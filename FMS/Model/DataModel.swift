@@ -591,3 +591,45 @@ final class AppNotification {
         self.createdAt = createdAt
     }
 }
+
+
+// MARK: - Inventory Model
+
+@Model
+final class InventoryItem {
+    
+    @Attribute(.unique) var id: UUID
+    
+    var partName: String
+    var partNumber: String
+    var quantityInStock: Int
+    var reorderThreshold: Int
+    
+    var unitCost: Double
+    var supplierName: String?
+    
+    var createdAt: Date
+    var updatedAt: Date
+    
+    init(
+        id: UUID = UUID(),
+        partName: String,
+        partNumber: String,
+        quantityInStock: Int,
+        reorderThreshold: Int,
+        unitCost: Double,
+        supplierName: String? = nil,
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.partName = partName
+        self.partNumber = partNumber
+        self.quantityInStock = quantityInStock
+        self.reorderThreshold = reorderThreshold
+        self.unitCost = unitCost
+        self.supplierName = supplierName
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
