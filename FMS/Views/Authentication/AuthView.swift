@@ -1,4 +1,6 @@
 import SwiftUI
+import Supabase
+
 
 // MARK: - Theme Configuration
 struct Theme {
@@ -19,6 +21,14 @@ extension UserRole {
         }
     }
     static let allRoles: [UserRole] = [.fleetManager, .driver, .maintenance]
+    
+    var toDBUserRole: DBUserRole {
+        switch self {
+        case .fleetManager: return .fleetManager
+        case .driver: return .driver
+        case .maintenance: return .maintenance
+        }
+    }
 }
 
 // MARK: - Focus Enum for Premium Interaction
@@ -28,7 +38,9 @@ enum FocusField: Hashable {
 
 // MARK: - Premium Authentication View
 struct AuthView: View {
+    @StateObject private var supabaseManager = SupabaseManager.shared
     @State private var isLoginMode = true
+
     
     // User Input States
     @State private var email = ""
@@ -173,18 +185,34 @@ struct AuthView: View {
                             }
                         }
                         
+                        if let authError = supabaseManager.authError {
+                            Text(authError)
+                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.top, 4)
+                        }
+                        
                         // Submit Button
                         Button(action: handleAuthentication) {
-                            Text(isLoginMode ? "Sign In" : "Create Account")
-                                .font(.system(.title3, design: .rounded, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 18)
-                                .background(Theme.royalBlue)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .shadow(color: Theme.royalBlue.opacity(0.3), radius: 10, x: 0, y: 6)
+                            HStack {
+                                if supabaseManager.isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .padding(.trailing, 8)
+                                }
+                                Text(isLoginMode ? "Sign In" : "Create Account")
+                                    .font(.system(.title3, design: .rounded, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(Theme.royalBlue)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: Theme.royalBlue.opacity(0.3), radius: 10, x: 0, y: 6)
                         }
                         .buttonStyle(ScaleButtonStyle())
+                        .disabled(supabaseManager.isLoading)
                         .padding(.top, 8)
                     }
                     .padding(28)
@@ -239,6 +267,27 @@ struct AuthView: View {
         let impactHeavy = UIImpactFeedbackGenerator(style: .medium)
         impactHeavy.impactOccurred()
         focusedField = nil
+        
+        Task {
+            do {
+                if isLoginMode {
+                    try await supabaseManager.signIn(email: email, passwordString: password)
+                } else {
+                    guard password == confirmPassword else {
+                        supabaseManager.authError = "Passwords do not match."
+                        return
+                    }
+                    try await supabaseManager.signUp(
+                        email: email,
+                        passwordString: password,
+                        fullName: fullName,
+                        role: selectedRole.toDBUserRole
+                    )
+                }
+            } catch {
+                print("Authentication error: \(error)")
+            }
+        }
     }
     
     private func resetFields() {
