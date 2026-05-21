@@ -102,26 +102,26 @@ struct DashboardStatCard: View {
                 // Trend Badge
                 Text(stat.trend)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(stat.isTrendPositive ? Color(red: 0.15, green: 0.75, blue: 0.45) : Color(red: 0.95, green: 0.3, blue: 0.3))
+                    .foregroundColor(stat.isTrendPositive ? AppTheme.Status.success : AppTheme.Status.danger)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
                     .background(
                         Capsule()
-                            .fill(stat.isTrendPositive ? Color(red: 0.15, green: 0.75, blue: 0.45).opacity(0.1) : Color(red: 0.95, green: 0.3, blue: 0.3).opacity(0.1))
+                            .fill(stat.isTrendPositive ? AppTheme.IconBg.green : AppTheme.IconBg.red)
                     )
             }
             
             // Value
             Text(stat.value)
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundColor(.black)
+                .foregroundColor(AppTheme.Text.primary)
                 .padding(.top, 4)
             
             // Bottom Row: Label & Sparkline
             HStack(alignment: .bottom) {
                 Text(stat.label)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 
@@ -132,9 +132,9 @@ struct DashboardStatCard: View {
             }
         }
         .padding(16)
-        .background(Color.white)
-        .cornerRadius(18)
-        .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
     }
 }
 
@@ -144,5 +144,5 @@ struct DashboardStatCard: View {
         DashboardStatCard(stat: DashboardMockData.stats[3])
     }
     .padding()
-    .background(Color(red: 0.97, green: 0.98, blue: 1.0))
+    .background(AppTheme.Background.page)
 }
