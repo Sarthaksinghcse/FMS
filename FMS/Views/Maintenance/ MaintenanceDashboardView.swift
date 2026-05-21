@@ -96,7 +96,13 @@ struct MaintenanceDashboardView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NotificationBellButton(count: unreadNotifications.count)
+                    HStack(spacing: 8) {
+                        NotificationBellButton(count: unreadNotifications.count)
+                        ProfileMenuButton(
+                            initials: "M",
+                            avatarColor: AppTheme.Brand.primary
+                        )
+                    }
                 }
             }
         }
