@@ -68,7 +68,7 @@ struct MaintenanceDashboardView: View {
                 .tabItem { Label("Inventory", systemImage: "shippingbox") }
                 .tag(1)
         }
-        .accentColor(.blue)
+        .accentColor(AppTheme.Brand.primary)
     }
 
     // MARK: Dashboard Tab
@@ -83,7 +83,7 @@ struct MaintenanceDashboardView: View {
                 }
                 .padding(.bottom, 32)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(AppTheme.Background.page)
             .navigationTitle("Maintenance")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -92,11 +92,17 @@ struct MaintenanceDashboardView: View {
                         Text("Maintenance")
                             .font(.headline).fontWeight(.semibold)
                         Text("Maintenance Personnel")
-                            .font(.caption).foregroundColor(.secondary)
+                            .font(.caption).foregroundColor(AppTheme.Text.secondary)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NotificationBellButton(count: unreadNotifications.count)
+                    HStack(spacing: 8) {
+                        NotificationBellButton(count: unreadNotifications.count)
+                        ProfileMenuButton(
+                            initials: "M",
+                            avatarColor: AppTheme.Brand.primary
+                        )
+                    }
                 }
             }
         }
@@ -114,38 +120,38 @@ struct MaintenanceDashboardView: View {
             ) {
                 StatCard(
                     icon: "doc.text.fill",
-                    iconColor: .red,
-                    iconBg: Color.red.opacity(0.12),
+                    iconColor: AppTheme.Status.danger,
+                    iconBg: AppTheme.IconBg.red,
                     title: "Pending Repairs",
                     value: "\(pendingOrders.count)",
-                    valueColor: .red,
+                    valueColor: AppTheme.Status.danger,
                     footnote: pendingOrders.isEmpty ? "None pending" : "\(pendingOrders.count) open work orders"
                 )
                 StatCard(
                     icon: "checkmark.circle.fill",
-                    iconColor: .green,
-                    iconBg: Color.green.opacity(0.12),
+                    iconColor: AppTheme.Status.success,
+                    iconBg: AppTheme.IconBg.green,
                     title: "Completed Today",
                     value: "\(completedToday.count)",
-                    valueColor: .green,
+                    valueColor: AppTheme.Status.success,
                     footnote: "Since midnight"
                 )
                 StatCard(
                     icon: "clock.fill",
-                    iconColor: .orange,
-                    iconBg: Color.orange.opacity(0.12),
+                    iconColor: AppTheme.Status.warning,
+                    iconBg: AppTheme.IconBg.orange,
                     title: "In Progress",
                     value: "\(inProgressOrders.count)",
-                    valueColor: .orange,
+                    valueColor: AppTheme.Status.warning,
                     footnote: inProgressOrders.isEmpty ? "No change" : "Active now"
                 )
                 StatCard(
                     icon: "exclamationmark.triangle.fill",
-                    iconColor: Color.purple,
-                    iconBg: Color.purple.opacity(0.12),
+                    iconColor: AppTheme.Status.purple,
+                    iconBg: AppTheme.IconBg.purple,
                     title: "Low Stock Items",
                     value: "\(lowStockItems.count)",
-                    valueColor: .purple,
+                    valueColor: AppTheme.Status.purple,
                     footnote: lowStockItems.isEmpty ? "Stock OK" : "Below reorder level"
                 )
             }
@@ -160,10 +166,10 @@ struct MaintenanceDashboardView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Quick Actions")
             HStack(spacing: 10) {
-                QuickActionButton(icon: "wrench.fill",           label: "Create\nWork Order",    color: .blue)
-                QuickActionButton(icon: "checkmark.square.fill", label: "Update\nMaintenance",   color: .green)
-                QuickActionButton(icon: "camera.fill",           label: "Upload\nRepair Notes",  color: .purple)
-                QuickActionButton(icon: "clock.fill",            label: "View\nSchedule",        color: .blue)
+                QuickActionButton(icon: "wrench.fill",           label: "Create\nWork Order",    color: AppTheme.Brand.primary)
+                QuickActionButton(icon: "checkmark.square.fill", label: "Update\nMaintenance",   color: AppTheme.Status.success)
+                QuickActionButton(icon: "camera.fill",           label: "Upload\nRepair Notes",  color: AppTheme.Status.purple)
+                QuickActionButton(icon: "clock.fill",            label: "View\nSchedule",        color: AppTheme.Brand.primary)
             }
             .padding(.horizontal)
         }
@@ -177,7 +183,7 @@ struct MaintenanceDashboardView: View {
                 SectionHeader(title: "Recent Work Orders")
                 Spacer()
                 Button("See All") {}
-                    .font(.subheadline).foregroundColor(.blue)
+                    .font(.subheadline).foregroundColor(AppTheme.Brand.primary)
             }
             .padding(.horizontal)
 
@@ -192,9 +198,9 @@ struct MaintenanceDashboardView: View {
                         }
                     }
                 }
-                .background(Color(.systemBackground))
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                 .padding(.horizontal)
             }
         }
@@ -206,14 +212,14 @@ struct MaintenanceDashboardView: View {
         VStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 36))
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.Text.secondary)
             Text(message)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.Text.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(32)
-        .background(Color(.systemBackground))
+        .background(AppTheme.Background.card)
         .cornerRadius(16)
         .padding(.horizontal)
     }
@@ -237,7 +243,7 @@ struct InventoryTabView: View {
                         }
                     } header: {
                         Label("Low Stock", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.Status.danger)
                     }
                 }
 
@@ -266,23 +272,23 @@ struct InventoryRow: View {
                 Text(item.partName)
                     .font(.subheadline).fontWeight(.medium)
                 Text("Part #\(item.partNumber)")
-                    .font(.caption).foregroundColor(.secondary)
+                    .font(.caption).foregroundColor(AppTheme.Text.secondary)
                 if let supplier = item.supplierName {
                     Text(supplier)
-                        .font(.caption).foregroundColor(.secondary)
+                        .font(.caption).foregroundColor(AppTheme.Text.secondary)
                 }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
                 Text("\(item.quantityInStock)")
                     .font(.title3).fontWeight(.bold)
-                    .foregroundColor(isLow ? .red : .primary)
+                    .foregroundColor(isLow ? AppTheme.Status.danger : AppTheme.Text.primary)
                 Text("in stock")
-                    .font(.caption2).foregroundColor(.secondary)
+                    .font(.caption2).foregroundColor(AppTheme.Text.secondary)
                 if isLow {
                     Text("Reorder: \(item.reorderThreshold)")
                         .font(.caption2)
-                        .foregroundColor(.red)
+                        .foregroundColor(AppTheme.Status.danger)
                 }
             }
         }
@@ -317,12 +323,12 @@ struct WorkOrderRow: View {
                     .font(.subheadline).fontWeight(.semibold)
                     .lineLimit(1)
                 Text(order.workDescription)
-                    .font(.caption).foregroundColor(.secondary)
+                    .font(.caption).foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(1)
                 Text(order.status == .completed
                      ? "Completed \(order.completedAt?.formatted(date: .abbreviated, time: .omitted) ?? "")"
                      : "Created \(order.createdAt.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption).foregroundColor(.secondary)
+                    .font(.caption).foregroundColor(AppTheme.Text.secondary)
             }
 
             Spacer()
@@ -331,7 +337,7 @@ struct WorkOrderRow: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color(.systemGray3))
+                .foregroundColor(AppTheme.Text.tertiary.opacity(0.7))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -363,13 +369,13 @@ struct NotificationBellButton: View {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: "bell")
                     .font(.system(size: 20))
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.Text.primary)
                 if count > 0 {
                     Text("\(min(count, 99))")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.Text.onDark)
                         .frame(minWidth: 16, minHeight: 16)
-                        .background(Color.red)
+                        .background(AppTheme.Status.danger)
                         .clipShape(Circle())
                         .offset(x: 6, y: -6)
                 }
@@ -410,20 +416,20 @@ struct StatCard: View {
             }
             Text(title)
                 .font(.subheadline).fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundColor(AppTheme.Text.primary)
             Text(value)
                 .font(.system(size: 34, weight: .bold))
                 .foregroundColor(valueColor)
             Text(footnote)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.Text.secondary)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
     }
 }
 
@@ -446,14 +452,14 @@ struct QuickActionButton: View {
                 Text(label)
                     .font(.system(size: 11)).fontWeight(.medium)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.Text.primary)
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color(.systemBackground))
-            .cornerRadius(14)
-            .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
+            .background(AppTheme.Background.card)
+            .cornerRadius(AppTheme.Radius.medium)
+            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -472,9 +478,9 @@ extension WorkOrderStatus {
     }
     var color: Color {
         switch self {
-        case .open:       return .red
-        case .inProgress: return .orange
-        case .completed:  return Color(red: 0.18, green: 0.65, blue: 0.36)
+        case .open:       return AppTheme.Status.danger
+        case .inProgress: return AppTheme.Status.warning
+        case .completed:  return AppTheme.Status.success
         case .cancelled:  return .gray
         }
     }
@@ -484,9 +490,9 @@ extension WorkOrderPriority {
     var color: Color {
         switch self {
         case .low:    return .gray
-        case .medium: return .blue
-        case .high:   return .orange
-        case .urgent: return .red
+        case .medium: return AppTheme.Brand.primary
+        case .high:   return AppTheme.Status.warning
+        case .urgent: return AppTheme.Status.danger
         }
     }
     var shortLabel: String {
