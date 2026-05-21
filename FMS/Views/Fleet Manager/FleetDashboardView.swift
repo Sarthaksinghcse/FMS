@@ -198,21 +198,11 @@ struct FleetDashboardView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // Initials Profile Avatar
-                        Button(action: {
-                            print("Profile tapped")
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(AppTheme.Brand.primaryDeep)
-                                    .frame(width: 38, height: 38)
-                                
-                                Text("FM")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(AppTheme.Text.onDark)
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                        // Profile avatar — tap for Sign Out menu
+                        ProfileMenuButton(
+                            initials: "FM",
+                            avatarColor: AppTheme.Brand.primaryDeep
+                        )
                     }
                     .padding(.trailing, 2)
                 }
