@@ -9,7 +9,8 @@
 
 import SwiftUI
 import MapKit
-import Combine
+internal import Combine
+
 
 // MARK: - Design Tokens
 
@@ -91,31 +92,7 @@ struct DashboardUser {
     let name: String
 }
 
-struct DBVehicle: Identifiable {
-    let id: UUID
-    let vehicleNumber: String
-}
 
-enum DBTripStatus: String {
-    case assigned
-    case started
-    case completed
-    case cancelled
-}
-
-struct DBTrip: Identifiable {
-    let id: UUID
-    let vehicleId: UUID
-    let driverId: UUID
-    let source: String
-    let destination: String
-    let startTime: Date?
-    let endTime: Date?
-    let distance: Double
-    let status: DBTripStatus
-    let notes: String?
-    let createdAt: Date
-}
 
 private actor DriverDashboardDataStore {
     static let shared = DriverDashboardDataStore()
@@ -146,7 +123,21 @@ private actor DriverDashboardDataStore {
     }
 
     func fetchVehicles() async throws -> [DBVehicle] {
-        [DBVehicle(id: vehicleId, vehicleNumber: "TN-07-AB-1234")]
+        [
+            DBVehicle(
+                id: vehicleId,
+                vehicleNumber: "TN-07-AB-1234",
+                model: "Transit",
+                manufacturer: "Ford",
+                year: 2024,
+                vin: "FMSMOCKVIN000101",
+                licensePlate: "TN-07-AB-1234",
+                status: .inUse,
+                assignedDriverId: currentUser.id,
+                lastServiceDate: nil,
+                createdAt: .now
+            )
+        ]
     }
 }
 
