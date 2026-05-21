@@ -8,68 +8,109 @@
 import SwiftUI
 
 struct DashboardBottomTabBar: View {
-    @Binding var selectedTab: Int // 0 for Dashboard, 1 for Tracking
+    /// 0 = Dashboard  |  1 = Tracking  |  2 = Manage
+    @Binding var selectedTab: Int
 
     var body: some View {
         HStack(spacing: 8) {
-            // Tab 1: Dashboard
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedTab = 0
-                }
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "square.grid.2x2.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Dashboard")
-                        .font(.system(size: 12, weight: .bold))
-                }
-                .foregroundColor(selectedTab == 0 ? AppTheme.Brand.primary : AppTheme.Text.primary)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(
-                    Capsule()
-                        .fill(selectedTab == 0 ? AppTheme.IconBg.blue : Color.clear)
-                )
-            }
-
-            // Tab 2: Tracking
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedTab = 1
-                }
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .rotationEffect(.degrees(45))
-                    Text("Tracking")
-                        .font(.system(size: 12, weight: .bold))
-                }
-                .foregroundColor(selectedTab == 1 ? AppTheme.Brand.primary : AppTheme.Text.primary)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(
-                    Capsule()
-                        .fill(selectedTab == 1 ? AppTheme.IconBg.blue : Color.clear)
-                )
-            }
+            tabButton(index: 0, icon: "square.grid.2x2.fill", label: "Dashboard")
+            tabButton(index: 1, icon: "location.fill", label: "Tracking", rotateIcon: true)
+            tabButton(index: 2, icon: "slider.horizontal.3", label: "Manage")
         }
-        .padding(6)
-        .background(AppTheme.Background.card)
-        .clipShape(Capsule())
-        .shadow(color: AppTheme.Shadow.card, radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            ZStack {
+                // Glassmorphic background
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                
+                // Subtle gradient overlay
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                AppTheme.Brand.primary.opacity(0.05),
+                                AppTheme.Brand.primary.opacity(0.02)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                // Border
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.3),
+                                Color.white.opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        )
+        .shadow(color: AppTheme.Shadow.card.opacity(0.15), radius: 20, x: 0, y: 10)
+        .shadow(color: AppTheme.Shadow.card.opacity(0.1), radius: 8, x: 0, y: 4)
+    }
+
+    @ViewBuilder
+    private func tabButton(index: Int, icon: String, label: String, rotateIcon: Bool = false) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                selectedTab = index
+            }
+        } label: {
+            VStack(spacing: 6) {
+                ZStack {
+                    // Background circle for selected state
+                    if selectedTab == index {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        AppTheme.Brand.primary.opacity(0.15),
+                                        AppTheme.Brand.primary.opacity(0.08)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 48, height: 48)
+                            .overlay(
+                                Circle()
+                                    .stroke(AppTheme.Brand.primary.opacity(0.2), lineWidth: 1)
+                            )
+                    }
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: selectedTab == index ? 20 : 18, weight: .semibold))
+                        .rotationEffect(rotateIcon ? .degrees(45) : .zero)
+                        .foregroundColor(selectedTab == index ? AppTheme.Brand.primary : AppTheme.Text.secondary)
+                }
+                .frame(height: 48)
+                
+                Text(label)
+                    .font(.system(size: 11, weight: selectedTab == index ? .bold : .medium, design: .rounded))
+                    .foregroundColor(selectedTab == index ? AppTheme.Brand.primary : AppTheme.Text.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
 #Preview {
     ZStack {
-        AppTheme.Background.page
-            .ignoresSafeArea()
-
+        AppTheme.Background.page.ignoresSafeArea()
         VStack {
             Spacer()
             DashboardBottomTabBar(selectedTab: .constant(0))
+                .padding(.horizontal, 24)
                 .padding(.bottom, 20)
         }
     }
