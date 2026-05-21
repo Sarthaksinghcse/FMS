@@ -5,12 +5,6 @@
 //  Created by Naman Yadav on 20/05/26.
 //
 
-
-//
-//  FleetManagementModels.swift
-//  FleetManagementSystem
-//
-
 import Foundation
 import SwiftData
 
