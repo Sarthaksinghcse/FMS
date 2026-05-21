@@ -29,9 +29,9 @@ enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     
     var chipColor: Color {
         switch self {
-        case .all: return Theme.royalBlue
+        case .all: return AppTheme.Brand.royalBlue
         case .active: return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive: return Theme.darkOrange
+        case .inactive: return AppTheme.Brand.accent
         case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
         }
     }
@@ -51,7 +51,7 @@ extension VehicleStatus {
     var statusColor: Color {
         switch self {
         case .active: return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive: return Theme.darkOrange
+        case .inactive: return AppTheme.Brand.accent
         case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
         }
     }
@@ -88,10 +88,10 @@ extension VehicleType {
     
     var iconColor: Color {
         switch self {
-        case .truck: return Theme.royalBlue
+        case .truck: return AppTheme.Brand.royalBlue
         case .van: return Color(red: 0.58, green: 0.39, blue: 0.87)
         case .car: return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .bike: return Theme.darkOrange
+        case .bike: return AppTheme.Brand.accent
         }
     }
 }
@@ -165,7 +165,7 @@ struct VehicleListView: View {
     
     var body: some View {
         ZStack {
-            Theme.clearWhite.ignoresSafeArea()
+            AppTheme.Background.page.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // MARK: - Filter Chips
@@ -183,7 +183,7 @@ struct VehicleListView: View {
                                 showAddVehicle = true
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Theme.royalBlue)
+                            .tint(AppTheme.Brand.royalBlue)
                         }
                     } else {
                         ContentUnavailableView.search(text: searchText)
@@ -450,9 +450,9 @@ struct VehicleCardView: View {
             } label: {
                 Image(systemName: "pencil")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Theme.royalBlue)
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                     .frame(width: 36, height: 36)
-                    .background(Theme.royalBlue.opacity(0.08))
+                    .background(AppTheme.Brand.royalBlue.opacity(0.08))
                     .clipShape(Circle())
             }
             .buttonStyle(ScaleButtonStyle())
@@ -462,7 +462,7 @@ struct VehicleCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Theme.glassBorder, lineWidth: 1)
+                .stroke(AppTheme.Glass.border, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
     }
@@ -477,19 +477,19 @@ struct AddVehicleStubView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
                 
                 VStack(spacing: 20) {
                     Spacer()
                     
                     ZStack {
                         Circle()
-                            .fill(Theme.royalBlue.opacity(0.08))
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 100, height: 100)
                         
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 40, weight: .medium))
-                            .foregroundColor(Theme.royalBlue.opacity(0.5))
+                            .foregroundColor(AppTheme.Brand.royalBlue.opacity(0.5))
                             .symbolEffect(.bounce)
                     }
                     
@@ -514,7 +514,7 @@ struct AddVehicleStubView: View {
                         dismiss()
                     }
                     .font(.system(.body, design: .rounded))
-                    .foregroundColor(Theme.royalBlue)
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
             }
         }
@@ -531,7 +531,7 @@ struct EditVehicleStubView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
                 
                 VStack(spacing: 20) {
                     Spacer()
@@ -568,7 +568,7 @@ struct EditVehicleStubView: View {
                         dismiss()
                     }
                     .font(.system(.body, design: .rounded))
-                    .foregroundColor(Theme.royalBlue)
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
@@ -577,7 +577,7 @@ struct EditVehicleStubView: View {
                         dismiss()
                     }
                     .font(.system(.body, design: .rounded, weight: .semibold))
-                    .foregroundColor(Theme.royalBlue)
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
             }
         }

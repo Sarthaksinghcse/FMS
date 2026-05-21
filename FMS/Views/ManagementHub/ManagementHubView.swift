@@ -66,11 +66,11 @@ struct ManagementHubView: View {
                 title: "Vehicle Management",
                 subtitle: "Manage all fleet vehicles",
                 icon: "truck.box.fill",
-                accentColor: Theme.royalBlue,
+                accentColor: AppTheme.Brand.royalBlue,
                 metrics: [
-                    CardMetric(label: "Total", value: "\(vehicles.count)", systemIcon: "car.fill", iconColor: Theme.royalBlue),
+                    CardMetric(label: "Total", value: "\(vehicles.count)", systemIcon: "car.fill", iconColor: AppTheme.Brand.royalBlue),
                     CardMetric(label: "Active", value: "\(vehicles.filter { $0.status == .active }.count)", systemIcon: "checkmark.circle.fill", iconColor: .green),
-                    CardMetric(label: "In Shop", value: "\(vehicles.filter { $0.status == .inMaintenance }.count)", systemIcon: "exclamationmark.triangle.fill", iconColor: Theme.darkOrange)
+                    CardMetric(label: "In Shop", value: "\(vehicles.filter { $0.status == .inMaintenance }.count)", systemIcon: "exclamationmark.triangle.fill", iconColor: AppTheme.Brand.accent)
                 ],
                 destination: .vehicleList
             ),
@@ -90,9 +90,9 @@ struct ManagementHubView: View {
                 title: "Maintenance Team",
                 subtitle: "Manage technicians & tasks",
                 icon: "wrench.and.screwdriver.fill",
-                accentColor: Theme.darkOrange,
+                accentColor: AppTheme.Brand.accent,
                 metrics: [
-                    CardMetric(label: "Staff", value: "\(maintenanceCount)", systemIcon: "person.3.fill", iconColor: Theme.darkOrange),
+                    CardMetric(label: "Staff", value: "\(maintenanceCount)", systemIcon: "person.3.fill", iconColor: AppTheme.Brand.accent),
                     CardMetric(label: "Active Orders", value: "\(workOrders.filter { $0.status == .open || $0.status == .inProgress }.count)", systemIcon: "doc.text.fill", iconColor: .orange),
                     CardMetric(label: "Done Orders", value: "\(workOrders.filter { $0.status == .completed }.count)", systemIcon: "checkmark.seal.fill", iconColor: .green)
                 ],
@@ -116,7 +116,7 @@ struct ManagementHubView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
                 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 0) {

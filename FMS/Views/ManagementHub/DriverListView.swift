@@ -60,7 +60,7 @@ struct DriverListView: View {
     
     var body: some View {
         ZStack {
-            Theme.clearWhite.ignoresSafeArea()
+            AppTheme.Background.page.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // MARK: - Content
@@ -75,7 +75,7 @@ struct DriverListView: View {
                                 showAddDriver = true
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Theme.royalBlue)
+                            .tint(AppTheme.Brand.royalBlue)
                         }
                     } else {
                         ContentUnavailableView.search(text: searchText)
@@ -144,13 +144,13 @@ struct DriverListView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Theme.royalBlue.opacity(0.8), Theme.royalBlue],
+                            colors: [AppTheme.Brand.royalBlue.opacity(0.8), AppTheme.Brand.royalBlue],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 56, height: 56)
-                    .shadow(color: Theme.royalBlue.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 8, x: 0, y: 4)
                 
                 Text(initials(for: driver.fullName))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -193,10 +193,10 @@ struct DriverListView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "car.fill")
                             .font(.system(size: 11))
-                            .foregroundColor(Theme.royalBlue.opacity(0.7))
+                            .foregroundColor(AppTheme.Brand.royalBlue.opacity(0.7))
                         Text(vehicle.registrationNumber)
                             .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(Theme.royalBlue)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                 } else {
                     HStack(spacing: 6) {
@@ -236,7 +236,7 @@ struct DriverListView: View {
                     
                     Image(systemName: "pencil")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Theme.royalBlue)
+                        .foregroundColor(AppTheme.Brand.royalBlue)
                 }
             }
             .buttonStyle(ScaleButtonStyle())
@@ -246,7 +246,7 @@ struct DriverListView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Theme.glassBorder, lineWidth: 1)
+                .stroke(AppTheme.Glass.border, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
     }
@@ -286,16 +286,16 @@ struct DriverListView: View {
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .tracking(0.3)
         }
-        .foregroundColor(Theme.royalBlue)
+        .foregroundColor(AppTheme.Brand.royalBlue)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(
             Capsule()
-                .fill(Theme.royalBlue.opacity(0.10))
+                .fill(AppTheme.Brand.royalBlue.opacity(0.10))
         )
         .overlay(
             Capsule()
-                .stroke(Theme.royalBlue.opacity(0.25), lineWidth: 1)
+                .stroke(AppTheme.Brand.royalBlue.opacity(0.25), lineWidth: 1)
         )
     }
     
@@ -326,7 +326,7 @@ struct AddDriverStubView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
                 
                 VStack(spacing: 24) {
                     Spacer()
@@ -335,7 +335,7 @@ struct AddDriverStubView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Theme.royalBlue.opacity(0.08), Theme.royalBlue.opacity(0.15)],
+                                    colors: [AppTheme.Brand.royalBlue.opacity(0.08), AppTheme.Brand.royalBlue.opacity(0.15)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -344,7 +344,7 @@ struct AddDriverStubView: View {
                         
                         Image(systemName: "person.badge.plus")
                             .font(.system(size: 38, weight: .medium))
-                            .foregroundColor(Theme.royalBlue)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                             .symbolEffect(.bounce, value: appearAnimation)
                     }
                     
@@ -375,7 +375,7 @@ struct AddDriverStubView: View {
                         dismiss()
                     }
                     .font(.system(.body, design: .rounded, weight: .semibold))
-                    .foregroundColor(Theme.royalBlue)
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
             }
             .onAppear {
@@ -399,7 +399,7 @@ struct EditDriverStubView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
                 
                 VStack(spacing: 24) {
                     Spacer()
@@ -409,13 +409,13 @@ struct EditDriverStubView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Theme.royalBlue.opacity(0.8), Theme.royalBlue],
+                                    colors: [AppTheme.Brand.royalBlue.opacity(0.8), AppTheme.Brand.royalBlue],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .frame(width: 80, height: 80)
-                            .shadow(color: Theme.royalBlue.opacity(0.3), radius: 12, x: 0, y: 6)
+                            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 12, x: 0, y: 6)
                         
                         Text(driverInitials)
                             .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -454,7 +454,7 @@ struct EditDriverStubView: View {
                         dismiss()
                     }
                     .font(.system(.body, design: .rounded, weight: .semibold))
-                    .foregroundColor(Theme.royalBlue)
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
             }
             .onAppear {

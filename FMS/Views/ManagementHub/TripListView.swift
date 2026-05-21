@@ -49,7 +49,7 @@ extension TripStatus {
         switch self {
         case .assigned: return Color(red: 0.15, green: 0.38, blue: 0.90)
         case .started: return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inProgress: return Theme.darkOrange
+        case .inProgress: return AppTheme.Brand.accent
         case .completed: return Color.gray
         case .cancelled: return Color.red
         }
@@ -134,7 +134,7 @@ struct TripListView: View {
 
     var body: some View {
         ZStack {
-            Theme.clearWhite.ignoresSafeArea()
+            AppTheme.Background.page.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Filter Chips
@@ -202,7 +202,7 @@ struct TripListView: View {
                 ForEach(TripStatusFilter.allCases) { filter in
                     let isSelected = selectedFilter == filter
                     let fgColor: Color = isSelected ? .white : .gray
-                    let strokeColor: Color = isSelected ? .clear : Theme.glassBorder
+                    let strokeColor: Color = isSelected ? .clear : AppTheme.Glass.border
                     
                     Button {
                         let impact = UIImpactFeedbackGenerator(style: .light)
@@ -380,7 +380,7 @@ struct TripCardView: View {
             // MARK: Driver Info
             if let name = driverName {
                 Divider()
-                    .background(Theme.glassBorder)
+                    .background(AppTheme.Glass.border)
 
                 HStack(spacing: 10) {
                     Image(systemName: "person.circle.fill")
@@ -407,7 +407,7 @@ struct TripCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Theme.glassBorder, lineWidth: 1)
+                .stroke(AppTheme.Glass.border, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
     }
@@ -494,7 +494,7 @@ struct AddTripStubView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
 
                 VStack(spacing: 24) {
                     Spacer()
@@ -551,7 +551,7 @@ struct EditTripStubView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
 
                 VStack(spacing: 24) {
                     Spacer()

@@ -61,7 +61,7 @@ struct MaintenanceStaffListView: View {
     
     var body: some View {
         ZStack {
-            Theme.clearWhite.ignoresSafeArea()
+            AppTheme.Background.page.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // MARK: - Content
@@ -76,7 +76,7 @@ struct MaintenanceStaffListView: View {
                                 showAddStaffSheet = true
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Theme.darkOrange)
+                            .tint(AppTheme.Brand.accent)
                         }
                     } else {
                         ContentUnavailableView.search(text: searchText)
@@ -152,15 +152,15 @@ struct MaintenanceStaffListView: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Theme.darkOrange.opacity(0.7),
-                                    Theme.darkOrange
+                                    AppTheme.Brand.accent.opacity(0.7),
+                                    AppTheme.Brand.accent
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 56, height: 56)
-                        .shadow(color: Theme.darkOrange.opacity(0.3), radius: 8, x: 0, y: 4)
+                        .shadow(color: AppTheme.Brand.accent.opacity(0.3), radius: 8, x: 0, y: 4)
                     
                     Text(initials(for: staff.fullName))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -219,7 +219,7 @@ struct MaintenanceStaffListView: View {
                     } label: {
                         Image(systemName: "pencil.circle.fill")
                             .font(.system(size: 28))
-                            .foregroundStyle(Theme.royalBlue)
+                            .foregroundStyle(AppTheme.Brand.royalBlue)
                             .symbolEffect(.bounce, value: selectedStaffForEdit?.id == staff.id)
                     }
                     .buttonStyle(ScaleButtonStyle())
@@ -231,7 +231,7 @@ struct MaintenanceStaffListView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Theme.glassBorder, lineWidth: 1)
+                    .stroke(AppTheme.Glass.border, lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
             
@@ -244,8 +244,8 @@ struct MaintenanceStaffListView: View {
                     .padding(.vertical, 5)
                     .background(
                         Capsule()
-                            .fill(Theme.royalBlue)
-                            .shadow(color: Theme.royalBlue.opacity(0.3), radius: 6, x: 0, y: 3)
+                            .fill(AppTheme.Brand.royalBlue)
+                            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 6, x: 0, y: 3)
                     )
                     .offset(x: -12, y: -8)
             }
@@ -257,18 +257,18 @@ struct MaintenanceStaffListView: View {
     private func statusBadge(isActive: Bool) -> some View {
         HStack(spacing: 5) {
             Circle()
-                .fill(isActive ? Color.green : Theme.darkOrange)
+                .fill(isActive ? Color.green : AppTheme.Brand.accent)
                 .frame(width: 7, height: 7)
             
             Text(isActive ? "Available" : "Busy")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundColor(isActive ? Color.green : Theme.darkOrange)
+                .foregroundColor(isActive ? Color.green : AppTheme.Brand.accent)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .background(
             Capsule()
-                .fill((isActive ? Color.green : Theme.darkOrange).opacity(0.12))
+                .fill((isActive ? Color.green : AppTheme.Brand.accent).opacity(0.12))
         )
     }
     
@@ -281,12 +281,12 @@ struct MaintenanceStaffListView: View {
             Text("Technician")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
         }
-        .foregroundColor(Theme.darkOrange)
+        .foregroundColor(AppTheme.Brand.accent)
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .background(
             Capsule()
-                .fill(Theme.darkOrange.opacity(0.12))
+                .fill(AppTheme.Brand.accent.opacity(0.12))
         )
     }
     
@@ -319,19 +319,19 @@ struct AddStaffSheetView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
                 
                 VStack(spacing: 24) {
                     Spacer()
                     
                     ZStack {
                         Circle()
-                            .fill(Theme.darkOrange.opacity(0.1))
+                            .fill(AppTheme.Brand.accent.opacity(0.1))
                             .frame(width: 90, height: 90)
                         
                         Image(systemName: "person.badge.plus")
                             .font(.system(size: 36, weight: .medium))
-                            .foregroundColor(Theme.darkOrange)
+                            .foregroundColor(AppTheme.Brand.accent)
                             .symbolEffect(.bounce)
                     }
                     
@@ -359,7 +359,7 @@ struct AddStaffSheetView: View {
                         dismiss()
                     }
                     .font(.system(.body, design: .rounded))
-                    .foregroundColor(Theme.darkOrange)
+                    .foregroundColor(AppTheme.Brand.accent)
                 }
             }
         }
@@ -377,7 +377,7 @@ struct EditStaffSheetView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.page.ignoresSafeArea()
                 
                 VStack(spacing: 24) {
                     Spacer()
@@ -386,13 +386,13 @@ struct EditStaffSheetView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Theme.darkOrange.opacity(0.7), Theme.darkOrange],
+                                    colors: [AppTheme.Brand.accent.opacity(0.7), AppTheme.Brand.accent],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .frame(width: 80, height: 80)
-                            .shadow(color: Theme.darkOrange.opacity(0.3), radius: 10, x: 0, y: 6)
+                            .shadow(color: AppTheme.Brand.accent.opacity(0.3), radius: 10, x: 0, y: 6)
                         
                         Text(staffInitials)
                             .font(.system(size: 26, weight: .bold, design: .rounded))
@@ -423,7 +423,7 @@ struct EditStaffSheetView: View {
                         dismiss()
                     }
                     .font(.system(.body, design: .rounded))
-                    .foregroundColor(Theme.darkOrange)
+                    .foregroundColor(AppTheme.Brand.accent)
                 }
             }
         }
