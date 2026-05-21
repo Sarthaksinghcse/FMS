@@ -55,8 +55,8 @@ struct DashboardActivityRow: View {
         Divider().padding(.leading, 60)
         DashboardActivityRow(activity: DashboardMockData.activities[2])
     }
-    .background(Color.white)
-    .cornerRadius(16)
+    .background(AppTheme.Background.card)
+    .cornerRadius(AppTheme.Radius.large)
     .padding()
-    .background(Color(red: 0.97, green: 0.98, blue: 1.0))
+    .background(AppTheme.Background.page)
 }

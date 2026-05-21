@@ -24,15 +24,15 @@ struct DashboardBottomTabBar: View {
                     Text("Dashboard")
                         .font(.system(size: 12, weight: .bold))
                 }
-                .foregroundColor(selectedTab == 0 ? Color(red: 0.2, green: 0.5, blue: 1.0) : Color.black)
+                .foregroundColor(selectedTab == 0 ? AppTheme.Brand.primary : AppTheme.Text.primary)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 .background(
                     Capsule()
-                        .fill(selectedTab == 0 ? Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.1) : Color.clear)
+                        .fill(selectedTab == 0 ? AppTheme.IconBg.blue : Color.clear)
                 )
             }
-            
+
             // Tab 2: Tracking
             Button(action: {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -42,31 +42,31 @@ struct DashboardBottomTabBar: View {
                 HStack(spacing: 8) {
                     Image(systemName: "location.fill")
                         .font(.system(size: 16, weight: .semibold))
-                        .rotationEffect(.degrees(45)) // Align diagonal arrow
+                        .rotationEffect(.degrees(45))
                     Text("Tracking")
                         .font(.system(size: 12, weight: .bold))
                 }
-                .foregroundColor(selectedTab == 1 ? Color(red: 0.2, green: 0.5, blue: 1.0) : Color.black)
+                .foregroundColor(selectedTab == 1 ? AppTheme.Brand.primary : AppTheme.Text.primary)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 .background(
                     Capsule()
-                        .fill(selectedTab == 1 ? Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.1) : Color.clear)
+                        .fill(selectedTab == 1 ? AppTheme.IconBg.blue : Color.clear)
                 )
             }
         }
         .padding(6)
-        .background(Color.white)
+        .background(AppTheme.Background.card)
         .clipShape(Capsule())
-        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
+        .shadow(color: AppTheme.Shadow.card, radius: 10, x: 0, y: 4)
     }
 }
 
 #Preview {
     ZStack {
-        Color(red: 0.97, green: 0.98, blue: 1.0)
+        AppTheme.Background.page
             .ignoresSafeArea()
-        
+
         VStack {
             Spacer()
             DashboardBottomTabBar(selectedTab: .constant(0))

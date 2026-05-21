@@ -31,8 +31,7 @@ struct FleetDashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Soft light gray/blue background matching screenshot
-                Color(red: 0.97, green: 0.98, blue: 1.0)
+                AppTheme.Background.page
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -104,9 +103,9 @@ struct FleetDashboardView: View {
                                 Spacer()
                             }
                             .padding(18)
-                            .background(Color.white)
-                            .cornerRadius(18)
-                            .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                         }
                         .padding(.horizontal, 16)
                         
@@ -120,9 +119,9 @@ struct FleetDashboardView: View {
                                 // Red notification count badge
                                 Text("3")
                                     .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(AppTheme.Text.onDark)
                                     .frame(width: 18, height: 18)
-                                    .background(Color(red: 0.95, green: 0.3, blue: 0.3))
+                                    .background(AppTheme.Status.danger)
                                     .clipShape(Circle())
                                 
                                 Spacer()
@@ -131,7 +130,7 @@ struct FleetDashboardView: View {
                                     print("See All pressed")
                                 }
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                                .foregroundColor(AppTheme.Brand.primary)
                             }
                             .padding(.horizontal, 16)
                             
@@ -147,9 +146,9 @@ struct FleetDashboardView: View {
                                     }
                                 }
                             }
-                            .background(Color.white)
-                            .cornerRadius(18)
-                            .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                             .padding(.horizontal, 16)
                         }
                         
@@ -181,39 +180,29 @@ struct FleetDashboardView: View {
                             ZStack(alignment: .topTrailing) {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.white)
+                                        .fill(AppTheme.Background.card)
                                         .frame(width: 38, height: 38)
-                                        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                                        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                                     
                                     Image(systemName: "bell.fill")
                                         .font(.system(size: 16))
-                                        .foregroundColor(Color.black.opacity(0.6))
+                                        .foregroundColor(AppTheme.Text.primary.opacity(0.6))
                                 }
                                 
                                 // Red notification dot
                                 Circle()
-                                    .fill(Color(red: 0.95, green: 0.3, blue: 0.3))
+                                    .fill(AppTheme.Status.danger)
                                     .frame(width: 8, height: 8)
                                     .offset(x: -2, y: 2)
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // Initials Profile Avatar
-                        Button(action: {
-                            print("Profile tapped")
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(red: 0.28, green: 0.35, blue: 0.92))
-                                    .frame(width: 38, height: 38)
-                                
-                                Text("FM")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                        // Profile avatar — tap for Sign Out menu
+                        ProfileMenuButton(
+                            initials: "FM",
+                            avatarColor: AppTheme.Brand.primaryDeep
+                        )
                     }
                     .padding(.trailing, 2)
                 }
@@ -230,13 +219,13 @@ struct FleetCircularProgressView: View {
         ZStack {
             // Background track
             Circle()
-                .stroke(Color(red: 0.9, green: 0.93, blue: 0.98), lineWidth: 6)
+                .stroke(AppTheme.Glass.ringTrack, lineWidth: 6)
             
             // Progress arc
             Circle()
                 .trim(from: 0.0, to: CGFloat(min(progress, 1.0)))
                 .stroke(
-                    Color(red: 0.2, green: 0.5, blue: 1.0),
+                    AppTheme.Brand.primary,
                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .rotationEffect(Angle(degrees: -90))
@@ -244,7 +233,7 @@ struct FleetCircularProgressView: View {
             // Inner percentage text
             Text("\(Int(progress * 100))%")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                .foregroundColor(AppTheme.Brand.primary)
         }
         .frame(width: 52, height: 52)
     }
