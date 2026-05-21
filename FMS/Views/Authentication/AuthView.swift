@@ -1,15 +1,6 @@
 import SwiftUI
 import Supabase
 
-
-// MARK: - Theme Configuration
-struct Theme {
-    static let royalBlue = Color(red: 0.15, green: 0.38, blue: 0.90)
-    static let darkOrange = Color(red: 0.93, green: 0.46, blue: 0.0)
-    static let clearWhite = Color.white
-    static let glassBorder = Color.black.opacity(0.20)
-}
-
 // MARK: - UI Helper for Existing Model
 extension UserRole {
     var displayName: String {
@@ -57,7 +48,7 @@ struct AuthView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.clearWhite.ignoresSafeArea()
+                AppTheme.Background.auth.ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     Spacer()
@@ -68,33 +59,39 @@ struct AuthView: View {
                             Circle()
                                 .fill(
                                     LinearGradient(
-                                        colors: [Theme.royalBlue.opacity(0.8), Theme.royalBlue],
+                                        colors: [
+                                            AppTheme.Brand.royalBlue.opacity(0.8),
+                                            AppTheme.Brand.royalBlue
+                                        ],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
                                 )
                                 .frame(width: 90, height: 100)
-                                .shadow(color: Theme.royalBlue.opacity(0.3), radius: 12, x: 0, y: 8)
+                                .shadow(
+                                    color: AppTheme.Brand.royalBlue.opacity(0.3),
+                                    radius: 12, x: 0, y: 8
+                                )
                                 .overlay(
                                     Circle()
-                                        .stroke(.white.opacity(0.2), lineWidth: 1)
+                                        .stroke(AppTheme.Text.onDark.opacity(0.2), lineWidth: 1)
                                 )
 
                             Image(systemName: "truck.box.fill")
                                 .font(.system(size: 34, weight: .semibold))
-                                .foregroundColor(.white)
+                                .foregroundColor(AppTheme.Text.onDark)
                                 .symbolEffect(.bounce, value: appearAnimation)
                         }
 
                         VStack(spacing: 6) {
                             Text("Fleeto")
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundColor(.black)
+                                .foregroundColor(AppTheme.Text.primary)
                                 .tracking(0.5)
 
                             Text("Sign in to your dashboard")
                                 .font(.system(.subheadline, design: .rounded))
-                                .foregroundColor(.gray)
+                                .foregroundColor(AppTheme.Text.tertiary)
                         }
                     }
                     .padding(.bottom, 36)
@@ -108,7 +105,7 @@ struct AuthView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("SELECT ROLE")
                                 .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundColor(.gray.opacity(0.8))
+                                .foregroundColor(AppTheme.Text.tertiary.opacity(0.8))
                                 .tracking(1.0)
 
                             Menu {
@@ -120,32 +117,42 @@ struct AuthView: View {
                             } label: {
                                 HStack {
                                     Text(selectedRole.displayName)
-                                        .foregroundColor(.black)
+                                        .foregroundColor(AppTheme.Text.primary)
                                         .font(.system(.body, design: .rounded))
                                     Spacer()
                                     Image(systemName: "chevron.up.chevron.down")
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(AppTheme.Text.tertiary)
                                 }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 16)
                                 .background(.ultraThinMaterial)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .stroke(Theme.glassBorder, lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous)
+                                        .stroke(AppTheme.Glass.border, lineWidth: 1)
                                 )
                             }
                         }
 
                         // Credentials
                         VStack(spacing: 16) {
-                            PremiumInputField(icon: "envelope.fill", placeholder: "Email Address", text: $email, isFocused: focusedField == .email)
-                                .keyboardType(.emailAddress)
-                                .focused($focusedField, equals: .email)
+                            PremiumInputField(
+                                icon: "envelope.fill",
+                                placeholder: "Email Address",
+                                text: $email,
+                                isFocused: focusedField == .email
+                            )
+                            .keyboardType(.emailAddress)
+                            .focused($focusedField, equals: .email)
 
-                            PremiumSecureField(icon: "key.fill", placeholder: "Password", text: $password, isFocused: focusedField == .password)
-                                .focused($focusedField, equals: .password)
+                            PremiumSecureField(
+                                icon: "key.fill",
+                                placeholder: "Password",
+                                text: $password,
+                                isFocused: focusedField == .password
+                            )
+                            .focused($focusedField, equals: .password)
                         }
 
                         // Submit Button
@@ -153,32 +160,35 @@ struct AuthView: View {
                             HStack {
                                 if supabaseManager.isLoading {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Text.onDark))
                                         .padding(.trailing, 8)
                                 }
                                 Text("Sign In")
                                     .font(.system(.title3, design: .rounded, weight: .semibold))
                             }
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.Text.onDark)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
-                            .background(Theme.royalBlue)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: Theme.royalBlue.opacity(0.3), radius: 10, x: 0, y: 6)
+                            .background(AppTheme.Brand.royalBlue)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.large, style: .continuous))
+                            .shadow(
+                                color: AppTheme.Brand.royalBlue.opacity(0.3),
+                                radius: 10, x: 0, y: 6
+                            )
                         }
                         .buttonStyle(ScaleButtonStyle())
                         .disabled(supabaseManager.isLoading)
                         .padding(.top, 8)
                     }
-                    .padding(28)
+                    .padding(AppTheme.Spacing.lg + 4)
                     .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.form, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 32, style: .continuous)
-                            .stroke(Theme.glassBorder, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: AppTheme.Radius.form, style: .continuous)
+                            .stroke(AppTheme.Glass.border, lineWidth: 1)
                     )
-                    .shadow(color: Color.black.opacity(0.04), radius: 24, x: 0, y: 12)
-                    .padding(.horizontal, 24)
+                    .shadow(color: AppTheme.Shadow.card, radius: 24, x: 0, y: 12)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
                     .opacity(appearAnimation ? 1 : 0)
                     .offset(y: appearAnimation ? 0 : 20)
 
@@ -237,7 +247,6 @@ struct AuthView: View {
                     expectedRole: selectedRole.toDBUserRole
                 )
             } catch {
-                // Surface error in glass alert popup
                 errorAlertMessage = error.localizedDescription
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                     showErrorAlert = true
@@ -257,62 +266,53 @@ struct GlassErrorAlert: View {
 
     var body: some View {
         ZStack {
-            // Invisible tap-to-dismiss layer
             Color.clear
                 .ignoresSafeArea()
                 .onTapGesture { onCancel() }
 
-            // Glass card
             VStack(spacing: 0) {
-                // Icon + title
                 VStack(spacing: 14) {
                     ZStack {
                         Circle()
-                            .fill(Color.red.opacity(0.12))
+                            .fill(AppTheme.Status.danger.opacity(0.12))
                             .frame(width: 64, height: 64)
                         Image(systemName: "lock.trianglebadge.exclamationmark.fill")
                             .font(.system(size: 28, weight: .semibold))
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.Status.danger)
                     }
                     .padding(.top, 28)
 
                     Text("Wrong Credentials")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
+                        .foregroundColor(AppTheme.Text.primary)
 
                     Text(message)
                         .font(.system(.subheadline, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.Text.secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                        .padding(.bottom, AppTheme.Spacing.lg)
                 }
 
                 Divider()
-                    .background(Color.gray.opacity(0.3))
 
-                // Action buttons
                 HStack(spacing: 0) {
-                    // Cancel
                     Button(action: onCancel) {
                         Text("Cancel")
                             .font(.system(.body, design: .rounded, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppTheme.Text.secondary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                     }
                     .buttonStyle(PlainButtonStyle())
 
-                    Divider()
-                        .frame(height: 52)
-                        .background(Color.gray.opacity(0.3))
+                    Divider().frame(height: 52)
 
-                    // Try Again
                     Button(action: onTryAgain) {
                         Text("Try Again")
                             .font(.system(.body, design: .rounded, weight: .bold))
-                            .foregroundColor(Theme.royalBlue)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                     }
@@ -320,18 +320,18 @@ struct GlassErrorAlert: View {
                 }
             }
             .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous)
+                    .stroke(AppTheme.Text.onDark.opacity(0.25), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.20), radius: 40, x: 0, y: 20)
-            .padding(.horizontal, 32)
+            .shadow(color: AppTheme.Shadow.modal, radius: 40, x: 0, y: 20)
+            .padding(.horizontal, AppTheme.Spacing.xl)
         }
     }
 }
 
-// MARK: - Reusable Premium Components
+// MARK: - Reusable Premium Input Components
 
 struct PremiumInputField: View {
     let icon: String
@@ -343,22 +343,25 @@ struct PremiumInputField: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(isFocused ? Theme.royalBlue : .gray.opacity(0.8))
+                .foregroundColor(isFocused ? AppTheme.Brand.royalBlue : AppTheme.Text.tertiary.opacity(0.8))
                 .frame(width: 24)
 
             TextField(placeholder, text: $text)
                 .font(.system(.body, design: .rounded))
-                .foregroundColor(.black)
+                .foregroundColor(AppTheme.Text.primary)
                 .textInputAutocapitalization(.never)
                 .disableAutocorrection(true)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(isFocused ? Theme.royalBlue : Theme.glassBorder, lineWidth: isFocused ? 1.5 : 1)
+            RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous)
+                .stroke(
+                    isFocused ? AppTheme.Brand.royalBlue : AppTheme.Glass.border,
+                    lineWidth: isFocused ? 1.5 : 1
+                )
         )
         .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
@@ -374,21 +377,24 @@ struct PremiumSecureField: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(isFocused ? Theme.royalBlue : .gray.opacity(0.8))
+                .foregroundColor(isFocused ? AppTheme.Brand.royalBlue : AppTheme.Text.tertiary.opacity(0.8))
                 .frame(width: 24)
 
             SecureField(placeholder, text: $text)
                 .font(.system(.body, design: .rounded))
-                .foregroundColor(.black)
+                .foregroundColor(AppTheme.Text.primary)
                 .textInputAutocapitalization(.never)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(isFocused ? Theme.royalBlue : Theme.glassBorder, lineWidth: isFocused ? 1.5 : 1)
+            RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous)
+                .stroke(
+                    isFocused ? AppTheme.Brand.royalBlue : AppTheme.Glass.border,
+                    lineWidth: isFocused ? 1.5 : 1
+                )
         )
         .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
