@@ -9,6 +9,21 @@ import Foundation
 import Supabase
 internal import Combine
 
+// MARK: - Auth Errors
+enum AuthError: LocalizedError {
+    case roleMismatch(expected: DBUserRole, actual: DBUserRole)
+    case profileNotFound
+    
+    var errorDescription: String? {
+        switch self {
+        case .roleMismatch(let expected, let actual):
+            return "You selected \"\(expected.displayName)\" but your account is registered as \"\(actual.displayName)\". Please choose the correct role."
+        case .profileNotFound:
+            return "User profile could not be found in the database."
+        }
+    }
+}
+
 // MARK: - Supabase Manager
 /// A singleton manager to coordinate all Supabase authentication and database interactions.
 @MainActor
@@ -153,6 +168,55 @@ final class SupabaseManager: ObservableObject {
         }
     }
     
+    /// Signs in and validates that the user's DB role matches the expected role.
+    /// Automatically signs out and throws `AuthError.roleMismatch` on mismatch.
+    func signIn(email: String, passwordString: String, expectedRole: DBUserRole) async throws {
+        isLoading = true
+        authError = nil
+        defer { isLoading = false }
+        
+        do {
+            // Step 1: Authenticate with Supabase Auth
+            let response = try await client.auth.signIn(
+                email: email,
+                password: passwordString
+            )
+            
+            // Step 2: Fetch the user's profile from the DB
+            let userId = response.user.id
+            let dbUser: DBUser
+            do {
+                dbUser = try await client
+                    .from("users")
+                    .select()
+                    .eq("id", value: userId.uuidString)
+                    .single()
+                    .execute()
+                    .value
+            } catch {
+                // Profile not found — sign out and surface error
+                try? await client.auth.signOut()
+                self.currentUser = nil
+                throw AuthError.profileNotFound
+            }
+            
+            // Step 3: Verify the role matches the selected role
+            guard dbUser.role == expectedRole else {
+                // Wrong role — sign out immediately so session is not persisted
+                try? await client.auth.signOut()
+                self.currentUser = nil
+                throw AuthError.roleMismatch(expected: expectedRole, actual: dbUser.role)
+            }
+            
+            // Step 4: All good — persist the user
+            self.currentUser = dbUser
+            
+        } catch {
+            self.authError = error.localizedDescription
+            throw error
+        }
+    }
+    
     /// Signs out the current user session.
     func signOut() async throws {
         isLoading = true
@@ -234,6 +298,23 @@ enum DBUserRole: String, Codable {
     case fleetManager = "fleet_manager"
     case driver = "driver"
     case maintenance = "maintenance"
+    
+    var displayName: String {
+        switch self {
+        case .fleetManager: return "Fleet Manager"
+        case .driver: return "Driver"
+        case .maintenance: return "Maintenance Personnel"
+        }
+    }
+
+    /// Converts to the SwiftData `UserRole` used by local model views.
+    var asLocalRole: UserRole {
+        switch self {
+        case .fleetManager: return .fleetManager
+        case .driver: return .driver
+        case .maintenance: return .maintenance
+        }
+    }
 }
 
 struct DBUser: Codable, Identifiable {
@@ -244,7 +325,7 @@ struct DBUser: Codable, Identifiable {
     var phoneNumber: String?
     var profileImage: String?
     var createdAt: Date
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case name
@@ -253,6 +334,19 @@ struct DBUser: Codable, Identifiable {
         case phoneNumber = "phone_number"
         case profileImage = "profile_image"
         case createdAt = "created_at"
+    }
+
+    /// Bridges this Supabase DB user to the SwiftData `User` model
+    /// used by views such as `MaintenanceDashboardView`.
+    var asLocalUser: User {
+        User(
+            id: id,
+            fullName: name,
+            email: email,
+            phoneNumber: phoneNumber ?? "",
+            passwordHash: "",
+            role: role.asLocalRole
+        )
     }
 }
 

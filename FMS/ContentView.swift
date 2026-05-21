@@ -10,17 +10,26 @@ import SwiftUI
 @available(iOS 26.0, *)
 struct ContentView: View {
     @StateObject private var supabaseManager = SupabaseManager.shared
-    
+
     var body: some View {
         Group {
-            if supabaseManager.currentUser == nil {
-                AuthView()
+            if let user = supabaseManager.currentUser {
+                switch user.role {
+                case .fleetManager:
+                    DashboardView()
+                case .maintenance:
+                    // Bridge DBUser → the SwiftData User the MaintenanceDashboardView expects
+                    MaintenanceDashboardView(currentUser: user.asLocalUser)
+                case .driver:
+                    DriverPlaceholderView(user: user)
+                }
             } else {
-                DashboardView()
+                AuthView()
             }
         }
     }
 }
+
 
 @available(iOS 26.0, *)
 struct DashboardView: View {
@@ -129,4 +138,72 @@ struct DashboardView: View {
 @available(iOS 26.0, *)
 #Preview {
     ContentView()
+}
+
+// MARK: - Driver Placeholder Dashboard
+/// Shown when a Driver logs in. Replace with the full DriverDashboardView when ready.
+@available(iOS 26.0, *)
+struct DriverPlaceholderView: View {
+    let user: DBUser
+    @StateObject private var supabaseManager = SupabaseManager.shared
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                LinearGradient(
+                    colors: [Color(red: 0.08, green: 0.12, blue: 0.22), Color(red: 0.12, green: 0.20, blue: 0.36)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                VStack(spacing: 28) {
+                    Spacer()
+
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.08))
+                            .frame(width: 110, height: 110)
+                        Image(systemName: "steeringwheel")
+                            .font(.system(size: 48, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+
+                    VStack(spacing: 8) {
+                        Text("Welcome, \(user.name)")
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        Text("Driver Dashboard")
+                            .font(.system(.subheadline, design: .rounded))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+
+                    Text("Your full dashboard is coming soon.\nYou are securely logged in as a Driver.")
+                        .font(.system(.body, design: .rounded))
+                        .foregroundColor(.white.opacity(0.5))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+
+                    Spacer()
+
+                    Button {
+                        Task { try? await supabaseManager.signOut() }
+                    } label: {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text("Sign Out")
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 40)
+                        .padding(.vertical, 16)
+                        .background(Color.red.opacity(0.75))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .padding(.bottom, 48)
+                }
+            }
+            .navigationBarHidden(true)
+        }
+    }
 }
