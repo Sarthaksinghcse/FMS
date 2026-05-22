@@ -351,3 +351,7 @@ struct CustomAddTextField: View {
         }
     }
 }
+
+#Preview{
+    AddVehicleView()
+}
