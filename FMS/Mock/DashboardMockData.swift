@@ -11,8 +11,8 @@ struct DashboardMockData {
     static let stats: [DashboardStat] = [
         DashboardStat(
             icon: "car.fill",
-            iconColor: Color(red: 0.2, green: 0.5, blue: 1.0),
-            iconBgColor: Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.12),
+            iconColor: AppTheme.Brand.primary,
+            iconBgColor: AppTheme.IconBg.blue,
             value: "48",
             label: "Total Vehicles",
             trend: "↗ 8%",
@@ -21,8 +21,8 @@ struct DashboardMockData {
         ),
         DashboardStat(
             icon: "location.fill",
-            iconColor: Color(red: 0.15, green: 0.75, blue: 0.45),
-            iconBgColor: Color(red: 0.15, green: 0.75, blue: 0.45).opacity(0.12),
+            iconColor: AppTheme.Status.success,
+            iconBgColor: AppTheme.IconBg.green,
             value: "32",
             label: "Active Now",
             trend: "↗ 12%",
@@ -31,8 +31,8 @@ struct DashboardMockData {
         ),
         DashboardStat(
             icon: "person.2.fill",
-            iconColor: Color(red: 0.55, green: 0.35, blue: 0.95),
-            iconBgColor: Color(red: 0.55, green: 0.35, blue: 0.95).opacity(0.12),
+            iconColor: AppTheme.Brand.violet,
+            iconBgColor: AppTheme.IconBg.violet,
             value: "28",
             label: "Drivers Online",
             trend: "↗ 5%",
@@ -41,8 +41,8 @@ struct DashboardMockData {
         ),
         DashboardStat(
             icon: "arrow.up.arrow.down",
-            iconColor: Color(red: 0.05, green: 0.75, blue: 0.65),
-            iconBgColor: Color(red: 0.05, green: 0.75, blue: 0.65).opacity(0.12),
+            iconColor: AppTheme.Brand.teal,
+            iconBgColor: AppTheme.IconBg.teal,
             value: "15",
             label: "Live Trips",
             trend: "↘ 3%",
@@ -54,32 +54,32 @@ struct DashboardMockData {
     static let quickActions: [DashboardQuickAction] = [
         DashboardQuickAction(
             icon: "plus",
-            iconColor: Color(red: 0.2, green: 0.5, blue: 1.0),
-            bgColor: Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.12),
+            iconColor: AppTheme.Brand.primary,
+            bgColor: AppTheme.IconBg.blue,
             label: "Add Vehicle"
         ),
         DashboardQuickAction(
             icon: "person.badge.plus",
-            iconColor: Color(red: 0.55, green: 0.35, blue: 0.95),
-            bgColor: Color(red: 0.55, green: 0.35, blue: 0.95).opacity(0.12),
+            iconColor: AppTheme.Brand.violet,
+            bgColor: AppTheme.IconBg.violet,
             label: "Assign Driver"
         ),
         DashboardQuickAction(
             icon: "chart.bar.fill",
-            iconColor: Color(red: 0.05, green: 0.75, blue: 0.65),
-            bgColor: Color(red: 0.05, green: 0.75, blue: 0.65).opacity(0.12),
+            iconColor: AppTheme.Brand.teal,
+            bgColor: AppTheme.IconBg.teal,
             label: "Reports"
         ),
         DashboardQuickAction(
             icon: "exclamationmark.octagon.fill",
-            iconColor: Color(red: 0.95, green: 0.3, blue: 0.3),
-            bgColor: Color(red: 0.95, green: 0.3, blue: 0.3).opacity(0.1),
+            iconColor: AppTheme.Status.danger,
+            bgColor: AppTheme.IconBg.red,
             label: "Alerts"
         ),
         DashboardQuickAction(
             icon: "wrench.and.screwdriver.fill",
-            iconColor: Color(red: 1.0, green: 0.6, blue: 0.1),
-            bgColor: Color(red: 1.0, green: 0.6, blue: 0.1).opacity(0.12),
+            iconColor: AppTheme.Brand.amber,
+            bgColor: AppTheme.IconBg.amber,
             label: "Maintenance"
         )
     ]
@@ -90,40 +90,40 @@ struct DashboardMockData {
             subtitle: "Priyanshu N. → Nehru Place",
             time: "1 hr ago",
             icon: "arrow.turn.up.right",
-            iconColor: Color(red: 0.2, green: 0.5, blue: 1.0),
-            iconBgColor: Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.12)
+            iconColor: AppTheme.Brand.primary,
+            iconBgColor: AppTheme.IconBg.blue
         ),
         DashboardActivity(
             title: "Trip #1839 Completed",
             subtitle: "Amit K. delivered to Noida Sec 62",
             time: "1 hr ago",
             icon: "checkmark.seal.fill",
-            iconColor: Color(red: 0.15, green: 0.75, blue: 0.45),
-            iconBgColor: Color(red: 0.15, green: 0.75, blue: 0.45).opacity(0.12)
+            iconColor: AppTheme.Status.success,
+            iconBgColor: AppTheme.IconBg.green
         ),
         DashboardActivity(
             title: "Overspeeding Alert",
             subtitle: "Tata Intra V30 • 92 km/h",
             time: "2 hr ago",
             icon: "exclamationmark.triangle.fill",
-            iconColor: Color(red: 0.95, green: 0.3, blue: 0.3),
-            iconBgColor: Color(red: 0.95, green: 0.3, blue: 0.3).opacity(0.1)
+            iconColor: AppTheme.Status.danger,
+            iconBgColor: AppTheme.IconBg.red
         ),
         DashboardActivity(
             title: "Maintenance Scheduled",
             subtitle: "Force Traveller • Oil Change",
             time: "2 hr ago",
             icon: "wrench.fill",
-            iconColor: Color(red: 0.55, green: 0.35, blue: 0.95),
-            iconBgColor: Color(red: 0.55, green: 0.35, blue: 0.95).opacity(0.12)
+            iconColor: AppTheme.Brand.violet,
+            iconBgColor: AppTheme.IconBg.violet
         ),
         DashboardActivity(
             title: "Driver Shift Started",
             subtitle: "Deepak M. clocked in",
             time: "2 hr ago",
             icon: "person.badge.clock.fill",
-            iconColor: Color(red: 1.0, green: 0.6, blue: 0.1),
-            iconBgColor: Color(red: 1.0, green: 0.6, blue: 0.1).opacity(0.12)
+            iconColor: AppTheme.Brand.amber,
+            iconBgColor: AppTheme.IconBg.amber
         )
     ]
 }

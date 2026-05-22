@@ -16,7 +16,7 @@ struct ContentView: View {
             if let user = supabaseManager.currentUser {
                 switch user.role {
                 case .fleetManager:
-                    FleetDashboardView()
+                    FleetContentView()
                 case .maintenance:
                     // Bridge DBUser → the SwiftData User the MaintenanceDashboardView expects
                     MaintenanceDashboardView(currentUser: user.asLocalUser)
@@ -151,7 +151,7 @@ struct DriverPlaceholderView: View {
         NavigationStack {
             ZStack {
                 LinearGradient(
-                    colors: [Color(red: 0.08, green: 0.12, blue: 0.22), Color(red: 0.12, green: 0.20, blue: 0.36)],
+                    colors: [AppTheme.Background.driverStart, AppTheme.Background.driverEnd],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )

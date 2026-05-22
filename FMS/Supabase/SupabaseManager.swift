@@ -7,7 +7,7 @@
 
 import Foundation
 import Supabase
-internal import Combine
+import Combine
 
 // MARK: - Auth Errors
 enum AuthError: LocalizedError {
@@ -32,8 +32,8 @@ final class SupabaseManager: ObservableObject {
     
     // MARK: - Configuration
     // TODO: Replace these with your actual Supabase project credentials from Settings > API
-    private static let supabaseURL = URL(string: "https://bwhprdxqfpdaohvbadij.supabase.co")!
-    private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3aHByZHhxZnBkYW9odmJhZGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyOTU2NTEsImV4cCI6MjA5NDg3MTY1MX0.b57Ykm7u8roOA20uJlteTvOfyvJISaZIFavpJ5vYUMI"
+    private static let supabaseURL = URL(string: "https://trkurrtlyzfsssnptdsc.supabase.co")!
+    private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRya3VycnRseXpmc3NzbnB0ZHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTI0NTgsImV4cCI6MjA5NDkyODQ1OH0.380Es9QbO6ppO9bFUiFV3qmNKpgWzf3fzBKR9S9Ajuo"
     
     /// The underlying Supabase client instance.
     let client: SupabaseClient

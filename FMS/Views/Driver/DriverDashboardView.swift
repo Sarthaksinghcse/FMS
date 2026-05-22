@@ -9,7 +9,7 @@
 
 import SwiftUI
 import MapKit
-internal import Combine
+import Combine
 
 
 // MARK: - Design Tokens

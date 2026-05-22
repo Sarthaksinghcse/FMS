@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct DashboardStat: Identifiable {
-    let id = UUID()
+    var id: String { label }
     let icon: String
     let iconColor: Color
     let iconBgColor: Color

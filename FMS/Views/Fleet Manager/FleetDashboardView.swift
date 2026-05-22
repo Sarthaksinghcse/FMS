@@ -2,78 +2,109 @@
 //  FleetDashboardView.swift
 //  FMS
 //
-//  Created by Antigravity on 21/05/26.
-//
 
 import SwiftUI
+import SwiftData
+import MapKit
 
 struct FleetDashboardView: View {
-    @State private var selectedTab: Int = 0 // 0: Dashboard, 1: Tracking
+    @Environment(\.modelContext) private var modelContext
     
-    // Dynamic greeting and formatted date to match screenshot or update live
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 {
-            return "Good Morning, Manager"
-        } else if hour < 17 {
-            return "Good Afternoon, Manager"
-        } else {
-            return "Good Evening, Manager"
-        }
-    }
+    @Query private var vehicles: [Vehicle]
+    @Query private var allUsers: [User]
+    @Query private var trips: [Trip]
     
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, d MMMM yyyy"
-        return formatter.string(from: Date())
-    }
+    @State private var viewModel = FleetDashboardViewModel()
+    @State private var trackingViewModel = FleetTrackingViewModel()
+    
+    @State private var selectedTab = 0
+    @State private var cameraPos: MapCameraPosition = .region(MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020),
+        span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
+    ))
+    @State private var selectedVehicle: MappedVehicle?
     
     var body: some View {
+        TabView(selection: $selectedTab) {
+            dashboardTab
+                .tabItem {
+                    Label("Dashboard", systemImage: "square.grid.2x2.fill")
+                }
+                .tag(0)
+
+            trackingTab
+                .tabItem {
+                    Label("Tracking", systemImage: "location.fill")
+                }
+                .tag(1)
+
+            ManagementHubView()
+                .tabItem {
+                    Label("Manage", systemImage: "slider.horizontal.3")
+                }
+                .tag(2)
+        }
+        .accentColor(AppTheme.Brand.primary)
+    }
+
+    // MARK: - Dashboard Tab Content
+    private var dashboardTab: some View {
         NavigationStack {
             ZStack {
-                // Soft light gray/blue background matching screenshot
-                Color(red: 0.97, green: 0.98, blue: 1.0)
-                    .ignoresSafeArea()
-                
+                AppTheme.Background.page.ignoresSafeArea()
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
                         
-                        // Header Greeting & Date (Sits right below native Large Title)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(greetingText)
+                            Text(viewModel.getGreetingText())
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.black)
                             
-                            Text(formattedDate)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.secondary)
+//                            Text(viewModel.getFormattedDate())
+//                                .font(.system(size: 13, weight: .medium))
+//                                .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 4)
                         
-                        // 2x2 Analytics Cards Grid
                         LazyVGrid(
-                            columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                            columns: [GridItem(.flexible(), spacing: 12),
+                                      GridItem(.flexible(), spacing: 12)],
                             spacing: 12
                         ) {
-                            ForEach(DashboardMockData.stats) { stat in
+                            ForEach(viewModel.getDynamicStats(vehicles: vehicles, allUsers: allUsers, trips: trips)) { stat in
                                 DashboardStatCard(stat: stat)
                             }
                         }
                         .padding(.horizontal, 16)
                         
-                        // Quick Actions Section
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Quick Actions")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 16)
-                            
+
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(DashboardMockData.quickActions) { action in
                                         DashboardQuickActionCard(action: action) {
-                                            print("Tapped Action: \(action.label)")
+                                            let impact = UIImpactFeedbackGenerator(style: .medium)
+                                            impact.impactOccurred()
+                                            switch action.label {
+                                            case "Add Vehicle":
+                                                viewModel.activeQuickAction = .addVehicle
+                                            case "Assign Driver":
+                                                viewModel.activeQuickAction = .assignDriver
+                                            case "Reports":
+                                                viewModel.activeQuickAction = .reports
+                                            case "Alerts":
+                                                viewModel.activeQuickAction = .alerts
+                                            case "Maintenance":
+                                                viewModel.activeQuickAction = .maintenance
+                                            default:
+                                                break
+                                            }
                                         }
                                     }
                                 }
@@ -82,171 +113,337 @@ struct FleetDashboardView: View {
                             }
                         }
                         
-                        // Fleet Utilization Card
+                        let totalVehiclesCount = vehicles.count
+                        let activeVehiclesCount = vehicles.filter { $0.status == .active }.count
+                        let progress = viewModel.getFleetUtilizationProgress(vehicles: vehicles)
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             HStack(spacing: 16) {
-                                // Circular Progress Ring
-                                FleetCircularProgressView(progress: 0.67)
+                                FleetCircularProgressView(progress: progress)
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Fleet Utilization")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
                                     
-                                    Text("67%")
+                                    Text("\(Int(progress * 100))%")
                                         .font(.system(size: 24, weight: .bold))
                                         .foregroundColor(.black)
                                     
-                                    Text("32 of 48 vehicles active today")
+                                    Text("\(activeVehiclesCount) of \(totalVehiclesCount) vehicles active today")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
                                 }
                                 Spacer()
                             }
-                            .padding(18)
-                            .background(Color.white)
-                            .cornerRadius(18)
-                            .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
+                            Spacer()
                         }
+                        .padding(18)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(AppTheme.Radius.card)
+                        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                         .padding(.horizontal, 16)
                         
-                        // Recent Activity Section
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(alignment: .center, spacing: 8) {
                                 Text("Recent Activity")
                                     .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(.black)
                                 
-                                // Red notification count badge
                                 Text("3")
                                     .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(AppTheme.Text.onDark)
                                     .frame(width: 18, height: 18)
-                                    .background(Color(red: 0.95, green: 0.3, blue: 0.3))
+                                    .background(AppTheme.Status.danger)
                                     .clipShape(Circle())
-                                
+
                                 Spacer()
-                                
-                                Button("See All") {
-                                    print("See All pressed")
-                                }
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+
+                                Button("See All") { print("See All pressed") }
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(AppTheme.Brand.primary)
                             }
                             .padding(.horizontal, 16)
                             
-                            // Activity Container Card
                             VStack(spacing: 0) {
-                                ForEach(Array(DashboardMockData.activities.enumerated()), id: \.element.id) { index, activity in
+                                ForEach(
+                                    Array(DashboardMockData.activities.enumerated()),
+                                    id: \.element.id
+                                ) { index, activity in
                                     DashboardActivityRow(activity: activity)
                                     
-                                    // Custom padded divider between rows
                                     if index < DashboardMockData.activities.count - 1 {
-                                        Divider()
-                                            .padding(.leading, 60)
+                                        Divider().padding(.leading, 60)
                                     }
                                 }
                             }
-                            .background(Color.white)
-                            .cornerRadius(18)
-                            .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                             .padding(.horizontal, 16)
                         }
-                        
-                        // Extra bottom spacing to ensure content scrolls past the floating tab bar
                         Spacer()
-                            .frame(height: 100)
+                            .frame(height: 40)
                     }
                     .padding(.top, 8)
                 }
-                
-                // Floating Bottom Tab Bar Overlay
-                VStack {
-                    Spacer()
-                    DashboardBottomTabBar(selectedTab: $selectedTab)
-                        .padding(.bottom, 16)
-                }
-                .ignoresSafeArea(.keyboard, edges: .bottom)
             }
-            .navigationTitle("Fleet Dashboard")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("Dashboard")
+            .toolbarTitleDisplayMode(.inlineLarge)
+            .sheet(item: $viewModel.activeQuickAction) { action in
+                Group {
+                    switch action {
+                    case .addVehicle:
+                        AddVehicleView()
+                    case .assignDriver:
+                        AssignDriverView()
+                    case .reports:
+                        ReportsView()
+                    case .alerts:
+                        AlertsFeedView()
+                    case .maintenance:
+                        MaintenanceManagementView()
+                    }
+                }
+                .environment(\.modelContext, modelContext)
+            }
+            .task {
+                DatabaseSeeder.seedIfEmpty(context: modelContext)
+            }
             .toolbar {
-                // Toolbar Items: Notification bell and profile initials
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 10) {
-                        // Bell Button
                         Button(action: {
                             print("Notification tapped")
                         }) {
                             ZStack(alignment: .topTrailing) {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.white)
+                                        .fill(AppTheme.Background.card)
                                         .frame(width: 38, height: 38)
-                                        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
-                                    
+                                        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                                     Image(systemName: "bell.fill")
                                         .font(.system(size: 16))
-                                        .foregroundColor(Color.black.opacity(0.6))
+                                        .foregroundColor(AppTheme.Text.primary.opacity(0.6))
                                 }
                                 
-                                // Red notification dot
                                 Circle()
-                                    .fill(Color(red: 0.95, green: 0.3, blue: 0.3))
+                                    .fill(AppTheme.Status.danger)
                                     .frame(width: 8, height: 8)
                                     .offset(x: -2, y: 2)
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // Initials Profile Avatar
-                        Button(action: {
-                            print("Profile tapped")
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(red: 0.28, green: 0.35, blue: 0.92))
-                                    .frame(width: 38, height: 38)
-                                
-                                Text("FM")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                        ProfileMenuButton(
+                            initials: "FM",
+                            avatarColor: AppTheme.Brand.primaryDeep
+                        )
                     }
                     .padding(.trailing, 2)
                 }
             }
         }
     }
+
+    // MARK: - Tracking Tab Content
+    private var trackingTab: some View {
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                Map(position: $cameraPos) {
+                    ForEach(trackingViewModel.mappedVehicles) { vehicle in
+                        let markerColor: Color = vehicle.vehicle.status == .inUse ? .green : .gray
+                        Annotation(vehicle.vehicle.vehicleNumber, coordinate: vehicle.coordinate, anchor: .bottom) {
+                            ZStack {
+                                Circle()
+                                    .fill(markerColor.opacity(0.2))
+                                    .frame(width: 42, height: 42)
+                                Circle()
+                                    .fill(markerColor)
+                                    .frame(width: 28, height: 28)
+                                    .shadow(color: .black.opacity(0.15), radius: 4)
+                                Image(systemName: "truck.box.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.white)
+                            }
+                            .onTapGesture {
+                                selectedVehicle = vehicle
+                                withAnimation {
+                                    cameraPos = .region(MKCoordinateRegion(
+                                        center: vehicle.coordinate,
+                                        span: MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)
+                                    ))
+                                }
+                            }
+                        }
+                    }
+                }
+                .mapStyle(.standard(elevation: .realistic))
+                .ignoresSafeArea(edges: .top)
+
+                VStack(spacing: 0) {
+                    Capsule()
+                        .fill(Color(UIColor.systemGray4))
+                        .frame(width: 36, height: 5)
+                        .padding(.top, 8)
+                        .padding(.bottom, 12)
+
+                    Text("Active Fleet Tracking")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(trackingViewModel.mappedVehicles) { vehicle in
+                                let driverName = allUsers.first(where: { $0.id == vehicle.vehicle.assignedDriverId })?.fullName ?? "Unassigned"
+                                TrackingVehicleCard(
+                                    vehicle: vehicle,
+                                    driverName: driverName,
+                                    isSelected: selectedVehicle?.id == vehicle.id
+                                ) {
+                                    selectedVehicle = vehicle
+                                    withAnimation {
+                                        cameraPos = .region(MKCoordinateRegion(
+                                            center: vehicle.coordinate,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                                        ))
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color.white.opacity(0.95))
+                        .shadow(color: Color.black.opacity(0.08), radius: 10, y: -2)
+                )
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+            }
+            .navigationTitle("Live Tracking")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        withAnimation {
+                            cameraPos = .region(MKCoordinateRegion(
+                                center: CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020),
+                                span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
+                            ))
+                            selectedVehicle = nil
+                        }
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(AppTheme.Brand.primary)
+                    }
+                }
+            }
+            .task {
+                await trackingViewModel.loadVehicles()
+            }
+        }
+    }
 }
 
-// MARK: - Circular Progress View Helper
 struct FleetCircularProgressView: View {
     let progress: Double
-    
+
     var body: some View {
         ZStack {
-            // Background track
             Circle()
-                .stroke(Color(red: 0.9, green: 0.93, blue: 0.98), lineWidth: 6)
+                .stroke(AppTheme.Glass.ringTrack, lineWidth: 6)
             
-            // Progress arc
             Circle()
                 .trim(from: 0.0, to: CGFloat(min(progress, 1.0)))
                 .stroke(
-                    Color(red: 0.2, green: 0.5, blue: 1.0),
+                    AppTheme.Brand.primary,
                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .rotationEffect(Angle(degrees: -90))
             
-            // Inner percentage text
             Text("\(Int(progress * 100))%")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                .foregroundColor(AppTheme.Brand.primary)
         }
         .frame(width: 52, height: 52)
+    }
+}
+
+struct TrackingVehicleCard: View {
+    let vehicle: MappedVehicle
+    let driverName: String
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    private var statusText: String {
+        vehicle.vehicle.status == .inUse ? "Moving" : "Idle"
+    }
+
+    private var statusColor: Color {
+        vehicle.vehicle.status == .inUse ? .green : .gray
+    }
+
+    private var driverLabel: String {
+        driverName
+    }
+
+    private var speedLabel: String {
+        vehicle.vehicle.status == .inUse ? "45 km/h" : "0 km/h"
+    }
+
+    private var borderColor: Color {
+        isSelected ? AppTheme.Brand.primary : Color.clear
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(vehicle.vehicle.vehicleNumber)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                    Spacer()
+                    Text(statusText)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(statusColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(statusColor.opacity(0.1))
+                        .cornerRadius(4)
+                }
+
+                Text(vehicle.vehicle.model)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    Label(driverLabel, systemImage: "person.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(speedLabel)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.Brand.primary)
+                }
+            }
+            .padding(12)
+            .frame(width: 220)
+            .background(Color.white)
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(borderColor, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

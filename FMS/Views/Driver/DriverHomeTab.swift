@@ -75,16 +75,13 @@ private struct GreetingRow: View {
 
             Spacer()
 
-            // Avatar + status dot
+            // Profile avatar + status dot — tap to sign out
             ZStack(alignment: .bottomTrailing) {
-                ZStack {
-                    Circle()
-                        .fill(Color.fmsIndigo.opacity(0.10))
-                        .frame(width: 44, height: 44)
-                    Text(vm.driverFirstName.prefix(1))
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color.fmsIndigo)
-                }
+                ProfileMenuButton(
+                    initials: String(vm.driverFirstName.prefix(1)),
+                    avatarColor: Color.fmsIndigo,
+                    size: 44
+                )
                 Circle()
                     .fill(vm.driverStatus.dot)
                     .frame(width: 11, height: 11)
