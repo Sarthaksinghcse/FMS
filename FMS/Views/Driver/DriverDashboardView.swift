@@ -320,7 +320,7 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatSheet(messages: vm.messages) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
-        .sheet(item: $vm.mapActiveTrip) { trip in
+        .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
         }
         // ─── Confirmations ──────────────────────────────────────
@@ -491,10 +491,9 @@ struct ActionTile: View {
 
 struct VoiceLogSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var recording  = false
+    @State private var voiceLogger = VoiceTripLogger()
     @State private var elapsed    = 0
     @State private var timer: Timer?
-    @State private var transcript = ""
     @State private var saved      = false
 
     var body: some View {
@@ -512,35 +511,35 @@ struct VoiceLogSheet: View {
                         ForEach(0..<3, id: \.self) { i in
                             Circle()
                                 .stroke(
-                                    recording ? Color.red.opacity(0.12) : Color.clear,
+                                    voiceLogger.isRecording ? Color.red.opacity(0.12) : Color.clear,
                                     lineWidth: 1.5
                                 )
                                 .frame(
                                     width: CGFloat(100 + i * 36),
                                     height: CGFloat(100 + i * 36)
                                 )
-                                .scaleEffect(recording ? 1.0 : 0.85)
+                                .scaleEffect(voiceLogger.isRecording ? 1.0 : 0.85)
                                 .animation(
-                                    recording
+                                    voiceLogger.isRecording
                                     ? .easeInOut(duration: 1.4).repeatForever().delay(Double(i) * 0.28)
                                     : .default,
-                                    value: recording
+                                    value: voiceLogger.isRecording
                                 )
                         }
                         Button(action: toggleRec) {
                             ZStack {
                                 Circle()
                                     .fill(
-                                        recording
+                                        voiceLogger.isRecording
                                         ? AnyShapeStyle(Color.red.gradient)
                                         : AnyShapeStyle(Color.fmsIndigo.gradient)
                                     )
                                     .frame(width: 88, height: 88)
                                     .shadow(
-                                        color: (recording ? Color.red : Color.fmsIndigo).opacity(0.35),
+                                        color: (voiceLogger.isRecording ? Color.red : Color.fmsIndigo).opacity(0.35),
                                         radius: 20, y: 6
                                     )
-                                Image(systemName: recording ? "stop.fill" : "mic.fill")
+                                Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundStyle(.white)
                             }
@@ -550,16 +549,16 @@ struct VoiceLogSheet: View {
 
                     VStack(spacing: 8) {
                         Text(
-                            recording
+                            voiceLogger.isRecording
                             ? String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
                             : "Tap to Record"
                         )
                         .font(.system(size: 30, weight: .bold, design: .monospaced))
-                        .foregroundStyle(recording ? Color.red : Color.fmsIndigo)
+                        .foregroundStyle(voiceLogger.isRecording ? Color.red : Color.fmsIndigo)
                         .contentTransition(.numericText())
 
                         Text(
-                            recording
+                            voiceLogger.isRecording
                             ? "Listening…"
                             : "Voice-log your trip notes, delays, or ETA"
                         )
@@ -569,14 +568,41 @@ struct VoiceLogSheet: View {
                         .padding(.horizontal, 40)
                     }
 
-                    if !transcript.isEmpty {
+                    if let err = voiceLogger.errorMessage {
+                        Text(err)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.red)
+                            .padding(.horizontal, 40)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    if !voiceLogger.transcribedText.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("Transcript", systemImage: "text.quote")
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(Color.fmsIndigo)
-                            Text(transcript)
+                            Text(voiceLogger.transcribedText)
                                 .font(.system(size: 13))
                                 .foregroundStyle(.secondary)
+                            
+                            if let parsed = voiceLogger.parsedData {
+                                Divider().padding(.vertical, 4)
+                                Label("Extracted Entities", systemImage: "wand.and.stars")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppTheme.Brand.accent)
+                                
+                                HStack(alignment: .top, spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if let sl = parsed.startLocation { Text("From: \(sl)").font(.caption) }
+                                        if let el = parsed.endLocation   { Text("To: \(el)").font(.caption) }
+                                    }
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if let st = parsed.startTime { Text("Start: \(st)").font(.caption) }
+                                        if let et = parsed.endTime   { Text("End: \(et)").font(.caption) }
+                                        if let mi = parsed.mileage   { Text("Dist: \(String(format: "%.1f", mi))").font(.caption) }
+                                    }
+                                }
+                            }
                         }
                         .padding(16)
                         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
@@ -585,7 +611,7 @@ struct VoiceLogSheet: View {
 
                     Spacer()
 
-                    if !transcript.isEmpty {
+                    if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
                         Button { saved = true } label: {
                             Text("Save Log")
                                 .font(.system(size: 16, weight: .semibold))
@@ -618,13 +644,15 @@ struct VoiceLogSheet: View {
     }
 
     private func toggleRec() {
-        recording.toggle()
-        if recording {
+        if voiceLogger.isRecording {
+            voiceLogger.stopRecording()
+            timer?.invalidate(); timer = nil
+        } else {
             elapsed = 0
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in elapsed += 1 }
-        } else {
-            timer?.invalidate(); timer = nil
-            transcript = "Log at \(Date().formatted(.dateTime.hour().minute())). Departed on schedule. Minor traffic on NH-8 near Sector 14. ETA revised to 2:45 PM."
+            Task {
+                await voiceLogger.startRecording()
+            }
         }
     }
 }
