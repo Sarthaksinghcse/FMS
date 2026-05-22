@@ -2,18 +2,14 @@
 //  FleetTrackingView.swift
 //  FMS
 //
-//  Created by Priyanshu Namdev on 21/05/26.
-//
 
 import SwiftUI
 import MapKit
 
-@available(iOS 26.0, *)
 struct FleetTrackingView: View {
-    @StateObject private var viewModel = FleetTrackingViewModel()
+    @State private var viewModel = FleetTrackingViewModel()
     @State private var selectedVehicle: MappedVehicle?
     
-    // Initial camera position centered on the hub
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020),
@@ -24,14 +20,11 @@ struct FleetTrackingView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-                // 1. The Map
                 Map(position: $cameraPosition, selection: $selectedVehicle) {
-                    // Draw the Geofence
                     MapCircle(center: viewModel.hubCoordinate, radius: viewModel.geofenceRadius)
-                        .foregroundStyle(Color.blue.opacity(0.1))
-                        .stroke(Color.blue, lineWidth: 2)
+                        .foregroundStyle(AppTheme.Brand.primary.opacity(0.1))
+                        .stroke(AppTheme.Brand.primary, lineWidth: 2)
                     
-                    // Draw the Vehicles
                     ForEach(viewModel.mappedVehicles) { mappedVehicle in
                         Marker(
                             mappedVehicle.vehicle.vehicleNumber,
@@ -45,7 +38,6 @@ struct FleetTrackingView: View {
                 .mapStyle(.standard(elevation: .realistic))
                 .ignoresSafeArea()
                 
-                // 2. Loading / Error Overlays
                 if viewModel.isLoading {
                     VStack {
                         ProgressView("Loading vehicles...")
@@ -57,7 +49,7 @@ struct FleetTrackingView: View {
                 } else if let error = viewModel.errorMessage {
                     VStack {
                         Text(error)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.Status.danger)
                             .padding()
                             .background(.ultraThinMaterial)
                             .cornerRadius(12)
@@ -66,7 +58,6 @@ struct FleetTrackingView: View {
                     .padding(.top, 40)
                 }
                 
-                // 3. Selected Vehicle Detail Card
                 if let selected = selectedVehicle {
                     VehicleDetailCard(mappedVehicle: selected, onClose: {
                         selectedVehicle = nil
@@ -88,14 +79,11 @@ struct FleetTrackingView: View {
             .task {
                 await viewModel.loadVehicles()
             }
-            // Animate selection changes
             .animation(.easeInOut, value: selectedVehicle?.id)
         }
     }
 }
 
-// MARK: - Vehicle Detail Card
-@available(iOS 26.0, *)
 struct VehicleDetailCard: View {
     let mappedVehicle: MappedVehicle
     let onClose: () -> Void
@@ -117,7 +105,7 @@ struct VehicleDetailCard: View {
                 
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.gray)
+                        .foregroundColor(AppTheme.Text.secondary)
                         .font(.title3)
                 }
             }
@@ -150,15 +138,14 @@ struct VehicleDetailCard: View {
             }
         }
         .padding()
-        .background(Color(uiColor: .systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
         .padding(.horizontal)
         .padding(.bottom, 24)
     }
 }
 
-@available(iOS 26.0, *)
 #Preview {
     FleetTrackingView()
 }

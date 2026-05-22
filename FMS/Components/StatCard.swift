@@ -2,8 +2,6 @@
 //  StatCard.swift
 //  FMS
 //
-//  Created by Priyanshu Namdev on 21/05/26.
-//
 
 import SwiftUI
 
@@ -12,7 +10,6 @@ struct DashboardStatCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Icon Container (Top Left)
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(stat.iconBgColor)
@@ -26,12 +23,10 @@ struct DashboardStatCard: View {
             Spacer()
                 .frame(height: 2)
             
-            // Value (Large bold number)
             Text(stat.value)
                 .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
             
-            // Label (Small muted text)
             Text(stat.label)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
