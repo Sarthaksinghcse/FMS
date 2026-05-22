@@ -16,12 +16,12 @@ struct ContentView: View {
             if let user = supabaseManager.currentUser {
                 switch user.role {
                 case .fleetManager:
-                    FleetDashboardView()
+                    FleetContentView()
                 case .maintenance:
                     // Bridge DBUser → the SwiftData User the MaintenanceDashboardView expects
                     MaintenanceDashboardView(currentUser: user.asLocalUser)
                 case .driver:
-                    DriverPlaceholderView(user: user)
+                    DriverDashboardView()
                 }
             } else {
                 AuthView()

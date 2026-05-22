@@ -1,4 +1,61 @@
+# ─── macOS ────────────────────────────────────────────────────────────────────
 .DS_Store
-UserInterfaceState.xcuserstate
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+
+# ─── Xcode ────────────────────────────────────────────────────────────────────
+build/
+DerivedData/
+*.pbxuser
 *.xcuserstate
 xcuserdata/
+
+# Playground
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager cache
+.build/
+.swiftpm/
+
+# ─── CocoaPods (future-proof) ─────────────────────────────────────────────────
+Pods/
+Podfile.lock
+
+# ─── Carthage ─────────────────────────────────────────────────────────────────
+Carthage/Build/
+
+# ─── Secrets & environment ────────────────────────────────────────────────────
+.env
+.env.*
+Secrets.swift
+Config.xcconfig
+GoogleService-Info.plist
+secrets/
+
+# ─── Fastlane ─────────────────────────────────────────────────────────────────
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+# ─── Test results ─────────────────────────────────────────────────────────────
+*.xcresult
+TestResults/
+
+# ─── Archives & exports ───────────────────────────────────────────────────────
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.app
+
+# ─── Editor cruft ─────────────────────────────────────────────────────────────
+*.orig
+*.swp
+*~
+.idea/
+.vscode/

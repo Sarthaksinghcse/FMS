@@ -7,7 +7,31 @@
 
 import Foundation
 import Supabase
-internal import Combine
+import Combine
+
+// MARK: - InMemoryLocalStorage
+class InMemoryLocalStorage: AuthLocalStorage, @unchecked Sendable {
+    private var storage: [String: Data] = [:]
+    private let queue = DispatchQueue(label: "InMemoryLocalStorageQueue")
+    
+    func store(key: String, value: Data) throws {
+        queue.sync {
+            storage[key] = value
+        }
+    }
+    
+    func retrieve(key: String) throws -> Data? {
+        return queue.sync {
+            storage[key]
+        }
+    }
+    
+    func remove(key: String) throws {
+        queue.sync {
+            _ = storage.removeValue(forKey: key)
+        }
+    }
+}
 
 // MARK: - Auth Errors
 enum AuthError: LocalizedError {
@@ -105,7 +129,7 @@ final class SupabaseManager: ObservableObject {
             do {
                 try await client
                     .from("users")
-                    .insert(dbUser)
+                    .upsert(dbUser)
                     .execute()
             } catch {
                 print("Failed to insert user profile: \(error)")
@@ -151,7 +175,7 @@ final class SupabaseManager: ObservableObject {
             do {
                 try await client
                     .from("users")
-                    .insert(dbUser)
+                    .upsert(dbUser)
                     .execute()
             } catch {
                 print("Failed to insert user profile: \(error)")
@@ -202,7 +226,7 @@ final class SupabaseManager: ObservableObject {
             
             // Step 2: Fetch the user's profile from the DB
             let userId = response.user.id
-            let dbUser: DBUser
+            var dbUser: DBUser
             do {
                 dbUser = try await client
                     .from("users")
@@ -225,7 +249,31 @@ final class SupabaseManager: ObservableObject {
                 )
             }
             
-            // Step 3: Verify the role matches the selected role
+            // Step 3: Self-healing role sync
+            // Parse role from user metadata
+            var authMetadataRole: DBUserRole? = nil
+            let metadata = response.user.userMetadata
+            if let roleJSON = metadata["role"], case .string(let roleStr) = roleJSON {
+                authMetadataRole = DBUserRole(rawValue: roleStr)
+            }
+            
+            // If the metadata role matches the expected role but the database profile has a mismatch,
+            // we override the database profile role and update it in Supabase under the user's new session.
+            if dbUser.role != expectedRole, authMetadataRole == expectedRole {
+                print("Syncing database role \(dbUser.role.rawValue) to expected role \(expectedRole.rawValue) based on Auth metadata")
+                dbUser.role = expectedRole
+                do {
+                    try await client
+                        .from("users")
+                        .update(dbUser)
+                        .eq("id", value: userId.uuidString)
+                        .execute()
+                } catch {
+                    print("⚠️ Failed to sync database role: \(error.localizedDescription)")
+                }
+            }
+            
+            // Step 4: Verify the role matches the selected role
             guard dbUser.role == expectedRole else {
                 // Wrong role — sign out immediately so session is not persisted
                 try? await client.auth.signOut()
@@ -233,7 +281,7 @@ final class SupabaseManager: ObservableObject {
                 throw AuthError.roleMismatch(expected: expectedRole, actual: dbUser.role)
             }
             
-            // Step 4: All good — persist the user
+            // Step 5: All good — persist the user
             self.currentUser = dbUser
             
         } catch {
@@ -269,12 +317,31 @@ final class SupabaseManager: ObservableObject {
             self.currentUser = dbUser
         } catch {
             print("Error fetching user profile from database: \(error)")
-            // Fallback to a generic user so the session isn't immediately killed
+            
+            // Resolve role, name, and email from Auth userMetadata if possible to avoid role mismatch/conflict
+            var resolvedRole: DBUserRole = .fleetManager
+            var resolvedName: String = "Test User"
+            var resolvedEmail: String = "test@fms.com"
+            
+            if let user = client.auth.currentUser {
+                resolvedEmail = user.email ?? resolvedEmail
+                let metadata = user.userMetadata
+                if let nameJSON = metadata["name"], case .string(let nameStr) = nameJSON {
+                    resolvedName = nameStr
+                }
+                if let roleJSON = metadata["role"], case .string(let roleStr) = roleJSON {
+                    if let roleEnum = DBUserRole(rawValue: roleStr) {
+                        resolvedRole = roleEnum
+                    }
+                }
+            }
+            
+            // Fallback to a resolved user metadata or defaults so the session isn't immediately killed
             self.currentUser = DBUser(
                 id: userId,
-                name: "Test User",
-                email: "test@fms.com",
-                role: .fleetManager,
+                name: resolvedName,
+                email: resolvedEmail,
+                role: resolvedRole,
                 phoneNumber: nil,
                 profileImage: nil,
                 createdAt: Date()
@@ -325,158 +392,107 @@ final class SupabaseManager: ObservableObject {
             .insert(inspection)
             .execute()
     }
-}
-
-// MARK: - Codable Swift Database Models (Matching public schema in supabase_schema.sql)
-
-enum DBUserRole: String, Codable {
-    case fleetManager = "fleet_manager"
-    case driver = "driver"
-    case maintenance = "maintenance"
     
-    var displayName: String {
-        switch self {
-        case .fleetManager: return "Fleet Manager"
-        case .driver: return "Driver"
-        case .maintenance: return "Maintenance Personnel"
-        }
+    // MARK: - Driver CRUD
+    
+    /// Fetches all drivers from public.users.
+    func fetchDrivers() async throws -> [DBUser] {
+        return try await client
+            .from("users")
+            .select()
+            .eq("role", value: DBUserRole.driver.rawValue)
+            .execute()
+            .value
     }
-
-    /// Converts to the SwiftData `UserRole` used by local model views.
-    var asLocalRole: UserRole {
-        switch self {
-        case .fleetManager: return .fleetManager
-        case .driver: return .driver
-        case .maintenance: return .maintenance
-        }
-    }
-}
-
-struct DBUser: Codable, Identifiable {
-    let id: UUID
-    var name: String
-    let email: String
-    var role: DBUserRole
-    var phoneNumber: String?
-    var profileImage: String?
-    var createdAt: Date
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case email
-        case role
-        case phoneNumber = "phone_number"
-        case profileImage = "profile_image"
-        case createdAt = "created_at"
-    }
-
-    /// Bridges this Supabase DB user to the SwiftData `User` model
-    /// used by views such as `MaintenanceDashboardView`.
-    var asLocalUser: User {
-        User(
-            id: id,
-            fullName: name,
-            email: email,
-            phoneNumber: phoneNumber ?? "",
-            passwordHash: "",
-            role: role.asLocalRole
+    
+    /// Creates a new driver Auth account and profile record.
+    /// Returns the created DBUser containing the generated Auth UUID.
+    func createDriver(email: String, passwordString: String, fullName: String, phoneNumber: String, isActive: Bool) async throws -> DBUser {
+        // 1. Create a temporary client with in-memory storage so it doesn't affect manager session
+        let tempClient = SupabaseClient(
+            supabaseURL: Self.supabaseURL,
+            supabaseKey: Self.supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    storage: InMemoryLocalStorage(),
+                    emitLocalSessionAsInitialSession: false
+                )
+            )
         )
+        
+        // 2. Sign up user in Supabase Auth
+        let authResponse = try await tempClient.auth.signUp(
+            email: email,
+            password: passwordString,
+            data: [
+                "name": .string(fullName),
+                "role": .string(DBUserRole.driver.rawValue)
+            ]
+        )
+        
+        let authUserId = authResponse.user.id
+        
+        // 3. Create profile in public.users using the main client
+        let dbUser = DBUser(
+            id: authUserId,
+            name: fullName,
+            email: email,
+            role: .driver,
+            phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
+            profileImage: nil,
+            createdAt: Date()
+        )
+        
+        do {
+            try await client
+                .from("users")
+                .upsert(dbUser)
+                .execute()
+        } catch {
+            print("⚠️ Profile upsert failed (possibly auto-inserted by database trigger): \(error.localizedDescription)")
+            // Safe to ignore because our self-healing role sync during login will fix the profile record
+        }
+            
+        return dbUser
     }
-}
-
-enum DBVehicleStatus: String, Codable {
-    case available
-    case inUse = "in_use"
-    case maintenance
-    case inactive
-}
-
-struct DBVehicle: Codable, Identifiable {
-    let id: UUID
-    var vehicleNumber: String
-    var model: String
-    var manufacturer: String
-    var year: Int
-    var vin: String
-    var licensePlate: String
-    var status: DBVehicleStatus
-    var assignedDriverId: UUID?
-    var lastServiceDate: Date?
-    var createdAt: Date
     
-    enum CodingKeys: String, CodingKey {
-        case id
-        case vehicleNumber = "vehicle_number"
-        case model
-        case manufacturer
-        case year
-        case vin
-        case licensePlate = "license_plate"
-        case status
-        case assignedDriverId = "assigned_driver_id"
-        case lastServiceDate = "last_service_date"
-        case createdAt = "created_at"
+    /// Updates a driver profile record.
+    func updateDriver(_ driver: DBUser) async throws {
+        try await client
+            .from("users")
+            .update(driver)
+            .eq("id", value: driver.id.uuidString)
+            .execute()
     }
-}
-
-enum DBTripStatus: String, Codable {
-    case assigned
-    case started
-    case completed
-    case cancelled
-}
-
-struct DBTrip: Codable, Identifiable {
-    let id: UUID
-    var vehicleId: UUID
-    var driverId: UUID
-    var source: String
-    var destination: String
-    var startTime: Date?
-    var endTime: Date?
-    var distance: Double
-    var status: DBTripStatus
-    var notes: String?
-    var createdAt: Date
     
-    enum CodingKeys: String, CodingKey {
-        case id
-        case vehicleId = "vehicle_id"
-        case driverId = "driver_id"
-        case source
-        case destination
-        case startTime = "start_time"
-        case endTime = "end_time"
-        case distance
-        case status
-        case notes
-        case createdAt = "created_at"
+    /// Deletes a driver profile record.
+    func deleteDriver(id: UUID) async throws {
+        try await client
+            .from("users")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
     }
-}
-
-enum DBInspectionStatus: String, Codable {
-    case passed
-    case failed
-    case needsRepair = "needs_repair"
-}
-
-struct DBVehicleInspection: Codable, Identifiable {
-    let id: UUID
-    var vehicleId: UUID
-    var driverId: UUID
-    var checklist: [String]
-    var defects: String?
-    var inspectionDate: Date
-    var status: DBInspectionStatus
     
-    enum CodingKeys: String, CodingKey {
-        case id
-        case vehicleId = "vehicle_id"
-        case driverId = "driver_id"
-        case checklist
-        case defects
-        case inspectionDate = "inspection_date"
-        case status
+    // MARK: - Vehicle CRUD Extensions
+    
+    /// Updates a vehicle record.
+    func updateVehicle(_ vehicle: DBVehicle) async throws {
+        try await client
+            .from("vehicles")
+            .update(vehicle)
+            .eq("id", value: vehicle.id.uuidString)
+            .execute()
+    }
+    
+    /// Deletes a vehicle record.
+    func deleteVehicle(id: UUID) async throws {
+        try await client
+            .from("vehicles")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
     }
 }
+
+

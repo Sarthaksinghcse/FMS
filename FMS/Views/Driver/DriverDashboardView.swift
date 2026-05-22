@@ -9,16 +9,20 @@
 
 import SwiftUI
 import MapKit
-internal import Combine
+import Combine
 
 
-// MARK: - Design Tokens
+// MARK: - Design Tokens (mapped to AppTheme — single source of truth)
 
 extension Color {
-    static let fmsIndigo      = Color(red: 0.20, green: 0.20, blue: 0.60)
-    static let fmsIndigoLight = Color(red: 0.20, green: 0.20, blue: 0.60).opacity(0.10)
-    static let fmsCard        = Color(UIColor.secondarySystemBackground)
-    static let fmsBackground  = Color(UIColor.systemBackground)
+    /// Primary brand accent — maps to AppTheme.Brand.primaryDeep
+    static let fmsIndigo      = AppTheme.Brand.primaryDeep
+    /// Light tint of the brand accent
+    static let fmsIndigoLight = AppTheme.Brand.primaryDeep.opacity(0.10)
+    /// Card surface — white
+    static let fmsCard        = AppTheme.Background.card
+    /// Page background — soft blue-white
+    static let fmsBackground  = AppTheme.Background.page
 }
 
 // MARK: - Driver Status
@@ -28,9 +32,9 @@ enum DriverOnlineStatus: String, CaseIterable {
 
     var dot: Color {
         switch self {
-        case .active:      return Color(red: 0.2, green: 0.78, blue: 0.35)
-        case .idle:        return Color(red: 0.98, green: 0.78, blue: 0.10)
-        case .maintenance: return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case .active:      return AppTheme.Status.success
+        case .idle:        return AppTheme.Brand.amber
+        case .maintenance: return AppTheme.Brand.accent
         case .offline:     return Color(UIColor.systemGray3)
         }
     }
@@ -73,9 +77,9 @@ struct DashboardBanner: Identifiable {
 
     var tint: Color {
         switch kind {
-        case .info:    return .fmsIndigo
-        case .warning: return Color(red: 0.95, green: 0.50, blue: 0.15)
-        case .urgent:  return Color(red: 0.85, green: 0.15, blue: 0.15)
+        case .info:    return AppTheme.Brand.primaryDeep
+        case .warning: return AppTheme.Brand.accent
+        case .urgent:  return AppTheme.Status.danger
         }
     }
     var icon: String {
@@ -127,9 +131,9 @@ private actor DriverDashboardDataStore {
             DBVehicle(
                 id: vehicleId,
                 vehicleNumber: "TN-07-AB-1234",
-                model: "Transit",
-                manufacturer: "Ford",
-                year: 2024,
+                model: "Swift Dzire",
+                manufacturer: "Maruti Suzuki",
+                year: 2023,
                 vin: "FMSMOCKVIN000101",
                 licensePlate: "TN-07-AB-1234",
                 status: .inUse,
@@ -166,6 +170,7 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showPostTrip  = false
     @Published var showDefect    = false
     @Published var showMessaging = false
+    @Published var showProfile   = false
 
     @Published var confirmEnd    = false
     @Published var showMaps      = false
@@ -177,14 +182,24 @@ final class DriverDashboardViewModel: ObservableObject {
 
     init() { seedMock() }
 
+    // MARK: Driver Info
+    
+    var driverId: UUID {
+        SupabaseManager.shared.currentUser?.id ?? db.currentUser.id
+    }
+
+    var driverName: String {
+        SupabaseManager.shared.currentUser?.name ?? db.currentUser.name
+    }
+
     // MARK: Load
 
     func load() async {
         isLoading = true; defer { isLoading = false }
         do {
-            let trips    = try await db.fetchTrips()
-            let vehicles = try await db.fetchVehicles()
-            let uid = db.currentUser.id
+            let trips    = try await SupabaseManager.shared.fetchTrips()
+            let vehicles = try await SupabaseManager.shared.fetchVehicles()
+            let uid = driverId
             let mine = trips.filter { $0.driverId == uid }
             currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
             activeTrip    = currentTrip ?? activeTrip
@@ -193,7 +208,24 @@ final class DriverDashboardViewModel: ObservableObject {
             driverStatus  = isTripActive ? .active : .idle
             let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
             assignedVehicle = vehicles.first(where: { $0.id == vid })
-        } catch { /* keep mock */ }
+        } catch {
+            print("Failed to fetch live driver data, using local fallback/mock: \(error.localizedDescription)")
+            do {
+                let trips    = try await db.fetchTrips()
+                let vehicles = try await db.fetchVehicles()
+                let uid = db.currentUser.id
+                let mine = trips.filter { $0.driverId == uid }
+                currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
+                activeTrip    = currentTrip ?? activeTrip
+                upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
+                isTripActive  = currentTrip != nil
+                driverStatus  = isTripActive ? .active : .idle
+                let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
+                assignedVehicle = vehicles.first(where: { $0.id == vid })
+            } catch {
+                // keep mock
+            }
+        }
     }
 
     // MARK: Trip control
@@ -236,11 +268,14 @@ final class DriverDashboardViewModel: ObservableObject {
     }
 
     var driverFirstName: String {
-        db.currentUser.name.components(separatedBy: " ").first ?? "Driver"
+        driverName.components(separatedBy: " ").first ?? "Driver"
     }
 
     var totalKm: Double { upcomingTrips.reduce(0) { $0 + $1.distance } }
-    var assignedReg: String { assignedVehicle?.vehicleNumber ?? "TN-07-AB-1234" }
+    var assignedReg: String  { assignedVehicle?.vehicleNumber ?? "TN-07-AB-1234" }
+    var vehicleManufacturer: String { assignedVehicle?.manufacturer ?? "Maruti Suzuki" }
+    var vehicleModel: String        { assignedVehicle?.model       ?? "Swift Dzire" }
+    var vehicleYear: String         { assignedVehicle.map { String($0.year) } ?? "2023" }
 
     func fire(_ action: DashboardAction) {
         switch action {
@@ -311,7 +346,8 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showPostTrip)  { InspectionFormSheet(isPreTrip: false) }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatSheet(messages: vm.messages) }
-        .sheet(item: $vm.mapActiveTrip) { trip in
+        .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
+        .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
         }
         // ─── Confirmations ──────────────────────────────────────
@@ -340,13 +376,13 @@ struct FMSRouteRow: View {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.fmsIndigo.opacity(0.5), Color.green.opacity(0.5)],
+                            colors: [AppTheme.Brand.primaryDeep.opacity(0.5), AppTheme.Status.success.opacity(0.5)],
                             startPoint: .top, endPoint: .bottom
                         )
                     )
                     .frame(width: 2, height: 28)
                 Circle()
-                    .fill(Color(red: 0.2, green: 0.78, blue: 0.35))
+                    .fill(AppTheme.Status.success)
                     .frame(width: 9, height: 9)
             }
             VStack(alignment: .leading, spacing: 10) {
@@ -394,8 +430,8 @@ struct FMSMsgRow: View {
 
     private var roleColor: Color {
         switch msg.role {
-        case "Fleet Manager": return .fmsIndigo
-        case "Maintenance":   return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case "Fleet Manager": return AppTheme.Brand.primaryDeep
+        case "Maintenance":   return AppTheme.Brand.accent
         default:              return Color(UIColor.systemGray)
         }
     }
@@ -482,10 +518,9 @@ struct ActionTile: View {
 
 struct VoiceLogSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var recording  = false
+    @State private var voiceLogger = VoiceTripLogger()
     @State private var elapsed    = 0
     @State private var timer: Timer?
-    @State private var transcript = ""
     @State private var saved      = false
 
     var body: some View {
@@ -503,35 +538,35 @@ struct VoiceLogSheet: View {
                         ForEach(0..<3, id: \.self) { i in
                             Circle()
                                 .stroke(
-                                    recording ? Color.red.opacity(0.12) : Color.clear,
+                                    voiceLogger.isRecording ? Color.red.opacity(0.12) : Color.clear,
                                     lineWidth: 1.5
                                 )
                                 .frame(
                                     width: CGFloat(100 + i * 36),
                                     height: CGFloat(100 + i * 36)
                                 )
-                                .scaleEffect(recording ? 1.0 : 0.85)
+                                .scaleEffect(voiceLogger.isRecording ? 1.0 : 0.85)
                                 .animation(
-                                    recording
+                                    voiceLogger.isRecording
                                     ? .easeInOut(duration: 1.4).repeatForever().delay(Double(i) * 0.28)
                                     : .default,
-                                    value: recording
+                                    value: voiceLogger.isRecording
                                 )
                         }
                         Button(action: toggleRec) {
                             ZStack {
                                 Circle()
                                     .fill(
-                                        recording
+                                        voiceLogger.isRecording
                                         ? AnyShapeStyle(Color.red.gradient)
                                         : AnyShapeStyle(Color.fmsIndigo.gradient)
                                     )
                                     .frame(width: 88, height: 88)
                                     .shadow(
-                                        color: (recording ? Color.red : Color.fmsIndigo).opacity(0.35),
+                                        color: (voiceLogger.isRecording ? Color.red : Color.fmsIndigo).opacity(0.35),
                                         radius: 20, y: 6
                                     )
-                                Image(systemName: recording ? "stop.fill" : "mic.fill")
+                                Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundStyle(.white)
                             }
@@ -541,16 +576,16 @@ struct VoiceLogSheet: View {
 
                     VStack(spacing: 8) {
                         Text(
-                            recording
+                            voiceLogger.isRecording
                             ? String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
                             : "Tap to Record"
                         )
                         .font(.system(size: 30, weight: .bold, design: .monospaced))
-                        .foregroundStyle(recording ? Color.red : Color.fmsIndigo)
+                        .foregroundStyle(voiceLogger.isRecording ? Color.red : Color.fmsIndigo)
                         .contentTransition(.numericText())
 
                         Text(
-                            recording
+                            voiceLogger.isRecording
                             ? "Listening…"
                             : "Voice-log your trip notes, delays, or ETA"
                         )
@@ -560,14 +595,41 @@ struct VoiceLogSheet: View {
                         .padding(.horizontal, 40)
                     }
 
-                    if !transcript.isEmpty {
+                    if let err = voiceLogger.errorMessage {
+                        Text(err)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.red)
+                            .padding(.horizontal, 40)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    if !voiceLogger.transcribedText.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("Transcript", systemImage: "text.quote")
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(Color.fmsIndigo)
-                            Text(transcript)
+                            Text(voiceLogger.transcribedText)
                                 .font(.system(size: 13))
                                 .foregroundStyle(.secondary)
+                            
+                            if let parsed = voiceLogger.parsedData {
+                                Divider().padding(.vertical, 4)
+                                Label("Extracted Entities", systemImage: "wand.and.stars")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppTheme.Brand.accent)
+                                
+                                HStack(alignment: .top, spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if let sl = parsed.startLocation { Text("From: \(sl)").font(.caption) }
+                                        if let el = parsed.endLocation   { Text("To: \(el)").font(.caption) }
+                                    }
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if let st = parsed.startTime { Text("Start: \(st)").font(.caption) }
+                                        if let et = parsed.endTime   { Text("End: \(et)").font(.caption) }
+                                        if let mi = parsed.mileage   { Text("Dist: \(String(format: "%.1f", mi))").font(.caption) }
+                                    }
+                                }
+                            }
                         }
                         .padding(16)
                         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
@@ -576,7 +638,7 @@ struct VoiceLogSheet: View {
 
                     Spacer()
 
-                    if !transcript.isEmpty {
+                    if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
                         Button { saved = true } label: {
                             Text("Save Log")
                                 .font(.system(size: 16, weight: .semibold))
@@ -609,13 +671,15 @@ struct VoiceLogSheet: View {
     }
 
     private func toggleRec() {
-        recording.toggle()
-        if recording {
+        if voiceLogger.isRecording {
+            voiceLogger.stopRecording()
+            timer?.invalidate(); timer = nil
+        } else {
             elapsed = 0
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in elapsed += 1 }
-        } else {
-            timer?.invalidate(); timer = nil
-            transcript = "Log at \(Date().formatted(.dateTime.hour().minute())). Departed on schedule. Minor traffic on NH-8 near Sector 14. ETA revised to 2:45 PM."
+            Task {
+                await voiceLogger.startRecording()
+            }
         }
     }
 }
@@ -752,6 +816,8 @@ struct IssueReportSheet: View {
 struct InspectionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
+    /// Called when the user submits. `passed` = all items checked.
+    var onComplete: ((Bool) -> Void)? = nil
 
     struct CheckItem: Identifiable {
         let id    = UUID()
@@ -797,7 +863,7 @@ struct InspectionFormSheet: View {
                             Circle()
                                 .trim(from: 0, to: CGFloat(passCount) / CGFloat(items.count))
                                 .stroke(
-                                    allPass ? Color(red:0.2,green:0.78,blue:0.35) : Color.fmsIndigo,
+                                    allPass ? AppTheme.Status.success : Color.fmsIndigo,
                                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                                 )
                                 .rotationEffect(.degrees(-90))
@@ -820,7 +886,7 @@ struct InspectionFormSheet: View {
                             HStack(spacing: 14) {
                                 Image(systemName: item.icon)
                                     .font(.system(size: 16))
-                                    .foregroundStyle(item.passed ? Color(red:0.2,green:0.78,blue:0.35) : .secondary)
+                                    .foregroundStyle(item.passed ? AppTheme.Status.success : .secondary)
                                     .frame(width: 26)
                                 Text(item.label)
                                     .font(.system(size: 14))
@@ -845,9 +911,9 @@ struct InspectionFormSheet: View {
                     HStack {
                         Label("Defect Found", systemImage: "exclamationmark.triangle.fill")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(hasDefect ? Color(red:0.85,green:0.15,blue:0.15) : .secondary)
+                            .foregroundStyle(hasDefect ? AppTheme.Status.danger : .secondary)
                         Spacer()
-                        Toggle("", isOn: $hasDefect).tint(Color(red:0.85,green:0.15,blue:0.15))
+                        Toggle("", isOn: $hasDefect).tint(AppTheme.Status.danger)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
@@ -873,7 +939,7 @@ struct InspectionFormSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background((allPass ? Color(red:0.2,green:0.78,blue:0.35) : Color.fmsIndigo).gradient)
+                        .background((allPass ? AppTheme.Status.success : Color.fmsIndigo).gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }
@@ -888,11 +954,14 @@ struct InspectionFormSheet: View {
                 }
             }
             .alert(allPass ? "Inspection Passed" : "Inspection Submitted", isPresented: $submitted) {
-                Button("Done") { dismiss() }
+                Button("Done") {
+                    onComplete?(allPass)
+                    dismiss()
+                }
             } message: {
                 Text(allPass
                      ? "All items passed. You are cleared for departure."
-                     : "Recorded. Any issues have been flagged for maintenance.")
+                     : "Some items were not checked. Please resolve before starting the trip.")
             }
         }
     }
@@ -901,7 +970,8 @@ struct InspectionFormSheet: View {
     private func doSubmit() async {
         submitting = true
         try? await Task.sleep(nanoseconds: 1_000_000_000)
-        submitting = false; submitted = true
+        submitting = false
+        submitted = true
     }
 }
 
@@ -1004,7 +1074,7 @@ struct DefectReportSheet: View {
                             }
                         }
                         .frame(maxWidth: .infinity).frame(height: 52)
-                        .background(Color(red:0.85,green:0.15,blue:0.15).gradient)
+                        .background(AppTheme.Status.danger.gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                     .disabled(titleStr.isEmpty || desc.isEmpty)
