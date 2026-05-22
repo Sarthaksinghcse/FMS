@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 @available(iOS 26.0, *)
@@ -14,5 +15,17 @@ struct FMSApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [
+            User.self,
+            Vehicle.self,
+            Trip.self,
+            VehicleInspection.self,
+            DefectReport.self,
+            WorkOrder.self,
+            MaintenanceRecord.self,
+            SOSAlert.self,
+            AppNotification.self,
+            InventoryItem.self
+        ])
     }
 }
