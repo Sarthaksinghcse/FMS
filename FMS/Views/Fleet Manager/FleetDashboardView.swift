@@ -2,86 +2,19 @@
 //  FleetDashboardView.swift
 //  FMS
 //
-//  Created by Antigravity on 21/05/26.
-//
 
 import SwiftUI
-import MapKit
 import SwiftData
 
 struct FleetDashboardView: View {
-    /// 0 = Dashboard  |  1 = Tracking  |  2 = Manage
-    @State private var selectedTab: Int = 0
-
-    // MARK: - Greeting and Date Info
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "Good Morning, Manager" }
-        else if hour < 17 { return "Good Afternoon, Manager" }
-        else { return "Good Evening, Manager" }
-    }
-
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, d MMMM yyyy"
-        return formatter.string(from: Date())
-    }
-
-    // MARK: - Tracking State
-    @State private var selectedVehicle: TrackedVehicle? = nil
-    @State private var cameraPos = MapCameraPosition.region(MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090),
-        span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
-    ))
-
-    private struct TrackedVehicle: Identifiable {
-        let id = UUID()
-        let regNo: String
-        let model: String
-        let driver: String
-        let status: VehicleStatus
-        let speed: String
-        let coordinate: CLLocationCoordinate2D
-    }
-
-    private var trackedVehicles: [TrackedVehicle] {
-        [
-            TrackedVehicle(
-                regNo: "DL-01-A-1234",
-                model: "Tata Ace Gold",
-                driver: "Priyanshu N.",
-                status: .active,
-                speed: "45 km/h",
-                coordinate: CLLocationCoordinate2D(latitude: 28.6250, longitude: 77.2200)
-            ),
-            TrackedVehicle(
-                regNo: "DL-03-C-5678",
-                model: "Mahindra Supro",
-                driver: "Amit K.",
-                status: .active,
-                speed: "58 km/h",
-                coordinate: CLLocationCoordinate2D(latitude: 28.6010, longitude: 77.1890)
-            ),
-            TrackedVehicle(
-                regNo: "DL-04-Y-9012",
-                model: "Tata Ultra",
-                driver: "Rohan S.",
-                status: .inactive,
-                speed: "Stopped",
-                coordinate: CLLocationCoordinate2D(latitude: 28.6380, longitude: 77.2510)
-            ),
-            TrackedVehicle(
-                regNo: "DL-02-B-3456",
-                model: "Ashok Leyland",
-                driver: "Suresh P.",
-                status: .active,
-                speed: "62 km/h",
-                coordinate: CLLocationCoordinate2D(latitude: 28.5800, longitude: 77.2300)
-            )
-        ]
-    }
-
-    // MARK: - Main Body
+    @Environment(\.modelContext) private var modelContext
+    
+    @Query private var vehicles: [Vehicle]
+    @Query private var allUsers: [User]
+    @Query private var trips: [Trip]
+    
+    @State private var viewModel = FleetDashboardViewModel()
+    
     var body: some View {
         TabView(selection: $selectedTab) {
             dashboardTab
@@ -115,32 +48,30 @@ struct FleetDashboardView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
-
-                        // Greeting & Date
+                        
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(greetingText)
+                            Text(viewModel.getGreetingText())
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.black)
-                            Text(formattedDate)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.secondary)
+                            
+//                            Text(viewModel.getFormattedDate())
+//                                .font(.system(size: 13, weight: .medium))
+//                                .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 4)
-
-                        // 2×2 Analytics Cards
+                        
                         LazyVGrid(
                             columns: [GridItem(.flexible(), spacing: 12),
                                       GridItem(.flexible(), spacing: 12)],
                             spacing: 12
                         ) {
-                            ForEach(DashboardMockData.stats) { stat in
+                            ForEach(viewModel.getDynamicStats(vehicles: vehicles, allUsers: allUsers, trips: trips)) { stat in
                                 DashboardStatCard(stat: stat)
                             }
                         }
                         .padding(.horizontal, 16)
-
-                        // Quick Actions
+                        
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Quick Actions")
                                 .font(.system(size: 18, weight: .bold))
@@ -151,7 +82,22 @@ struct FleetDashboardView: View {
                                 HStack(spacing: 16) {
                                     ForEach(DashboardMockData.quickActions) { action in
                                         DashboardQuickActionCard(action: action) {
-                                            print("Tapped: \(action.label)")
+                                            let impact = UIImpactFeedbackGenerator(style: .medium)
+                                            impact.impactOccurred()
+                                            switch action.label {
+                                            case "Add Vehicle":
+                                                viewModel.activeQuickAction = .addVehicle
+                                            case "Assign Driver":
+                                                viewModel.activeQuickAction = .assignDriver
+                                            case "Reports":
+                                                viewModel.activeQuickAction = .reports
+                                            case "Alerts":
+                                                viewModel.activeQuickAction = .alerts
+                                            case "Maintenance":
+                                                viewModel.activeQuickAction = .maintenance
+                                            default:
+                                                break
+                                            }
                                         }
                                     }
                                 }
@@ -159,20 +105,29 @@ struct FleetDashboardView: View {
                                 .padding(.vertical, 4)
                             }
                         }
-
-                        // Fleet Utilization Card
-                        HStack(spacing: 16) {
-                            FleetCircularProgressView(progress: 0.67)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Fleet Utilization")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                Text("67%")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.black)
-                                Text("32 of 48 vehicles active today")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
+                        
+                        let totalVehiclesCount = vehicles.count
+                        let activeVehiclesCount = vehicles.filter { $0.status == .active }.count
+                        let progress = viewModel.getFleetUtilizationProgress(vehicles: vehicles)
+                        
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack(spacing: 16) {
+                                FleetCircularProgressView(progress: progress)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Fleet Utilization")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Text("\(Int(progress * 100))%")
+                                        .font(.system(size: 24, weight: .bold))
+                                        .foregroundColor(.black)
+                                    
+                                    Text("\(activeVehiclesCount) of \(totalVehiclesCount) vehicles active today")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
                             }
                             Spacer()
                         }
@@ -181,14 +136,13 @@ struct FleetDashboardView: View {
                         .cornerRadius(AppTheme.Radius.card)
                         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                         .padding(.horizontal, 16)
-
-                        // Recent Activity
+                        
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(alignment: .center, spacing: 8) {
                                 Text("Recent Activity")
                                     .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(.black)
-
+                                
                                 Text("3")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(AppTheme.Text.onDark)
@@ -203,13 +157,14 @@ struct FleetDashboardView: View {
                                     .foregroundColor(AppTheme.Brand.primary)
                             }
                             .padding(.horizontal, 16)
-
+                            
                             VStack(spacing: 0) {
                                 ForEach(
                                     Array(DashboardMockData.activities.enumerated()),
                                     id: \.element.id
                                 ) { index, activity in
                                     DashboardActivityRow(activity: activity)
+                                    
                                     if index < DashboardMockData.activities.count - 1 {
                                         Divider().padding(.leading, 60)
                                     }
@@ -220,19 +175,40 @@ struct FleetDashboardView: View {
                             .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                             .padding(.horizontal, 16)
                         }
-
-                        Spacer().frame(height: 32)
+                        Spacer()
+                            .frame(height: 40)
                     }
                     .padding(.top, 8)
-                } // ScrollView
-            } // ZStack
-            .navigationTitle("Fleet Dashboard")
-            .navigationBarTitleDisplayMode(.large)
+                }
+            }
+            .navigationTitle("Dashboard")
+            .toolbarTitleDisplayMode(.inlineLarge)
+            .sheet(item: $viewModel.activeQuickAction) { action in
+                Group {
+                    switch action {
+                    case .addVehicle:
+                        AddVehicleView()
+                    case .assignDriver:
+                        AssignDriverView()
+                    case .reports:
+                        ReportsView()
+                    case .alerts:
+                        AlertsFeedView()
+                    case .maintenance:
+                        MaintenanceManagementView()
+                    }
+                }
+                .environment(\.modelContext, modelContext)
+            }
+            .task {
+                DatabaseSeeder.seedIfEmpty(context: modelContext)
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 10) {
-                        // Notification Bell
-                        Button(action: { print("Notifications tapped") }) {
+                        Button(action: {
+                            print("Notification tapped")
+                        }) {
                             ZStack(alignment: .topTrailing) {
                                 ZStack {
                                     Circle()
@@ -243,6 +219,7 @@ struct FleetDashboardView: View {
                                         .font(.system(size: 16))
                                         .foregroundColor(AppTheme.Text.primary.opacity(0.6))
                                 }
+                                
                                 Circle()
                                     .fill(AppTheme.Status.danger)
                                     .frame(width: 8, height: 8)
@@ -250,8 +227,7 @@ struct FleetDashboardView: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
-
-                        // Profile avatar → Sign Out popover
+                        
                         ProfileMenuButton(
                             initials: "FM",
                             avatarColor: AppTheme.Brand.primaryDeep
@@ -403,18 +379,22 @@ struct FleetDashboardView: View {
     }
 }
 
-// MARK: - Circular Progress Ring
 struct FleetCircularProgressView: View {
     let progress: Double
 
     var body: some View {
         ZStack {
-            Circle().stroke(AppTheme.Glass.ringTrack, lineWidth: 6)
+            Circle()
+                .stroke(AppTheme.Glass.ringTrack, lineWidth: 6)
+            
             Circle()
                 .trim(from: 0.0, to: CGFloat(min(progress, 1.0)))
-                .stroke(AppTheme.Brand.primary,
-                        style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                .rotationEffect(.degrees(-90))
+                .stroke(
+                    AppTheme.Brand.primary,
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                )
+                .rotationEffect(Angle(degrees: -90))
+            
             Text("\(Int(progress * 100))%")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(AppTheme.Brand.primary)
