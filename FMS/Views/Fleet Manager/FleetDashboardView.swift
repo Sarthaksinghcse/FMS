@@ -250,16 +250,16 @@ struct FleetDashboardView: View {
     private var trackingTab: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-                // Map View
                 Map(position: $cameraPos) {
                     ForEach(trackingViewModel.mappedVehicles) { vehicle in
+                        let markerColor: Color = vehicle.vehicle.status == .inUse ? .green : .gray
                         Annotation(vehicle.vehicle.vehicleNumber, coordinate: vehicle.coordinate, anchor: .bottom) {
                             ZStack {
                                 Circle()
-                                    .fill((vehicle.vehicle.status == .inUse ? Color.green : Color.gray).opacity(0.2))
+                                    .fill(markerColor.opacity(0.2))
                                     .frame(width: 42, height: 42)
                                 Circle()
-                                    .fill(vehicle.vehicle.status == .inUse ? Color.green : Color.gray)
+                                    .fill(markerColor)
                                     .frame(width: 28, height: 28)
                                     .shadow(color: .black.opacity(0.15), radius: 4)
                                 Image(systemName: "truck.box.fill")
@@ -281,7 +281,6 @@ struct FleetDashboardView: View {
                 .mapStyle(.standard(elevation: .realistic))
                 .ignoresSafeArea(edges: .top)
 
-                // Bottom floating panel
                 VStack(spacing: 0) {
                     Capsule()
                         .fill(Color(UIColor.systemGray4))
@@ -299,7 +298,10 @@ struct FleetDashboardView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(trackingViewModel.mappedVehicles) { vehicle in
-                                Button {
+                                TrackingVehicleCard(
+                                    vehicle: vehicle,
+                                    isSelected: selectedVehicle?.id == vehicle.id
+                                ) {
                                     selectedVehicle = vehicle
                                     withAnimation {
                                         cameraPos = .region(MKCoordinateRegion(
@@ -307,54 +309,7 @@ struct FleetDashboardView: View {
                                             span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
                                         ))
                                     }
-                                } label: {
-                                    let isSelected = selectedVehicle?.id == vehicle.id
-                                    let borderColor: Color = isSelected ? AppTheme.Brand.primary : Color.clear
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack {
-                                            Text(vehicle.vehicle.vehicleNumber)
-                                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                                .foregroundColor(.black)
-                                            Spacer()
-                                            let statusText = vehicle.vehicle.status == .inUse ? "Moving" : "Idle"
-                                            let statusColor: Color = vehicle.vehicle.status == .inUse ? .green : .gray
-                                            Text(statusText)
-                                                .font(.system(size: 10, weight: .bold))
-                                                .foregroundColor(statusColor)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(statusColor.opacity(0.1))
-                                                .cornerRadius(4)
-                                        }
-
-                                        let modelName = vehicle.vehicle.model
-                                        let driverLabel = vehicle.vehicle.driverId ?? "Unassigned"
-                                        let speedLabel: String = vehicle.vehicle.status == .inUse ? "45 km/h" : "0 km/h"
-                                        Text(modelName)
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.secondary)
-
-                                        HStack {
-                                            Label(driverLabel, systemImage: "person.fill")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(.secondary)
-                                            Spacer()
-                                            Text(speedLabel)
-                                                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                                .foregroundColor(AppTheme.Brand.primary)
-                                        }
-                                    }
-                                    .padding(12)
-                                    .frame(width: 220)
-                                    .background(Color.white)
-                                    .cornerRadius(12)
-                                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(borderColor, lineWidth: 2)
-                                    )
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.horizontal, 16)
@@ -373,7 +328,7 @@ struct FleetDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
+                    Button {
                         withAnimation {
                             cameraPos = .region(MKCoordinateRegion(
                                 center: CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020),
@@ -381,7 +336,7 @@ struct FleetDashboardView: View {
                             ))
                             selectedVehicle = nil
                         }
-                    }) {
+                    } label: {
                         Image(systemName: "arrow.counterclockwise.circle.fill")
                             .font(.system(size: 20))
                             .foregroundColor(AppTheme.Brand.primary)
@@ -416,6 +371,76 @@ struct FleetCircularProgressView: View {
                 .foregroundColor(AppTheme.Brand.primary)
         }
         .frame(width: 52, height: 52)
+    }
+}
+
+struct TrackingVehicleCard: View {
+    let vehicle: MappedVehicle
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    private var statusText: String {
+        vehicle.vehicle.status == .inUse ? "Moving" : "Idle"
+    }
+
+    private var statusColor: Color {
+        vehicle.vehicle.status == .inUse ? .green : .gray
+    }
+
+    private var driverLabel: String {
+        vehicle.vehicle.driverId ?? "Unassigned"
+    }
+
+    private var speedLabel: String {
+        vehicle.vehicle.status == .inUse ? "45 km/h" : "0 km/h"
+    }
+
+    private var borderColor: Color {
+        isSelected ? AppTheme.Brand.primary : Color.clear
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(vehicle.vehicle.vehicleNumber)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                    Spacer()
+                    Text(statusText)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(statusColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(statusColor.opacity(0.1))
+                        .cornerRadius(4)
+                }
+
+                Text(vehicle.vehicle.model)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    Label(driverLabel, systemImage: "person.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(speedLabel)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.Brand.primary)
+                }
+            }
+            .padding(12)
+            .frame(width: 220)
+            .background(Color.white)
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(borderColor, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
