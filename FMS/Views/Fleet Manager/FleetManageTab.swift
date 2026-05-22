@@ -49,7 +49,7 @@ struct ManagementHubView: View {
 
     @State private var appearAnimation = false
     @State private var cardAnimations: [Bool] = [false, false, false]
-    @State private var selectedDestination: ManagementDestination?
+    @State private var path: [ManagementDestination] = []
 
     @Environment(\.modelContext) private var modelContext
 
@@ -117,7 +117,7 @@ struct ManagementHubView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
 
@@ -132,7 +132,7 @@ struct ManagementHubView: View {
             }
             .navigationTitle("Manage")
             .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(item: $selectedDestination) { destination in
+            .navigationDestination(for: ManagementDestination.self) { destination in
                 destinationView(for: destination)
             }
             .onAppear {
@@ -154,7 +154,7 @@ struct ManagementHubView: View {
                 let index = managementCards.firstIndex(where: { $0.id == card.id }) ?? 0
                 ManagementCardView(card: card) {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    selectedDestination = card.destination
+                    path.append(card.destination)
                 }
                 .opacity(cardAnimations.indices.contains(index) && cardAnimations[index] ? 1 : 0)
                 .offset(y: cardAnimations.indices.contains(index) && cardAnimations[index] ? 0 : 30)
@@ -1238,7 +1238,8 @@ struct TripListView: View {
     }
 
     var body: some View {
-        ZStack {
+        NavigationStack {
+            ZStack {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChips.padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 8)
@@ -1281,6 +1282,7 @@ struct TripListView: View {
             Task {
                 await syncTrips()
             }
+        }
         }
     }
 
