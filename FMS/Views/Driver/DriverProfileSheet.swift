@@ -16,6 +16,9 @@ struct DriverProfileSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
 
+    @StateObject private var supabase = SupabaseManager.shared
+    @State private var showSignOutConfirm = false
+
     // Mock performance stats (replace with real data from backend)
     private let totalTrips    = 142
     private let totalKmDriven = 4_820.0
@@ -118,7 +121,7 @@ struct DriverProfileSheet: View {
 
                     // ── Sign out ───────────────────────────────────────────
                     Button {
-                        dismiss()
+                        showSignOutConfirm = true
                     } label: {
                         Text("Sign Out")
                             .font(.system(size: 16, weight: .semibold))
@@ -146,6 +149,14 @@ struct DriverProfileSheet: View {
                             .symbolRenderingMode(.hierarchical)
                     }
                 }
+            }
+            .alert("Sign Out", isPresented: $showSignOutConfirm) {
+                Button("Sign Out", role: .destructive) {
+                    Task { try? await supabase.signOut() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to sign out of your Driver account?")
             }
         }
     }

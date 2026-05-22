@@ -64,9 +64,6 @@ struct AddDriverFormView: View {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
-                        // ── Save Button ────────────────────────────────────
-                        saveButton
-
                         Spacer().frame(height: 40)
                     }
                     .padding(.horizontal, 20)
@@ -78,11 +75,14 @@ struct AddDriverFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(Color.red)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        saveDriver()
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
+                    .disabled(isSaving)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -121,12 +121,12 @@ struct AddDriverFormView: View {
             .frame(height: 54)
             .background(
                 LinearGradient(
-                    colors: [Color(red: 0.30, green: 0.70, blue: 0.46), Color(red: 0.25, green: 0.60, blue: 0.40)],
+                    colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.primaryDeep],
                     startPoint: .leading, endPoint: .trailing
                 )
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color(red: 0.30, green: 0.70, blue: 0.46).opacity(0.35), radius: 12, x: 0, y: 6)
+            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
         .disabled(isSaving)
     }
@@ -299,9 +299,6 @@ struct EditDriverFormView: View {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
-                        // ── Save ───────────────────────────────────────────
-                        saveButton
-
                         // ── Delete ─────────────────────────────────────────
                         deleteButton
 
@@ -316,11 +313,14 @@ struct EditDriverFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(Color.red)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        saveChanges()
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
+                    .disabled(isSaving || isDeleting)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -391,11 +391,11 @@ struct EditDriverFormView: View {
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
             .background(LinearGradient(
-                colors: [Color(red: 0.30, green: 0.70, blue: 0.46), Color(red: 0.25, green: 0.60, blue: 0.40)],
+                colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.primaryDeep],
                 startPoint: .leading, endPoint: .trailing
             ))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color(red: 0.30, green: 0.70, blue: 0.46).opacity(0.35), radius: 12, x: 0, y: 6)
+            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
         .disabled(isSaving || isDeleting)
     }

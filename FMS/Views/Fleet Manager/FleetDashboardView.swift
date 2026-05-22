@@ -23,6 +23,7 @@ struct FleetDashboardView: View {
         span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
     ))
     @State private var selectedVehicle: MappedVehicle?
+    @State private var showProfile = false
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -38,11 +39,19 @@ struct FleetDashboardView: View {
                 }
                 .tag(1)
 
+            NavigationStack {
+                TripListView()
+            }
+            .tabItem {
+                Label("Trips", systemImage: "map.fill")
+            }
+            .tag(2)
+
             ManagementHubView()
                 .tabItem {
                     Label("Manage", systemImage: "slider.horizontal.3")
                 }
-                .tag(2)
+                .tag(3)
         }
         .accentColor(AppTheme.Brand.primary)
     }
@@ -81,32 +90,30 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 16)
 
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                    ForEach(DashboardMockData.quickActions) { action in
-                                        DashboardQuickActionCard(action: action) {
-                                            let impact = UIImpactFeedbackGenerator(style: .medium)
-                                            impact.impactOccurred()
-                                            switch action.label {
-                                            case "Add Vehicle":
-                                                viewModel.activeQuickAction = .addVehicle
-                                            case "Assign Driver":
-                                                viewModel.activeQuickAction = .assignDriver
-                                            case "Reports":
-                                                viewModel.activeQuickAction = .reports
-                                            case "Alerts":
-                                                viewModel.activeQuickAction = .alerts
-                                            case "Maintenance":
-                                                viewModel.activeQuickAction = .maintenance
-                                            default:
-                                                break
-                                            }
+                            HStack(spacing: 10) {
+                                ForEach(DashboardMockData.quickActions) { action in
+                                    DashboardQuickActionCard(action: action) {
+                                        let impact = UIImpactFeedbackGenerator(style: .medium)
+                                        impact.impactOccurred()
+                                        switch action.label {
+                                        case "Add Vehicle":
+                                            viewModel.activeQuickAction = .addVehicle
+                                        case "Assign Driver":
+                                            viewModel.activeQuickAction = .assignDriver
+                                        case "Reports":
+                                            viewModel.activeQuickAction = .reports
+                                        case "Alerts":
+                                            viewModel.activeQuickAction = .alerts
+                                        case "Maintenance":
+                                            viewModel.activeQuickAction = .maintenance
+                                        default:
+                                            break
                                         }
                                     }
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 4)
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 4)
                         }
                         
                         let totalVehiclesCount = vehicles.count
@@ -192,7 +199,7 @@ struct FleetDashboardView: View {
                     case .addVehicle:
                         AddVehicleFormView()
                     case .assignDriver:
-                        AssignDriverView()
+                        AddTripFormView()
                     case .reports:
                         ReportsView()
                     case .alerts:
@@ -203,40 +210,45 @@ struct FleetDashboardView: View {
                 }
                 .environment(\.modelContext, modelContext)
             }
+            .sheet(isPresented: $showProfile) {
+                FleetManagerProfileView()
+                    .environment(\.modelContext, modelContext)
+            }
             .task {
                 DatabaseSeeder.seedIfEmpty(context: modelContext)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 10) {
-                        Button(action: {
-                            print("Notification tapped")
-                        }) {
-                            ZStack(alignment: .topTrailing) {
-                                ZStack {
-                                    Circle()
-                                        .fill(AppTheme.Background.card)
-                                        .frame(width: 38, height: 38)
-                                        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
-                                    Image(systemName: "bell.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(AppTheme.Text.primary.opacity(0.6))
-                                }
-                                
+                    Button(action: {
+                        print("Notification tapped")
+                    }) {
+                        ZStack(alignment: .topTrailing) {
+                            ZStack {
                                 Circle()
-                                    .fill(AppTheme.Status.danger)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: -2, y: 2)
+                                    .fill(AppTheme.Background.card)
+                                    .frame(width: 38, height: 38)
+                                    .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                                Image(systemName: "bell.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(AppTheme.Text.primary.opacity(0.6))
                             }
+                            
+                            Circle()
+                                .fill(AppTheme.Status.danger)
+                                .frame(width: 8, height: 8)
+                                .offset(x: -2, y: 2)
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        ProfileMenuButton(
-                            initials: "FM",
-                            avatarColor: AppTheme.Brand.primaryDeep
-                        )
                     }
-                    .padding(.trailing, 2)
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ProfileMenuButton(
+                        initials: "FM",
+                        avatarColor: AppTheme.Brand.primaryDeep
+                    ) {
+                        showProfile = true
+                    }
                 }
             }
         }
