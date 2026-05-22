@@ -2,7 +2,7 @@
 //  QuickActionCard.swift
 //  FMS
 //
-//  Created by Antigravity on 21/05/26.
+//  Created by Priyanshu Namdev on 21/05/26.
 //
 
 import SwiftUI

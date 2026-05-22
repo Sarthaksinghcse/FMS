@@ -109,6 +109,8 @@ struct AddVehicleFormView: View {
                     Button("Cancel") { dismiss() }
                         .foregroundColor(AppTheme.Brand.royalBlue)
                 }
+            }
+            .toolbar {
                 ToolbarItem(placement: .keyboard) {
                     Button("Done") { focusedField = nil }
                         .foregroundColor(AppTheme.Brand.royalBlue)
@@ -315,6 +317,8 @@ struct EditVehicleFormView: View {
                     Button("Cancel") { dismiss() }
                         .foregroundColor(AppTheme.Brand.royalBlue)
                 }
+            }
+            .toolbar {
                 ToolbarItem(placement: .keyboard) {
                     Button("Done") { focusedField = nil }
                         .foregroundColor(AppTheme.Brand.royalBlue)
