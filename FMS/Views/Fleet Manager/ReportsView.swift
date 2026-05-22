@@ -113,8 +113,8 @@ struct ReportsView: View {
                                 value: "\(totalTripsCount)",
                                 subtitle: selectedPeriod,
                                 icon: "map.fill",
-                                color: Color(red: 0.58, green: 0.39, blue: 0.87),
-                                bgColor: Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.12)
+                                color: AppTheme.Brand.primaryDeep,
+                                bgColor: AppTheme.IconBg.indigo
                             )
                             
                             ReportKpiCard(

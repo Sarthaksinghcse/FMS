@@ -13,26 +13,27 @@ struct DashboardQuickActionCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 // Rounded square pastel icon container
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 18)
                         .fill(action.bgColor)
-                        .frame(width: 56, height: 56)
+                        .frame(width: 64, height: 64)
                     
                     Image(systemName: action.icon)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 24, weight: .semibold))
                         .foregroundColor(action.iconColor)
                 }
                 
                 // Label Text below
                 Text(action.label)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color.black.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .frame(width: 70) // Fixed width to ensure even spacing and wrapped text alignment
+                    .minimumScaleFactor(0.85)
             }
+            .frame(maxWidth: .infinity)
         }
         .buttonStyle(PlainButtonStyle())
     }

@@ -139,11 +139,11 @@ enum TripStatus: String, Codable {
     }
     var badgeColor: Color {
         switch self {
-        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90)
-        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inProgress: return AppTheme.Brand.accent
-        case .completed:  return Color.gray
-        case .cancelled:  return Color.red
+        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90) // Royal Blue (Upcoming)
+        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46) // Fresh Green (Active)
+        case .inProgress: return Color(red: 0.30, green: 0.70, blue: 0.46) // Fresh Green (Active)
+        case .completed:  return Color(red: 0.55, green: 0.58, blue: 0.62) // Slate-Silver (Completed success)
+        case .cancelled:  return Color(red: 0.85, green: 0.25, blue: 0.25) // Soft Red
         }
     }
     var badgeIcon: String {
@@ -231,7 +231,7 @@ enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     }
     var chipColor: Color {
         switch self {
-        case .all:           return AppTheme.Brand.royalBlue
+        case .all:           return AppTheme.Brand.accent
         case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
         case .inactive:      return AppTheme.Brand.accent
         case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
@@ -500,6 +500,73 @@ extension Vehicle {
             status: status.toDBStatus,
             assignedDriverId: assignedDriverId,
             lastServiceDate: lastServiceDate,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension Trip {
+    var asDBTrip: DBTrip {
+        DBTrip(
+            id: id,
+            vehicleId: vehicleId,
+            driverId: driverId,
+            source: startLocation,
+            destination: endLocation,
+            startTime: scheduledStartTime,
+            endTime: scheduledEndTime,
+            distance: distanceKm,
+            status: tripStatus.toDBStatus,
+            notes: notes,
+            createdAt: createdAt
+        )
+    }
+}
+
+// MARK: - Trip Mapping Extensions
+extension TripStatus {
+    var toDBStatus: DBTripStatus {
+        switch self {
+        case .assigned: return .assigned
+        case .started, .inProgress: return .started
+        case .completed: return .completed
+        case .cancelled: return .cancelled
+        }
+    }
+}
+
+extension DBTripStatus {
+    var toLocalStatus: TripStatus {
+        switch self {
+        case .assigned: return .assigned
+        case .started: return .started
+        case .completed: return .completed
+        case .cancelled: return .cancelled
+        }
+    }
+}
+
+extension DBTrip {
+    var asLocalTrip: Trip {
+        Trip(
+            id: id,
+            tripCode: "TRP-\(id.uuidString.prefix(4).uppercased())",
+            vehicleId: vehicleId,
+            driverId: driverId,
+            startLocation: source,
+            endLocation: destination,
+            startLatitude: 37.7749,
+            startLongitude: -122.4194,
+            endLatitude: 37.3382,
+            endLongitude: -121.8863,
+            scheduledStartTime: startTime ?? Date(),
+            scheduledEndTime: endTime ?? Date().addingTimeInterval(7200),
+            actualStartTime: startTime,
+            actualEndTime: endTime,
+            distanceKm: distance,
+            fuelConsumed: nil,
+            tripStatus: status.toLocalStatus,
+            notes: notes,
             createdAt: createdAt
         )
     }
