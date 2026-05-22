@@ -385,6 +385,13 @@ struct TripNavigationView: View {
     @State private var geocoding = true
     @State private var cameraPos = MapCameraPosition.automatic
 
+    // Pre-trip gate
+    @State private var showPreTripNav = false
+    @State private var preTripPassed  = false
+
+    // Already active trip doesn't need pre-trip again
+    private var isActiveTrip: Bool { vm.isTripActive && vm.activeTrip?.id == trip.id }
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
@@ -437,7 +444,7 @@ struct TripNavigationView: View {
                     // Destination info
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Navigating to")
+                            Text(isActiveTrip ? "Navigating to" : "Planned route to")
                                 .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                             Text(trip.destination)
@@ -476,9 +483,9 @@ struct TripNavigationView: View {
 
                     Divider().padding(.horizontal, 20).padding(.top, 4)
 
-                    // Action row
-                    if vm.isTripActive && vm.activeTrip?.id == trip.id {
-                        // All 4 in-trip actions
+                    // ── Action row ─────────────────────────────────────────
+                    if isActiveTrip {
+                        // ── In-trip: 4 live actions ───────────────────────
                         HStack(spacing: 10) {
                             MapActionButton(label: "Voice Log",    icon: "mic.fill",                   style: .glass)     { vm.showVoiceLog = true }
                             MapActionButton(label: "Report",       icon: "exclamationmark.bubble.fill", style: .warning)   { vm.showIssue    = true }
@@ -492,24 +499,62 @@ struct TripNavigationView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 20)
                     } else {
-                        // Pre-trip actions and Start Now
+                        // ── Pre-start: inspection gate + Start Now ────────
                         VStack(spacing: 14) {
+
+                            // Quick action buttons row
                             HStack(spacing: 10) {
-                                MapActionButton(label: "Pre-Trip", icon: "checklist", style: .glass) { vm.showPreTrip = true }
-                                MapActionButton(label: "Defect", icon: "wrench.and.screwdriver.fill", style: .warning) { vm.showDefect = true }
-                                MapActionButton(label: "Voice Log", icon: "mic.fill", style: .glass) { vm.showVoiceLog = true }
+                                // Pre-Trip — shows green tick when passed
+                                MapActionButton(
+                                    label: preTripPassed ? "Passed ✓" : "Pre-Trip",
+                                    icon:  preTripPassed ? "checkmark.seal.fill" : "checklist",
+                                    style: preTripPassed ? .primary : .glass
+                                ) { showPreTripNav = true }
+
+                                MapActionButton(label: "Defect",    icon: "wrench.and.screwdriver.fill", style: .warning) { vm.showDefect   = true }
+                                MapActionButton(label: "Voice Log", icon: "mic.fill",                   style: .glass)   { vm.showVoiceLog = true }
                             }
-                            
+
+                            // Inspection warning banner (shown until passed)
+                            if !preTripPassed {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color(red: 0.95, green: 0.50, blue: 0.15))
+                                    Text("Complete Pre-Trip Inspection before starting")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 14).padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color(red: 0.95, green: 0.50, blue: 0.15).opacity(0.10))
+                                )
+                            }
+
+                            // Start Now — locked until inspection passes
                             Button {
+                                guard preTripPassed else { showPreTripNav = true; return }
                                 vm.beginTrip(trip: trip)
                             } label: {
-                                Text("Start Now")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 54)
-                                    .background(Color.fmsIndigo.gradient)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                HStack(spacing: 8) {
+                                    if !preTripPassed {
+                                        Image(systemName: "lock.fill")
+                                            .font(.system(size: 15, weight: .bold))
+                                    }
+                                    Text(preTripPassed ? "Start Now" : "Complete Inspection to Start")
+                                        .font(.system(size: 17, weight: .bold))
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 54)
+                                .background(
+                                    preTripPassed
+                                        ? AnyShapeStyle(Color.fmsIndigo.gradient)
+                                        : AnyShapeStyle(Color(UIColor.systemGray3).gradient)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
                             }
                         }
                         .padding(.horizontal, 20)
@@ -539,9 +584,24 @@ struct TripNavigationView: View {
                         .glassEffect(.regular, in: Capsule())
                 }
             }
+            // ── Pre-Trip sheet (auto-opened + can re-open via button) ────
+            .sheet(isPresented: $showPreTripNav) {
+                InspectionFormSheet(isPreTrip: true) { passed in
+                    preTripPassed = passed
+                }
+            }
         }
         .task { await geocodeAndRoute() }
+        .onAppear {
+            // Auto-open pre-trip only when this is a new (not yet started) trip
+            if !isActiveTrip {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                    showPreTripNav = true
+                }
+            }
+        }
     }
+
 
     // ── Map pin helper ─────────────────────────────────────────────────────
     private func mapPin(icon: String, color: Color) -> some View {
@@ -606,7 +666,7 @@ struct TripNavigationView: View {
 
 // MARK: - Map Action Button (compact, used in Maps drawer)
 
-private enum MapActionStyle { case glass, warning, destructive }
+private enum MapActionStyle { case primary, glass, warning, destructive }
 
 private struct MapActionButton: View {
     let label: String
@@ -616,6 +676,7 @@ private struct MapActionButton: View {
 
     private var color: Color {
         switch style {
+        case .primary:     return Color.fmsIndigo
         case .glass:       return Color.fmsIndigo
         case .warning:     return Color(red: 0.95, green: 0.50, blue: 0.15)
         case .destructive: return .red
@@ -627,10 +688,10 @@ private struct MapActionButton: View {
             VStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(style == .destructive ? .white : color)
+                    .foregroundStyle((style == .primary || style == .destructive) ? .white : color)
                     .frame(width: 46, height: 46)
                     .background(
-                        style == .destructive
+                        (style == .primary || style == .destructive)
                         ? AnyShapeStyle(color.gradient)
                         : AnyShapeStyle(color.opacity(0.10))
                     )

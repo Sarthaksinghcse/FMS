@@ -127,9 +127,9 @@ private actor DriverDashboardDataStore {
             DBVehicle(
                 id: vehicleId,
                 vehicleNumber: "TN-07-AB-1234",
-                model: "Transit",
-                manufacturer: "Ford",
-                year: 2024,
+                model: "Swift Dzire",
+                manufacturer: "Maruti Suzuki",
+                year: 2023,
                 vin: "FMSMOCKVIN000101",
                 licensePlate: "TN-07-AB-1234",
                 status: .inUse,
@@ -240,7 +240,10 @@ final class DriverDashboardViewModel: ObservableObject {
     }
 
     var totalKm: Double { upcomingTrips.reduce(0) { $0 + $1.distance } }
-    var assignedReg: String { assignedVehicle?.vehicleNumber ?? "TN-07-AB-1234" }
+    var assignedReg: String  { assignedVehicle?.vehicleNumber ?? "TN-07-AB-1234" }
+    var vehicleManufacturer: String { assignedVehicle?.manufacturer ?? "Maruti Suzuki" }
+    var vehicleModel: String        { assignedVehicle?.model       ?? "Swift Dzire" }
+    var vehicleYear: String         { assignedVehicle.map { String($0.year) } ?? "2023" }
 
     func fire(_ action: DashboardAction) {
         switch action {
@@ -752,6 +755,8 @@ struct IssueReportSheet: View {
 struct InspectionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
+    /// Called when the user submits. `passed` = all items checked.
+    var onComplete: ((Bool) -> Void)? = nil
 
     struct CheckItem: Identifiable {
         let id    = UUID()
@@ -888,11 +893,14 @@ struct InspectionFormSheet: View {
                 }
             }
             .alert(allPass ? "Inspection Passed" : "Inspection Submitted", isPresented: $submitted) {
-                Button("Done") { dismiss() }
+                Button("Done") {
+                    onComplete?(allPass)
+                    dismiss()
+                }
             } message: {
                 Text(allPass
                      ? "All items passed. You are cleared for departure."
-                     : "Recorded. Any issues have been flagged for maintenance.")
+                     : "Some items were not checked. Please resolve before starting the trip.")
             }
         }
     }
@@ -901,7 +909,8 @@ struct InspectionFormSheet: View {
     private func doSubmit() async {
         submitting = true
         try? await Task.sleep(nanoseconds: 1_000_000_000)
-        submitting = false; submitted = true
+        submitting = false
+        submitted = true
     }
 }
 

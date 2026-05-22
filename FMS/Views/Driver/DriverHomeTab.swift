@@ -310,8 +310,30 @@ private struct VehicleRow: View {
                 }
             }
 
-            // Card — three stats arranged as labelled rows, no dividers
+            // Card
             VStack(spacing: 0) {
+
+                // ── Manufacturer ─────────────────────────────────────────────
+                VehicleStatRow(
+                    icon: "building.2.fill",
+                    label: "Manufacturer",
+                    value: vm.vehicleManufacturer
+                )
+                Color(UIColor.separator)
+                    .frame(height: 0.4)
+                    .padding(.leading, 40)
+
+                // ── Model ─────────────────────────────────────────────────────
+                VehicleStatRow(
+                    icon: "car.side.fill",
+                    label: "Model",
+                    value: "\(vm.vehicleModel)  (\(vm.vehicleYear))"
+                )
+                Color(UIColor.separator)
+                    .frame(height: 0.4)
+                    .padding(.leading, 40)
+
+                // ── Plate ─────────────────────────────────────────────────────
                 VehicleStatRow(
                     icon: "car.fill",
                     label: "Plate number",
@@ -320,6 +342,8 @@ private struct VehicleRow: View {
                 Color(UIColor.separator)
                     .frame(height: 0.4)
                     .padding(.leading, 40)
+
+                // ── Fuel ──────────────────────────────────────────────────────
                 VehicleStatRow(
                     icon: "fuelpump.fill",
                     label: "Fuel level",
@@ -331,6 +355,8 @@ private struct VehicleRow: View {
                 Color(UIColor.separator)
                     .frame(height: 0.4)
                     .padding(.leading, 40)
+
+                // ── Odometer ─────────────────────────────────────────────────
                 VehicleStatRow(
                     icon: "gauge",
                     label: "Odometer",
