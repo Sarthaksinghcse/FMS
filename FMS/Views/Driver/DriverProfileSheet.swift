@@ -19,8 +19,6 @@ struct DriverProfileSheet: View {
     // Mock performance stats (replace with real data from backend)
     private let totalTrips    = 142
     private let totalKmDriven = 4_820.0
-    private let rating        = 4.8
-    private let onTimeRate    = 94      // percent
     private let joinDate      = "March 2023"
     private let employeeId    = "DRV-00412"
     private let licenseNo     = "TN-24-2019-0041823"
@@ -35,20 +33,13 @@ struct DriverProfileSheet: View {
                         .padding(.top, 8)
                         .padding(.bottom, 28)
 
-                    // ── Stats strip (4 key numbers) ────────────────────────
+                    // ── Stats strip (2 key numbers) ────────────────────────
                     StatsStrip(
                         totalTrips: totalTrips,
-                        totalKm:    totalKmDriven,
-                        rating:     rating,
-                        onTime:     onTimeRate
+                        totalKm:    totalKmDriven
                     )
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
-
-                    // ── Rating bar ─────────────────────────────────────────
-                    RatingCard(rating: rating)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
 
                     // ── Account info rows ──────────────────────────────────
                     ProfileSection(header: "Account") {
@@ -214,20 +205,16 @@ private struct HeroHeader: View {
     }
 }
 
-// MARK: - Stats Strip (4 KPIs)
+// MARK: - Stats Strip (2 KPIs)
 
 private struct StatsStrip: View {
     let totalTrips: Int
     let totalKm:    Double
-    let rating:     Double
-    let onTime:     Int
 
     var body: some View {
         HStack(spacing: 10) {
             StatPill(value: "\(totalTrips)", label: "Trips",  icon: "map.fill",          color: AppTheme.Brand.primaryDeep)
             StatPill(value: String(format: "%.0f km", totalKm), label: "Driven", icon: "arrow.left.arrow.right", color: AppTheme.Brand.teal)
-            StatPill(value: String(format: "%.1f ★", rating), label: "Rating", icon: "star.fill",   color: AppTheme.Brand.amber)
-            StatPill(value: "\(onTime)%", label: "On Time",  icon: "clock.fill",        color: AppTheme.Status.success)
         }
     }
 }
@@ -262,53 +249,7 @@ private struct StatPill: View {
     }
 }
 
-// MARK: - Rating Card
 
-private struct RatingCard: View {
-    let rating: Double
-
-    // e.g. 4.8 → fill 4 full stars + partial 5th
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Performance Rating")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-
-            HStack(spacing: 0) {
-                // Star row
-                HStack(spacing: 4) {
-                    ForEach(1...5, id: \.self) { i in
-                        Image(systemName: Double(i) <= rating ? "star.fill"
-                              : (Double(i) - 0.5 <= rating ? "star.leadinghalf.filled" : "star"))
-                            .font(.system(size: 22))
-                            .foregroundStyle(AppTheme.Brand.amber)
-                    }
-                }
-                Spacer()
-                Text(String(format: "%.1f / 5.0", rating))
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.primary)
-            }
-
-            // Progress bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color(UIColor.systemGray5))
-                        .frame(height: 6)
-                    Capsule()
-                        .fill(AppTheme.Brand.amber.gradient)
-                        .frame(width: geo.size.width * CGFloat(rating / 5.0), height: 6)
-                }
-            }
-            .frame(height: 6)
-        }
-        .padding(18)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-    }
-}
 
 // MARK: - Profile Section wrapper
 

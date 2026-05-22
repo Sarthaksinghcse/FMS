@@ -444,19 +444,20 @@ struct TripNavigationView: View {
                     // Destination info
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(isActiveTrip ? "Navigating to" : "Planned route to")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                            Text(trip.destination)
-                                .font(.system(size: 18, weight: .bold))
-                                .lineLimit(1)
                             if let r = route {
-                                Text(String(format: "%.1f km  ·  ~%d min",
-                                            r.distance / 1000,
-                                            Int(r.expectedTravelTime / 60)))
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(Color.fmsIndigo)
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Text(String(format: "%d min", Int(r.expectedTravelTime / 60)))
+                                        .font(.system(size: 34, weight: .bold))
+                                        .foregroundStyle(AppTheme.Status.success)
+                                    Text(String(format: "%.1f km", r.distance / 1000))
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            Text(isActiveTrip ? "Navigating to: \(trip.destination)" : "Planned: \(trip.destination)")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
                         }
                         Spacer()
                         Button { openInAppleMaps() } label: {
@@ -475,8 +476,6 @@ struct TripNavigationView: View {
                                      value: String(format: "%.1f km", trip.distance), label: "Distance")
                         TripMetaCell(icon: "clock",
                                      value: vm.elapsedFormatted, label: "Elapsed")
-                        TripMetaCell(icon: "fuelpump.fill",
-                                     value: String(format: "%.0f%%", vm.fuelLevel * 100), label: "Fuel")
                     }
                     .padding(.horizontal, 8)
                     .padding(.top, 8)
@@ -488,8 +487,8 @@ struct TripNavigationView: View {
                         // ── In-trip: 4 live actions ───────────────────────
                         HStack(spacing: 10) {
                             MapActionButton(label: "Voice Log",    icon: "mic.fill",                   style: .glass)     { vm.showVoiceLog = true }
-                            MapActionButton(label: "Report",       icon: "exclamationmark.bubble.fill", style: .warning)   { vm.showIssue    = true }
                             MapActionButton(label: "Defect",       icon: "wrench.and.screwdriver.fill", style: .warning)   { vm.showDefect   = true }
+                            MapActionButton(label: "SOS",          icon: "sos",                         style: .destructive) { /* SOS action */ }
                             MapActionButton(label: "End Trip",     icon: "stop.fill",                   style: .destructive) {
                                 dismiss()
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { vm.confirmEnd = true }
@@ -513,6 +512,7 @@ struct TripNavigationView: View {
 
                                 MapActionButton(label: "Defect",    icon: "wrench.and.screwdriver.fill", style: .warning) { vm.showDefect   = true }
                                 MapActionButton(label: "Voice Log", icon: "mic.fill",                   style: .glass)   { vm.showVoiceLog = true }
+                                MapActionButton(label: "SOS",       icon: "sos",                        style: .destructive) { /* SOS action */ }
                             }
 
                             // Inspection warning banner (shown until passed)
