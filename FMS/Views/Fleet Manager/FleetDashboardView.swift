@@ -298,8 +298,10 @@ struct FleetDashboardView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(trackingViewModel.mappedVehicles) { vehicle in
+                                let driverName = allUsers.first(where: { $0.id == vehicle.vehicle.assignedDriverId })?.fullName ?? "Unassigned"
                                 TrackingVehicleCard(
                                     vehicle: vehicle,
+                                    driverName: driverName,
                                     isSelected: selectedVehicle?.id == vehicle.id
                                 ) {
                                     selectedVehicle = vehicle
@@ -376,6 +378,7 @@ struct FleetCircularProgressView: View {
 
 struct TrackingVehicleCard: View {
     let vehicle: MappedVehicle
+    let driverName: String
     let isSelected: Bool
     let onTap: () -> Void
 
@@ -388,7 +391,7 @@ struct TrackingVehicleCard: View {
     }
 
     private var driverLabel: String {
-        vehicle.vehicle.driverId ?? "Unassigned"
+        driverName
     }
 
     private var speedLabel: String {
