@@ -40,7 +40,6 @@ enum ManagementDestination: Hashable {
     case vehicleList
     case driverList
     case maintenanceStaff
-    case tripList
 }
 
 // MARK: Hub View
@@ -49,7 +48,7 @@ enum ManagementDestination: Hashable {
 struct ManagementHubView: View {
 
     @State private var appearAnimation = false
-    @State private var cardAnimations: [Bool] = [false, false, false, false]
+    @State private var cardAnimations: [Bool] = [false, false, false]
     @State private var selectedDestination: ManagementDestination?
 
     @Environment(\.modelContext) private var modelContext
@@ -113,22 +112,6 @@ struct ManagementHubView: View {
                                systemIcon: "checkmark.seal.fill", iconColor: .green)
                 ],
                 destination: .maintenanceStaff
-            ),
-            ManagementCard(
-                title: "Trip Management",
-                subtitle: "Manage trips & schedules",
-                icon: "map.fill",
-                accentColor: Color(red: 0.58, green: 0.39, blue: 0.87),
-                metrics: [
-                    CardMetric(label: "Active",    value: "\(trips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }.count)",
-                               systemIcon: "arrow.triangle.turn.up.right.diamond.fill",
-                               iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)),
-                    CardMetric(label: "Pending",   value: "\(trips.filter { $0.tripStatus == .assigned }.count)",
-                               systemIcon: "clock.fill",           iconColor: .orange),
-                    CardMetric(label: "Completed", value: "\(trips.filter { $0.tripStatus == .completed }.count)",
-                               systemIcon: "checkmark.circle.fill", iconColor: .green)
-                ],
-                destination: .tripList
             )
         ]
     }
@@ -187,7 +170,6 @@ struct ManagementHubView: View {
         case .vehicleList:      VehicleListView()
         case .driverList:       DriverListView()
         case .maintenanceStaff: MaintenanceStaffListView()
-        case .tripList:         TripListView()
         }
     }
 }
@@ -1188,13 +1170,23 @@ struct EditStaffSheetView: View {
 // ─────────────────────────────────────────────────────────────────────────────
 
 
+// MARK: Trip Category Filter
+enum TripCategoryFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case active = "Active"
+    case upcoming = "Upcoming"
+    case past = "Past"
+
+    var id: String { rawValue }
+}
+
 // MARK: Trip List View
 
 @available(iOS 26.0, *)
 struct TripListView: View {
 
     @State private var searchText = ""
-    @State private var selectedFilter: TripStatusFilter = .all
+    @State private var selectedFilter: TripCategoryFilter = .all
     @State private var showAddTrip = false
     @State private var editingTrip: Trip? = nil
     @State private var appearAnimation = false
@@ -1208,7 +1200,17 @@ struct TripListView: View {
 
     private var filteredTrips: [Trip] {
         var trips = allTrips
-        if let status = selectedFilter.tripStatus { trips = trips.filter { $0.tripStatus == status } }
+        switch selectedFilter {
+        case .all:
+            break
+        case .active:
+            trips = trips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }
+        case .upcoming:
+            trips = trips.filter { $0.tripStatus == .assigned }
+        case .past:
+            trips = trips.filter { $0.tripStatus == .completed || $0.tripStatus == .cancelled }
+        }
+        
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if !q.isEmpty {
             trips = trips.filter {
@@ -1218,6 +1220,19 @@ struct TripListView: View {
             }
         }
         return trips
+    }
+
+    private func countForFilter(_ filter: TripCategoryFilter) -> Int {
+        switch filter {
+        case .all:
+            return allTrips.count
+        case .active:
+            return allTrips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }.count
+        case .upcoming:
+            return allTrips.filter { $0.tripStatus == .assigned }.count
+        case .past:
+            return allTrips.filter { $0.tripStatus == .completed || $0.tripStatus == .cancelled }.count
+        }
     }
 
     private func driverName(for driverId: UUID) -> String? {
@@ -1266,20 +1281,29 @@ struct TripListView: View {
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(TripStatusFilter.allCases) { filter in
+                ForEach(TripCategoryFilter.allCases) { filter in
                     let isSelected = selectedFilter == filter
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { selectedFilter = filter }
                     } label: {
-                        Text(filter.rawValue)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(isSelected ? .white : .gray)
-                            .padding(.horizontal, 16).padding(.vertical, 9)
-                            .background { if isSelected { tripPurple } }
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(isSelected ? Color.clear : AppTheme.Glass.border, lineWidth: 1))
+                        HStack(spacing: 6) {
+                            Text(filter.rawValue)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            let count = countForFilter(filter)
+                            if count > 0 {
+                                Text("\(count)")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(isSelected ? Color.white.opacity(0.25) : tripPurple.opacity(0.12))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .foregroundColor(isSelected ? .white : tripPurple)
+                        .padding(.horizontal, 16).padding(.vertical, 9)
+                        .background(isSelected ? tripPurple : tripPurple.opacity(0.08))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(isSelected ? Color.clear : tripPurple.opacity(0.2), lineWidth: 1))
                     }
                     .buttonStyle(ScaleButtonStyle())
                 }

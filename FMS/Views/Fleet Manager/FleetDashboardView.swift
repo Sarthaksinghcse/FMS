@@ -38,11 +38,19 @@ struct FleetDashboardView: View {
                 }
                 .tag(1)
 
+            NavigationStack {
+                TripListView()
+            }
+            .tabItem {
+                Label("Trips", systemImage: "map.fill")
+            }
+            .tag(2)
+
             ManagementHubView()
                 .tabItem {
                     Label("Manage", systemImage: "slider.horizontal.3")
                 }
-                .tag(2)
+                .tag(3)
         }
         .accentColor(AppTheme.Brand.primary)
     }
