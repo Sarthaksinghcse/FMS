@@ -2,8 +2,6 @@
 //  ActivityRow.swift
 //  FMS
 //
-//  Created by Antigravity on 21/05/26.
-//
 
 import SwiftUI
 
@@ -12,7 +10,6 @@ struct DashboardActivityRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Left Side: Colored Circle Icon
             ZStack {
                 Circle()
                     .fill(activity.iconBgColor)
@@ -23,24 +20,22 @@ struct DashboardActivityRow: View {
                     .foregroundColor(activity.iconColor)
             }
             
-            // Center Stack: Title and Subtitle
             VStack(alignment: .leading, spacing: 3) {
                 Text(activity.title)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.black)
+                    .foregroundColor(AppTheme.Text.primary)
                 
                 Text(activity.subtitle)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(1)
             }
             
             Spacer()
             
-            // Right Side: Timestamp
             Text(activity.time)
                 .font(.system(size: 11, weight: .regular))
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.Text.secondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
