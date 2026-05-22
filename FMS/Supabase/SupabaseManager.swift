@@ -7,7 +7,7 @@
 
 import Foundation
 import Supabase
-internal import Combine
+import Combine
 
 // MARK: - Auth Errors
 enum AuthError: LocalizedError {

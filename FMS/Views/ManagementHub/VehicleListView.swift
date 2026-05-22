@@ -213,10 +213,12 @@ struct VehicleListView: View {
             }
         }
         .sheet(isPresented: $showAddVehicle) {
-            AddVehicleStubView()
+            AddVehicleView()
+                .environment(\.modelContext, modelContext)
         }
         .sheet(item: $editingVehicle) { vehicle in
-            EditVehicleStubView(vehicle: vehicle)
+            EditVehicleView(vehicle: vehicle)
+                .environment(\.modelContext, modelContext)
         }
     }
     

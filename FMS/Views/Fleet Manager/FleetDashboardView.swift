@@ -6,9 +6,76 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct FleetDashboardView: View {
-    @State private var selectedTab: Int = 0 // 0: Dashboard, 1: Tracking
+    @Environment(\.modelContext) private var modelContext
+    
+    @Query private var vehicles: [Vehicle]
+    @Query private var allUsers: [User]
+    @Query private var trips: [Trip]
+    
+    @State private var activeQuickAction: ActiveQuickAction? = nil
+    
+    enum ActiveQuickAction: Identifiable {
+        case addVehicle
+        case assignDriver
+        case reports
+        case alerts
+        case maintenance
+        
+        var id: Self { self }
+    }
+    
+    private var dynamicStats: [DashboardStat] {
+        let totalVehicles = vehicles.count
+        let activeVehicles = vehicles.filter { $0.status == .active }.count
+        let driversOnline = allUsers.filter { $0.role == .driver && $0.isActive }.count
+        let liveTrips = trips.filter { $0.tripStatus == .inProgress || $0.tripStatus == .started }.count
+        
+        return [
+            DashboardStat(
+                icon: "car.fill",
+                iconColor: AppTheme.Brand.primary,
+                iconBgColor: AppTheme.IconBg.blue,
+                value: "\(totalVehicles)",
+                label: "Total Vehicles",
+                trend: "",
+                isTrendPositive: true,
+                graphData: []
+            ),
+            DashboardStat(
+                icon: "location.fill",
+                iconColor: AppTheme.Status.success,
+                iconBgColor: AppTheme.IconBg.green,
+                value: "\(activeVehicles)",
+                label: "Active Now",
+                trend: "",
+                isTrendPositive: true,
+                graphData: []
+            ),
+            DashboardStat(
+                icon: "person.2.fill",
+                iconColor: AppTheme.Brand.violet,
+                iconBgColor: AppTheme.IconBg.violet,
+                value: "\(driversOnline)",
+                label: "Drivers Online",
+                trend: "",
+                isTrendPositive: true,
+                graphData: []
+            ),
+            DashboardStat(
+                icon: "arrow.up.arrow.down",
+                iconColor: AppTheme.Brand.teal,
+                iconBgColor: AppTheme.IconBg.teal,
+                value: "\(liveTrips)",
+                label: "Live Trips",
+                trend: "",
+                isTrendPositive: false,
+                graphData: []
+            )
+        ]
+    }
     
     // Dynamic greeting and formatted date to match screenshot or update live
     private var greetingText: String {
@@ -55,7 +122,7 @@ struct FleetDashboardView: View {
                             columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                             spacing: 12
                         ) {
-                            ForEach(DashboardMockData.stats) { stat in
+                            ForEach(dynamicStats) { stat in
                                 DashboardStatCard(stat: stat)
                             }
                         }
@@ -72,7 +139,22 @@ struct FleetDashboardView: View {
                                 HStack(spacing: 16) {
                                     ForEach(DashboardMockData.quickActions) { action in
                                         DashboardQuickActionCard(action: action) {
-                                            print("Tapped Action: \(action.label)")
+                                            let impact = UIImpactFeedbackGenerator(style: .medium)
+                                            impact.impactOccurred()
+                                            switch action.label {
+                                            case "Add Vehicle":
+                                                activeQuickAction = .addVehicle
+                                            case "Assign Driver":
+                                                activeQuickAction = .assignDriver
+                                            case "Reports":
+                                                activeQuickAction = .reports
+                                            case "Alerts":
+                                                activeQuickAction = .alerts
+                                            case "Maintenance":
+                                                activeQuickAction = .maintenance
+                                            default:
+                                                break
+                                            }
                                         }
                                     }
                                 }
@@ -82,21 +164,25 @@ struct FleetDashboardView: View {
                         }
                         
                         // Fleet Utilization Card
+                        let totalVehiclesCount = vehicles.count
+                        let activeVehiclesCount = vehicles.filter { $0.status == .active }.count
+                        let progress = totalVehiclesCount > 0 ? Double(activeVehiclesCount) / Double(totalVehiclesCount) : 0.0
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             HStack(spacing: 16) {
                                 // Circular Progress Ring
-                                FleetCircularProgressView(progress: 0.67)
+                                FleetCircularProgressView(progress: progress)
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Fleet Utilization")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
                                     
-                                    Text("67%")
+                                    Text("\(Int(progress * 100))%")
                                         .font(.system(size: 24, weight: .bold))
                                         .foregroundColor(.black)
                                     
-                                    Text("32 of 48 vehicles active today")
+                                    Text("\(activeVehiclesCount) of \(totalVehiclesCount) vehicles active today")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
                                 }
@@ -151,23 +237,35 @@ struct FleetDashboardView: View {
                             .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                             .padding(.horizontal, 16)
                         }
-                        
-                        // Extra bottom spacing to ensure content scrolls past the floating tab bar
+                        // Extra bottom spacing to ensure content scrolls beautifully
                         Spacer()
-                            .frame(height: 100)
+                            .frame(height: 40)
                     }
                     .padding(.top, 8)
                 }
-                
-                // Floating Bottom Tab Bar Overlay
-                VStack {
-                    Spacer()
-                    DashboardBottomTabBar(selectedTab: $selectedTab)
-                        .padding(.bottom, 16)
-                }
-                .ignoresSafeArea(.keyboard, edges: .bottom)
             }
             .navigationTitle("Fleet Dashboard")
+            .navigationBarTitleDisplayMode(.large)
+            .sheet(item: $activeQuickAction) { action in
+                Group {
+                    switch action {
+                    case .addVehicle:
+                        AddVehicleView()
+                    case .assignDriver:
+                        AssignDriverView()
+                    case .reports:
+                        ReportsView()
+                    case .alerts:
+                        AlertsFeedView()
+                    case .maintenance:
+                        MaintenanceManagementView()
+                    }
+                }
+                .environment(\.modelContext, modelContext)
+            }
+            .task {
+                DatabaseSeeder.seedIfEmpty(context: modelContext)
+            }
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 // Toolbar Items: Notification bell and profile initials
