@@ -17,11 +17,11 @@ final class AssignDriverViewModel: ObservableObject {
     
     @Published var errorMessage: String? = nil
     @Published var isSaveSuccessful: Bool = false
+    @Published var isSaving: Bool = false
     
     /// Assigns the selected driver to the selected vehicle.
     /// Clears any other vehicle's assignment to the same driver to maintain a 1-to-1 mapping.
-    /// BACKEND DEVS: Add your cloud database/Supabase API sync calls inside this function.
-    func assignDriver(context: ModelContext, vehicles: [Vehicle], drivers: [User]) -> Bool {
+    func assignDriver(context: ModelContext, vehicles: [Vehicle], drivers: [User]) async -> Bool {
         errorMessage = nil
         
         guard let vehicleId = selectedVehicleId else {
@@ -44,32 +44,78 @@ final class AssignDriverViewModel: ObservableObject {
             return false
         }
         
-        // 1. Clear this driver from any other vehicles they were assigned to
+        isSaving = true
+        defer { isSaving = false }
+        
+        // 1. Gather all vehicles that need updating in Supabase
+        var vehiclesToUpdate: [Vehicle] = []
+        
         for vehicle in vehicles {
             if vehicle.assignedDriverId == selectedDriver.id && vehicle.id != selectedVehicle.id {
                 vehicle.assignedDriverId = nil
                 vehicle.updatedAt = Date()
+                vehiclesToUpdate.append(vehicle)
             }
         }
         
-        // 2. Set the driver for the selected vehicle
         selectedVehicle.assignedDriverId = selectedDriver.id
         selectedVehicle.updatedAt = Date()
+        vehiclesToUpdate.append(selectedVehicle)
         
         do {
+            // Update vehicle assignments in Supabase first
+            for vehicle in vehiclesToUpdate {
+                try await SupabaseManager.shared.updateVehicle(vehicle.asDBVehicle)
+            }
+            
+            // Send the vehicle assignment email to the driver
+            do {
+                try await EmailManager.shared.sendVehicleAssignmentEmail(
+                    to: selectedDriver.email,
+                    name: selectedDriver.fullName,
+                    vehicleReg: selectedVehicle.registrationNumber,
+                    vehicleModel: "\(selectedVehicle.make) \(selectedVehicle.model)"
+                )
+            } catch {
+                print("⚠️ Vehicle assignment email send failed: \(error.localizedDescription)")
+            }
+            
+            // Commit to local SwiftData context
             try context.save()
             
-            // Trigger haptic feedback
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
             
             isSaveSuccessful = true
             return true
         } catch {
-            errorMessage = "Failed to save assignment: \(error.localizedDescription)"
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.error)
-            return false
+            print("Failed to sync vehicle assignment to Supabase: \(error)")
+            
+            // Fallback offline support: Save locally to SwiftData
+            do {
+                // Attempt assignment email in offline fallback mode if network permits
+                try await EmailManager.shared.sendVehicleAssignmentEmail(
+                    to: selectedDriver.email,
+                    name: selectedDriver.fullName,
+                    vehicleReg: selectedVehicle.registrationNumber,
+                    vehicleModel: "\(selectedVehicle.make) \(selectedVehicle.model)"
+                )
+            } catch {
+                print("⚠️ Vehicle assignment email send failed in offline fallback: \(error.localizedDescription)")
+            }
+            
+            do {
+                try context.save()
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                isSaveSuccessful = true
+                return true
+            } catch {
+                errorMessage = "Failed to save assignment locally: \(error.localizedDescription)"
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.error)
+                return false
+            }
         }
     }
 }
@@ -294,11 +340,23 @@ struct AssignDriverView: View {
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Assign") {
-                        if viewModel.assignDriver(context: modelContext, vehicles: vehicles, drivers: drivers) {
-                            dismiss()
+                    Button {
+                        Task {
+                            let success = await viewModel.assignDriver(context: modelContext, vehicles: vehicles, drivers: drivers)
+                            if success {
+                                dismiss()
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            if viewModel.isSaving {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Brand.primary))
+                            }
+                            Text("Assign")
                         }
                     }
+                    .disabled(viewModel.isSaving)
                     .foregroundColor(AppTheme.Brand.primary)
                     .font(.system(.body, design: .rounded, weight: .bold))
                 }

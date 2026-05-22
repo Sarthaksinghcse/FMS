@@ -190,7 +190,7 @@ struct FleetDashboardView: View {
                 Group {
                     switch action {
                     case .addVehicle:
-                        AddVehicleView()
+                        AddVehicleFormView()
                     case .assignDriver:
                         AssignDriverView()
                     case .reports:

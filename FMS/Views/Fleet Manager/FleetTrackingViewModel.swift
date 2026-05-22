@@ -8,28 +8,6 @@ import MapKit
 import SwiftUI
 import Combine
 
-struct MappedVehicle: Identifiable, Hashable {
-    let id = UUID()
-    let vehicle: DBVehicle
-    let coordinate: CLLocationCoordinate2D
-    
-    static func == (lhs: MappedVehicle, rhs: MappedVehicle) -> Bool {
-        lhs.id == rhs.id
-    }
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    
-    var statusColor: Color {
-        switch vehicle.status {
-        case .available: return AppTheme.Status.success
-        case .inUse: return AppTheme.Brand.primary
-        case .maintenance: return AppTheme.Status.warning
-        case .inactive: return AppTheme.Text.secondary
-        }
-    }
-}
 
 @MainActor
 @Observable

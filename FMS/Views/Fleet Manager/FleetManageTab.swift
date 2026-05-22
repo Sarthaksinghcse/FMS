@@ -291,105 +291,6 @@ struct ManagementCardView: View {
 // MARK: - SECTION 2 ▸ Vehicle List
 // ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Filter Enum
-
-enum VehicleStatusFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case active = "Active"
-    case inactive = "Inactive"
-    case inMaintenance = "In Maintenance"
-
-    var id: String { rawValue }
-
-    var vehicleStatus: VehicleStatus? {
-        switch self {
-        case .all:           return nil
-        case .active:        return .active
-        case .inactive:      return .inactive
-        case .inMaintenance: return .inMaintenance
-        }
-    }
-
-    var chipColor: Color {
-        switch self {
-        case .all:           return AppTheme.Brand.royalBlue
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
-        }
-    }
-}
-
-// MARK: Model Extensions
-
-extension VehicleStatus {
-    var displayName: String {
-        switch self {
-        case .active:        return "Active"
-        case .inactive:      return "Inactive"
-        case .inMaintenance: return "Maintenance"
-        }
-    }
-    var statusColor: Color {
-        switch self {
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
-        }
-    }
-    var statusIcon: String {
-        switch self {
-        case .active:        return "checkmark.circle.fill"
-        case .inactive:      return "pause.circle.fill"
-        case .inMaintenance: return "wrench.and.screwdriver.fill"
-        }
-    }
-}
-
-extension VehicleType {
-    var displayName: String {
-        switch self {
-        case .truck: return "Truck"
-        case .van:   return "Van"
-        case .car:   return "Car"
-        case .bike:  return "Bike"
-        }
-    }
-    var icon: String {
-        switch self {
-        case .truck: return "truck.box.fill"
-        case .van:   return "bus.fill"
-        case .car:   return "car.fill"
-        case .bike:  return "bicycle"
-        }
-    }
-    var iconColor: Color {
-        switch self {
-        case .truck: return AppTheme.Brand.royalBlue
-        case .van:   return Color(red: 0.58, green: 0.39, blue: 0.87)
-        case .car:   return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .bike:  return AppTheme.Brand.accent
-        }
-    }
-}
-
-extension FuelType {
-    var displayName: String {
-        switch self {
-        case .petrol:   return "Petrol"
-        case .diesel:   return "Diesel"
-        case .electric: return "Electric"
-        case .hybrid:   return "Hybrid"
-        }
-    }
-    var icon: String {
-        switch self {
-        case .petrol, .diesel: return "fuelpump.fill"
-        case .electric:        return "bolt.fill"
-        case .hybrid:          return "leaf.fill"
-        }
-    }
-}
 
 // MARK: Vehicle List View
 
@@ -442,6 +343,9 @@ struct VehicleListView: View {
                 }
             }
         }
+        .refreshable {
+            await syncVehicles()
+        }
         .navigationTitle("Vehicle Management")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "Search registration, make, model…")
@@ -455,6 +359,9 @@ struct VehicleListView: View {
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) { appearAnimation = true }
+            Task {
+                await syncVehicles()
+            }
         }
         .sheet(isPresented: $showAddVehicle) {
             if #available(iOS 26.0, *) {
@@ -519,6 +426,40 @@ struct VehicleListView: View {
     private func countForFilter(_ filter: VehicleStatusFilter) -> Int {
         guard let status = filter.vehicleStatus else { return vehicles.count }
         return vehicles.filter { $0.status == status }.count
+    }
+
+    private func syncVehicles() async {
+        do {
+            let dbVehicles = try await SupabaseManager.shared.fetchVehicles()
+            await MainActor.run {
+                for dbv in dbVehicles {
+                    if let localVehicle = vehicles.first(where: { $0.id == dbv.id }) {
+                        localVehicle.registrationNumber = dbv.vehicleNumber
+                        localVehicle.vinNumber = dbv.vin
+                        localVehicle.make = dbv.manufacturer
+                        localVehicle.model = dbv.model
+                        localVehicle.year = dbv.year
+                        localVehicle.status = dbv.status.toLocalStatus
+                        localVehicle.assignedDriverId = dbv.assignedDriverId
+                        localVehicle.lastServiceDate = dbv.lastServiceDate
+                    } else {
+                        let newVehicle = dbv.asLocalVehicle
+                        modelContext.insert(newVehicle)
+                    }
+                }
+                
+                let remoteIds = Set(dbVehicles.map { $0.id })
+                for localVehicle in vehicles {
+                    if !remoteIds.contains(localVehicle.id) {
+                        modelContext.delete(localVehicle)
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("Failed to sync vehicles: \(error)")
+        }
     }
 }
 
@@ -703,6 +644,9 @@ struct DriverListView: View {
                 }
             }
         }
+        .refreshable {
+            await syncDrivers()
+        }
         .navigationTitle("Driver Management")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "Search drivers…")
@@ -716,7 +660,12 @@ struct DriverListView: View {
         }
         .sheet(isPresented: $showAddDriver) { AddDriverFormView() }
         .sheet(item: $selectedDriverForEdit) { d in EditDriverFormView(driver: d) }
-        .onAppear { triggerCardAnimations() }
+        .onAppear {
+            triggerCardAnimations()
+            Task {
+                await syncDrivers()
+            }
+        }
         .onChange(of: filteredDrivers.count) { triggerCardAnimations() }
     }
 
@@ -826,6 +775,37 @@ struct DriverListView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.08 + 0.15)) {
                 cardAnimations[driver.id] = true
             }
+        }
+    }
+
+    private func syncDrivers() async {
+        do {
+            let dbDrivers = try await SupabaseManager.shared.fetchDrivers()
+            await MainActor.run {
+                for dbd in dbDrivers {
+                    if let localDriver = allUsers.first(where: { $0.id == dbd.id }) {
+                        localDriver.fullName = dbd.name
+                        localDriver.email = dbd.email
+                        localDriver.phoneNumber = dbd.phoneNumber ?? ""
+                        localDriver.role = dbd.role.asLocalRole
+                    } else {
+                        let newDriver = dbd.asLocalUser
+                        modelContext.insert(newDriver)
+                    }
+                }
+                
+                let remoteIds = Set(dbDrivers.map { $0.id })
+                let localDrivers = allUsers.filter { $0.role == .driver }
+                for localDriver in localDrivers {
+                    if !remoteIds.contains(localDriver.id) {
+                        modelContext.delete(localDriver)
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("Failed to sync drivers: \(error)")
         }
     }
 }
@@ -1207,61 +1187,6 @@ struct EditStaffSheetView: View {
 // MARK: - SECTION 5 ▸ Trip List
 // ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Filter Enum
-
-enum TripStatusFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case assigned = "Assigned"
-    case started = "Started"
-    case inProgress = "In Progress"
-    case completed = "Completed"
-    case cancelled = "Cancelled"
-
-    var id: String { rawValue }
-
-    var tripStatus: TripStatus? {
-        switch self {
-        case .all:       return nil
-        case .assigned:  return .assigned
-        case .started:   return .started
-        case .inProgress:return .inProgress
-        case .completed: return .completed
-        case .cancelled: return .cancelled
-        }
-    }
-}
-
-// MARK: Trip Status Extension
-
-extension TripStatus {
-    var displayName: String {
-        switch self {
-        case .assigned:   return "Assigned"
-        case .started:    return "Started"
-        case .inProgress: return "In Progress"
-        case .completed:  return "Completed"
-        case .cancelled:  return "Cancelled"
-        }
-    }
-    var badgeColor: Color {
-        switch self {
-        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90)
-        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inProgress: return AppTheme.Brand.accent
-        case .completed:  return Color.gray
-        case .cancelled:  return Color.red
-        }
-    }
-    var badgeIcon: String {
-        switch self {
-        case .assigned:   return "person.badge.clock.fill"
-        case .started:    return "play.circle.fill"
-        case .inProgress: return "truck.box.fill"
-        case .completed:  return "checkmark.circle.fill"
-        case .cancelled:  return "xmark.circle.fill"
-        }
-    }
-}
 
 // MARK: Trip List View
 
