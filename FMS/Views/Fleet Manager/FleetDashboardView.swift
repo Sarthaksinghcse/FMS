@@ -327,16 +327,19 @@ struct FleetDashboardView: View {
                                                 .cornerRadius(4)
                                         }
 
-                                        Text(vehicle.vehicle.model)
+                                        let modelName = vehicle.vehicle.model
+                                        let driverLabel = vehicle.vehicle.driverId ?? "Unassigned"
+                                        let speedLabel: String = vehicle.vehicle.status == .inUse ? "45 km/h" : "0 km/h"
+                                        Text(modelName)
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary)
 
                                         HStack {
-                                            Label(vehicle.vehicle.driverId ?? "Unassigned", systemImage: "person.fill")
+                                            Label(driverLabel, systemImage: "person.fill")
                                                 .font(.system(size: 11))
                                                 .foregroundColor(.secondary)
                                             Spacer()
-                                            Text(vehicle.vehicle.status == .inUse ? "45 km/h" : "0 km/h")
+                                            Text(speedLabel)
                                                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                                                 .foregroundColor(AppTheme.Brand.primary)
                                         }
