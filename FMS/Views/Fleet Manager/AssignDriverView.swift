@@ -181,7 +181,10 @@ struct AssignDriverView: View {
                                                         
                                                         Text(driverName == nil ? "Unassigned" : "Driver: \(driverName!)")
                                                             .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                                            .foregroundColor(isSelected ? .white.opacity(0.9) : (driverName == nil ? AppTheme.Brand.accent : AppTheme.Status.success))
+                                                            .foregroundColor({
+                                                                if isSelected { return Color.white.opacity(0.9) }
+                                                                return driverName == nil ? AppTheme.Brand.accent : AppTheme.Status.success
+                                                            }())
                                                             .lineLimit(1)
                                                     }
                                                     .padding(14)
