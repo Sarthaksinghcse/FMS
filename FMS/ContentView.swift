@@ -21,7 +21,7 @@ struct ContentView: View {
                     // Bridge DBUser → the SwiftData User the MaintenanceDashboardView expects
                     MaintenanceDashboardView(currentUser: user.asLocalUser)
                 case .driver:
-                    DriverPlaceholderView(user: user)
+                    DriverDashboardView()
                 }
             } else {
                 AuthView()

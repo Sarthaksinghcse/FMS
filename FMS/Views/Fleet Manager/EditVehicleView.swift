@@ -9,6 +9,45 @@ import SwiftUI
 import SwiftData
 import Combine
 
+// MARK: - Reusable Custom Text Field
+struct CustomAddTextField: View {
+    let label: String
+    let placeholder: String
+    let icon: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundColor(isFocused ? AppTheme.Brand.primary : AppTheme.Text.secondary)
+
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 15))
+                    .foregroundColor(isFocused ? AppTheme.Brand.primary : AppTheme.Text.tertiary)
+
+                TextField(placeholder, text: $text)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(.black)
+                    .focused($isFocused)
+                    .keyboardType(keyboardType)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.02))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isFocused ? AppTheme.Brand.primary : AppTheme.Glass.border, lineWidth: isFocused ? 1.5 : 1)
+            )
+        }
+    }
+}
+
 // MARK: - Edit Vehicle View Model
 @MainActor
 final class EditVehicleViewModel: ObservableObject {
