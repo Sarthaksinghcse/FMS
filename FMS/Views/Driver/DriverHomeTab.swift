@@ -303,7 +303,7 @@ private struct VehicleRow: View {
                 Button { vm.showDefect = true } label: {
                     Text("Report defect")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color(red: 0.85, green: 0.15, blue: 0.15))
+                        .foregroundStyle(AppTheme.Status.danger)
                 }
             }
 
@@ -346,7 +346,7 @@ private struct VehicleRow: View {
                     label: "Fuel level",
                     value: String(format: "%.0f%%", vm.fuelLevel * 100),
                     valueColor: vm.fuelLevel < 0.25
-                        ? Color(red: 0.85, green: 0.15, blue: 0.15)
+                        ? AppTheme.Status.danger
                         : Color.fmsIndigo
                 )
                 Color(UIColor.separator)
@@ -441,7 +441,7 @@ private struct BareMessageRow: View {
     private var roleColor: Color {
         switch msg.role {
         case "Fleet Manager": return Color.fmsIndigo
-        case "Maintenance":   return Color(red:0.95,green:0.50,blue:0.15)
+        case "Maintenance":   return AppTheme.Brand.accent
         default:              return Color(UIColor.systemGray)
         }
     }

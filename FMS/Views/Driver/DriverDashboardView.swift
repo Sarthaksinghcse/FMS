@@ -12,13 +12,17 @@ import MapKit
 import Combine
 
 
-// MARK: - Design Tokens
+// MARK: - Design Tokens (mapped to AppTheme — single source of truth)
 
 extension Color {
-    static let fmsIndigo      = Color(red: 0.20, green: 0.20, blue: 0.60)
-    static let fmsIndigoLight = Color(red: 0.20, green: 0.20, blue: 0.60).opacity(0.10)
-    static let fmsCard        = Color(UIColor.secondarySystemBackground)
-    static let fmsBackground  = Color(UIColor.systemBackground)
+    /// Primary brand accent — maps to AppTheme.Brand.primaryDeep
+    static let fmsIndigo      = AppTheme.Brand.primaryDeep
+    /// Light tint of the brand accent
+    static let fmsIndigoLight = AppTheme.Brand.primaryDeep.opacity(0.10)
+    /// Card surface — white
+    static let fmsCard        = AppTheme.Background.card
+    /// Page background — soft blue-white
+    static let fmsBackground  = AppTheme.Background.page
 }
 
 // MARK: - Driver Status
@@ -28,9 +32,9 @@ enum DriverOnlineStatus: String, CaseIterable {
 
     var dot: Color {
         switch self {
-        case .active:      return Color(red: 0.2, green: 0.78, blue: 0.35)
-        case .idle:        return Color(red: 0.98, green: 0.78, blue: 0.10)
-        case .maintenance: return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case .active:      return AppTheme.Status.success
+        case .idle:        return AppTheme.Brand.amber
+        case .maintenance: return AppTheme.Brand.accent
         case .offline:     return Color(UIColor.systemGray3)
         }
     }
@@ -73,9 +77,9 @@ struct DashboardBanner: Identifiable {
 
     var tint: Color {
         switch kind {
-        case .info:    return .fmsIndigo
-        case .warning: return Color(red: 0.95, green: 0.50, blue: 0.15)
-        case .urgent:  return Color(red: 0.85, green: 0.15, blue: 0.15)
+        case .info:    return AppTheme.Brand.primaryDeep
+        case .warning: return AppTheme.Brand.accent
+        case .urgent:  return AppTheme.Status.danger
         }
     }
     var icon: String {
@@ -343,13 +347,13 @@ struct FMSRouteRow: View {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.fmsIndigo.opacity(0.5), Color.green.opacity(0.5)],
+                            colors: [AppTheme.Brand.primaryDeep.opacity(0.5), AppTheme.Status.success.opacity(0.5)],
                             startPoint: .top, endPoint: .bottom
                         )
                     )
                     .frame(width: 2, height: 28)
                 Circle()
-                    .fill(Color(red: 0.2, green: 0.78, blue: 0.35))
+                    .fill(AppTheme.Status.success)
                     .frame(width: 9, height: 9)
             }
             VStack(alignment: .leading, spacing: 10) {
@@ -397,8 +401,8 @@ struct FMSMsgRow: View {
 
     private var roleColor: Color {
         switch msg.role {
-        case "Fleet Manager": return .fmsIndigo
-        case "Maintenance":   return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case "Fleet Manager": return AppTheme.Brand.primaryDeep
+        case "Maintenance":   return AppTheme.Brand.accent
         default:              return Color(UIColor.systemGray)
         }
     }
@@ -802,7 +806,7 @@ struct InspectionFormSheet: View {
                             Circle()
                                 .trim(from: 0, to: CGFloat(passCount) / CGFloat(items.count))
                                 .stroke(
-                                    allPass ? Color(red:0.2,green:0.78,blue:0.35) : Color.fmsIndigo,
+                                    allPass ? AppTheme.Status.success : Color.fmsIndigo,
                                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                                 )
                                 .rotationEffect(.degrees(-90))
@@ -825,7 +829,7 @@ struct InspectionFormSheet: View {
                             HStack(spacing: 14) {
                                 Image(systemName: item.icon)
                                     .font(.system(size: 16))
-                                    .foregroundStyle(item.passed ? Color(red:0.2,green:0.78,blue:0.35) : .secondary)
+                                    .foregroundStyle(item.passed ? AppTheme.Status.success : .secondary)
                                     .frame(width: 26)
                                 Text(item.label)
                                     .font(.system(size: 14))
@@ -850,9 +854,9 @@ struct InspectionFormSheet: View {
                     HStack {
                         Label("Defect Found", systemImage: "exclamationmark.triangle.fill")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(hasDefect ? Color(red:0.85,green:0.15,blue:0.15) : .secondary)
+                            .foregroundStyle(hasDefect ? AppTheme.Status.danger : .secondary)
                         Spacer()
-                        Toggle("", isOn: $hasDefect).tint(Color(red:0.85,green:0.15,blue:0.15))
+                        Toggle("", isOn: $hasDefect).tint(AppTheme.Status.danger)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
@@ -878,7 +882,7 @@ struct InspectionFormSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background((allPass ? Color(red:0.2,green:0.78,blue:0.35) : Color.fmsIndigo).gradient)
+                        .background((allPass ? AppTheme.Status.success : Color.fmsIndigo).gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }
@@ -1013,7 +1017,7 @@ struct DefectReportSheet: View {
                             }
                         }
                         .frame(maxWidth: .infinity).frame(height: 52)
-                        .background(Color(red:0.85,green:0.15,blue:0.15).gradient)
+                        .background(AppTheme.Status.danger.gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                     .disabled(titleStr.isEmpty || desc.isEmpty)

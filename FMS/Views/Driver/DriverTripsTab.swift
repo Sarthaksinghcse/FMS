@@ -42,7 +42,7 @@ struct DriverTripsTab: View {
                                     Button { vm.showDefect = true } label: {
                                         Label("Defect", systemImage: "wrench.and.screwdriver.fill")
                                     }
-                                    .tint(Color(red: 0.85, green: 0.15, blue: 0.15))
+                                    .tint(AppTheme.Status.danger)
                                 }
                                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                     Button { vm.showPreTrip = true } label: {
@@ -206,9 +206,9 @@ private struct TripRow: View {
     private var statusColor: Color {
         switch trip.status {
         case .assigned:  return Color.fmsIndigo
-        case .started:   return Color(red: 0.2, green: 0.78, blue: 0.35)
+        case .started:   return AppTheme.Status.success
         case .completed: return Color(UIColor.systemGray)
-        case .cancelled: return Color(red: 0.85, green: 0.15, blue: 0.15)
+        case .cancelled: return AppTheme.Status.danger
         }
     }
 
@@ -352,7 +352,7 @@ private struct TripActionButton: View {
         switch style {
         case .primary:     return .white
         case .glass:       return Color.fmsIndigo
-        case .warning:     return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case .warning:     return AppTheme.Brand.accent
         case .destructive: return .white
         }
     }
@@ -360,11 +360,11 @@ private struct TripActionButton: View {
     private var backgroundContent: some ShapeStyle {
         switch style {
         case .primary:
-            return AnyShapeStyle(Color.fmsIndigo.gradient)
+            return AnyShapeStyle(AppTheme.Brand.primaryDeep.gradient)
         case .glass:
-            return AnyShapeStyle(Color.fmsIndigo.opacity(0.08))
+            return AnyShapeStyle(AppTheme.Brand.primaryDeep.opacity(0.08))
         case .warning:
-            return AnyShapeStyle(Color(red: 0.95, green: 0.50, blue: 0.15).opacity(0.10))
+            return AnyShapeStyle(AppTheme.Brand.accent.opacity(0.10))
         case .destructive:
             return AnyShapeStyle(Color.red.gradient)
         }
@@ -405,7 +405,7 @@ struct TripNavigationView: View {
                     }
                     if let d = destItem?.placemark.coordinate {
                         Annotation("Destination", coordinate: d, anchor: .bottom) {
-                            mapPin(icon: "flag.fill", color: Color(red: 0.2, green: 0.78, blue: 0.35))
+                            mapPin(icon: "flag.fill", color: AppTheme.Status.success)
                         }
                     }
                     if let r = route {
@@ -520,16 +520,16 @@ struct TripNavigationView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .font(.system(size: 13))
-                                        .foregroundStyle(Color(red: 0.95, green: 0.50, blue: 0.15))
+                                        .foregroundStyle(AppTheme.Brand.accent)
                                     Text("Complete Pre-Trip Inspection before starting")
                                         .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(AppTheme.Brand.accent)
                                     Spacer()
                                 }
                                 .padding(.horizontal, 14).padding(.vertical, 10)
                                 .background(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color(red: 0.95, green: 0.50, blue: 0.15).opacity(0.10))
+                                        .fill(AppTheme.Brand.accent.opacity(0.10))
                                 )
                             }
 
@@ -678,7 +678,7 @@ private struct MapActionButton: View {
         switch style {
         case .primary:     return Color.fmsIndigo
         case .glass:       return Color.fmsIndigo
-        case .warning:     return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case .warning:     return AppTheme.Brand.accent
         case .destructive: return .red
         }
     }
