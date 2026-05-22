@@ -1,25 +1,7 @@
 import SwiftUI
 import Supabase
 
-// MARK: - UI Helper for Existing Model
-extension UserRole {
-    var displayName: String {
-        switch self {
-        case .fleetManager: return "Fleet Manager"
-        case .driver: return "Driver"
-        case .maintenance: return "Maintenance Personnel"
-        }
-    }
-    static let allRoles: [UserRole] = [.fleetManager, .driver, .maintenance]
 
-    var toDBUserRole: DBUserRole {
-        switch self {
-        case .fleetManager: return .fleetManager
-        case .driver: return .driver
-        case .maintenance: return .maintenance
-        }
-    }
-}
 
 // MARK: - Focus Enum for Premium Interaction
 enum FocusField: Hashable {

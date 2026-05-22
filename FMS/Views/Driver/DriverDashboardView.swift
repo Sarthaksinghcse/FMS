@@ -182,14 +182,24 @@ final class DriverDashboardViewModel: ObservableObject {
 
     init() { seedMock() }
 
+    // MARK: Driver Info
+    
+    var driverId: UUID {
+        SupabaseManager.shared.currentUser?.id ?? db.currentUser.id
+    }
+
+    var driverName: String {
+        SupabaseManager.shared.currentUser?.name ?? db.currentUser.name
+    }
+
     // MARK: Load
 
     func load() async {
         isLoading = true; defer { isLoading = false }
         do {
-            let trips    = try await db.fetchTrips()
-            let vehicles = try await db.fetchVehicles()
-            let uid = db.currentUser.id
+            let trips    = try await SupabaseManager.shared.fetchTrips()
+            let vehicles = try await SupabaseManager.shared.fetchVehicles()
+            let uid = driverId
             let mine = trips.filter { $0.driverId == uid }
             currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
             activeTrip    = currentTrip ?? activeTrip
@@ -198,7 +208,24 @@ final class DriverDashboardViewModel: ObservableObject {
             driverStatus  = isTripActive ? .active : .idle
             let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
             assignedVehicle = vehicles.first(where: { $0.id == vid })
-        } catch { /* keep mock */ }
+        } catch {
+            print("Failed to fetch live driver data, using local fallback/mock: \(error.localizedDescription)")
+            do {
+                let trips    = try await db.fetchTrips()
+                let vehicles = try await db.fetchVehicles()
+                let uid = db.currentUser.id
+                let mine = trips.filter { $0.driverId == uid }
+                currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
+                activeTrip    = currentTrip ?? activeTrip
+                upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
+                isTripActive  = currentTrip != nil
+                driverStatus  = isTripActive ? .active : .idle
+                let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
+                assignedVehicle = vehicles.first(where: { $0.id == vid })
+            } catch {
+                // keep mock
+            }
+        }
     }
 
     // MARK: Trip control
@@ -241,7 +268,7 @@ final class DriverDashboardViewModel: ObservableObject {
     }
 
     var driverFirstName: String {
-        db.currentUser.name.components(separatedBy: " ").first ?? "Driver"
+        driverName.components(separatedBy: " ").first ?? "Driver"
     }
 
     var totalKm: Double { upcomingTrips.reduce(0) { $0 + $1.distance } }

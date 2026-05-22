@@ -276,7 +276,7 @@ struct DatabaseSeeder {
             try context.save()
             print("🎉 Database successfully seeded with 6 vehicles, 5 users, 2 trips, 2 defects, 1 SOS, 1 work order, and 2 records.")
         } catch {
-            print("❌ Failed to save seeded context: \(error.localizedDescription)")
+            print("Failed to save seeded context: \(error.localizedDescription)")
         }
     }
 }

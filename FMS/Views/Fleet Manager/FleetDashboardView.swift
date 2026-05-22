@@ -60,10 +60,6 @@ struct FleetDashboardView: View {
                             Text(viewModel.getGreetingText())
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.black)
-                            
-//                            Text(viewModel.getFormattedDate())
-//                                .font(.system(size: 13, weight: .medium))
-//                                .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 4)
@@ -194,7 +190,7 @@ struct FleetDashboardView: View {
                 Group {
                     switch action {
                     case .addVehicle:
-                        AddVehicleView()
+                        AddVehicleFormView()
                     case .assignDriver:
                         AssignDriverView()
                     case .reports:
