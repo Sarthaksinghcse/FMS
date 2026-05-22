@@ -243,6 +243,8 @@ CREATE POLICY "users_select_own"         ON public.users FOR SELECT USING (id = 
 CREATE POLICY "users_select_all_manager" ON public.users FOR SELECT USING (public.current_user_role() = 'fleet_manager');
 CREATE POLICY "users_update_own"         ON public.users FOR UPDATE USING (id = auth.uid());
 CREATE POLICY "users_insert_manager"     ON public.users FOR INSERT WITH CHECK (public.current_user_role() = 'fleet_manager');
+CREATE POLICY "users_update_manager"     ON public.users FOR UPDATE USING (public.current_user_role() = 'fleet_manager');
+CREATE POLICY "users_delete_manager"     ON public.users FOR DELETE USING (public.current_user_role() = 'fleet_manager');
 
 -- ---- vehicles ----
 CREATE POLICY "vehicles_select_all"     ON public.vehicles FOR SELECT USING (TRUE);
