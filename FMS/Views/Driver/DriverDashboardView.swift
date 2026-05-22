@@ -170,6 +170,7 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showPostTrip  = false
     @Published var showDefect    = false
     @Published var showMessaging = false
+    @Published var showProfile   = false
 
     @Published var confirmEnd    = false
     @Published var showMaps      = false
@@ -318,6 +319,7 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showPostTrip)  { InspectionFormSheet(isPreTrip: false) }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatSheet(messages: vm.messages) }
+        .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
         .sheet(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
         }

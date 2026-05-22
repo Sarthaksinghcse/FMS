@@ -75,18 +75,24 @@ private struct GreetingRow: View {
 
             Spacer()
 
-            // Profile avatar + status dot — tap to sign out
-            ZStack(alignment: .bottomTrailing) {
-                ProfileMenuButton(
-                    initials: String(vm.driverFirstName.prefix(1)),
-                    avatarColor: Color.fmsIndigo,
-                    size: 44
-                )
-                Circle()
-                    .fill(vm.driverStatus.dot)
-                    .frame(width: 11, height: 11)
-                    .overlay(Circle().stroke(Color(UIColor.systemBackground), lineWidth: 2))
+            // Profile avatar + status dot — tap to open profile
+            Button { vm.showProfile = true } label: {
+                ZStack(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(Color.fmsIndigo.gradient)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Text(String(vm.driverFirstName.prefix(1)))
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.white)
+                        )
+                    Circle()
+                        .fill(vm.driverStatus.dot)
+                        .frame(width: 11, height: 11)
+                        .overlay(Circle().stroke(Color(UIColor.systemBackground), lineWidth: 2))
+                }
             }
+            .buttonStyle(.plain)
         }
     }
 }
