@@ -493,6 +493,26 @@ final class SupabaseManager: ObservableObject {
             .eq("id", value: id.uuidString)
             .execute()
     }
+    
+    // MARK: - Trip CRUD Extensions
+    
+    /// Updates a trip record.
+    func updateTrip(_ trip: DBTrip) async throws {
+        try await client
+            .from("trips")
+            .update(trip)
+            .eq("id", value: trip.id.uuidString)
+            .execute()
+    }
+    
+    /// Deletes a trip record.
+    func deleteTrip(id: UUID) async throws {
+        try await client
+            .from("trips")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
 }
 
 

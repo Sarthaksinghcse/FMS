@@ -84,10 +84,6 @@ struct AddDriverFormView: View {
                     .foregroundColor(AppTheme.Brand.royalBlue)
                     .disabled(isSaving)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
                 Button("OK", role: .cancel) {}
@@ -325,10 +321,6 @@ struct EditDriverFormView: View {
                     }
                     .foregroundColor(AppTheme.Brand.royalBlue)
                     .disabled(isSaving || isDeleting)
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {

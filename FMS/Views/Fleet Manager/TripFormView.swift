@@ -41,6 +41,7 @@ struct AddTripFormView: View {
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
+    @State private var isSaving             = false
 
     // ── Focus ─────────────────────────────────────────────────────────────────
     @FocusState private var focusedField: TripFocusField?
@@ -56,7 +57,7 @@ struct AddTripFormView: View {
                     VStack(spacing: 24) {
 
                         // ── Form sections ──────────────────────────────────
-                        formSection(title: "Trip Details", icon: "map.fill", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                         }
@@ -89,7 +90,7 @@ struct AddTripFormView: View {
                                          text: $endLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLong)
                         }
 
-                        formSection(title: "Schedule", icon: "calendar", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             FormDivider()
                             DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
@@ -117,11 +118,7 @@ struct AddTripFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -144,9 +141,14 @@ struct AddTripFormView: View {
             saveTrip()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Create Trip")
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Creating..." : "Create Trip")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
@@ -154,13 +156,14 @@ struct AddTripFormView: View {
             .frame(height: 54)
             .background(
                 LinearGradient(
-                    colors: [Color(red: 0.58, green: 0.39, blue: 0.87), Color(red: 0.48, green: 0.29, blue: 0.77)],
+                    colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.primary],
                     startPoint: .leading, endPoint: .trailing
                 )
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.35), radius: 12, x: 0, y: 6)
+            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving)
     }
 
     // MARK: Save Action
@@ -226,9 +229,30 @@ struct AddTripFormView: View {
             notes:               notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
         )
 
-        modelContext.insert(trip)
-        try? modelContext.save()
-        saveSuccess = true
+        isSaving = true
+
+        Task {
+            do {
+                // Save to Supabase first
+                try await SupabaseManager.shared.createTrip(trip.asDBTrip)
+                
+                await MainActor.run {
+                    modelContext.insert(trip)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to save trip to Supabase: \(error)")
+                // Fallback to local cache so user can work offline
+                await MainActor.run {
+                    modelContext.insert(trip)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 }
 
@@ -267,6 +291,8 @@ struct EditTripFormView: View {
     @State private var validationMessage   = ""
     @State private var showDeleteConfirm   = false
     @State private var saveSuccess         = false
+    @State private var isSaving             = false
+    @State private var isDeleting           = false
     @FocusState private var focusedField: TripFocusField?
 
     private var drivers: [User] { allUsers.filter { $0.role == .driver } }
@@ -299,7 +325,7 @@ struct EditTripFormView: View {
                         tripBadge
 
                         // ── Sections ───────────────────────────────────────
-                        formSection(title: "Trip Details", icon: "map.fill", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                             FormDivider()
@@ -334,7 +360,7 @@ struct EditTripFormView: View {
                                          text: $endLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLong)
                         }
 
-                        formSection(title: "Schedule", icon: "calendar", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             FormDivider()
                             DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
@@ -365,11 +391,7 @@ struct EditTripFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -403,11 +425,11 @@ struct EditTripFormView: View {
             ZStack {
                 Circle()
                     .fill(LinearGradient(
-                        colors: [Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.8), Color(red: 0.58, green: 0.39, blue: 0.87)],
+                        colors: [AppTheme.Brand.royalBlue.opacity(0.8), AppTheme.Brand.royalBlue],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ))
                     .frame(width: 60, height: 60)
-                    .shadow(color: Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.35), radius: 10, y: 4)
+                    .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 10, y: 4)
                 Image(systemName: "map.fill")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(.white)
@@ -434,18 +456,24 @@ struct EditTripFormView: View {
     private var saveButton: some View {
         Button { saveChanges() } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
-                Text("Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
             .background(LinearGradient(
-                colors: [Color(red: 0.58, green: 0.39, blue: 0.87), Color(red: 0.48, green: 0.29, blue: 0.77)],
+                colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.primary],
                 startPoint: .leading, endPoint: .trailing
             ))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.35), radius: 12, x: 0, y: 6)
+            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving || isDeleting)
     }
 
     // MARK: Delete Button
@@ -453,8 +481,13 @@ struct EditTripFormView: View {
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
             HStack(spacing: 8) {
-                Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
-                Text("Delete Trip").font(.system(size: 15, weight: .semibold, design: .rounded))
+                if isDeleting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                } else {
+                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                }
+                Text(isDeleting ? "Deleting..." : "Delete Trip").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
             .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -463,6 +496,7 @@ struct EditTripFormView: View {
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
         }
+        .disabled(isSaving || isDeleting)
     }
 
     // MARK: Actions
@@ -508,30 +542,102 @@ struct EditTripFormView: View {
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        trip.tripCode           = tripCode.trimmingCharacters(in: .whitespaces).uppercased()
-        trip.vehicleId          = vehicle.id
-        trip.driverId           = driver.id
-        trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
-        trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
-        trip.startLatitude      = startLat
-        trip.startLongitude     = startLong
-        trip.endLatitude        = endLat
-        trip.endLongitude       = endLong
-        trip.scheduledStartTime = scheduledStartTime
-        trip.scheduledEndTime   = scheduledEndTime
-        trip.distanceKm         = distance
-        trip.tripStatus         = tripStatus
-        trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+        // Create updated DB model
+        let updatedDBTrip = DBTrip(
+            id: trip.id,
+            vehicleId: vehicle.id,
+            driverId: driver.id,
+            source: startLocation.trimmingCharacters(in: .whitespaces),
+            destination: endLocation.trimmingCharacters(in: .whitespaces),
+            startTime: scheduledStartTime,
+            endTime: scheduledEndTime,
+            distance: distance,
+            status: tripStatus.toDBStatus,
+            notes: notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces),
+            createdAt: trip.createdAt
+        )
 
-        try? modelContext.save()
-        saveSuccess = true
+        isSaving = true
+
+        Task {
+            do {
+                // Update on Supabase first
+                try await SupabaseManager.shared.updateTrip(updatedDBTrip)
+                
+                await MainActor.run {
+                    trip.tripCode           = tripCode.trimmingCharacters(in: .whitespaces).uppercased()
+                    trip.vehicleId          = vehicle.id
+                    trip.driverId           = driver.id
+                    trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
+                    trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
+                    trip.startLatitude      = startLat
+                    trip.startLongitude     = startLong
+                    trip.endLatitude        = endLat
+                    trip.endLongitude       = endLong
+                    trip.scheduledStartTime = scheduledStartTime
+                    trip.scheduledEndTime   = scheduledEndTime
+                    trip.distanceKm         = distance
+                    trip.tripStatus         = tripStatus
+                    trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to update trip on Supabase: \(error)")
+                // Fallback to local cache update
+                await MainActor.run {
+                    trip.tripCode           = tripCode.trimmingCharacters(in: .whitespaces).uppercased()
+                    trip.vehicleId          = vehicle.id
+                    trip.driverId           = driver.id
+                    trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
+                    trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
+                    trip.startLatitude      = startLat
+                    trip.startLongitude     = startLong
+                    trip.endLatitude        = endLat
+                    trip.endLongitude       = endLong
+                    trip.scheduledStartTime = scheduledStartTime
+                    trip.scheduledEndTime   = scheduledEndTime
+                    trip.distanceKm         = distance
+                    trip.tripStatus         = tripStatus
+                    trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 
     private func deleteTrip() {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        modelContext.delete(trip)
-        try? modelContext.save()
-        dismiss()
+        
+        isDeleting = true
+        
+        Task {
+            do {
+                // Delete from Supabase first
+                try await SupabaseManager.shared.deleteTrip(id: trip.id)
+                
+                await MainActor.run {
+                    modelContext.delete(trip)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            } catch {
+                print("Failed to delete trip from Supabase: \(error)")
+                // Fallback to local delete
+                await MainActor.run {
+                    modelContext.delete(trip)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            }
+        }
     }
 }
 
@@ -610,20 +716,18 @@ struct VehiclePickerRow: View {
     @Binding var selection: Vehicle?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
+
+            Spacer()
 
             if vehicles.isEmpty {
-                Text("No vehicles available. Add vehicles first.")
+                Text("No vehicles available")
                     .font(.system(size: 13, design: .rounded))
                     .foregroundColor(.gray)
                     .italic()
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
             } else {
                 Picker("", selection: $selection) {
                     Text("Select Vehicle").tag(nil as Vehicle?)
@@ -634,10 +738,10 @@ struct VehiclePickerRow: View {
                 }
                 .pickerStyle(.menu)
                 .tint(AppTheme.Brand.royalBlue)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 14)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }
 
@@ -649,20 +753,18 @@ struct DriverPickerRow: View {
     @Binding var selection: User?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
+
+            Spacer()
 
             if drivers.isEmpty {
-                Text("No drivers available. Add drivers first.")
+                Text("No drivers available")
                     .font(.system(size: 13, design: .rounded))
                     .foregroundColor(.gray)
                     .italic()
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
             } else {
                 Picker("", selection: $selection) {
                     Text("Select Driver").tag(nil as User?)
@@ -672,10 +774,10 @@ struct DriverPickerRow: View {
                 }
                 .pickerStyle(.menu)
                 .tint(AppTheme.Brand.royalBlue)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 14)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }
 
@@ -685,11 +787,11 @@ struct TripStatusPickerRow: View {
     @Binding var selection: TripStatus
 
     private let options: [(TripStatus, String, Color)] = [
-        (.assigned,    "Assigned",    Color.orange),
-        (.started,     "Started",     Color.blue),
-        (.inProgress,  "In Progress", Color(red: 0.58, green: 0.39, blue: 0.87)),
-        (.completed,   "Completed",   Color(red: 0.30, green: 0.70, blue: 0.46)),
-        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))
+        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)), // Royal Blue (Upcoming)
+        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)), // Fresh Green (Active)
+        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)), // Fresh Green (Active)
+        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)), // Slate-Silver (Completed success)
+        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))  // Soft Red
     ]
 
     var body: some View {

@@ -22,6 +22,7 @@ struct MaintenanceDashboardView: View {
     @Query private var allNotifications: [AppNotification]
 
     @State private var selectedTab: Int = 0
+    @State private var showProfile: Bool = false
 
     // MARK: Derived counts (computed from real data)
 
@@ -86,6 +87,9 @@ struct MaintenanceDashboardView: View {
             .background(AppTheme.Background.page)
             .navigationTitle("Maintenance")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showProfile) {
+                MaintenanceProfileView()
+            }
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
@@ -96,12 +100,14 @@ struct MaintenanceDashboardView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 8) {
-                        NotificationBellButton(count: unreadNotifications.count)
-                        ProfileMenuButton(
-                            initials: "M",
-                            avatarColor: AppTheme.Brand.primary
-                        )
+                    NotificationBellButton(count: unreadNotifications.count)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ProfileMenuButton(
+                        initials: "M",
+                        avatarColor: AppTheme.Brand.primary
+                    ) {
+                        showProfile = true
                     }
                 }
             }
@@ -365,22 +371,29 @@ struct WorkOrderStatusBadge: View {
 struct NotificationBellButton: View {
     let count: Int
     var body: some View {
-        Button(action: {}) {
+        Button(action: {
+            print("Notification tapped")
+        }) {
             ZStack(alignment: .topTrailing) {
-                Image(systemName: "bell")
-                    .font(.system(size: 20))
-                    .foregroundColor(AppTheme.Text.primary)
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.Background.card)
+                        .frame(width: 38, height: 38)
+                        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(AppTheme.Text.primary.opacity(0.6))
+                }
+                
                 if count > 0 {
-                    Text("\(min(count, 99))")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(AppTheme.Text.onDark)
-                        .frame(minWidth: 16, minHeight: 16)
-                        .background(AppTheme.Status.danger)
-                        .clipShape(Circle())
-                        .offset(x: 6, y: -6)
+                    Circle()
+                        .fill(AppTheme.Status.danger)
+                        .frame(width: 8, height: 8)
+                        .offset(x: -2, y: 2)
                 }
             }
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

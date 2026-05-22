@@ -15,10 +15,6 @@ import SwiftData
 struct FleetManagerProfileView: View {
 
     @StateObject private var supabase = SupabaseManager.shared
-    @Query private var vehicles: [Vehicle]
-    @Query private var allUsers: [User]
-    @Query private var trips: [Trip]
-
     @State private var showEditProfile = false
     @State private var showNotificationSettings = false
     @State private var showSecuritySettings = false
@@ -37,15 +33,6 @@ struct FleetManagerProfileView: View {
         return String(name.prefix(2)).uppercased()
     }
 
-    // MARK: Derived Stats
-
-    private var totalVehicles: Int { vehicles.count }
-    private var activeVehicles: Int { vehicles.filter { $0.status == .active }.count }
-    private var totalDrivers: Int { allUsers.filter { $0.role == .driver }.count }
-    private var activeTrips: Int { trips.filter { $0.tripStatus == .assigned || $0.tripStatus == .inProgress || $0.tripStatus == .started }.count }
-    private var completedTrips: Int { trips.filter { $0.tripStatus == .completed }.count }
-    private var maintenancePersonnel: Int { allUsers.filter { $0.role == .maintenance }.count }
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -54,7 +41,6 @@ struct FleetManagerProfileView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
                         profileHeaderCard
-                        fleetOverviewSection
                         accountSettingsSection
                         signOutSection
                     }
@@ -94,123 +80,80 @@ struct FleetManagerProfileView: View {
     // MARK: - Profile Header Card
 
     private var profileHeaderCard: some View {
-        VStack(spacing: 20) {
-            // Avatar
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 20) {
+                // Avatar
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 90, height: 90)
-                    .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 16, y: 6)
+                        .frame(width: 90, height: 90)
+                        .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 16, y: 6)
 
-                Text(initials)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-            }
-
-            // Name & Email
-            VStack(spacing: 6) {
-                Text(user?.name ?? "Fleet Manager")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.primary)
-
-                Text(user?.email ?? "manager@fms.com")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(AppTheme.Text.secondary)
-
-                // Role Badge
-                HStack(spacing: 6) {
-                    Image(systemName: "shield.checkered")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Fleet Manager")
-                        .font(.system(size: 12, weight: .semibold))
+                    Text(initials)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
                 }
-                .foregroundColor(AppTheme.Brand.primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(AppTheme.Brand.primary.opacity(0.10))
-                .clipShape(Capsule())
-                .padding(.top, 4)
-            }
 
-            // Edit Profile Button
+                // Name & Email
+                VStack(spacing: 6) {
+                    Text(user?.name ?? "Fleet Manager")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.primary)
+
+                    Text(user?.email ?? "manager@fms.com")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppTheme.Text.secondary)
+
+                    // Role Badge
+                    HStack(spacing: 6) {
+                        Image(systemName: "shield.checkered")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Fleet Manager")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.primary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.Brand.primary.opacity(0.10))
+                    .clipShape(Capsule())
+                    .padding(.top, 4)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+
+            // Edit Profile Button (Top-Right)
             Button {
                 showEditProfile = true
             } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "pencil.line")
-                        .font(.system(size: 13, weight: .medium))
-                    Text("Edit Profile")
-                        .font(.system(size: 14, weight: .semibold))
+                HStack(spacing: 4) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Edit")
+                        .font(.system(size: 12, weight: .bold))
                 }
                 .foregroundColor(AppTheme.Brand.primary)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
                 .background(AppTheme.Brand.primary.opacity(0.08))
                 .clipShape(Capsule())
             }
             .buttonStyle(PlainButtonStyle())
+            .padding(.top, 16)
+            .padding(.trailing, 16)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
         .background(AppTheme.Background.card)
         .cornerRadius(AppTheme.Radius.card)
         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
     }
 
-    // MARK: - Fleet Overview Stats Section
 
-    private var fleetOverviewSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Fleet Overview")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(AppTheme.Text.primary)
-                .padding(.leading, 4)
-
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                spacing: 12
-            ) {
-                ProfileStatCard(
-                    icon: "bus.fill",
-                    iconColor: AppTheme.Brand.primary,
-                    iconBg: AppTheme.IconBg.blue,
-                    title: "Total Vehicles",
-                    value: "\(totalVehicles)",
-                    subtitle: "\(activeVehicles) active"
-                )
-                ProfileStatCard(
-                    icon: "person.2.fill",
-                    iconColor: AppTheme.Brand.violet,
-                    iconBg: AppTheme.IconBg.violet,
-                    title: "Drivers",
-                    value: "\(totalDrivers)",
-                    subtitle: "Registered"
-                )
-                ProfileStatCard(
-                    icon: "arrow.triangle.swap",
-                    iconColor: AppTheme.Brand.teal,
-                    iconBg: AppTheme.IconBg.teal,
-                    title: "Active Trips",
-                    value: "\(activeTrips)",
-                    subtitle: "\(completedTrips) completed"
-                )
-                ProfileStatCard(
-                    icon: "wrench.and.screwdriver.fill",
-                    iconColor: AppTheme.Brand.amber,
-                    iconBg: AppTheme.IconBg.amber,
-                    title: "Maintenance Staff",
-                    value: "\(maintenancePersonnel)",
-                    subtitle: "Available"
-                )
-            }
-        }
-    }
 
     // MARK: - Account & Settings
 

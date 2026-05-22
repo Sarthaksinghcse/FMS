@@ -86,7 +86,7 @@ struct ManagementHubView: View {
             ManagementCard(
                 title: "Driver Management",
                 subtitle: "Manage drivers & assignments",
-                icon: "person.fill.checkmark",
+                icon: "person.fill",
                 accentColor: Color(red: 0.30, green: 0.70, blue: 0.46),
                 metrics: [
                     CardMetric(label: "Total",   value: "\(driverCount)",
@@ -1194,9 +1194,7 @@ struct TripListView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Trip.scheduledStartTime, order: .reverse) private var allTrips: [Trip]
-    @Query private var allUsers: [User]
-
-    private let tripPurple = Color(red: 0.58, green: 0.39, blue: 0.87)
+    @Query(sort: \User.fullName) private var allUsers: [User]
 
     private var filteredTrips: [Trip] {
         var trips = allTrips
@@ -1252,7 +1250,7 @@ struct TripListView: View {
                             Text("Schedule or dispatch your first trip.")
                         } actions: {
                             Button("Add Trip") { showAddTrip = true }
-                                .buttonStyle(.borderedProminent).tint(tripPurple)
+                                .buttonStyle(.borderedProminent).tint(AppTheme.Brand.royalBlue)
                         }
                     } else {
                         ContentUnavailableView.search(text: searchText)
@@ -1261,6 +1259,9 @@ struct TripListView: View {
                     tripListContent
                 }
             }
+        }
+        .refreshable {
+            await syncTrips()
         }
         .navigationTitle("Trip Management")
         .navigationBarTitleDisplayMode(.large)
@@ -1275,7 +1276,12 @@ struct TripListView: View {
         }
         .sheet(isPresented: $showAddTrip) { AddTripFormView() }
         .sheet(item: $editingTrip) { t in EditTripFormView(trip: t) }
-        .onAppear { withAnimation(.easeOut(duration: 0.6)) { appearAnimation = true } }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.6)) { appearAnimation = true }
+            Task {
+                await syncTrips()
+            }
+        }
     }
 
     private var filterChips: some View {
@@ -1283,6 +1289,15 @@ struct TripListView: View {
             HStack(spacing: 10) {
                 ForEach(TripCategoryFilter.allCases) { filter in
                     let isSelected = selectedFilter == filter
+                    let chipColor: Color = {
+                        switch filter {
+                        case .all:      return AppTheme.Brand.accent // Dark Orange in App Theme
+                        case .active:   return Color(red: 0.30, green: 0.70, blue: 0.46) // Fresh Green
+                        case .upcoming: return Color(red: 0.15, green: 0.38, blue: 0.90) // Royal Blue
+                        case .past:     return Color(red: 0.55, green: 0.58, blue: 0.62) // Slate-Silver (Completed success)
+                        }
+                    }()
+                    
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { selectedFilter = filter }
@@ -1295,15 +1310,15 @@ struct TripListView: View {
                                 Text("\(count)")
                                     .font(.system(size: 11, weight: .bold, design: .rounded))
                                     .padding(.horizontal, 6).padding(.vertical, 2)
-                                    .background(isSelected ? Color.white.opacity(0.25) : tripPurple.opacity(0.12))
+                                    .background(isSelected ? Color.white.opacity(0.25) : chipColor.opacity(0.12))
                                     .clipShape(Capsule())
                             }
                         }
-                        .foregroundColor(isSelected ? .white : tripPurple)
+                        .foregroundColor(isSelected ? .white : chipColor)
                         .padding(.horizontal, 16).padding(.vertical, 9)
-                        .background(isSelected ? tripPurple : tripPurple.opacity(0.08))
+                        .background(isSelected ? chipColor : chipColor.opacity(0.08))
                         .clipShape(Capsule())
-                        .overlay(Capsule().stroke(isSelected ? Color.clear : tripPurple.opacity(0.2), lineWidth: 1))
+                        .overlay(Capsule().stroke(isSelected ? Color.clear : chipColor.opacity(0.2), lineWidth: 1))
                     }
                     .buttonStyle(ScaleButtonStyle())
                 }
@@ -1322,7 +1337,7 @@ struct TripListView: View {
                     TripCardView(
                         trip: trip,
                         driverName: driverName(for: trip.driverId),
-                        accentColor: tripPurple,
+                        accentColor: trip.tripStatus.badgeColor,
                         onEdit: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             editingTrip = trip
@@ -1338,6 +1353,42 @@ struct TripListView: View {
                 }
             }
             .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 100)
+        }
+    }
+
+    private func syncTrips() async {
+        do {
+            let dbTrips = try await SupabaseManager.shared.fetchTrips()
+            await MainActor.run {
+                for dbt in dbTrips {
+                    if let localTrip = allTrips.first(where: { $0.id == dbt.id }) {
+                        localTrip.vehicleId = dbt.vehicleId
+                        localTrip.driverId = dbt.driverId
+                        localTrip.startLocation = dbt.source
+                        localTrip.endLocation = dbt.destination
+                        localTrip.scheduledStartTime = dbt.startTime ?? Date()
+                        localTrip.scheduledEndTime = dbt.endTime ?? Date().addingTimeInterval(7200)
+                        localTrip.actualStartTime = dbt.startTime
+                        localTrip.actualEndTime = dbt.endTime
+                        localTrip.distanceKm = dbt.distance
+                        localTrip.tripStatus = dbt.status.toLocalStatus
+                        localTrip.notes = dbt.notes
+                    } else {
+                        modelContext.insert(dbt.asLocalTrip)
+                    }
+                }
+                
+                let remoteIds = Set(dbTrips.map { $0.id })
+                for localTrip in allTrips {
+                    if !remoteIds.contains(localTrip.id) {
+                        modelContext.delete(localTrip)
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("Failed to sync trips: \(error)")
         }
     }
 }
@@ -1428,12 +1479,18 @@ struct TripCardView: View {
 
     private var tripStatusBadge: some View {
         HStack(spacing: 4) {
-            Image(systemName: trip.tripStatus.badgeIcon).font(.system(size: 10, weight: .bold))
-            Text(trip.tripStatus.displayName).font(.system(size: 11, weight: .bold, design: .rounded))
+            Image(systemName: trip.tripStatus.badgeIcon)
+                .font(.system(size: 10, weight: .bold))
+            Text(trip.tripStatus.displayName)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .foregroundColor(.white)
         .padding(.horizontal, 10).padding(.vertical, 5)
-        .background(trip.tripStatus.badgeColor).clipShape(Capsule())
+        .background(trip.tripStatus.badgeColor)
+        .clipShape(Capsule())
+        .layoutPriority(1)
     }
 
     private func tripDetailCol(label: String, value: String, icon: String) -> some View {
@@ -1450,7 +1507,7 @@ struct TripCardView: View {
 @available(iOS 26.0, *)
 struct AddTripStubView: View {
     @Environment(\.dismiss) private var dismiss
-    private let tripPurple = Color(red: 0.58, green: 0.39, blue: 0.87)
+    private let tripBlue = AppTheme.Brand.royalBlue
 
     var body: some View {
         NavigationStack {
@@ -1459,9 +1516,9 @@ struct AddTripStubView: View {
                 VStack(spacing: 24) {
                     Spacer()
                     ZStack {
-                        Circle().fill(tripPurple.opacity(0.08)).frame(width: 100, height: 100)
+                        Circle().fill(tripBlue.opacity(0.08)).frame(width: 100, height: 100)
                         Image(systemName: "map.fill").font(.system(size: 38, weight: .medium))
-                            .foregroundColor(tripPurple.opacity(0.5)).symbolEffect(.bounce)
+                            .foregroundColor(tripBlue.opacity(0.5)).symbolEffect(.bounce)
                     }
                     VStack(spacing: 8) {
                         Text("Add New Trip").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
@@ -1474,7 +1531,7 @@ struct AddTripStubView: View {
             .navigationTitle("New Trip").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.foregroundColor(tripPurple)
+                    Button("Cancel") { dismiss() }.foregroundColor(tripBlue)
                 }
             }
         }
@@ -1485,7 +1542,7 @@ struct AddTripStubView: View {
 struct EditTripStubView: View {
     let trip: Trip
     @Environment(\.dismiss) private var dismiss
-    private let tripPurple = Color(red: 0.58, green: 0.39, blue: 0.87)
+    private let tripBlue = AppTheme.Brand.royalBlue
 
     var body: some View {
         NavigationStack {
@@ -1494,13 +1551,13 @@ struct EditTripStubView: View {
                 VStack(spacing: 24) {
                     Spacer()
                     ZStack {
-                        Circle().fill(tripPurple.opacity(0.08)).frame(width: 100, height: 100)
+                        Circle().fill(tripBlue.opacity(0.08)).frame(width: 100, height: 100)
                         Image(systemName: "pencil.and.list.clipboard").font(.system(size: 38, weight: .medium))
-                            .foregroundColor(tripPurple.opacity(0.5)).symbolEffect(.bounce)
+                            .foregroundColor(tripBlue.opacity(0.5)).symbolEffect(.bounce)
                     }
                     VStack(spacing: 8) {
                         Text("Edit Trip").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
-                        Text("Editing \(trip.tripCode)").font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundColor(tripPurple)
+                        Text("Editing \(trip.tripCode)").font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundColor(tripBlue)
                         Text("Trip editing form\ncoming soon.")
                             .font(.system(size: 14, design: .rounded)).foregroundColor(.gray).multilineTextAlignment(.center)
                     }
@@ -1510,7 +1567,7 @@ struct EditTripStubView: View {
             .navigationTitle("Edit Trip").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.foregroundColor(tripPurple)
+                    Button("Cancel") { dismiss() }.foregroundColor(tripBlue)
                 }
             }
         }
