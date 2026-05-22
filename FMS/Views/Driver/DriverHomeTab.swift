@@ -75,18 +75,24 @@ private struct GreetingRow: View {
 
             Spacer()
 
-            // Profile avatar + status dot — tap to sign out
-            ZStack(alignment: .bottomTrailing) {
-                ProfileMenuButton(
-                    initials: String(vm.driverFirstName.prefix(1)),
-                    avatarColor: Color.fmsIndigo,
-                    size: 44
-                )
-                Circle()
-                    .fill(vm.driverStatus.dot)
-                    .frame(width: 11, height: 11)
-                    .overlay(Circle().stroke(Color(UIColor.systemBackground), lineWidth: 2))
+            // Profile avatar + status dot — tap to open profile
+            Button { vm.showProfile = true } label: {
+                ZStack(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(Color.fmsIndigo.gradient)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Text(String(vm.driverFirstName.prefix(1)))
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.white)
+                        )
+                    Circle()
+                        .fill(vm.driverStatus.dot)
+                        .frame(width: 11, height: 11)
+                        .overlay(Circle().stroke(Color(UIColor.systemBackground), lineWidth: 2))
+                }
             }
+            .buttonStyle(.plain)
         }
     }
 }
@@ -303,12 +309,34 @@ private struct VehicleRow: View {
                 Button { vm.showDefect = true } label: {
                     Text("Report defect")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color(red: 0.85, green: 0.15, blue: 0.15))
+                        .foregroundStyle(AppTheme.Status.danger)
                 }
             }
 
-            // Card — three stats arranged as labelled rows, no dividers
+            // Card
             VStack(spacing: 0) {
+
+                // ── Manufacturer ─────────────────────────────────────────────
+                VehicleStatRow(
+                    icon: "building.2.fill",
+                    label: "Manufacturer",
+                    value: vm.vehicleManufacturer
+                )
+                Color(UIColor.separator)
+                    .frame(height: 0.4)
+                    .padding(.leading, 40)
+
+                // ── Model ─────────────────────────────────────────────────────
+                VehicleStatRow(
+                    icon: "car.side.fill",
+                    label: "Model",
+                    value: "\(vm.vehicleModel)  (\(vm.vehicleYear))"
+                )
+                Color(UIColor.separator)
+                    .frame(height: 0.4)
+                    .padding(.leading, 40)
+
+                // ── Plate ─────────────────────────────────────────────────────
                 VehicleStatRow(
                     icon: "car.fill",
                     label: "Plate number",
@@ -317,17 +345,21 @@ private struct VehicleRow: View {
                 Color(UIColor.separator)
                     .frame(height: 0.4)
                     .padding(.leading, 40)
+
+                // ── Fuel ──────────────────────────────────────────────────────
                 VehicleStatRow(
                     icon: "fuelpump.fill",
                     label: "Fuel level",
                     value: String(format: "%.0f%%", vm.fuelLevel * 100),
                     valueColor: vm.fuelLevel < 0.25
-                        ? Color(red: 0.85, green: 0.15, blue: 0.15)
+                        ? AppTheme.Status.danger
                         : Color.fmsIndigo
                 )
                 Color(UIColor.separator)
                     .frame(height: 0.4)
                     .padding(.leading, 40)
+
+                // ── Odometer ─────────────────────────────────────────────────
                 VehicleStatRow(
                     icon: "gauge",
                     label: "Odometer",
@@ -415,7 +447,7 @@ private struct BareMessageRow: View {
     private var roleColor: Color {
         switch msg.role {
         case "Fleet Manager": return Color.fmsIndigo
-        case "Maintenance":   return Color(red:0.95,green:0.50,blue:0.15)
+        case "Maintenance":   return AppTheme.Brand.accent
         default:              return Color(UIColor.systemGray)
         }
     }
