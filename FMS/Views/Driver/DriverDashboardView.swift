@@ -109,13 +109,13 @@ private actor DriverDashboardDataStore {
 
     func fetchTrips() async throws -> [DBTrip] {
         [
-            DBTrip(id: UUID(), vehicleId: vehicleId, driverId: currentUser.id,
-                   source: "Warehouse A - Sector 17",
-                   destination: "Distribution Hub - Phase 5",
+            DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!, vehicleId: vehicleId, driverId: currentUser.id,
+                   source: "San Francisco Dock C",
+                   destination: "Los Angeles Warehouse 4",
                    startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
                    endTime: Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                   distance: 48.2, status: .assigned,
-                   notes: "Priority delivery", createdAt: .now),
+                   distance: 612.0, status: .assigned,
+                   notes: "Dry Van Food Grd", createdAt: .now),
             DBTrip(id: UUID(), vehicleId: vehicleId, driverId: currentUser.id,
                    source: "Distribution Hub - Phase 5",
                    destination: "Client Site - Noida",
@@ -145,6 +145,28 @@ private actor DriverDashboardDataStore {
     }
 }
 
+// MARK: - Completed Trip Record
+
+struct CompletedTripRecord: Identifiable {
+    let id: UUID
+    let trip: DBTrip
+    let completedAt: Date
+    let elapsedSeconds: Int       // time taken in seconds
+    let distanceKm: Double
+    let inspectionPassed: Bool
+    let issuesFound: Int
+    let inspectionRemarks: String
+
+    var formattedDuration: String {
+        let h = elapsedSeconds / 3600
+        let m = (elapsedSeconds % 3600) / 60
+        let s = elapsedSeconds % 60
+        if h > 0 { return "\(h)h \(m)m" }
+        if m > 0 { return "\(m)m \(s)s" }
+        return "\(s)s"
+    }
+}
+
 // MARK: - ViewModel
 
 @MainActor
@@ -171,13 +193,24 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showDefect    = false
     @Published var showMessaging = false
     @Published var showProfile   = false
+    @Published var showSOSConfirm = false
+    @Published var showSOSCountdown = false
+    @Published var sosSentAlert   = false
 
     @Published var confirmEnd    = false
+    @Published var showPostTripOnEnd = false
     @Published var showMaps      = false
     @Published var activeTrip: DBTrip?
     @Published var mapActiveTrip: DBTrip?
+    @Published var completedTrips: [CompletedTripRecord] = []
+
+    // Post-trip inspection data captured when submitting
+    var lastInspectionPassed: Bool = true
+    var lastIssuesFound: Int = 0
+    var lastInspectionRemarks: String = ""
 
     private var tripTimer: Timer?
+    private var tripStartDate: Date?
     private let db = DriverDashboardDataStore.shared
 
     init() { seedMock() }
@@ -196,10 +229,10 @@ final class DriverDashboardViewModel: ObservableObject {
 
     func load() async {
         isLoading = true; defer { isLoading = false }
+        let uid = driverId
         do {
             let trips    = try await SupabaseManager.shared.fetchTrips()
             let vehicles = try await SupabaseManager.shared.fetchVehicles()
-            let uid = driverId
             let mine = trips.filter { $0.driverId == uid }
             currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
             activeTrip    = currentTrip ?? activeTrip
@@ -213,7 +246,6 @@ final class DriverDashboardViewModel: ObservableObject {
             do {
                 let trips    = try await db.fetchTrips()
                 let vehicles = try await db.fetchVehicles()
-                let uid = db.currentUser.id
                 let mine = trips.filter { $0.driverId == uid }
                 currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
                 activeTrip    = currentTrip ?? activeTrip
@@ -226,6 +258,36 @@ final class DriverDashboardViewModel: ObservableObject {
                 // keep mock
             }
         }
+
+        // Global fallback: if no trips are assigned to the current driver, load the mock A8802 trip so the UI is populated
+        if upcomingTrips.isEmpty && currentTrip == nil {
+            upcomingTrips = [
+                DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!,
+                       vehicleId: assignedVehicle?.id ?? UUID(),
+                       driverId: uid,
+                       source: "San Francisco Dock C",
+                       destination: "Los Angeles Warehouse 4",
+                       startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
+                       endTime:   Calendar.current.date(byAdding: .hour, value: 4, to: .now),
+                       distance: 612.0, status: .assigned, notes: "Dry Van Food Grd", createdAt: .now)
+            ]
+        }
+        
+        if assignedVehicle == nil {
+            assignedVehicle = DBVehicle(
+                id: UUID(),
+                vehicleNumber: "TN-07-AB-1234",
+                model: "Swift Dzire",
+                manufacturer: "Maruti Suzuki",
+                year: 2023,
+                vin: "FMSMOCKVIN000101",
+                licensePlate: "TN-07-AB-1234",
+                status: .inUse,
+                assignedDriverId: uid,
+                lastServiceDate: nil,
+                createdAt: .now
+            )
+        }
     }
 
     // MARK: Trip control
@@ -237,6 +299,7 @@ final class DriverDashboardViewModel: ObservableObject {
         }
         showMaps = true
         mapActiveTrip = activeTrip
+        tripStartDate = Date()   // Record exact start time
         tripTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.tripElapsed += 1
@@ -246,10 +309,49 @@ final class DriverDashboardViewModel: ObservableObject {
 
     func finishTrip() {
         tripTimer?.invalidate(); tripTimer = nil
+        let endingId  = activeTrip?.id ?? currentTrip?.id
+        let endingTrip = activeTrip ?? currentTrip
+
+        // Calculate elapsed from start date (more reliable than timer counter)
+        let elapsed: Int
+        if let start = tripStartDate {
+            elapsed = max(Int(Date().timeIntervalSince(start)), tripElapsed)
+        } else {
+            elapsed = tripElapsed
+        }
+        tripStartDate = nil
+
+        // Archive to completed list
+        if let trip = endingTrip {
+            let record = CompletedTripRecord(
+                id: UUID(),
+                trip: trip,
+                completedAt: Date(),
+                elapsedSeconds: elapsed,
+                distanceKm: trip.distance,
+                inspectionPassed: lastInspectionPassed,
+                issuesFound: lastIssuesFound,
+                inspectionRemarks: lastInspectionRemarks
+            )
+            withAnimation { completedTrips.insert(record, at: 0) }
+        }
+
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
             isTripActive = false; driverStatus = .idle
             currentTrip = nil; activeTrip = nil
+            showPostTripOnEnd = false
+            tripElapsed = 0
         }
+        // Remove the completed trip from the assigned list
+        if let id = endingId {
+            upcomingTrips.removeAll { $0.id == id }
+        } else {
+            upcomingTrips.removeAll()
+        }
+        // Reset inspection capture
+        lastInspectionPassed = true
+        lastIssuesFound = 0
+        lastInspectionRemarks = ""
     }
 
     // MARK: Helpers
@@ -292,12 +394,12 @@ final class DriverDashboardViewModel: ObservableObject {
 
     private func seedMock() {
         upcomingTrips = [
-            DBTrip(id: UUID(), vehicleId: UUID(), driverId: UUID(),
-                   source: "Warehouse A – Sector 17",
-                   destination: "Distribution Hub – Phase 5",
+            DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!, vehicleId: UUID(), driverId: UUID(),
+                   source: "San Francisco Dock C",
+                   destination: "Los Angeles Warehouse 4",
                    startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
                    endTime:   Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                   distance: 48.2, status: .assigned, notes: "Priority delivery", createdAt: .now),
+                   distance: 612.0, status: .assigned, notes: "Dry Van Food Grd", createdAt: .now),
             DBTrip(id: UUID(), vehicleId: UUID(), driverId: UUID(),
                    source: "Distribution Hub – Phase 5",
                    destination: "Client Site – Noida",
@@ -328,14 +430,30 @@ final class DriverDashboardViewModel: ObservableObject {
 struct DriverDashboardView: View {
 
     @StateObject private var vm = DriverDashboardViewModel()
+    @State private var selectedTab = 0
 
     var body: some View {
-        TabView {
-            Tab("Dashboard", systemImage: "square.grid.2x2") {
-                DriverHomeTab(vm: vm)
+        ZStack(alignment: .bottom) {
+            Group {
+                if selectedTab == 0 {
+                    DriverHomeTab(vm: vm, selectedTab: $selectedTab)
+                } else {
+                    DriverTripsTab(vm: vm)
+                }
             }
-            Tab("Trips", systemImage: "map") {
-                DriverTripsTab(vm: vm)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            DriverBottomTabBar(selectedTab: $selectedTab)
+                .padding(.bottom, 16)
+        }
+        // ── SOS Countdown Overlay ──────────────────────────────
+        .overlay {
+            if vm.showSOSCountdown {
+                SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
+                    vm.sosSentAlert = true
+                }
+                .transition(.opacity)
+                .zIndex(999)
             }
         }
         .task { await vm.load() }
@@ -343,7 +461,18 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet() }
         .sheet(isPresented: $vm.showIssue)     { IssueReportSheet() }
         .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
-        .sheet(isPresented: $vm.showPostTrip)  { InspectionFormSheet(isPreTrip: false) }
+        .sheet(isPresented: $vm.showPostTrip, onDismiss: {
+            if vm.showPostTripOnEnd {
+                vm.finishTrip()
+            }
+        }) {
+            InspectionFormSheet(isPreTrip: false) { passed, issues, remarks in
+                vm.lastInspectionPassed = passed
+                vm.lastIssuesFound      = issues
+                vm.lastInspectionRemarks = remarks
+                vm.showPostTrip = false
+            }
+        }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatSheet(messages: vm.messages) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
@@ -352,11 +481,70 @@ struct DriverDashboardView: View {
         }
         // ─── Confirmations ──────────────────────────────────────
         .confirmationDialog("End Trip", isPresented: $vm.confirmEnd, titleVisibility: .visible) {
-            Button("End Trip", role: .destructive) { vm.finishTrip() }
+            Button("End Trip", role: .destructive) {
+                // Show post-trip inspection first — finishTrip() is called after the sheet closes
+                vm.showPostTripOnEnd = true
+                vm.showPostTrip = true
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Confirm you have completed all deliveries.")
+            Text("Please complete the post-trip inspection before ending.")
         }
+        .alert("🚨 SOS Triggered", isPresented: $vm.sosSentAlert) {
+            Button("OK") {}
+        } message: {
+            Text("Emergency alert has been sent to your fleet manager. Help is on the way.")
+        }
+    }
+}
+
+// ── Custom Bottom Tab Bar Capsule ──────────────────────────────────────────────
+struct DriverBottomTabBar: View {
+    @Binding var selectedTab: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            tabButton(index: 0, icon: "square.grid.2x2.fill", label: "Dashboard")
+            tabButton(index: 1, icon: "road.lanes", label: "Trips")
+        }
+        .padding(6)
+        .background(
+            Capsule()
+                .fill(Color(UIColor.systemBackground).opacity(0.95))
+                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 5)
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+    }
+
+    private func tabButton(index: Int, icon: String, label: String) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedTab = index
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .medium))
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundColor(selectedTab == index ? Color.fmsIndigo : Color.black.opacity(0.6))
+            .frame(width: 80, height: 48)
+            .background(
+                Group {
+                    if selectedTab == index {
+                        Capsule()
+                            .fill(Color.black.opacity(0.05))
+                    } else {
+                        Color.clear
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -816,8 +1004,8 @@ struct IssueReportSheet: View {
 struct InspectionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
-    /// Called when the user submits. `passed` = all items checked.
-    var onComplete: ((Bool) -> Void)? = nil
+    /// Called when the user submits. (passed, issuesFound, remarks)
+    var onComplete: ((Bool, Int, String) -> Void)? = nil
 
     struct CheckItem: Identifiable {
         let id    = UUID()
@@ -848,6 +1036,8 @@ struct InspectionFormSheet: View {
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
     private var passCount: Int { items.filter(\.passed).count }
+    /// For post-trip: items that are NOT checked = issues found
+    private var issuesFound: Int { isPreTrip ? 0 : items.filter { !$0.passed }.count }
 
     var body: some View {
         NavigationStack {
@@ -932,14 +1122,24 @@ struct InspectionFormSheet: View {
                             if submitting {
                                 ProgressView().tint(.white)
                             } else {
-                                Text(allPass ? "Submit  ✓ All Passed" : "Submit Inspection")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(.white)
+                                if isPreTrip {
+                                    Text(allPass ? "Submit  ✓ All Passed" : "Submit Inspection")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                } else {
+                                    Text(issuesFound > 0 ? "Submit  ⚠ \(issuesFound) Issue(s) Found" : "Submit  ✓ All Good")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background((allPass ? AppTheme.Status.success : Color.fmsIndigo).gradient)
+                        .background(
+                            isPreTrip
+                            ? (allPass ? AppTheme.Status.success : Color.fmsIndigo).gradient
+                            : (issuesFound > 0 ? AppTheme.Brand.accent : AppTheme.Status.success).gradient
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }
@@ -953,15 +1153,26 @@ struct InspectionFormSheet: View {
                     Button("Cancel") { dismiss() }.foregroundStyle(Color.fmsIndigo)
                 }
             }
-            .alert(allPass ? "Inspection Passed" : "Inspection Submitted", isPresented: $submitted) {
+            .alert(
+                isPreTrip
+                    ? (allPass ? "Inspection Passed" : "Inspection Submitted")
+                    : (issuesFound > 0 ? "Issues Reported" : "Post-Trip Complete"),
+                isPresented: $submitted
+            ) {
                 Button("Done") {
-                    onComplete?(allPass)
+                    onComplete?(allPass, issuesFound, remarks)
                     dismiss()
                 }
             } message: {
-                Text(allPass
-                     ? "All items passed. You are cleared for departure."
-                     : "Some items were not checked. Please resolve before starting the trip.")
+                if isPreTrip {
+                    Text(allPass
+                         ? "All items passed. You are cleared for departure."
+                         : "Some items were not checked. Please resolve before starting the trip.")
+                } else {
+                    Text(issuesFound > 0
+                         ? "\(issuesFound) vehicle issue(s) have been flagged and logged for the maintenance team."
+                         : "Vehicle looks good! All post-trip checks passed.")
+                }
             }
         }
     }

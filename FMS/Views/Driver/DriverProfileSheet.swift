@@ -118,7 +118,10 @@ struct DriverProfileSheet: View {
 
                     // ── Sign out ───────────────────────────────────────────
                     Button {
-                        dismiss()
+                        Task {
+                            try? await SupabaseManager.shared.signOut()
+                            dismiss()
+                        }
                     } label: {
                         Text("Sign Out")
                             .font(.system(size: 16, weight: .semibold))

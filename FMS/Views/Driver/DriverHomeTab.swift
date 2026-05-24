@@ -2,8 +2,7 @@
 //  DriverHomeTab.swift
 //  FMS
 //
-//  Tab 1 — Dashboard home. Uber/Ola-style minimal layout.
-//  One primary focus at a time. Breathes. No clutter.
+//  Tab 1 — Dashboard home. Redesigned to match the premium mockup.
 //  Target: iOS 26+
 //
 
@@ -14,44 +13,98 @@ import SwiftUI
 @available(iOS 26.0, *)
 struct DriverHomeTab: View {
     @ObservedObject var vm: DriverDashboardViewModel
+    @Binding var selectedTab: Int
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 20) {
 
-                    // ── 1. Greeting ─────────────────────────────────────────
+                    // ── 1. Greeting Row ──────────────────────────────────────
                     GreetingRow(vm: vm)
                         .padding(.horizontal, 24)
                         .padding(.top, 20)
-                        .padding(.bottom, 32)
+                        .padding(.bottom, 12)
 
-                    // ── 2. Primary card (trip or idle prompt) ────────────────
-                    PrimaryCard(vm: vm)
-                        .padding(.horizontal, 24)
-
-                    // ── 3. Notification badge (single, subtle) ───────────────
-                    if let banner = vm.banners.first {
-                        NoticeStrip(banner: banner)
-                            .padding(.horizontal, 24)
-                            .padding(.top, 20)
+                    // ── 2. Active Assigned Trip Section ──────────────────────
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("ACTIVE ASSIGNED TRIP")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.secondary)
+                                .tracking(0.6)
+                            Spacer()
+                            Button {
+                                withAnimation {
+                                    selectedTab = 1 // Switch to Trips tab
+                                }
+                            } label: {
+                                Text("See All")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(Color.fmsIndigo)
+                            }
+                        }
+                        
+                        PrimaryCard(vm: vm)
                     }
+                    .padding(.horizontal, 24)
 
+                    // ── 3. Quick Actions Grid ────────────────────────────────
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("QUICK ACTIONS")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.6)
 
-                    // ── 5. Vehicle summary (one clean line) ──────────────────
-                    VehicleRow(vm: vm)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 32)
+                        HStack(spacing: 12) {
+                            QuickActionGridCell(
+                                title: "Emergency SOS",
+                                icon: "exclamationmark.shield.fill",
+                                iconColor: AppTheme.Status.danger,
+                                action: { vm.showSOSCountdown = true }
+                            )
+                            QuickActionGridCell(
+                                title: "Chat",
+                                icon: "bubble.left.and.bubble.right.fill",
+                                iconColor: Color.fmsIndigo,
+                                action: { vm.showMessaging = true }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 14)
 
-                    // ── 6. Messages (bare list, no card chrome) ──────────────
-                    MessageList(vm: vm)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 32)
+                    // ── 4. Driver Performance Section ────────────────────────
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("DRIVER PERFORMANCE")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.6)
 
-                    Spacer(minLength: 48)
+                        HStack(spacing: 12) {
+                            PerformanceCard(
+                                title: "Total Trips",
+                                value: "48 Runs",
+                                subtitle: "Completed runs",
+                                icon: "road.lanes",
+                                iconColor: Color.fmsIndigo
+                            )
+                            PerformanceCard(
+                                title: "Time Logged",
+                                value: "112 hrs",
+                                subtitle: "Within standard limits",
+                                icon: "clock.fill",
+                                iconColor: AppTheme.Brand.amber
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 14)
+
+                    Spacer(minLength: 100) // Space for the floating bottom tab bar
                 }
             }
-            .background(Color(UIColor.systemBackground).ignoresSafeArea())
+            .background(Color.fmsBackground.ignoresSafeArea())
             .navigationBarHidden(true)
         }
     }
@@ -62,42 +115,54 @@ struct DriverHomeTab: View {
 private struct GreetingRow: View {
     @ObservedObject var vm: DriverDashboardViewModel
 
+    private var initials: String {
+        let components = vm.driverName.components(separatedBy: " ")
+        if components.count >= 2 {
+            let first = components[0].prefix(1)
+            let last = components[1].prefix(1)
+            return "\(first)\(last)".uppercased()
+        } else {
+            return String(vm.driverName.prefix(2)).uppercased()
+        }
+    }
+
     var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(vm.greeting)
-                    .font(.system(size: 15, weight: .regular))
+        HStack(alignment: .center, spacing: 12) {
+            // Initials avatar circle on the left
+            Circle()
+                .fill(Color.fmsIndigo.opacity(0.12))
+                .frame(width: 44, height: 44)
+                .overlay(
+                    Text(initials)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.fmsIndigo)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Welcome Back,")
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(.secondary)
-                Text(vm.driverFirstName)
-                    .font(.system(size: 30, weight: .bold))
+                Text(vm.driverName)
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.primary)
             }
 
             Spacer()
 
-            // Profile avatar + status dot — tap to open profile
-            Button { vm.showProfile = true } label: {
-                ZStack(alignment: .bottomTrailing) {
-                    Circle()
-                        .fill(Color.fmsIndigo.gradient)
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Text(String(vm.driverFirstName.prefix(1)))
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.white)
-                        )
-                    Circle()
-                        .fill(vm.driverStatus.dot)
-                        .frame(width: 11, height: 11)
-                        .overlay(Circle().stroke(Color(UIColor.systemBackground), lineWidth: 2))
-                }
+            // System profile button on the right
+            Button {
+                vm.showProfile = true
+            } label: {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(Color.fmsIndigo)
             }
             .buttonStyle(.plain)
         }
     }
 }
 
-// MARK: - 2. Primary Card
+// MARK: - 2. Primary Card (Trip details)
 
 private struct PrimaryCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
@@ -111,387 +176,365 @@ private struct PrimaryCard: View {
     }
 }
 
-// Active state — shows timer + destination
+// ── Vertical Dashed Line Connector ─────────────────────────────────────────────
+private struct VerticalDashedLine: View {
+    var body: some View {
+        VStack(spacing: 3) {
+            ForEach(0..<6) { _ in
+                Circle()
+                    .fill(Color(UIColor.systemGray4))
+                    .frame(width: 2, height: 2)
+            }
+        }
+    }
+}
+
+// Active state — shows timer, route + end button
 private struct LiveTripCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Live badge
-            HStack(spacing: 7) {
-                Circle()
-                    .fill(Color.red)
-                    .frame(width: 7, height: 7)
-                    .shadow(color: Color.red.opacity(0.5), radius: 3)
-                Text("In Progress")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.red)
-            }
+        VStack(alignment: .leading, spacing: 16) {
+            if let trip = vm.activeTrip {
+                // Top row: ID + Status badge
+                HStack {
+                    Text("TRIP-\(trip.id.uuidString.prefix(5).uppercased())")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text("IN PROGRESS")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.red.opacity(0.10))
+                        .cornerRadius(6)
+                }
 
-            // Timer (hero element)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(vm.elapsedFormatted)
-                    .font(.system(size: 48, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.primary)
-                    .contentTransition(.numericText())
+                Divider()
 
-                if let trip = vm.activeTrip {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 12))
+                // Route Details
+                HStack(alignment: .top, spacing: 14) {
+                    VStack(spacing: 4) {
+                        Circle()
+                            .stroke(Color.fmsIndigo, lineWidth: 3)
+                            .frame(width: 14, height: 14)
+                        
+                        VerticalDashedLine()
+                            .frame(height: 24)
+                        
+                        Circle()
+                            .stroke(Color.orange, lineWidth: 3)
+                            .frame(width: 14, height: 14)
+                    }
+                    .padding(.top, 4)
+                    
+                    VStack(alignment: .leading, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("DEPARTURE PORT")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            Text(trip.source)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.primary)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("ARRIVAL TERMINAL")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            Text(trip.destination)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+
+                Divider()
+
+                // Stats: Distance + Cargo
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("DISTANCE")
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.secondary)
-                        Text(trip.destination)
-                            .font(.system(size: 14, weight: .regular))
+                        Text(String(format: "%.0f km", trip.distance))
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.primary)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("CARGO SPEC")
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        Text(trip.notes ?? "General Cargo")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                
+                Divider()
+
+                // Timer & controls
+                VStack(alignment: .center, spacing: 12) {
+                    Text(vm.elapsedFormatted)
+                        .font(.system(size: 32, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.primary)
+                        .contentTransition(.numericText())
+
+                    HStack(spacing: 10) {
+                        Button {
+                            vm.mapActiveTrip = vm.activeTrip
+                            vm.showMaps = true
+                        } label: {
+                            Label("Navigate", systemImage: "location.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Color.fmsIndigo)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(Color.fmsIndigo.opacity(0.10))
+                                .cornerRadius(12)
+                        }
+
+                        Button {
+                            vm.showPostTripOnEnd = true
+                            vm.showPostTrip = true
+                        } label: {
+                            Label("End Trip", systemImage: "stop.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(Color.red.gradient)
+                                .cornerRadius(12)
+                        }
                     }
                 }
             }
-
-            // Actions
-            HStack(spacing: 10) {
-                Button { vm.mapActiveTrip = vm.activeTrip; vm.showMaps = true } label: {
-                    Label("Navigate", systemImage: "location.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.fmsIndigo)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .glassEffect(.regular.tint(Color.fmsIndigo.opacity(0.08)),
-                                     in: RoundedRectangle(cornerRadius: 12))
-                }
-                Button { vm.confirmEnd = true } label: {
-                    Label("End Trip", systemImage: "stop.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .background(Color.red.gradient)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            }
         }
-        .padding(22)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20))
+        .padding(20)
+        .background(Color.white)
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.red.opacity(0.12), lineWidth: 1)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
         )
     }
 }
 
-// Idle state — shows next trip + start CTA
+// Idle state — shows next trip + start button
 private struct IdleCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             if let trip = vm.upcomingTrips.first {
-                // Next trip label
-                Text("Next trip")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(.secondary)
+                // Top row: ID + Status badge
+                HStack {
+                    Text("TRIP-\(trip.id.uuidString.prefix(5).uppercased())")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text("ASSIGNED")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.fmsIndigo)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.fmsIndigo.opacity(0.10))
+                        .cornerRadius(6)
+                }
 
-                // Route in large text
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(trip.source)
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.down")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.fmsIndigo)
-                        Text(trip.destination)
-                            .font(.system(size: 22, weight: .bold))
-                            .lineLimit(1)
+                Divider()
+
+                // Route Details
+                HStack(alignment: .top, spacing: 14) {
+                    VStack(spacing: 4) {
+                        Circle()
+                            .stroke(Color.fmsIndigo, lineWidth: 3)
+                            .frame(width: 14, height: 14)
+                        
+                        VerticalDashedLine()
+                            .frame(height: 24)
+                        
+                        Circle()
+                            .stroke(Color.orange, lineWidth: 3)
+                            .frame(width: 14, height: 14)
+                    }
+                    .padding(.top, 4)
+                    
+                    VStack(alignment: .leading, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("DEPARTURE PORT")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            Text(trip.source)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.primary)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("ARRIVAL TERMINAL")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            Text(trip.destination)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.primary)
+                        }
                     }
                 }
 
-                // Metadata chips
-                HStack(spacing: 8) {
-                    MetaChip(icon: "arrow.left.arrow.right",
-                             label: String(format: "%.0f km", trip.distance))
-                    if let s = trip.startTime {
-                        MetaChip(icon: "clock",
-                                 label: s.formatted(.dateTime.hour().minute()))
+                Divider()
+
+                // Stats: Distance + Cargo
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("DISTANCE")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                        Text(String(format: "%.0f km", trip.distance))
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.primary)
                     }
-                    if trip.notes != nil {
-                        MetaChip(icon: "exclamationmark", label: "Priority")
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("CARGO SPEC")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                        Text(trip.notes ?? "Dry Van Food Grd")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.primary)
                     }
                 }
+
+                Divider()
 
                 // Start button
-                Button { vm.mapActiveTrip = trip } label: {
-                    Text("Start Trip")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Color.fmsIndigo.gradient)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                Button {
+                    vm.mapActiveTrip = trip
+                } label: {
+                    HStack {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14))
+                        Text("Start Active Trip")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.fmsIndigo.gradient)
+                    .cornerRadius(14)
                 }
             } else {
-                // No trips
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("No trips today")
-                        .font(.system(size: 20, weight: .semibold))
+                VStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "map.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(Color.fmsIndigo.opacity(0.3))
+                    Text("No trips assigned today")
+                        .font(.system(size: 16, weight: .bold))
                     Text("Your fleet manager will assign trips here.")
-                        .font(.system(size: 14))
+                        .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
             }
         }
-        .padding(22)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20))
+        .padding(20)
+        .background(Color.white)
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
     }
 }
 
-private struct MetaChip: View {
+// MARK: - 3. Quick Actions Components
+
+private struct QuickActionGridCell: View {
+    let title: String
     let icon: String
-    let label: String
+    let iconColor: Color
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10))
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-        }
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(Color(UIColor.tertiarySystemFill))
-        .clipShape(Capsule())
-    }
-}
-
-// MARK: - 3. Notice Strip (single banner, very subtle)
-
-private struct NoticeStrip: View {
-    let banner: DashboardBanner
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(banner.tint)
-                .frame(width: 6, height: 6)
-            Text(banner.title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.primary)
-            Text("·")
-                .foregroundStyle(.tertiary)
-            Text(banner.body)
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Spacer()
-        }
-    }
-}
-
-
-
-// MARK: - 5. Vehicle Row
-
-private struct VehicleRow: View {
-    @ObservedObject var vm: DriverDashboardViewModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-
-            // Section label + defect link
-            HStack {
-                Text("Vehicle")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button { vm.showDefect = true } label: {
-                    Text("Report defect")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(AppTheme.Status.danger)
-                }
-            }
-
-            // Card
-            VStack(spacing: 0) {
-
-                // ── Manufacturer ─────────────────────────────────────────────
-                VehicleStatRow(
-                    icon: "building.2.fill",
-                    label: "Manufacturer",
-                    value: vm.vehicleManufacturer
-                )
-                Color(UIColor.separator)
-                    .frame(height: 0.4)
-                    .padding(.leading, 40)
-
-                // ── Model ─────────────────────────────────────────────────────
-                VehicleStatRow(
-                    icon: "car.side.fill",
-                    label: "Model",
-                    value: "\(vm.vehicleModel)  (\(vm.vehicleYear))"
-                )
-                Color(UIColor.separator)
-                    .frame(height: 0.4)
-                    .padding(.leading, 40)
-
-                // ── Plate ─────────────────────────────────────────────────────
-                VehicleStatRow(
-                    icon: "car.fill",
-                    label: "Plate number",
-                    value: vm.assignedReg
-                )
-                Color(UIColor.separator)
-                    .frame(height: 0.4)
-                    .padding(.leading, 40)
-
-                // ── Fuel ──────────────────────────────────────────────────────
-                VehicleStatRow(
-                    icon: "fuelpump.fill",
-                    label: "Fuel level",
-                    value: String(format: "%.0f%%", vm.fuelLevel * 100),
-                    valueColor: vm.fuelLevel < 0.25
-                        ? AppTheme.Status.danger
-                        : Color.fmsIndigo
-                )
-                Color(UIColor.separator)
-                    .frame(height: 0.4)
-                    .padding(.leading, 40)
-
-                // ── Odometer ─────────────────────────────────────────────────
-                VehicleStatRow(
-                    icon: "gauge",
-                    label: "Odometer",
-                    value: "12,430 km"
-                )
-            }
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
-        }
-    }
-}
-
-private struct VehicleStatRow: View {
-    let icon: String
-    let label: String
-    let value: String
-    var valueColor: Color = .primary
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 15))
-                .foregroundStyle(Color.fmsIndigo)
-                .frame(width: 22)
-            Text(label)
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text(value)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(valueColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
-    }
-}
-
-// MARK: - 6. Message List (bare, no card chrome)
-
-private struct MessageList: View {
-    @ObservedObject var vm: DriverDashboardViewModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                HStack(spacing: 8) {
-                    Text("Messages")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(.secondary)
-                    let unread = vm.messages.filter(\.unread).count
-                    if unread > 0 {
-                        Text("\(unread)")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 16, height: 16)
-                            .background(Color.red)
-                            .clipShape(Circle())
-                    }
-                }
-                Spacer()
-                Button { vm.showMessaging = true } label: {
-                    Text("See all")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.fmsIndigo)
-                }
-            }
-
-            VStack(spacing: 0) {
-                ForEach(Array(vm.messages.prefix(2).enumerated()), id: \.offset) { i, m in
-                    BareMessageRow(msg: m)
-                    if i == 0 {
-                        Divider().padding(.leading, 52)
-                    }
-                }
-            }
-            .onTapGesture { vm.showMessaging = true }
-        }
-    }
-}
-
-private struct BareMessageRow: View {
-    let msg: DriverChatMessage
-
-    private var roleColor: Color {
-        switch msg.role {
-        case "Fleet Manager": return Color.fmsIndigo
-        case "Maintenance":   return AppTheme.Brand.accent
-        default:              return Color(UIColor.systemGray)
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(roleColor.opacity(0.10))
-                    .frame(width: 36, height: 36)
-                Text(msg.initials)
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                    .foregroundStyle(iconColor)
+                    .frame(width: 44, height: 44)
+                
+                Text(title)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(roleColor)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(msg.sender)
-                        .font(.system(size: 14, weight: msg.unread ? .semibold : .regular))
-                    if msg.unread {
-                        Circle()
-                            .fill(Color.fmsIndigo)
-                            .frame(width: 5, height: 5)
-                    }
-                    Spacer()
-                    Text(msg.time)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                Text(msg.preview)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 100)
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
+            )
         }
-        .padding(.vertical, 10)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(msg.sender): \(msg.preview)")
+        .buttonStyle(.plain)
     }
 }
 
-// MARK: - Preview
+// MARK: - 4. Driver Performance Components
+
+private struct PerformanceCard: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    let icon: String
+    let iconColor: Color
+
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+            
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundStyle(iconColor)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Previews
 
 @available(iOS 26.0, *)
 #Preview("Home Tab") {
-    DriverHomeTab(vm: DriverDashboardViewModel())
+    DriverHomeTab(vm: DriverDashboardViewModel(), selectedTab: .constant(0))
 }
