@@ -53,12 +53,6 @@ struct DashboardMockData {
 
     static let quickActions: [DashboardQuickAction] = [
         DashboardQuickAction(
-            icon: "plus",
-            iconColor: AppTheme.Brand.primary,
-            bgColor: AppTheme.IconBg.blue,
-            label: "Add Vehicle"
-        ),
-        DashboardQuickAction(
             icon: "person.badge.plus",
             iconColor: AppTheme.Brand.violet,
             bgColor: AppTheme.IconBg.violet,
@@ -98,8 +92,8 @@ struct DashboardMockData {
             subtitle: "Amit K. delivered to Noida Sec 62",
             time: "1 hr ago",
             icon: "checkmark.seal.fill",
-            iconColor: AppTheme.Status.success,
-            iconBgColor: AppTheme.IconBg.green
+            iconColor: Color(red: 0.55, green: 0.58, blue: 0.62),
+            iconBgColor: Color(red: 0.55, green: 0.58, blue: 0.62).opacity(0.12)
         ),
         DashboardActivity(
             title: "Overspeeding Alert",

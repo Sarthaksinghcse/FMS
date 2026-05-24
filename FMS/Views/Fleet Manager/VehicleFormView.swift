@@ -60,7 +60,7 @@ struct AddVehicleFormView: View {
                                             text: $vinNumber, keyboardType: .default, focus: $focusedField, tag: .vin)
                         }
 
-                        formSection(title: "Specifications", icon: "gearshape.2.fill", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Specifications", icon: "gearshape.2.fill", iconColor: AppTheme.Brand.teal) {
                             VehicleFormField(label: "Make", placeholder: "e.g. Tata, Mahindra",
                                             text: $make, keyboardType: .default, focus: $focusedField, tag: .make)
                             FormDivider()
@@ -108,13 +108,7 @@ struct AddVehicleFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -298,7 +292,7 @@ struct EditVehicleFormView: View {
                                             text: $vinNumber, keyboardType: .default, focus: $focusedField, tag: .vin)
                         }
 
-                        formSection(title: "Specifications", icon: "gearshape.2.fill", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Specifications", icon: "gearshape.2.fill", iconColor: AppTheme.Brand.teal) {
                             VehicleFormField(label: "Make", placeholder: "e.g. Tata",
                                             text: $make, keyboardType: .default, focus: $focusedField, tag: .make)
                             FormDivider()
@@ -345,13 +339,7 @@ struct EditVehicleFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
