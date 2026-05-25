@@ -1,22 +1,5 @@
-
-
-
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
-
-
-
-
-
-
-
 
 struct CardMetric: Identifiable {
     var id: String { label }

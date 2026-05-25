@@ -1,28 +1,17 @@
-
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
 import CoreLocation
 
 
-
-
-
 @available(iOS 26.0, *)
 struct AddTripFormView: View {
-
+    
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
-
+    
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
-
+    
     
     @State private var tripCode         = ""
     @State private var selectedVehicle: Vehicle?
@@ -37,63 +26,63 @@ struct AddTripFormView: View {
     @State private var scheduledEndTime   = Date().addingTimeInterval(3600)
     @State private var distanceText     = ""
     @State private var notes            = ""
-
+    
     
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
     @State private var isSaving             = false
-
+    
     
     @FocusState private var focusedField: TripFocusField?
-
+    
     private var drivers: [User] { allUsers.filter { $0.role == .driver } }
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
-
+                
                 ScrollView {
                     VStack(spacing: 24) {
-
+                        
                         
                         formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
-                                         text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
+                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                         }
-
+                        
                         formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
                             VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle)
                             FormDivider()
                             DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver)
                         }
-
+                        
                         formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
                             TripFormField(label: "Start Location", placeholder: "e.g. Mumbai",
-                                         text: $startLocation, keyboardType: .default, focus: $focusedField, tag: .startLocation)
+                                          text: $startLocation, keyboardType: .default, focus: $focusedField, tag: .startLocation)
                             FormDivider()
                             TripFormField(label: "End Location", placeholder: "e.g. Delhi",
-                                         text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
+                                          text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
                         }
-
+                        
                         formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             FormDivider()
                             DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
                         }
-
+                        
                         formSection(title: "Distance & Notes", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
                             TripFormField(label: "Distance (km)", placeholder: "e.g. 1450",
-                                         text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
+                                          text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
                             FormDivider()
                             TripNotesField(label: "Notes", placeholder: "Optional notes",
-                                          text: $notes, focus: $focusedField, tag: .notes)
+                                           text: $notes, focus: $focusedField, tag: .notes)
                         }
-
+                        
                         
                         saveButton
-
+                        
                         Spacer().frame(height: 40)
                     }
                     .padding(.horizontal, 20)
@@ -120,9 +109,9 @@ struct AddTripFormView: View {
             }
         }
     }
-
     
-
+    
+    
     private var saveButton: some View {
         Button {
             saveTrip()
@@ -152,9 +141,9 @@ struct AddTripFormView: View {
         }
         .disabled(isSaving)
     }
-
     
-
+    
+    
     private func saveTrip() {
         
         guard !tripCode.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -180,15 +169,15 @@ struct AddTripFormView: View {
         
         
         let distance = Double(distanceText)
-
+        
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
+        
         isSaving = true
-
+        
         Task {
             let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
             let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
-
+            
             
             let distance: Double
             if let userDistance = Double(distanceText), userDistance > 0 {
@@ -198,7 +187,7 @@ struct AddTripFormView: View {
                 let endLoc = CLLocation(latitude: endCoord.latitude, longitude: endCoord.longitude)
                 distance = Double(String(format: "%.1f", startLoc.distance(from: endLoc) / 1000.0)) ?? 0.0
             }
-
+            
             let trip = Trip(
                 tripCode:            tripCode.trimmingCharacters(in: .whitespaces).uppercased(),
                 vehicleId:           vehicle.id,
@@ -215,7 +204,7 @@ struct AddTripFormView: View {
                 tripStatus:          .assigned,
                 notes:               notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
             )
-
+            
             do {
                 try await SupabaseManager.shared.createTrip(trip.asDBTrip)
                 
@@ -259,15 +248,15 @@ struct AddTripFormView: View {
 
 @available(iOS 26.0, *)
 struct EditTripFormView: View {
-
+    
     let trip: Trip
-
+    
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
-
+    
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
-
+    
     
     @State private var tripCode: String
     @State private var selectedVehicle: Vehicle?
@@ -283,7 +272,7 @@ struct EditTripFormView: View {
     @State private var distanceText: String
     @State private var notes: String
     @State private var tripStatus: TripStatus
-
+    
     @State private var showValidationAlert = false
     @State private var validationMessage   = ""
     @State private var showDeleteConfirm   = false
@@ -291,9 +280,9 @@ struct EditTripFormView: View {
     @State private var isSaving             = false
     @State private var isDeleting           = false
     @FocusState private var focusedField: TripFocusField?
-
+    
     private var drivers: [User] { allUsers.filter { $0.role == .driver } }
-
+    
     init(trip: Trip) {
         self.trip = trip
         _tripCode            = State(initialValue: trip.tripCode)
@@ -309,60 +298,60 @@ struct EditTripFormView: View {
         _notes               = State(initialValue: trip.notes ?? "")
         _tripStatus          = State(initialValue: trip.tripStatus)
     }
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
-
+                
                 ScrollView {
                     VStack(spacing: 24) {
-
+                        
                         
                         tripBadge
-
+                        
                         
                         formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
-                                         text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
+                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                             FormDivider()
                             TripStatusPickerRow(selection: $tripStatus)
                         }
-
+                        
                         formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
                             VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle)
                             FormDivider()
                             DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver)
                         }
-
+                        
                         formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
                             TripFormField(label: "Start Location", placeholder: "e.g. Mumbai",
-                                         text: $startLocation, keyboardType: .default, focus: $focusedField, tag: .startLocation)
+                                          text: $startLocation, keyboardType: .default, focus: $focusedField, tag: .startLocation)
                             FormDivider()
                             TripFormField(label: "End Location", placeholder: "e.g. Delhi",
-                                         text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
+                                          text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
                         }
-
+                        
                         formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             FormDivider()
                             DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
                         }
-
+                        
                         formSection(title: "Distance & Notes", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
                             TripFormField(label: "Distance (km)", placeholder: "e.g. 1450",
-                                         text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
+                                          text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
                             FormDivider()
                             TripNotesField(label: "Notes", placeholder: "Optional notes",
-                                          text: $notes, focus: $focusedField, tag: .notes)
+                                           text: $notes, focus: $focusedField, tag: .notes)
                         }
-
+                        
                         
                         saveButton
-
+                        
                         
                         deleteButton
-
+                        
                         Spacer().frame(height: 40)
                     }
                     .padding(.horizontal, 20)
@@ -380,19 +369,19 @@ struct EditTripFormView: View {
             .alert("Missing Information", isPresented: $showValidationAlert) {
                 Button("OK", role: .cancel) {}
             } message: { Text(validationMessage) }
-            .alert("Changes Saved", isPresented: $saveSuccess) {
-                Button("Done") { dismiss() }
-            } message: { Text("\(tripCode) has been updated.") }
-            .confirmationDialog(
-                "Delete \(trip.tripCode)?",
-                isPresented: $showDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Delete Trip", role: .destructive) { deleteTrip() }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will permanently remove the trip. This action cannot be undone.")
-            }
+                .alert("Changes Saved", isPresented: $saveSuccess) {
+                    Button("Done") { dismiss() }
+                } message: { Text("\(tripCode) has been updated.") }
+                .confirmationDialog(
+                    "Delete \(trip.tripCode)?",
+                    isPresented: $showDeleteConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Delete Trip", role: .destructive) { deleteTrip() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will permanently remove the trip. This action cannot be undone.")
+                }
         }
         .onAppear {
             
@@ -400,9 +389,9 @@ struct EditTripFormView: View {
             selectedDriver = drivers.first { $0.id == trip.driverId }
         }
     }
-
     
-
+    
+    
     private var tripBadge: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -433,9 +422,9 @@ struct EditTripFormView: View {
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(AppTheme.Glass.border, lineWidth: 1))
         .padding(.top, 8)
     }
-
     
-
+    
+    
     private var saveButton: some View {
         Button { saveChanges() } label: {
             HStack(spacing: 10) {
@@ -458,9 +447,9 @@ struct EditTripFormView: View {
         }
         .disabled(isSaving || isDeleting)
     }
-
     
-
+    
+    
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
             HStack(spacing: 8) {
@@ -481,9 +470,9 @@ struct EditTripFormView: View {
         }
         .disabled(isSaving || isDeleting)
     }
-
     
-
+    
+    
     private func saveChanges() {
         
         guard !tripCode.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -511,13 +500,13 @@ struct EditTripFormView: View {
         }
         
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
+        
         isSaving = true
-
+        
         Task {
             let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
             let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
-
+            
             let updatedDBTrip = DBTrip(
                 id: trip.id,
                 vehicleId: vehicle.id,
@@ -531,7 +520,7 @@ struct EditTripFormView: View {
                 notes: notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces),
                 createdAt: trip.createdAt
             )
-
+            
             do {
                 try await SupabaseManager.shared.updateTrip(updatedDBTrip)
                 await MainActor.run {
@@ -549,7 +538,7 @@ struct EditTripFormView: View {
                     trip.distanceKm         = distance
                     trip.tripStatus         = tripStatus
                     trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
-
+                    
                     try? modelContext.save()
                     isSaving = false
                     saveSuccess = true
@@ -571,7 +560,7 @@ struct EditTripFormView: View {
                     trip.distanceKm         = distance
                     trip.tripStatus         = tripStatus
                     trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
-
+                    
                     try? modelContext.save()
                     isSaving = false
                     saveSuccess = true
@@ -579,7 +568,7 @@ struct EditTripFormView: View {
             }
         }
     }
-
+    
     private func deleteTrip() {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         
@@ -629,14 +618,14 @@ struct TripFormField: View {
     let keyboardType: UIKeyboardType
     var focus: FocusState<TripFocusField?>.Binding
     let tag: TripFocusField
-
+    
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .frame(width: 120, alignment: .leading)
-
+            
             TextField(placeholder, text: $text)
                 .font(.system(size: 14, design: .rounded))
                 .foregroundColor(AppTheme.Brand.royalBlue)
@@ -657,7 +646,7 @@ struct TripNotesField: View {
     @Binding var text: String
     var focus: FocusState<TripFocusField?>.Binding
     let tag: TripFocusField
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
@@ -665,7 +654,7 @@ struct TripNotesField: View {
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
-
+            
             TextField(placeholder, text: $text, axis: .vertical)
                 .font(.system(size: 14, design: .rounded))
                 .foregroundColor(AppTheme.Brand.royalBlue)
@@ -683,15 +672,15 @@ struct VehiclePickerRow: View {
     let label: String
     let vehicles: [Vehicle]
     @Binding var selection: Vehicle?
-
+    
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
-
+            
             Spacer()
-
+            
             if vehicles.isEmpty {
                 Text("No vehicles available")
                     .font(.system(size: 13, design: .rounded))
@@ -720,15 +709,15 @@ struct DriverPickerRow: View {
     let label: String
     let drivers: [User]
     @Binding var selection: User?
-
+    
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
-
+            
             Spacer()
-
+            
             if drivers.isEmpty {
                 Text("No drivers available")
                     .font(.system(size: 13, design: .rounded))
@@ -754,15 +743,15 @@ struct DriverPickerRow: View {
 
 struct TripStatusPickerRow: View {
     @Binding var selection: TripStatus
-
+    
     private let options: [(TripStatus, String, Color)] = [
-        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)), 
-        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)), 
-        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)), 
-        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)), 
-        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))  
+        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)),
+        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)),
+        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)),
+        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)),
+        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))
     ]
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Status")
@@ -770,7 +759,7 @@ struct TripStatusPickerRow: View {
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
-
+            
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(options, id: \.0) { status, label, color in
