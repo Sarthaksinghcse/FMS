@@ -1,16 +1,16 @@
-//
-//  SupabaseManager.swift
-//  FMS
-//
-//  Created by Naman Yadav on 21/05/26.
-//
+
+
+
+
+
+
 
 import Foundation
 import Supabase
 import Combine
 import SwiftData
 
-// MARK: - InMemoryLocalStorage
+
 class InMemoryLocalStorage: AuthLocalStorage, @unchecked Sendable {
     private var storage: [String: Data] = [:]
     private let queue = DispatchQueue(label: "InMemoryLocalStorageQueue")
@@ -34,7 +34,7 @@ class InMemoryLocalStorage: AuthLocalStorage, @unchecked Sendable {
     }
 }
 
-// MARK: - Auth Errors
+
 enum AuthError: LocalizedError {
     case roleMismatch(expected: DBUserRole, actual: DBUserRole)
     case profileNotFound
@@ -49,25 +49,25 @@ enum AuthError: LocalizedError {
     }
 }
 
-// MARK: - Supabase Manager
-/// A singleton manager to coordinate all Supabase authentication and database interactions.
+
+
 @MainActor
 final class SupabaseManager: ObservableObject {
     static let shared = SupabaseManager()
     
-    // MARK: - Configuration
-    // TODO: Replace these with your actual Supabase project credentials from Settings > API
+    
+    
     private static let supabaseURL = URL(string: "https://trkurrtlyzfsssnptdsc.supabase.co")!
     private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRya3VycnRseXpmc3NzbnB0ZHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTI0NTgsImV4cCI6MjA5NDkyODQ1OH0.380Es9QbO6ppO9bFUiFV3qmNKpgWzf3fzBKR9S9Ajuo"
     
-    /// The underlying Supabase client instance.
+    
     let client: SupabaseClient
     
-    /// The currently logged-in user profile, if any.
+    
     @Published var currentUser: DBUser?
-    /// Published loading state indicator.
+    
     @Published var isLoading = false
-    /// Any error message to be displayed.
+    
     @Published var authError: String?
     
     private init() {
@@ -81,7 +81,7 @@ final class SupabaseManager: ObservableObject {
             )
         )
         
-        // Listen to auth state changes to keep session updated
+        
         Task {
             for await state in client.auth.authStateChanges {
                 if let session = state.session, !session.isExpired {
@@ -93,20 +93,20 @@ final class SupabaseManager: ObservableObject {
         }
     }
     
-    // MARK: - Authentication API
     
-    /// Signs up a new administrator (Fleet Manager) account.
-    /// In accordance with `supabase_schema.sql`, they must be inserted into the public.users table as 'fleet_manager'.
+    
+    
+    
     func signUp(email: String, password: UUID, fullName: String, role: DBUserRole = .fleetManager) async throws {
         isLoading = true
         authError = nil
         defer { isLoading = false }
         
         do {
-            // 1. Sign up with Supabase Auth
+            
             let response = try await client.auth.signUp(
                 email: email,
-                password: password.uuidString, // using password string from your view
+                password: password.uuidString, 
                 data: [
                     "name": .string(fullName),
                     "role": .string(role.rawValue)
@@ -116,7 +116,7 @@ final class SupabaseManager: ObservableObject {
             let authUser = response.user
 
             
-            // 2. Insert profile record into public.users table
+            
             let dbUser = DBUser(
                 id: authUser.id,
                 name: fullName,
@@ -134,7 +134,7 @@ final class SupabaseManager: ObservableObject {
                     .execute()
             } catch {
                 print("Failed to insert user profile: \(error)")
-                // Proceed anyway so the app remains runnable even if tables are missing
+                
             }
                 
             self.currentUser = dbUser
@@ -144,7 +144,7 @@ final class SupabaseManager: ObservableObject {
         }
     }
     
-    /// Overloaded helper for SignUp with simple password String
+    
     func signUp(email: String, passwordString: String, fullName: String, role: DBUserRole = .fleetManager) async throws {
         isLoading = true
         authError = nil
@@ -180,7 +180,7 @@ final class SupabaseManager: ObservableObject {
                     .execute()
             } catch {
                 print("Failed to insert user profile: \(error)")
-                // Proceed anyway so the app remains runnable even if tables are missing
+                
             }
                 
             self.currentUser = dbUser
@@ -190,7 +190,7 @@ final class SupabaseManager: ObservableObject {
         }
     }
     
-    /// Signs in an existing user using email and password.
+    
     func signIn(email: String, passwordString: String) async throws {
         isLoading = true
         authError = nil
@@ -211,21 +211,21 @@ final class SupabaseManager: ObservableObject {
         }
     }
     
-    /// Signs in and validates that the user's DB role matches the expected role.
-    /// Automatically signs out and throws `AuthError.roleMismatch` on mismatch.
+    
+    
     func signIn(email: String, passwordString: String, expectedRole: DBUserRole) async throws {
         isLoading = true
         authError = nil
         defer { isLoading = false }
         
         do {
-            // Step 1: Authenticate with Supabase Auth
+            
             let response = try await client.auth.signIn(
                 email: email,
                 password: passwordString
             )
             
-            // Step 2: Fetch the user's profile from the DB
+            
             let userId = response.user.id
             var dbUser: DBUser
             do {
@@ -238,7 +238,7 @@ final class SupabaseManager: ObservableObject {
                     .value
             } catch {
                 print("Profile fetch error: \(error)")
-                // Profile not found — mock user to keep the app runnable if DB isn't set up
+                
                 dbUser = DBUser(
                     id: userId,
                     name: "Test User",
@@ -250,16 +250,16 @@ final class SupabaseManager: ObservableObject {
                 )
             }
             
-            // Step 3: Self-healing role sync
-            // Parse role from user metadata
+            
+            
             var authMetadataRole: DBUserRole? = nil
             let metadata = response.user.userMetadata
             if let roleJSON = metadata["role"], case .string(let roleStr) = roleJSON {
                 authMetadataRole = DBUserRole(rawValue: roleStr)
             }
             
-            // If the metadata role matches the expected role but the database profile has a mismatch,
-            // we override the database profile role and update it in Supabase under the user's new session.
+            
+            
             if dbUser.role != expectedRole, authMetadataRole == expectedRole {
                 print("Syncing database role \(dbUser.role.rawValue) to expected role \(expectedRole.rawValue) based on Auth metadata")
                 dbUser.role = expectedRole
@@ -274,15 +274,15 @@ final class SupabaseManager: ObservableObject {
                 }
             }
             
-            // Step 4: Verify the role matches the selected role
+            
             guard dbUser.role == expectedRole else {
-                // Wrong role — sign out immediately so session is not persisted
+                
                 try? await client.auth.signOut()
                 self.currentUser = nil
                 throw AuthError.roleMismatch(expected: expectedRole, actual: dbUser.role)
             }
             
-            // Step 5: All good — persist the user
+            
             self.currentUser = dbUser
             
         } catch {
@@ -291,7 +291,7 @@ final class SupabaseManager: ObservableObject {
         }
     }
     
-    /// Signs out the current user session.
+    
     func signOut() async throws {
         isLoading = true
         defer { isLoading = false }
@@ -305,7 +305,7 @@ final class SupabaseManager: ObservableObject {
         }
     }
     
-    /// Refreshes the local user profile from public.users.
+    
     func fetchProfile(userId: UUID) async {
         do {
             let dbUser: DBUser = try await client
@@ -319,7 +319,7 @@ final class SupabaseManager: ObservableObject {
         } catch {
             print("Error fetching user profile from database: \(error)")
             
-            // Resolve role, name, and email from Auth userMetadata if possible to avoid role mismatch/conflict
+            
             var resolvedRole: DBUserRole = .fleetManager
             var resolvedName: String = "Test User"
             var resolvedEmail: String = "test@fms.com"
@@ -337,7 +337,7 @@ final class SupabaseManager: ObservableObject {
                 }
             }
             
-            // Fallback to a resolved user metadata or defaults so the session isn't immediately killed
+            
             self.currentUser = DBUser(
                 id: userId,
                 name: resolvedName,
@@ -350,9 +350,9 @@ final class SupabaseManager: ObservableObject {
         }
     }
     
-    // MARK: - Database API (Examples matching schema)
     
-    /// Fetches all vehicles from public.vehicles.
+    
+    
     func fetchVehicles() async throws -> [DBVehicle] {
         return try await client
             .from("vehicles")
@@ -361,7 +361,7 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
-    /// Creates a new vehicle record.
+    
     func createVehicle(_ vehicle: DBVehicle) async throws {
         try await client
             .from("vehicles")
@@ -369,7 +369,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Fetches all active trips for the current driver, or all trips if manager.
+    
     func fetchTrips() async throws -> [DBTrip] {
         return try await client
             .from("trips")
@@ -378,7 +378,7 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
-    /// Creates a new trip.
+    
     func createTrip(_ trip: DBTrip) async throws {
         try await client
             .from("trips")
@@ -386,7 +386,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Submits a vehicle inspection.
+    
     func submitInspection(_ inspection: DBVehicleInspection) async throws {
         try await client
             .from("vehicle_inspections")
@@ -394,9 +394,9 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    // MARK: - Driver CRUD
     
-    /// Fetches all drivers from public.users.
+    
+    
     func fetchDrivers() async throws -> [DBUser] {
         return try await client
             .from("users")
@@ -406,10 +406,10 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
-    /// Creates a new driver Auth account and profile record.
-    /// Returns the created DBUser containing the generated Auth UUID.
+    
+    
     func createDriver(email: String, passwordString: String, fullName: String, phoneNumber: String, isActive: Bool) async throws -> DBUser {
-        // 1. Create a temporary client with in-memory storage so it doesn't affect manager session
+        
         let tempClient = SupabaseClient(
             supabaseURL: Self.supabaseURL,
             supabaseKey: Self.supabaseAnonKey,
@@ -421,7 +421,7 @@ final class SupabaseManager: ObservableObject {
             )
         )
         
-        // 2. Sign up user in Supabase Auth
+        
         let authResponse = try await tempClient.auth.signUp(
             email: email,
             password: passwordString,
@@ -433,7 +433,7 @@ final class SupabaseManager: ObservableObject {
         
         let authUserId = authResponse.user.id
         
-        // 3. Create profile in public.users using the main client
+        
         let dbUser = DBUser(
             id: authUserId,
             name: fullName,
@@ -451,13 +451,13 @@ final class SupabaseManager: ObservableObject {
                 .execute()
         } catch {
             print("⚠️ Profile upsert failed (possibly auto-inserted by database trigger): \(error.localizedDescription)")
-            // Safe to ignore because our self-healing role sync during login will fix the profile record
+            
         }
             
         return dbUser
     }
     
-    /// Updates a driver profile record.
+    
     func updateDriver(_ driver: DBUser) async throws {
         try await client
             .from("users")
@@ -466,7 +466,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Deletes a driver profile record.
+    
     func deleteDriver(id: UUID) async throws {
         try await client
             .from("users")
@@ -475,9 +475,9 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    // MARK: - Vehicle CRUD Extensions
     
-    /// Updates a vehicle record.
+    
+    
     func updateVehicle(_ vehicle: DBVehicle) async throws {
         try await client
             .from("vehicles")
@@ -486,7 +486,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Deletes a vehicle record.
+    
     func deleteVehicle(id: UUID) async throws {
         try await client
             .from("vehicles")
@@ -495,9 +495,9 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    // MARK: - Trip CRUD Extensions
     
-    /// Updates a trip record.
+    
+    
     func updateTrip(_ trip: DBTrip) async throws {
         try await client
             .from("trips")
@@ -506,7 +506,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Deletes a trip record.
+    
     func deleteTrip(id: UUID) async throws {
         try await client
             .from("trips")
@@ -515,9 +515,9 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    // MARK: - Work Order CRUD
     
-    /// Fetches all work orders from public.work_orders.
+    
+    
     func fetchWorkOrders() async throws -> [DBWorkOrder] {
         return try await client
             .from("work_orders")
@@ -526,7 +526,7 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
-    /// Creates a new work order.
+    
     func createWorkOrder(_ workOrder: DBWorkOrder) async throws {
         try await client
             .from("work_orders")
@@ -534,7 +534,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Updates an existing work order.
+    
     func updateWorkOrder(_ workOrder: DBWorkOrder) async throws {
         try await client
             .from("work_orders")
@@ -543,7 +543,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Deletes a work order.
+    
     func deleteWorkOrder(id: UUID) async throws {
         try await client
             .from("work_orders")
@@ -552,9 +552,9 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    // MARK: - Maintenance Tasks
     
-    /// Fetches all maintenance tasks from public.maintenance_tasks.
+    
+    
     func fetchMaintenanceTasks() async throws -> [DBMaintenanceTask] {
         return try await client
             .from("maintenance_tasks")
@@ -563,7 +563,7 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
-    /// Creates a new maintenance task.
+    
     func createMaintenanceTask(_ task: DBMaintenanceTask) async throws {
         try await client
             .from("maintenance_tasks")
@@ -571,7 +571,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Updates an existing maintenance task.
+    
     func updateMaintenanceTask(_ task: DBMaintenanceTask) async throws {
         try await client
             .from("maintenance_tasks")
@@ -580,9 +580,9 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    // MARK: - Messages
     
-    /// Fetches all messages from public.messages.
+    
+    
     func fetchMessages() async throws -> [DBMessage] {
         return try await client
             .from("messages")
@@ -592,7 +592,7 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
-    /// Sends a new message.
+    
     func sendMessage(_ message: DBMessage) async throws {
         try await client
             .from("messages")
@@ -600,9 +600,9 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    // MARK: - Notifications
     
-    /// Fetches all notifications from public.notifications.
+    
+    
     func fetchNotifications() async throws -> [DBNotification] {
         return try await client
             .from("notifications")
@@ -611,7 +611,7 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
-    /// Creates a new notification.
+    
     func createNotification(_ notification: DBNotification) async throws {
         try await client
             .from("notifications")
@@ -619,7 +619,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Updates an existing notification.
+    
     func updateNotification(_ notification: DBNotification) async throws {
         try await client
             .from("notifications")
@@ -628,9 +628,9 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    // MARK: - Vehicle Locations
     
-    /// Inserts a new live GPS vehicle location entry.
+    
+    
     func insertVehicleLocation(_ location: DBVehicleLocation) async throws {
         try await client
             .from("vehicle_locations")
@@ -638,7 +638,7 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
-    /// Fetches the latest coordinate for all active vehicles.
+    
     func fetchLatestVehicleLocations() async throws -> [DBVehicleLocation] {
         return try await client
             .from("v_latest_vehicle_location")
@@ -647,14 +647,14 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
-    // MARK: - Reconciled Syncer
     
-    /// Synchronizes all Supabase data into SwiftData.
+    
+    
     func syncAllData(context: ModelContext) async {
         guard currentUser != nil else { return }
         
         do {
-            // 1. Sync Vehicles
+            
             if let remoteVehicles = try? await fetchVehicles() {
                 let descriptor = FetchDescriptor<Vehicle>()
                 let localVehicles = (try? context.fetch(descriptor)) ?? []
@@ -683,7 +683,7 @@ final class SupabaseManager: ObservableObject {
                 }
             }
             
-            // 2. Sync Users (Drivers)
+            
             if let remoteDrivers = try? await fetchDrivers() {
                 let descriptor = FetchDescriptor<User>()
                 let localUsers = (try? context.fetch(descriptor)) ?? []
@@ -709,7 +709,7 @@ final class SupabaseManager: ObservableObject {
                 }
             }
             
-            // 3. Sync Trips
+            
             if let remoteTrips = try? await fetchTrips() {
                 let descriptor = FetchDescriptor<Trip>()
                 let localTrips = (try? context.fetch(descriptor)) ?? []
@@ -738,10 +738,17 @@ final class SupabaseManager: ObservableObject {
                             context.delete(localTrip)
                         }
                     }
+                } else if currentUser?.role == .driver {
+                    let remoteIds = Set(remoteTrips.map { $0.id })
+                    for localTrip in localTrips {
+                        if localTrip.driverId == currentUser?.id && !remoteIds.contains(localTrip.id) {
+                            context.delete(localTrip)
+                        }
+                    }
                 }
             }
             
-            // 4. Sync Work Orders
+            
             if let remoteWorkOrders = try? await fetchWorkOrders() {
                 let descriptor = FetchDescriptor<WorkOrder>()
                 let localWorkOrders = (try? context.fetch(descriptor)) ?? []
@@ -767,7 +774,7 @@ final class SupabaseManager: ObservableObject {
                 }
             }
             
-            // 5. Sync Notifications
+            
             if let remoteNotifications = try? await fetchNotifications() {
                 let descriptor = FetchDescriptor<AppNotification>()
                 let localNotifications = (try? context.fetch(descriptor)) ?? []

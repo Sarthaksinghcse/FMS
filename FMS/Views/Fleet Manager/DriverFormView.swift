@@ -1,17 +1,17 @@
-//
-//  DriverFormView.swift
-//  FMS
-//
-//  Full Add / Edit / Delete driver forms for the Fleet Manager's
-//  Driver Management screen. Follows the VehicleFormView.swift pattern.
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Add Driver Form
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct AddDriverFormView: View {
@@ -19,20 +19,20 @@ struct AddDriverFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
 
-    // ── Form State ────────────────────────────────────────────────────────────
+    
     @State private var fullName     = ""
     @State private var email        = ""
     @State private var phoneNumber  = ""
     @State private var password     = ""
     @State private var isActive     = true
 
-    // ── Validation ────────────────────────────────────────────────────────────
+    
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
     @State private var isSaving             = false
 
-    // ── Focus ─────────────────────────────────────────────────────────────────
+    
     @FocusState private var focusedField: UserFocusField?
 
     var body: some View {
@@ -43,7 +43,7 @@ struct AddDriverFormView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // ── Form sections ──────────────────────────────────
+                        
                         formSection(title: "Personal Information", icon: "person.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
                             UserFormField(label: "Full Name", placeholder: "e.g. John Doe",
                                          text: $fullName, keyboardType: .default, focus: $focusedField, tag: .fullName)
@@ -99,7 +99,7 @@ struct AddDriverFormView: View {
     }
 
 
-    // MARK: Save Button
+    
 
     private var saveButton: some View {
         Button {
@@ -131,10 +131,10 @@ struct AddDriverFormView: View {
         .disabled(isSaving)
     }
 
-    // MARK: Save Action
+    
 
     private func saveDriver() {
-        // Validation
+        
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Full name is required."; showValidationAlert = true; return
         }
@@ -162,7 +162,7 @@ struct AddDriverFormView: View {
             let rawPassword = password
             
             do {
-                // Save to Supabase first (both Auth and public.users profile table)
+                
                 let dbUser = try await SupabaseManager.shared.createDriver(
                     email: emailToSend,
                     passwordString: rawPassword,
@@ -171,11 +171,11 @@ struct AddDriverFormView: View {
                     isActive: isActive
                 )
                 
-                // Simple password hashing using base64 for demo purposes
+                
                 let passwordHash = Data(rawPassword.utf8).base64EncodedString()
                 
                 let driver = User(
-                    id: dbUser.id, // Use the correct generated Auth UUID
+                    id: dbUser.id, 
                     fullName: nameToSend,
                     email: emailToSend,
                     phoneNumber: phoneToSend,
@@ -184,7 +184,7 @@ struct AddDriverFormView: View {
                     isActive: isActive
                 )
                 
-                // Attempt to send email with plain-text password
+                
                 do {
                     try await EmailManager.shared.sendWelcomeEmail(to: emailToSend, name: nameToSend, passwordString: rawPassword)
                 } catch {
@@ -200,7 +200,7 @@ struct AddDriverFormView: View {
             } catch {
                 print("Failed to save driver to Supabase: \(error)")
                 
-                // Fallback offline support: generate a local UUID
+                
                 let fallbackId = UUID()
                 let passwordHash = Data(rawPassword.utf8).base64EncodedString()
                 let driver = User(
@@ -213,14 +213,14 @@ struct AddDriverFormView: View {
                     isActive: isActive
                 )
                 
-                // Attempt welcome email even if Supabase profile insert failed (fallback offline mode)
+                
                 do {
                     try await EmailManager.shared.sendWelcomeEmail(to: emailToSend, name: nameToSend, passwordString: rawPassword)
                 } catch {
                     print("⚠️ Welcome email send failed in offline fallback: \(error.localizedDescription)")
                 }
                 
-                // Fallback to local cache so user can work offline
+                
                 await MainActor.run {
                     modelContext.insert(driver)
                     try? modelContext.save()
@@ -232,9 +232,9 @@ struct AddDriverFormView: View {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Edit Driver Form
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct EditDriverFormView: View {
@@ -244,7 +244,7 @@ struct EditDriverFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
 
-    // ── Form State ────────────────────────────────────────────────────────────
+    
     @State private var fullName: String
     @State private var email: String
     @State private var phoneNumber: String
@@ -280,10 +280,10 @@ struct EditDriverFormView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // ── Driver badge ───────────────────────────────────
+                        
                         driverBadge
 
-                        // ── Sections ───────────────────────────────────────
+                        
                         formSection(title: "Personal Information", icon: "person.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
                             UserFormField(label: "Full Name", placeholder: "e.g. John Doe",
                                          text: $fullName, keyboardType: .default, focus: $focusedField, tag: .fullName)
@@ -299,7 +299,7 @@ struct EditDriverFormView: View {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
-                        // ── Delete ─────────────────────────────────────────
+                        
                         deleteButton
 
                         Spacer().frame(height: 40)
@@ -342,7 +342,7 @@ struct EditDriverFormView: View {
         }
     }
 
-    // MARK: Driver Badge
+    
 
     private var driverBadge: some View {
         HStack(spacing: 16) {
@@ -375,7 +375,7 @@ struct EditDriverFormView: View {
         .padding(.top, 8)
     }
 
-    // MARK: Save Button
+    
 
     private var saveButton: some View {
         Button { saveChanges() } label: {
@@ -400,7 +400,7 @@ struct EditDriverFormView: View {
         .disabled(isSaving || isDeleting)
     }
 
-    // MARK: Delete Button
+    
 
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
@@ -423,7 +423,7 @@ struct EditDriverFormView: View {
         .disabled(isSaving || isDeleting)
     }
 
-    // MARK: Actions
+    
 
     private func saveChanges() {
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -513,17 +513,17 @@ struct EditDriverFormView: View {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Shared Form Components for User Forms
-// ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Field Tag Enum
+
+
+
+
 
 enum UserFocusField: Hashable {
     case fullName, email, phoneNumber, password
 }
 
-// MARK: Text Field Row
+
 
 struct UserFormField: View {
     let label: String
@@ -553,7 +553,7 @@ struct UserFormField: View {
     }
 }
 
-// MARK: Password Field Row
+
 
 struct UserPasswordField: View {
     let label: String
@@ -580,7 +580,7 @@ struct UserPasswordField: View {
     }
 }
 
-// MARK: Status Toggle Row
+
 
 struct StatusToggleRow: View {
     let label: String

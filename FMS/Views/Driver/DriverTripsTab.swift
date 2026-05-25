@@ -1,27 +1,29 @@
-//
-//  DriverTripsTab.swift
-//  FMS
-//
-//  Tab 2 — Trip list, integrated actions & Apple Maps navigation.
-//  All actions live contextually — no separate action section.
-//  Target: iOS 26+
-//
+
+
+
+
+
+
+
+
 
 import SwiftUI
+import SwiftData
 import MapKit
 
-// MARK: - Driver Trips Tab
+
 
 @available(iOS 26.0, *)
 struct DriverTripsTab: View {
+    @Environment(\.modelContext) private var modelContext
     @ObservedObject var vm: DriverDashboardViewModel
-    @State private var selectedSegment = 0   // 0 = Upcoming, 1 = Completed
+    @State private var selectedSegment = 0   
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
 
-                // ── Segment Picker ───────────────────────────────────────
+                
                 HStack(spacing: 0) {
                     ForEach(["Upcoming", "Completed"].indices, id: \.self) { i in
                         Button {
@@ -51,7 +53,7 @@ struct DriverTripsTab: View {
                                             .clipShape(Capsule())
                                     }
                                 }
-                                // Active underline indicator
+                                
                                 RoundedRectangle(cornerRadius: 2)
                                     .fill(selectedSegment == i ? Color.fmsIndigo : Color.clear)
                                     .frame(height: 3)
@@ -67,9 +69,9 @@ struct DriverTripsTab: View {
 
                 Divider()
 
-                // ── Tab Content ──────────────────────────────────────────
+                
                 if selectedSegment == 0 {
-                    // ── UPCOMING TRIPS ───────────────────────────────────
+                    
                     List {
                         if vm.isTripActive {
                             Section {
@@ -123,7 +125,7 @@ struct DriverTripsTab: View {
                     .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 80) }
 
                 } else {
-                    // ── COMPLETED TRIPS ──────────────────────────────────
+                    
                     if vm.completedTrips.isEmpty {
                         Spacer()
                         EmptyTripsCell(icon: "checkmark.seal",
@@ -145,7 +147,7 @@ struct DriverTripsTab: View {
                 }
             }
             .refreshable {
-                await vm.load()
+                await vm.load(context: modelContext)
             }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trips")
@@ -174,7 +176,7 @@ struct DriverTripsTab: View {
     }
 }
 
-// MARK: - Empty State Cell
+
 
 private struct EmptyTripsCell: View {
     let icon: String
@@ -198,7 +200,7 @@ private struct EmptyTripsCell: View {
     }
 }
 
-// MARK: - Completed Trip Card
+
 
 @available(iOS 26.0, *)
 private struct CompletedTripCard: View {
@@ -214,9 +216,9 @@ private struct CompletedTripCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // ── Header row ───────────────────────────────────────────
+            
             HStack(spacing: 12) {
-                // Green check circle
+                
                 ZStack {
                     Circle()
                         .fill(AppTheme.Status.success.opacity(0.12))
@@ -254,7 +256,7 @@ private struct CompletedTripCard: View {
 
             Divider().padding(.horizontal, 16)
 
-            // ── Stats row ────────────────────────────────────────────
+            
             HStack(spacing: 0) {
                 StatPill(icon: "clock.fill",
                          value: record.formattedDuration,
@@ -276,7 +278,7 @@ private struct CompletedTripCard: View {
 
             Divider().padding(.horizontal, 16)
 
-            // ── Details button ───────────────────────────────────────
+            
             Button {
                 showDetail = true
             } label: {
@@ -305,7 +307,7 @@ private struct CompletedTripCard: View {
     }
 }
 
-// ── Stat Pill (inside completed card) ─────────────────────────────────────────
+
 private struct StatPill: View {
     let icon: String
     let value: String
@@ -328,7 +330,7 @@ private struct StatPill: View {
     }
 }
 
-// MARK: - Trip Detail Sheet
+
 
 @available(iOS 26.0, *)
 struct TripDetailSheet: View {
@@ -341,7 +343,7 @@ struct TripDetailSheet: View {
         return f.string(from: record.completedAt)
     }
 
-    // Inspection items (same list as in InspectionFormSheet)
+    
     private let inspectionItems = [
         ("Brakes & Brake Lights",   "hand.raised.fill"),
         ("Tyres & Tyre Pressure",   "circle.dashed"),
@@ -360,9 +362,9 @@ struct TripDetailSheet: View {
             ScrollView {
                 VStack(spacing: 20) {
 
-                    // ── Hero summary card ────────────────────────────
+                    
                     VStack(spacing: 16) {
-                        // Big green check
+                        
                         ZStack {
                             Circle()
                                 .fill(AppTheme.Status.success.opacity(0.12))
@@ -380,7 +382,7 @@ struct TripDetailSheet: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        // Route
+                        
                         HStack(spacing: 8) {
                             Label(record.trip.source, systemImage: "circle.fill")
                                 .font(.system(size: 12))
@@ -398,7 +400,7 @@ struct TripDetailSheet: View {
                     .background(Color(UIColor.secondarySystemGroupedBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 18))
 
-                    // ── Key stats grid ───────────────────────────────
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         sectionHeader("TRIP SUMMARY")
 
@@ -437,12 +439,12 @@ struct TripDetailSheet: View {
                         }
                     }
 
-                    // ── Inspection Report ────────────────────────────
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         sectionHeader("POST-TRIP INSPECTION REPORT")
 
                         VStack(spacing: 0) {
-                            // Summary badge
+                            
                             HStack {
                                 Image(systemName: record.inspectionPassed
                                       ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
@@ -465,7 +467,7 @@ struct TripDetailSheet: View {
 
                             Divider()
 
-                            // Per-item list — top (10 - issuesFound) passed, rest failed
+                            
                             let passedCount = inspectionItems.count - record.issuesFound
                             ForEach(Array(inspectionItems.enumerated()), id: \.offset) { idx, item in
                                 let itemPassed = idx < passedCount
@@ -494,7 +496,7 @@ struct TripDetailSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
 
-                    // ── Remarks ──────────────────────────────────────
+                    
                     if !record.inspectionRemarks.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             sectionHeader("DRIVER REMARKS")
@@ -531,7 +533,7 @@ struct TripDetailSheet: View {
     }
 }
 
-// ── Detail Stat Card (inside TripDetailSheet) ─────────────────────────────────
+
 private struct DetailStatCard: View {
     let icon: String
     let label: String
@@ -563,7 +565,7 @@ private struct DetailStatCard: View {
     }
 }
 
-// MARK: - Active Trip Cell
+
 
 private struct ActiveTripCell: View {
     @ObservedObject var vm: DriverDashboardViewModel
@@ -571,7 +573,7 @@ private struct ActiveTripCell: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
 
-            // Live badge + timer
+            
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
@@ -589,7 +591,7 @@ private struct ActiveTripCell: View {
                         .contentTransition(.numericText())
                 }
                 Spacer()
-                // Fuel pill
+                
                 Label(String(format: "%.0f%%", vm.fuelLevel * 100), systemImage: "fuelpump.fill")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(vm.fuelLevel < 0.25 ? .red : Color.fmsIndigo)
@@ -598,14 +600,14 @@ private struct ActiveTripCell: View {
                     .clipShape(Capsule())
             }
 
-            // Route
+            
             if let trip = vm.activeTrip {
                 FMSRouteRow(source: trip.source, destination: trip.destination)
             }
 
             Divider()
 
-            // 2 × 2 action grid — all in-trip actions, no clutter
+            
             VStack(spacing: 10) {
                 HStack(spacing: 10) {
                     TripActionButton(
@@ -641,7 +643,7 @@ private struct ActiveTripCell: View {
     }
 }
 
-// MARK: - Trip Row (each assigned trip)
+
 
 private struct TripRow: View {
     let trip: DBTrip
@@ -660,9 +662,9 @@ private struct TripRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
 
-            // ── Header ───────────────────────────────────────────────────
+            
             HStack(spacing: 10) {
-                // Index badge
+                
                 Text("\(index + 1)")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.white)
@@ -690,10 +692,10 @@ private struct TripRow: View {
                     .clipShape(Capsule())
             }
 
-            // ── Route visual ─────────────────────────────────────────────
+            
             FMSRouteRow(source: trip.source, destination: trip.destination)
 
-            // ── Meta chips ────────────────────────────────────────────────
+            
             HStack(spacing: 8) {
                 TripChip(icon: "arrow.left.arrow.right",
                          label: String(format: "%.0f km", trip.distance))
@@ -708,9 +710,9 @@ private struct TripRow: View {
 
             Divider()
 
-            // ── Primary CTAs ──────────────────────────────────────────────
+            
             HStack(spacing: 10) {
-                // Pre-trip inspect
+                
                 Button { vm.showPreTrip = true } label: {
                     Label("Inspect", systemImage: "checklist")
                         .font(.system(size: 13, weight: .semibold))
@@ -723,7 +725,7 @@ private struct TripRow: View {
                         )
                 }
 
-                // Start / Navigate
+                
                 Button {
                     vm.mapActiveTrip = trip
                 } label: {
@@ -740,7 +742,7 @@ private struct TripRow: View {
                 }
             }
 
-            // ── Hint: swipe for more ───────────────────────────────────────
+            
             HStack(spacing: 4) {
                 Image(systemName: "hand.point.left")
                     .font(.system(size: 10))
@@ -752,7 +754,7 @@ private struct TripRow: View {
     }
 }
 
-// MARK: - Trip Chip (meta info pill)
+
 
 private struct TripChip: View {
     let icon: String
@@ -770,7 +772,7 @@ private struct TripChip: View {
     }
 }
 
-// MARK: - Trip Action Button (used in active trip 2×2 grid)
+
 
 private enum TripActionStyle { case primary, glass, warning, destructive }
 
@@ -816,7 +818,7 @@ private struct TripActionButton: View {
     }
 }
 
-// MARK: - Trip Navigation View (Apple Maps)
+
 
 @available(iOS 26.0, *)
 struct TripNavigationView: View {
@@ -831,25 +833,25 @@ struct TripNavigationView: View {
     @State private var geocoding = true
     @State private var cameraPos = MapCameraPosition.automatic
 
-    // Pre-trip gate
+    
     @State private var showPreTripNav = false
     @State private var preTripPassed  = false
 
-    // Reroute & turn-by-turn
+    
     @State private var showRerouteBanner = false
     @State private var bestAlternate: MKRoute?
     @State private var timeSavedMin = 0
     @State private var showTurnByTurn = false
     @State private var rerouteDismissed = false
 
-    // Already active trip doesn't need pre-trip again
+    
     private var isActiveTrip: Bool { vm.isTripActive && vm.activeTrip?.id == trip.id }
 
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
 
-                // ── Map ────────────────────────────────────────────────────
+                
                 Map(position: $cameraPos) {
                     if let s = sourceItem?.placemark.coordinate {
                         Annotation("Origin", coordinate: s, anchor: .bottom) {
@@ -861,7 +863,7 @@ struct TripNavigationView: View {
                             mapPin(icon: "flag.fill", color: AppTheme.Status.success)
                         }
                     }
-                    // Alternate routes (faded gray)
+                    
                     ForEach(alternateRoutes, id: \.name) { alt in
                         MapPolyline(alt.polyline)
                             .stroke(
@@ -869,7 +871,7 @@ struct TripNavigationView: View {
                                 style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 6])
                             )
                     }
-                    // Primary route (bold blue)
+                    
                     if let r = route {
                         MapPolyline(r.polyline)
                             .stroke(
@@ -881,7 +883,7 @@ struct TripNavigationView: View {
                 .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll, showsTraffic: true))
                 .ignoresSafeArea(edges: .top)
 
-                // Loading pill
+                
                 if geocoding {
                     HStack(spacing: 10) {
                         ProgressView().tint(Color.fmsIndigo)
@@ -894,16 +896,16 @@ struct TripNavigationView: View {
                     .padding(.bottom, 300)
                 }
 
-                // ── Bottom drawer ─────────────────────────────────────────
+                
                 VStack(spacing: 0) {
-                    // Drag handle
+                    
                     Capsule()
                         .fill(Color(UIColor.systemGray4))
                         .frame(width: 36, height: 5)
                         .padding(.top, 10)
                         .padding(.bottom, 14)
 
-                    // Destination info
+                    
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 3) {
                             if let r = route {
@@ -932,7 +934,7 @@ struct TripNavigationView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    // Stats strip
+                    
                     HStack(spacing: 0) {
                         TripMetaCell(icon: "arrow.left.arrow.right",
                                      value: String(format: "%.1f km", trip.distance), label: "Distance")
@@ -942,7 +944,7 @@ struct TripNavigationView: View {
                     .padding(.horizontal, 8)
                     .padding(.top, 8)
 
-                    // ── Reroute banner ─────────────────────────────────────
+                    
                     if showRerouteBanner && !rerouteDismissed {
                         HStack(spacing: 10) {
                             Image(systemName: "arrow.triangle.swap")
@@ -1003,7 +1005,7 @@ struct TripNavigationView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
-                    // ── Turn-by-turn steps ─────────────────────────────────
+                    
                     if let steps = route?.steps, steps.count > 1 {
                         VStack(alignment: .leading, spacing: 0) {
                             Button {
@@ -1059,9 +1061,9 @@ struct TripNavigationView: View {
 
                     Divider().padding(.horizontal, 20).padding(.top, 4)
 
-                    // ── Action row ─────────────────────────────────────────
+                    
                     if isActiveTrip {
-                        // ── In-trip: 4 live actions ───────────────────────
+                        
                         HStack(spacing: 10) {
                             MapActionButton(label: "Voice Log",    icon: "mic.fill",                   style: .glass)     { vm.showVoiceLog = true }
                             MapActionButton(label: "Defect",       icon: "wrench.and.screwdriver.fill", style: .warning)   { vm.showDefect   = true }
@@ -1078,12 +1080,12 @@ struct TripNavigationView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 20)
                     } else {
-                        // ── Pre-start: inspection gate + Start Now ────────
+                        
                         VStack(spacing: 14) {
 
-                            // Quick action buttons row
+                            
                             HStack(spacing: 10) {
-                                // Pre-Trip — shows green tick when passed
+                                
                                 MapActionButton(
                                     label: preTripPassed ? "Passed ✓" : "Pre-Trip",
                                     icon:  preTripPassed ? "checkmark.seal.fill" : "checklist",
@@ -1095,7 +1097,7 @@ struct TripNavigationView: View {
                                 MapActionButton(label: "SOS",       icon: "sos",                        style: .destructive) { vm.showSOSCountdown = true }
                             }
 
-                            // Inspection warning banner (shown until passed)
+                            
                             if !preTripPassed {
                                 HStack(spacing: 8) {
                                     Image(systemName: "exclamationmark.triangle.fill")
@@ -1113,7 +1115,7 @@ struct TripNavigationView: View {
                                 )
                             }
 
-                            // Start Now — locked until inspection passes
+                            
                             Button {
                                 guard preTripPassed else { showPreTripNav = true; return }
                                 vm.beginTrip(trip: trip)
@@ -1164,14 +1166,14 @@ struct TripNavigationView: View {
                         .glassEffect(.regular, in: Capsule())
                 }
             }
-            // ── Pre-Trip sheet (auto-opened + can re-open via button) ────
+            
             .sheet(isPresented: $showPreTripNav) {
                 InspectionFormSheet(isPreTrip: true) { passed, _, _ in
                     preTripPassed = passed
                 }
             }
         }
-        // ── SOS Countdown Overlay (over map) ─────────────────────────
+        
         .overlay {
             if vm.showSOSCountdown {
                 SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
@@ -1188,7 +1190,7 @@ struct TripNavigationView: View {
         }
         .task { await geocodeAndRoute() }
         .onAppear {
-            // Auto-open pre-trip only when this is a new (not yet started) trip
+            
             if !isActiveTrip {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                     showPreTripNav = true
@@ -1198,7 +1200,7 @@ struct TripNavigationView: View {
     }
 
 
-    // ── Map pin helper ─────────────────────────────────────────────────────
+    
     private func mapPin(icon: String, color: Color) -> some View {
         ZStack {
             Circle()
@@ -1214,7 +1216,7 @@ struct TripNavigationView: View {
         }
     }
 
-    // ── Geocode + route ────────────────────────────────────────────────────
+    
     @MainActor
     private func geocodeAndRoute() async {
         async let source = mapItem(for: trip.source)
@@ -1228,18 +1230,18 @@ struct TripNavigationView: View {
             req.source = sourceItem
             req.destination = destItem
             req.transportType = .automobile
-            req.requestsAlternateRoutes = true  // Request traffic-aware alternates
+            req.requestsAlternateRoutes = true  
 
             if let result = try? await MKDirections(request: req).calculate() {
                 let allRoutes = result.routes
                 route = allRoutes.first
 
-                // Check for faster alternates
+                
                 if allRoutes.count > 1, let primary = route {
                     let alts = Array(allRoutes.dropFirst())
                     alternateRoutes = alts
 
-                    // Find best alternate that saves meaningful time (≥ 2 min)
+                    
                     if let fastest = alts.min(by: { $0.expectedTravelTime < $1.expectedTravelTime }),
                        fastest.expectedTravelTime < primary.expectedTravelTime - 120 {
                         bestAlternate = fastest
@@ -1280,7 +1282,7 @@ struct TripNavigationView: View {
         ])
     }
 
-    // ── Turn icon helper ──────────────────────────────────────────────────
+    
     private func turnIcon(for instruction: String) -> String {
         let lower = instruction.lowercased()
         if lower.contains("left")  { return "arrow.turn.up.left" }
@@ -1295,7 +1297,7 @@ struct TripNavigationView: View {
     }
 }
 
-// MARK: - Map Action Button (compact, used in Maps drawer)
+
 
 private enum MapActionStyle { case primary, glass, warning, destructive }
 
@@ -1337,7 +1339,7 @@ private struct MapActionButton: View {
     }
 }
 
-// MARK: - Turn Step Row (extracted for compiler performance)
+
 
 private struct TurnStepRow: View {
     let index: Int
@@ -1350,7 +1352,7 @@ private struct TurnStepRow: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
-                // Step number badge
+                
                 ZStack {
                     Circle()
                         .fill(badgeColor)
@@ -1393,7 +1395,7 @@ private struct TurnStepRow: View {
     }
 }
 
-// MARK: - Preview
+
 
 @available(iOS 26.0, *)
 #Preview("Trips Tab") {

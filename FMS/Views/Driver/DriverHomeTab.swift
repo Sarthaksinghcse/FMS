@@ -1,14 +1,14 @@
-//
-//  DriverHomeTab.swift
-//  FMS
-//
-//  Tab 1 — Dashboard home. Redesigned to match the premium mockup.
-//  Target: iOS 26+
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Driver Home Tab
+
 
 @available(iOS 26.0, *)
 struct DriverHomeTab: View {
@@ -20,13 +20,13 @@ struct DriverHomeTab: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 20) {
 
-                    // ── 1. Greeting Row ──────────────────────────────────────
+                    
                     GreetingRow(vm: vm)
                         .padding(.horizontal, 24)
                         .padding(.top, 20)
                         .padding(.bottom, 12)
 
-                    // ── 2. Active Assigned Trip Section ──────────────────────
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("ACTIVE ASSIGNED TRIP")
@@ -36,7 +36,7 @@ struct DriverHomeTab: View {
                             Spacer()
                             Button {
                                 withAnimation {
-                                    selectedTab = 1 // Switch to Trips tab
+                                    selectedTab = 1 
                                 }
                             } label: {
                                 Text("See All")
@@ -49,7 +49,7 @@ struct DriverHomeTab: View {
                     }
                     .padding(.horizontal, 24)
 
-                    // ── 3. Quick Actions Grid ────────────────────────────────
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         Text("QUICK ACTIONS")
                             .font(.system(size: 11, weight: .bold))
@@ -74,7 +74,7 @@ struct DriverHomeTab: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 14)
 
-                    // ── 4. Driver Performance Section ────────────────────────
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         Text("DRIVER PERFORMANCE")
                             .font(.system(size: 11, weight: .bold))
@@ -101,7 +101,7 @@ struct DriverHomeTab: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 14)
 
-                    Spacer(minLength: 100) // Space for the floating bottom tab bar
+                    Spacer(minLength: 100) 
                 }
             }
             .refreshable {
@@ -113,7 +113,7 @@ struct DriverHomeTab: View {
     }
 }
 
-// MARK: - 1. Greeting Row
+
 
 private struct GreetingRow: View {
     @ObservedObject var vm: DriverDashboardViewModel
@@ -131,7 +131,7 @@ private struct GreetingRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            // Initials avatar circle on the left
+            
             Circle()
                 .fill(Color.fmsIndigo.opacity(0.12))
                 .frame(width: 44, height: 44)
@@ -152,9 +152,9 @@ private struct GreetingRow: View {
 
             Spacer()
 
-            // System profile & notification buttons on the right
+            
             HStack(spacing: 16) {
-                // Bell Button with unread badge count
+                
                 Button {
                     vm.showNotifications = true
                 } label: {
@@ -177,7 +177,7 @@ private struct GreetingRow: View {
                 }
                 .buttonStyle(.plain)
 
-                // Profile button
+                
                 Button {
                     vm.showProfile = true
                 } label: {
@@ -191,7 +191,7 @@ private struct GreetingRow: View {
     }
 }
 
-// MARK: - 2. Primary Card (Trip details)
+
 
 private struct PrimaryCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
@@ -205,7 +205,7 @@ private struct PrimaryCard: View {
     }
 }
 
-// ── Vertical Dashed Line Connector ─────────────────────────────────────────────
+
 private struct VerticalDashedLine: View {
     var body: some View {
         VStack(spacing: 3) {
@@ -218,14 +218,14 @@ private struct VerticalDashedLine: View {
     }
 }
 
-// Active state — shows timer, route + end button
+
 private struct LiveTripCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if let trip = vm.activeTrip {
-                // Top row: ID + Status badge
+                
                 HStack {
                     Text("TRIP-\(trip.id.uuidString.prefix(5).uppercased())")
                         .font(.system(size: 16, weight: .bold))
@@ -242,7 +242,7 @@ private struct LiveTripCard: View {
 
                 Divider()
 
-                // Route Details
+                
                 HStack(alignment: .top, spacing: 14) {
                     VStack(spacing: 4) {
                         Circle()
@@ -281,7 +281,7 @@ private struct LiveTripCard: View {
 
                 Divider()
 
-                // Stats: Distance + Cargo
+                
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("DISTANCE")
@@ -306,7 +306,7 @@ private struct LiveTripCard: View {
                 
                 Divider()
 
-                // Timer & controls
+                
                 VStack(alignment: .center, spacing: 12) {
                     Text(vm.elapsedFormatted)
                         .font(.system(size: 32, weight: .bold, design: .monospaced))
@@ -354,14 +354,14 @@ private struct LiveTripCard: View {
     }
 }
 
-// Idle state — shows next trip + start button
+
 private struct IdleCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if let trip = vm.upcomingTrips.first {
-                // Top row: ID + Status badge
+                
                 HStack {
                     Text("TRIP-\(trip.id.uuidString.prefix(5).uppercased())")
                         .font(.system(size: 16, weight: .bold))
@@ -378,7 +378,7 @@ private struct IdleCard: View {
 
                 Divider()
 
-                // Route Details
+                
                 HStack(alignment: .top, spacing: 14) {
                     VStack(spacing: 4) {
                         Circle()
@@ -417,7 +417,7 @@ private struct IdleCard: View {
 
                 Divider()
 
-                // Stats: Distance + Cargo
+                
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("DISTANCE")
@@ -442,7 +442,7 @@ private struct IdleCard: View {
 
                 Divider()
 
-                // Start button
+                
                 Button {
                     vm.mapActiveTrip = trip
                 } label: {
@@ -484,7 +484,7 @@ private struct IdleCard: View {
     }
 }
 
-// MARK: - 3. Quick Actions Components
+
 
 private struct QuickActionGridCell: View {
     let title: String
@@ -519,7 +519,7 @@ private struct QuickActionGridCell: View {
     }
 }
 
-// MARK: - 4. Driver Performance Components
+
 
 private struct PerformanceCard: View {
     let title: String
@@ -561,7 +561,7 @@ private struct PerformanceCard: View {
     }
 }
 
-// MARK: - Previews
+
 
 @available(iOS 26.0, *)
 #Preview("Home Tab") {

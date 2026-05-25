@@ -1,17 +1,17 @@
-//
-//  FleetManagerInnerScreens.swift
-//  FMS
-//
-//  Inner screens for Fleet Manager profile:
-//  - Notification Settings
-//  - Security Settings
-//  - Help & Support
-//  - About
-//
+
+
+
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Notification Settings
+
 
 @available(iOS 26.0, *)
 struct FMNotificationSettingsView: View {
@@ -38,7 +38,7 @@ struct FMNotificationSettingsView: View {
                             subtitle: "Choose which alerts you receive"
                         )
 
-                        // Fleet Alerts
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             Text("FLEET ALERTS")
                                 .font(.system(size: 11, weight: .semibold))
@@ -88,7 +88,7 @@ struct FMNotificationSettingsView: View {
                             .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                         }
 
-                        // General
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             Text("GENERAL")
                                 .font(.system(size: 11, weight: .semibold))
@@ -136,7 +136,7 @@ struct FMNotificationSettingsView: View {
     }
 }
 
-// MARK: - Security Settings
+
 
 @available(iOS 26.0, *)
 struct FMSecuritySettingsView: View {
@@ -163,7 +163,7 @@ struct FMSecuritySettingsView: View {
                             subtitle: "Manage password & authentication"
                         )
 
-                        // Change Password
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CHANGE PASSWORD")
                                 .font(.system(size: 11, weight: .semibold))
@@ -184,7 +184,7 @@ struct FMSecuritySettingsView: View {
                             .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                         }
 
-                        // Authentication
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             Text("AUTHENTICATION")
                                 .font(.system(size: 11, weight: .semibold))
@@ -207,7 +207,7 @@ struct FMSecuritySettingsView: View {
                             .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                         }
 
-                        // Update Button
+                        
                         Button {
                             isSaving = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -253,7 +253,7 @@ struct FMSecuritySettingsView: View {
     }
 }
 
-// MARK: - Secure Form Field
+
 
 private struct SecureFormField: View {
     let label: String
@@ -273,7 +273,7 @@ private struct SecureFormField: View {
     }
 }
 
-// MARK: - Help & Support
+
 
 @available(iOS 26.0, *)
 struct FMHelpSupportView: View {
@@ -301,7 +301,7 @@ struct FMHelpSupportView: View {
                             subtitle: "Frequently asked questions and contact"
                         )
 
-                        // FAQs
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             Text("FREQUENTLY ASKED QUESTIONS")
                                 .font(.system(size: 11, weight: .semibold))
@@ -338,7 +338,7 @@ struct FMHelpSupportView: View {
                             .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                         }
 
-                        // Contact
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CONTACT SUPPORT")
                                 .font(.system(size: 11, weight: .semibold))
@@ -375,7 +375,7 @@ struct FMHelpSupportView: View {
     }
 }
 
-// MARK: - About
+
 
 @available(iOS 26.0, *)
 struct FMAboutView: View {
@@ -388,7 +388,7 @@ struct FMAboutView: View {
 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // App logo & name
+                        
                         VStack(spacing: 12) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -417,7 +417,7 @@ struct FMAboutView: View {
                         }
                         .padding(.vertical, 24)
 
-                        // App info
+                        
                         VStack(spacing: 0) {
                             ProfileInfoRow(label: "Developer", value: "FMS Team")
                             Divider().padding(.leading, 16)
@@ -429,7 +429,7 @@ struct FMAboutView: View {
                         .cornerRadius(AppTheme.Radius.card)
                         .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
 
-                        // Legal
+                        
                         VStack(spacing: 0) {
                             Button { } label: {
                                 HStack {
@@ -490,7 +490,7 @@ struct FMAboutView: View {
     }
 }
 
-// MARK: - Previews
+
 
 @available(iOS 26.0, *)
 #Preview("Notification Settings") {

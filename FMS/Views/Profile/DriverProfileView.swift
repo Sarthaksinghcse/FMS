@@ -1,15 +1,15 @@
-//
-//  DriverProfileView.swift
-//  FMS
-//
-//  Profile main screen for Driver role.
-//  Shows personal info, driving statistics, performance metrics, and account settings.
-//  Styled consistently with Fleet Manager layout (light/adaptive theme).
-//
+
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Driver Profile View
+
 
 @available(iOS 26.0, *)
 struct DriverProfileView: View {
@@ -35,7 +35,7 @@ struct DriverProfileView: View {
         return String(name.prefix(2)).uppercased()
     }
 
-    // MARK: Mock driver stats (replace with real data in production)
+    
     private let tripsCompleted = 142
     private let totalKmDriven = 8_450.0
     private let hoursOnRoad = 326
@@ -94,11 +94,11 @@ struct DriverProfileView: View {
         }
     }
 
-    // MARK: - Profile Header
+    
 
     private var profileHeaderCard: some View {
         VStack(spacing: 20) {
-            // Avatar with status ring
+            
             ZStack {
                 Circle()
                     .fill(
@@ -139,7 +139,7 @@ struct DriverProfileView: View {
                 .padding(.top, 4)
             }
 
-            // Edit Profile
+            
             Button {
                 showEditProfile = true
             } label: {
@@ -164,7 +164,7 @@ struct DriverProfileView: View {
         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
     }
 
-    // MARK: - Performance Section
+    
 
     private var performanceSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -200,7 +200,7 @@ struct DriverProfileView: View {
         }
     }
 
-    // MARK: - Driving Stats
+    
 
     private var drivingStatsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -261,7 +261,7 @@ struct DriverProfileView: View {
         }
     }
 
-    // MARK: - Account Settings
+    
 
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -323,7 +323,7 @@ struct DriverProfileView: View {
         }
     }
 
-    // MARK: - Sign Out
+    
 
     private var signOutSection: some View {
         Button {
@@ -345,7 +345,7 @@ struct DriverProfileView: View {
     }
 }
 
-// MARK: - Driver Performance Ring
+
 
 @available(iOS 26.0, *)
 private struct DriverPerformanceRing: View {
@@ -379,7 +379,7 @@ private struct DriverPerformanceRing: View {
     }
 }
 
-// MARK: - Preview
+
 
 @available(iOS 26.0, *)
 #Preview {

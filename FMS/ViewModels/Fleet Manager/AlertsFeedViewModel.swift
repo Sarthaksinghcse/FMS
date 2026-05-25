@@ -1,21 +1,21 @@
-//
-//  AlertsFeedViewModel.swift
-//  FMS
-//
-//  Created on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 import Combine
 
-// MARK: - Alerts Feed View Model
+
 @MainActor
 final class AlertsFeedViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     
-    /// Resolves an SOS Alert by setting status to .resolved
-    /// BACKEND DEVS: Add your Supabase/cloud database call here.
+    
+    
     func resolveSOSAlert(alertId: UUID, context: ModelContext, alerts: [SOSAlert]) -> Bool {
         errorMessage = nil
         guard let alert = alerts.first(where: { $0.id == alertId }) else {
@@ -30,7 +30,7 @@ final class AlertsFeedViewModel: ObservableObject {
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
             
-            // Sync resolution notification to Supabase
+            
             let notification = DBNotification(
                 id: UUID(),
                 userId: alert.driverId,
@@ -53,8 +53,8 @@ final class AlertsFeedViewModel: ObservableObject {
         }
     }
     
-    /// Updates a Defect Report status
-    /// BACKEND DEVS: Add your Supabase/cloud database call here.
+    
+    
     func updateDefectStatus(defectId: UUID, newStatus: DefectStatus, context: ModelContext, defects: [DefectReport]) -> Bool {
         errorMessage = nil
         guard let defect = defects.first(where: { $0.id == defectId }) else {
