@@ -48,11 +48,11 @@ struct FleetDashboardView: View {
                         // ── Greeting ──────────────────────────────
                         HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(viewModel.getGreetingTime())
-                                    .font(.system(size: 13, weight: .regular))
+                                Text(viewModel.getGreetingTime() + ",")
+                                    .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(.secondary)
                                 Text("Manager")
-                                    .font(.system(size: 32, weight: .bold))
+                                    .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(.primary)
                             }
 
@@ -64,8 +64,11 @@ struct FleetDashboardView: View {
                                 } label: {
                                     ZStack(alignment: .topTrailing) {
                                         Image(systemName: "bell.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(AppTheme.Brand.primary)
+                                            .font(.system(size: 18))
+                                            .foregroundStyle(Color(UIColor.label))
+                                            .frame(width: 40, height: 40)
+                                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                                            .clipShape(Circle())
                                         
                                         if !sosAlerts.filter({ $0.status == .active }).isEmpty {
                                             Circle()
@@ -278,7 +281,16 @@ struct FleetDashboardView: View {
 
         }
     }
+//    private var initials: String {
+//        let parts = vm.driverName.components(separatedBy: " ")
+//        if parts.count >= 2 {
+//            return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
+//        }
+//        return String(vm.driverName.prefix(2)).uppercased()
+//    }
 }
+
+
 
 // MARK: - Circular progress
 
