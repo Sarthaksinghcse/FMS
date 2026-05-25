@@ -1,0 +1,811 @@
+
+
+
+
+
+
+
+import Foundation
+import Supabase
+import Combine
+import SwiftData
+
+
+class InMemoryLocalStorage: AuthLocalStorage, @unchecked Sendable {
+    private var storage: [String: Data] = [:]
+    private let queue = DispatchQueue(label: "InMemoryLocalStorageQueue")
+    
+    func store(key: String, value: Data) throws {
+        queue.sync {
+            storage[key] = value
+        }
+    }
+    
+    func retrieve(key: String) throws -> Data? {
+        return queue.sync {
+            storage[key]
+        }
+    }
+    
+    func remove(key: String) throws {
+        queue.sync {
+            _ = storage.removeValue(forKey: key)
+        }
+    }
+}
+
+
+enum AuthError: LocalizedError {
+    case roleMismatch(expected: DBUserRole, actual: DBUserRole)
+    case profileNotFound
+    
+    var errorDescription: String? {
+        switch self {
+        case .roleMismatch(let expected, let actual):
+            return "You selected \"\(expected.displayName)\" but your account is registered as \"\(actual.displayName)\". Please choose the correct role."
+        case .profileNotFound:
+            return "User profile could not be found in the database."
+        }
+    }
+}
+
+
+
+@MainActor
+final class SupabaseManager: ObservableObject {
+    static let shared = SupabaseManager()
+    
+    
+    
+    private static let supabaseURL = URL(string: "https://trkurrtlyzfsssnptdsc.supabase.co")!
+    private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRya3VycnRseXpmc3NzbnB0ZHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTI0NTgsImV4cCI6MjA5NDkyODQ1OH0.380Es9QbO6ppO9bFUiFV3qmNKpgWzf3fzBKR9S9Ajuo"
+    
+    
+    let client: SupabaseClient
+    
+    
+    @Published var currentUser: DBUser?
+    
+    @Published var isLoading = false
+    
+    @Published var authError: String?
+    
+    private init() {
+        self.client = SupabaseClient(
+            supabaseURL: Self.supabaseURL,
+            supabaseKey: Self.supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
+        )
+        
+        
+        Task {
+            for await state in client.auth.authStateChanges {
+                if let session = state.session, !session.isExpired {
+                    await fetchProfile(userId: session.user.id)
+                } else {
+                    self.currentUser = nil
+                }
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    func signUp(email: String, password: UUID, fullName: String, role: DBUserRole = .fleetManager) async throws {
+        isLoading = true
+        authError = nil
+        defer { isLoading = false }
+        
+        do {
+            
+            let response = try await client.auth.signUp(
+                email: email,
+                password: password.uuidString, 
+                data: [
+                    "name": .string(fullName),
+                    "role": .string(role.rawValue)
+                ]
+            )
+            
+            let authUser = response.user
+
+            
+            
+            let dbUser = DBUser(
+                id: authUser.id,
+                name: fullName,
+                email: email,
+                role: role,
+                phoneNumber: nil,
+                profileImage: nil,
+                createdAt: Date()
+            )
+            
+            do {
+                try await client
+                    .from("users")
+                    .upsert(dbUser)
+                    .execute()
+            } catch {
+                print("Failed to insert user profile: \(error)")
+                
+            }
+                
+            self.currentUser = dbUser
+        } catch {
+            self.authError = error.localizedDescription
+            throw error
+        }
+    }
+    
+    
+    func signUp(email: String, passwordString: String, fullName: String, role: DBUserRole = .fleetManager) async throws {
+        isLoading = true
+        authError = nil
+        defer { isLoading = false }
+        
+        do {
+            let response = try await client.auth.signUp(
+                email: email,
+                password: passwordString,
+                data: [
+                    "name": .string(fullName),
+                    "role": .string(role.rawValue)
+                ]
+            )
+            
+            let authUser = response.user
+
+            
+            let dbUser = DBUser(
+                id: authUser.id,
+                name: fullName,
+                email: email,
+                role: role,
+                phoneNumber: nil,
+                profileImage: nil,
+                createdAt: Date()
+            )
+            
+            do {
+                try await client
+                    .from("users")
+                    .upsert(dbUser)
+                    .execute()
+            } catch {
+                print("Failed to insert user profile: \(error)")
+                
+            }
+                
+            self.currentUser = dbUser
+        } catch {
+            self.authError = error.localizedDescription
+            throw error
+        }
+    }
+    
+    
+    func signIn(email: String, passwordString: String) async throws {
+        isLoading = true
+        authError = nil
+        defer { isLoading = false }
+        
+        do {
+            let response = try await client.auth.signIn(
+                email: email,
+                password: passwordString
+            )
+            
+            let user = response.user
+            await fetchProfile(userId: user.id)
+
+        } catch {
+            self.authError = error.localizedDescription
+            throw error
+        }
+    }
+    
+    
+    
+    func signIn(email: String, passwordString: String, expectedRole: DBUserRole) async throws {
+        isLoading = true
+        authError = nil
+        defer { isLoading = false }
+        
+        do {
+            
+            let response = try await client.auth.signIn(
+                email: email,
+                password: passwordString
+            )
+            
+            
+            let userId = response.user.id
+            var dbUser: DBUser
+            do {
+                dbUser = try await client
+                    .from("users")
+                    .select()
+                    .eq("id", value: userId.uuidString)
+                    .single()
+                    .execute()
+                    .value
+            } catch {
+                print("Profile fetch error: \(error)")
+                
+                dbUser = DBUser(
+                    id: userId,
+                    name: "Test User",
+                    email: email,
+                    role: expectedRole,
+                    phoneNumber: nil,
+                    profileImage: nil,
+                    createdAt: Date()
+                )
+            }
+            
+            
+            
+            var authMetadataRole: DBUserRole? = nil
+            let metadata = response.user.userMetadata
+            if let roleJSON = metadata["role"], case .string(let roleStr) = roleJSON {
+                authMetadataRole = DBUserRole(rawValue: roleStr)
+            }
+            
+            
+            
+            if dbUser.role != expectedRole, authMetadataRole == expectedRole {
+                print("Syncing database role \(dbUser.role.rawValue) to expected role \(expectedRole.rawValue) based on Auth metadata")
+                dbUser.role = expectedRole
+                do {
+                    try await client
+                        .from("users")
+                        .update(dbUser)
+                        .eq("id", value: userId.uuidString)
+                        .execute()
+                } catch {
+                    print("⚠️ Failed to sync database role: \(error.localizedDescription)")
+                }
+            }
+            
+            
+            guard dbUser.role == expectedRole else {
+                
+                try? await client.auth.signOut()
+                self.currentUser = nil
+                throw AuthError.roleMismatch(expected: expectedRole, actual: dbUser.role)
+            }
+            
+            
+            self.currentUser = dbUser
+            
+        } catch {
+            self.authError = error.localizedDescription
+            throw error
+        }
+    }
+    
+    
+    func signOut() async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            try await client.auth.signOut()
+            self.currentUser = nil
+        } catch {
+            self.authError = error.localizedDescription
+            throw error
+        }
+    }
+    
+    
+    func fetchProfile(userId: UUID) async {
+        do {
+            let dbUser: DBUser = try await client
+                .from("users")
+                .select()
+                .eq("id", value: userId.uuidString)
+                .single()
+                .execute()
+                .value
+            self.currentUser = dbUser
+        } catch {
+            print("Error fetching user profile from database: \(error)")
+            
+            
+            var resolvedRole: DBUserRole = .fleetManager
+            var resolvedName: String = "Test User"
+            var resolvedEmail: String = "test@fms.com"
+            
+            if let user = client.auth.currentUser {
+                resolvedEmail = user.email ?? resolvedEmail
+                let metadata = user.userMetadata
+                if let nameJSON = metadata["name"], case .string(let nameStr) = nameJSON {
+                    resolvedName = nameStr
+                }
+                if let roleJSON = metadata["role"], case .string(let roleStr) = roleJSON {
+                    if let roleEnum = DBUserRole(rawValue: roleStr) {
+                        resolvedRole = roleEnum
+                    }
+                }
+            }
+            
+            
+            self.currentUser = DBUser(
+                id: userId,
+                name: resolvedName,
+                email: resolvedEmail,
+                role: resolvedRole,
+                phoneNumber: nil,
+                profileImage: nil,
+                createdAt: Date()
+            )
+        }
+    }
+    
+    
+    
+    
+    func fetchVehicles() async throws -> [DBVehicle] {
+        return try await client
+            .from("vehicles")
+            .select()
+            .execute()
+            .value
+    }
+    
+    
+    func createVehicle(_ vehicle: DBVehicle) async throws {
+        try await client
+            .from("vehicles")
+            .insert(vehicle)
+            .execute()
+    }
+    
+    
+    func fetchTrips() async throws -> [DBTrip] {
+        return try await client
+            .from("trips")
+            .select()
+            .execute()
+            .value
+    }
+    
+    
+    func createTrip(_ trip: DBTrip) async throws {
+        try await client
+            .from("trips")
+            .insert(trip)
+            .execute()
+    }
+    
+    
+    func submitInspection(_ inspection: DBVehicleInspection) async throws {
+        try await client
+            .from("vehicle_inspections")
+            .insert(inspection)
+            .execute()
+    }
+    
+    
+    
+    
+    func fetchDrivers() async throws -> [DBUser] {
+        return try await client
+            .from("users")
+            .select()
+            .eq("role", value: DBUserRole.driver.rawValue)
+            .execute()
+            .value
+    }
+    
+    
+    
+    func createDriver(email: String, passwordString: String, fullName: String, phoneNumber: String, isActive: Bool) async throws -> DBUser {
+        
+        let tempClient = SupabaseClient(
+            supabaseURL: Self.supabaseURL,
+            supabaseKey: Self.supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    storage: InMemoryLocalStorage(),
+                    emitLocalSessionAsInitialSession: false
+                )
+            )
+        )
+        
+        
+        let authResponse = try await tempClient.auth.signUp(
+            email: email,
+            password: passwordString,
+            data: [
+                "name": .string(fullName),
+                "role": .string(DBUserRole.driver.rawValue)
+            ]
+        )
+        
+        let authUserId = authResponse.user.id
+        
+        
+        let dbUser = DBUser(
+            id: authUserId,
+            name: fullName,
+            email: email,
+            role: .driver,
+            phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
+            profileImage: nil,
+            createdAt: Date()
+        )
+        
+        do {
+            try await client
+                .from("users")
+                .upsert(dbUser)
+                .execute()
+        } catch {
+            print("⚠️ Profile upsert failed (possibly auto-inserted by database trigger): \(error.localizedDescription)")
+            
+        }
+            
+        return dbUser
+    }
+    
+    
+    func updateDriver(_ driver: DBUser) async throws {
+        try await client
+            .from("users")
+            .update(driver)
+            .eq("id", value: driver.id.uuidString)
+            .execute()
+    }
+    
+    
+    func deleteDriver(id: UUID) async throws {
+        try await client
+            .from("users")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+    
+    
+    
+    
+    func updateVehicle(_ vehicle: DBVehicle) async throws {
+        try await client
+            .from("vehicles")
+            .update(vehicle)
+            .eq("id", value: vehicle.id.uuidString)
+            .execute()
+    }
+    
+    
+    func deleteVehicle(id: UUID) async throws {
+        try await client
+            .from("vehicles")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+    
+    
+    
+    
+    func updateTrip(_ trip: DBTrip) async throws {
+        try await client
+            .from("trips")
+            .update(trip)
+            .eq("id", value: trip.id.uuidString)
+            .execute()
+    }
+    
+    
+    func deleteTrip(id: UUID) async throws {
+        try await client
+            .from("trips")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+    
+    
+    
+    
+    func fetchWorkOrders() async throws -> [DBWorkOrder] {
+        return try await client
+            .from("work_orders")
+            .select()
+            .execute()
+            .value
+    }
+    
+    
+    func createWorkOrder(_ workOrder: DBWorkOrder) async throws {
+        try await client
+            .from("work_orders")
+            .insert(workOrder)
+            .execute()
+    }
+    
+    
+    func updateWorkOrder(_ workOrder: DBWorkOrder) async throws {
+        try await client
+            .from("work_orders")
+            .update(workOrder)
+            .eq("id", value: workOrder.id.uuidString)
+            .execute()
+    }
+    
+    
+    func deleteWorkOrder(id: UUID) async throws {
+        try await client
+            .from("work_orders")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+    
+    
+    
+    
+    func fetchMaintenanceTasks() async throws -> [DBMaintenanceTask] {
+        return try await client
+            .from("maintenance_tasks")
+            .select()
+            .execute()
+            .value
+    }
+    
+    
+    func createMaintenanceTask(_ task: DBMaintenanceTask) async throws {
+        try await client
+            .from("maintenance_tasks")
+            .insert(task)
+            .execute()
+    }
+    
+    
+    func updateMaintenanceTask(_ task: DBMaintenanceTask) async throws {
+        try await client
+            .from("maintenance_tasks")
+            .update(task)
+            .eq("id", value: task.id.uuidString)
+            .execute()
+    }
+    
+    
+    
+    
+    func fetchMessages() async throws -> [DBMessage] {
+        return try await client
+            .from("messages")
+            .select()
+            .order("timestamp", ascending: true)
+            .execute()
+            .value
+    }
+    
+    
+    func sendMessage(_ message: DBMessage) async throws {
+        try await client
+            .from("messages")
+            .insert(message)
+            .execute()
+    }
+    
+    
+    
+    
+    func fetchNotifications() async throws -> [DBNotification] {
+        return try await client
+            .from("notifications")
+            .select()
+            .execute()
+            .value
+    }
+    
+    
+    func createNotification(_ notification: DBNotification) async throws {
+        try await client
+            .from("notifications")
+            .insert(notification)
+            .execute()
+    }
+    
+    
+    func updateNotification(_ notification: DBNotification) async throws {
+        try await client
+            .from("notifications")
+            .update(notification)
+            .eq("id", value: notification.id.uuidString)
+            .execute()
+    }
+    
+    
+    
+    
+    func insertVehicleLocation(_ location: DBVehicleLocation) async throws {
+        try await client
+            .from("vehicle_locations")
+            .insert(location)
+            .execute()
+    }
+    
+    
+    func fetchLatestVehicleLocations() async throws -> [DBVehicleLocation] {
+        return try await client
+            .from("v_latest_vehicle_location")
+            .select()
+            .execute()
+            .value
+    }
+    
+    
+    
+    
+    func syncAllData(context: ModelContext) async {
+        guard currentUser != nil else { return }
+        
+        do {
+            
+            if let remoteVehicles = try? await fetchVehicles() {
+                let descriptor = FetchDescriptor<Vehicle>()
+                let localVehicles = (try? context.fetch(descriptor)) ?? []
+                for rv in remoteVehicles {
+                    if let local = localVehicles.first(where: { $0.id == rv.id }) {
+                        local.registrationNumber = rv.vehicleNumber
+                        local.vinNumber = rv.vin
+                        local.make = rv.manufacturer
+                        local.model = rv.model
+                        local.year = rv.year
+                        local.status = rv.status.toLocalStatus
+                        local.assignedDriverId = rv.assignedDriverId
+                        local.lastServiceDate = rv.lastServiceDate
+                    } else {
+                        context.insert(rv.asLocalVehicle)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteVehicles.map { $0.id })
+                    for localVehicle in localVehicles {
+                        if !remoteIds.contains(localVehicle.id) {
+                            context.delete(localVehicle)
+                        }
+                    }
+                }
+            }
+            
+            
+            if let remoteDrivers = try? await fetchDrivers() {
+                let descriptor = FetchDescriptor<User>()
+                let localUsers = (try? context.fetch(descriptor)) ?? []
+                for rd in remoteDrivers {
+                    if let local = localUsers.first(where: { $0.id == rd.id }) {
+                        local.fullName = rd.name
+                        local.email = rd.email
+                        local.phoneNumber = rd.phoneNumber ?? ""
+                        local.role = rd.role.asLocalRole
+                    } else {
+                        context.insert(rd.asLocalUser)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteDrivers.map { $0.id })
+                    let localDrivers = localUsers.filter { $0.role == .driver }
+                    for localDriver in localDrivers {
+                        if !remoteIds.contains(localDriver.id) {
+                            context.delete(localDriver)
+                        }
+                    }
+                }
+            }
+            
+            
+            if let remoteTrips = try? await fetchTrips() {
+                let descriptor = FetchDescriptor<Trip>()
+                let localTrips = (try? context.fetch(descriptor)) ?? []
+                for rt in remoteTrips {
+                    if let local = localTrips.first(where: { $0.id == rt.id }) {
+                        local.vehicleId = rt.vehicleId
+                        local.driverId = rt.driverId
+                        local.startLocation = rt.source
+                        local.endLocation = rt.destination
+                        local.scheduledStartTime = rt.startTime ?? Date()
+                        local.scheduledEndTime = rt.endTime ?? Date().addingTimeInterval(7200)
+                        local.actualStartTime = rt.startTime
+                        local.actualEndTime = rt.endTime
+                        local.distanceKm = rt.distance
+                        local.tripStatus = rt.status.toLocalStatus
+                        local.notes = rt.notes
+                    } else {
+                        context.insert(rt.asLocalTrip)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteTrips.map { $0.id })
+                    for localTrip in localTrips {
+                        if !remoteIds.contains(localTrip.id) {
+                            context.delete(localTrip)
+                        }
+                    }
+                } else if currentUser?.role == .driver {
+                    let remoteIds = Set(remoteTrips.map { $0.id })
+                    for localTrip in localTrips {
+                        if localTrip.driverId == currentUser?.id && !remoteIds.contains(localTrip.id) {
+                            context.delete(localTrip)
+                        }
+                    }
+                }
+            }
+            
+            
+            if let remoteWorkOrders = try? await fetchWorkOrders() {
+                let descriptor = FetchDescriptor<WorkOrder>()
+                let localWorkOrders = (try? context.fetch(descriptor)) ?? []
+                for rwo in remoteWorkOrders {
+                    if let local = localWorkOrders.first(where: { $0.id == rwo.id }) {
+                        local.vehicleId = rwo.vehicleId
+                        local.assignedTo = rwo.assignedTo
+                        local.priority = rwo.priority.toLocalPriority
+                        local.workDescription = rwo.issueDescription
+                        local.status = rwo.status.toLocalStatus
+                    } else {
+                        context.insert(rwo.asLocalWorkOrder)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteWorkOrders.map { $0.id })
+                    for localWorkOrder in localWorkOrders {
+                        if !remoteIds.contains(localWorkOrder.id) {
+                            context.delete(localWorkOrder)
+                        }
+                    }
+                }
+            }
+            
+            
+            if let remoteNotifications = try? await fetchNotifications() {
+                let descriptor = FetchDescriptor<AppNotification>()
+                let localNotifications = (try? context.fetch(descriptor)) ?? []
+                for rn in remoteNotifications {
+                    if let local = localNotifications.first(where: { $0.id == rn.id }) {
+                        local.userId = rn.userId
+                        local.title = rn.title
+                        local.message = rn.message
+                        local.type = rn.type.toLocalType
+                        local.isRead = rn.isRead
+                    } else {
+                        context.insert(rn.asLocalNotification)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteNotifications.map { $0.id })
+                    for localNotification in localNotifications {
+                        if !remoteIds.contains(localNotification.id) {
+                            context.delete(localNotification)
+                        }
+                    }
+                }
+            }
+            
+            try context.save()
+            print("Successfully synchronized and deduplicated all data from Supabase to SwiftData")
+        } catch {
+            print("⚠️ Reconciled data synchronization error: \(error.localizedDescription)")
+        }
+    }
+}
+
+
