@@ -144,6 +144,9 @@ struct DriverTripsTab: View {
                     }
                 }
             }
+            .refreshable {
+                await vm.load()
+            }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trips")
             .navigationBarTitleDisplayMode(.large)

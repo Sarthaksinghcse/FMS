@@ -776,11 +776,13 @@ struct DriverListView: View {
                     }
                 }
                 
-                let remoteIds = Set(dbDrivers.map { $0.id })
-                let localDrivers = allUsers.filter { $0.role == .driver }
-                for localDriver in localDrivers {
-                    if !remoteIds.contains(localDriver.id) {
-                        modelContext.delete(localDriver)
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbDrivers.map { $0.id })
+                    let localDrivers = allUsers.filter { $0.role == .driver }
+                    for localDriver in localDrivers {
+                        if !remoteIds.contains(localDriver.id) {
+                            modelContext.delete(localDriver)
+                        }
                     }
                 }
                 
@@ -1380,10 +1382,12 @@ struct TripListView: View {
                     }
                 }
                 
-                let remoteIds = Set(dbTrips.map { $0.id })
-                for localTrip in allTrips {
-                    if !remoteIds.contains(localTrip.id) {
-                        modelContext.delete(localTrip)
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbTrips.map { $0.id })
+                    for localTrip in allTrips {
+                        if !remoteIds.contains(localTrip.id) {
+                            modelContext.delete(localTrip)
+                        }
                     }
                 }
                 
