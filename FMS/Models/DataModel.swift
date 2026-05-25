@@ -637,6 +637,271 @@ struct DBVehicleInspection: Codable, Identifiable {
     }
 }
 
+// MARK: DBMaintenanceStatus
+enum DBMaintenanceStatus: String, Codable {
+    case pending
+    case inProgress = "in_progress"
+    case completed
+}
+
+// MARK: DBMaintenanceTask
+struct DBMaintenanceTask: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var assignedTo: UUID
+    var serviceType: String
+    var dueDate: Date
+    var status: DBMaintenanceStatus
+    var notes: String?
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case assignedTo = "assigned_to"
+        case serviceType = "service_type"
+        case dueDate = "due_date"
+        case status
+        case notes
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: DBWorkOrderPriority
+enum DBWorkOrderPriority: String, Codable {
+    case low
+    case medium
+    case high
+    case urgent
+}
+
+// MARK: DBWorkOrderStatus
+enum DBWorkOrderStatus: String, Codable {
+    case open
+    case inProgress = "in_progress"
+    case completed
+    case closed
+}
+
+// MARK: DBWorkOrder
+struct DBWorkOrder: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var createdBy: UUID
+    var assignedTo: UUID
+    var priority: DBWorkOrderPriority
+    var issueDescription: String
+    var status: DBWorkOrderStatus
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case createdBy = "created_by"
+        case assignedTo = "assigned_to"
+        case priority
+        case issueDescription = "issue_description"
+        case status
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: DBMessage
+struct DBMessage: Codable, Identifiable {
+    let id: UUID
+    var senderId: UUID
+    var receiverId: UUID
+    var message: String
+    var timestamp: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case senderId = "sender_id"
+        case receiverId = "receiver_id"
+        case message
+        case timestamp
+    }
+}
+
+// MARK: DBNotificationType
+enum DBNotificationType: String, Codable {
+    case info
+    case warning
+    case maintenance
+    case trip
+    case emergency
+}
+
+// MARK: DBNotification
+struct DBNotification: Codable, Identifiable {
+    let id: UUID
+    var userId: UUID
+    var title: String
+    var message: String
+    var type: DBNotificationType
+    var isRead: Bool
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case title
+        case message
+        case type
+        case isRead = "is_read"
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: DBVehicleLocation
+struct DBVehicleLocation: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var latitude: Double
+    var longitude: Double
+    var timestamp: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case latitude
+        case longitude
+        case timestamp
+    }
+}
+
+// MARK: - Extension Conversions
+
+extension WorkOrder {
+    @MainActor
+    var asDBWorkOrder: DBWorkOrder {
+        DBWorkOrder(
+            id: id,
+            vehicleId: vehicleId,
+            createdBy: SupabaseManager.shared.currentUser?.id ?? UUID(),
+            assignedTo: assignedTo,
+            priority: priority.toDBPriority,
+            issueDescription: workDescription.isEmpty ? title : workDescription,
+            status: status.toDBStatus,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension WorkOrderPriority {
+    var toDBPriority: DBWorkOrderPriority {
+        switch self {
+        case .low: return .low
+        case .medium: return .medium
+        case .high: return .high
+        case .urgent: return .urgent
+        }
+    }
+}
+
+extension DBWorkOrderPriority {
+    var toLocalPriority: WorkOrderPriority {
+        switch self {
+        case .low: return .low
+        case .medium: return .medium
+        case .high: return .high
+        case .urgent: return .urgent
+        }
+    }
+}
+
+extension WorkOrderStatus {
+    var toDBStatus: DBWorkOrderStatus {
+        switch self {
+        case .open: return .open
+        case .inProgress: return .inProgress
+        case .completed: return .completed
+        case .cancelled: return .closed
+        }
+    }
+}
+
+extension DBWorkOrderStatus {
+    var toLocalStatus: WorkOrderStatus {
+        switch self {
+        case .open: return .open
+        case .inProgress: return .inProgress
+        case .completed: return .completed
+        case .closed: return .cancelled
+        }
+    }
+}
+
+extension DBWorkOrder {
+    var asLocalWorkOrder: WorkOrder {
+        WorkOrder(
+            id: id,
+            vehicleId: vehicleId,
+            defectReportId: nil,
+            assignedTo: assignedTo,
+            title: "Work Order - " + String(id.uuidString.prefix(4)),
+            workDescription: issueDescription,
+            priority: priority.toLocalPriority,
+            status: status.toLocalStatus,
+            estimatedCost: nil,
+            completedAt: status == .completed ? Date() : nil,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension DBNotificationType {
+    var toLocalType: NotificationType {
+        switch self {
+        case .info: return .general
+        case .warning: return .defectAlert
+        case .maintenance: return .maintenanceAlert
+        case .trip: return .tripAssigned
+        case .emergency: return .sosAlert
+        }
+    }
+}
+
+extension NotificationType {
+    var toDBType: DBNotificationType {
+        switch self {
+        case .general: return .info
+        case .defectAlert: return .warning
+        case .maintenanceAlert: return .maintenance
+        case .tripAssigned: return .trip
+        case .sosAlert: return .emergency
+        }
+    }
+}
+
+extension DBNotification {
+    var asLocalNotification: AppNotification {
+        AppNotification(
+            id: id,
+            userId: userId,
+            title: title,
+            message: message,
+            type: type.toLocalType,
+            isRead: isRead,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension AppNotification {
+    var asDBNotification: DBNotification {
+        DBNotification(
+            id: id,
+            userId: userId,
+            title: title,
+            message: message,
+            type: type.toDBType,
+            isRead: isRead,
+            createdAt: createdAt
+        )
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MARK: - SECTION 6 ▸ SwiftData @Model Classes
 // ─────────────────────────────────────────────────────────────────────────────

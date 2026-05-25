@@ -11,23 +11,28 @@ import SwiftData
 @MainActor
 struct DatabaseSeeder {
     static func seedIfEmpty(context: ModelContext) {
-        // Check if database is already seeded (using Vehicle count as indicator)
+        // Check if database is already seeded
         do {
             let vehicleDescriptor = FetchDescriptor<Vehicle>()
             let existingVehicles = try context.fetch(vehicleDescriptor)
-            guard existingVehicles.isEmpty else {
-                // Database is already seeded
+            
+            let userDescriptor = FetchDescriptor<User>()
+            let existingUsers = try context.fetch(userDescriptor)
+            
+            guard existingVehicles.isEmpty && existingUsers.isEmpty else {
+                // Database already contains seeded data
                 return
             }
         } catch {
-            print("Failed to fetch vehicles for seeding check: \(error)")
+            print("Failed to fetch database records for seeding check: \(error)")
             return
         }
         
-        print("🌱 Seeding SwiftData database with premium mock data...")
+        print(" Seeding SwiftData database with premium mock data...")
         
         // 1. Seed Users (Drivers & Maintenance)
         let driver1 = User(
+            id: UUID(uuidString: "d0000000-0000-0000-0000-000000000001")!,
             fullName: "Priyanshu Namdev",
             email: "priyanshu@fleet.com",
             phoneNumber: "+91 9999988888",
@@ -37,6 +42,7 @@ struct DatabaseSeeder {
         )
         
         let driver2 = User(
+            id: UUID(uuidString: "d0000000-0000-0000-0000-000000000002")!,
             fullName: "Amit Kumar",
             email: "amit@fleet.com",
             phoneNumber: "+91 8888877777",
@@ -46,6 +52,7 @@ struct DatabaseSeeder {
         )
         
         let driver3 = User(
+            id: UUID(uuidString: "d0000000-0000-0000-0000-000000000003")!,
             fullName: "Sarthak Singh",
             email: "sarthak@fleet.com",
             phoneNumber: "+91 7777766666",
@@ -55,6 +62,7 @@ struct DatabaseSeeder {
         )
         
         let tech1 = User(
+            id: UUID(uuidString: "d0000000-0000-0000-0000-000000000004")!,
             fullName: "Raj Kumar",
             email: "raj@fleet.com",
             phoneNumber: "+91 9876543210",
@@ -64,6 +72,7 @@ struct DatabaseSeeder {
         )
         
         let tech2 = User(
+            id: UUID(uuidString: "d0000000-0000-0000-0000-000000000005")!,
             fullName: "Naman Yadav",
             email: "naman@fleet.com",
             phoneNumber: "+91 8585858585",
@@ -76,6 +85,7 @@ struct DatabaseSeeder {
         
         // 2. Seed Vehicles
         let v1 = Vehicle(
+            id: UUID(uuidString: "e0000000-0000-0000-0000-000000000001")!,
             registrationNumber: "DL-01-MA-4532",
             vinNumber: "1HGCM82633A004352",
             make: "Tata",
@@ -89,6 +99,7 @@ struct DatabaseSeeder {
         )
         
         let v2 = Vehicle(
+            id: UUID(uuidString: "e0000000-0000-0000-0000-000000000002")!,
             registrationNumber: "HR-26-CR-8921",
             vinNumber: "2HGCM82633A004353",
             make: "Maruti",
@@ -102,6 +113,7 @@ struct DatabaseSeeder {
         )
         
         let v3 = Vehicle(
+            id: UUID(uuidString: "e0000000-0000-0000-0000-000000000003")!,
             registrationNumber: "DL-03-EV-1024",
             vinNumber: "3HGCM82633A004354",
             make: "Tata",
@@ -115,6 +127,7 @@ struct DatabaseSeeder {
         )
         
         let v4 = Vehicle(
+            id: UUID(uuidString: "e0000000-0000-0000-0000-000000000004")!,
             registrationNumber: "UP-16-PK-6721",
             vinNumber: "4HGCM82633A004355",
             make: "Mahindra",
@@ -128,6 +141,7 @@ struct DatabaseSeeder {
         )
         
         let v5 = Vehicle(
+            id: UUID(uuidString: "e0000000-0000-0000-0000-000000000005")!,
             registrationNumber: "DL-04-BI-7711",
             vinNumber: "5HGCM82633A004356",
             make: "Hero",
@@ -141,6 +155,7 @@ struct DatabaseSeeder {
         )
         
         let v6 = Vehicle(
+            id: UUID(uuidString: "e0000000-0000-0000-0000-000000000006")!,
             registrationNumber: "MH-02-HY-3344",
             vinNumber: "6HGCM82633A004357",
             make: "Toyota",
@@ -157,6 +172,7 @@ struct DatabaseSeeder {
         
         // 3. Seed Trips
         let t1 = Trip(
+            id: UUID(uuidString: "f0000000-0000-0000-0000-000000000184")!,
             tripCode: "TRIP-1842",
             vehicleId: v1.id,
             driverId: driver1.id,
@@ -175,6 +191,7 @@ struct DatabaseSeeder {
         )
         
         let t2 = Trip(
+            id: UUID(uuidString: "f0000000-0000-0000-0000-000000000183")!,
             tripCode: "TRIP-1839",
             vehicleId: v2.id,
             driverId: driver2.id,
@@ -274,7 +291,7 @@ struct DatabaseSeeder {
         
         do {
             try context.save()
-            print("🎉 Database successfully seeded with 6 vehicles, 5 users, 2 trips, 2 defects, 1 SOS, 1 work order, and 2 records.")
+            print(" Database successfully seeded with 6 vehicles, 5 users, 2 trips, 2 defects, 1 SOS, 1 work order, and 2 records.")
         } catch {
             print("Failed to save seeded context: \(error.localizedDescription)")
         }

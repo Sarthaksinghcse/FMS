@@ -104,6 +104,9 @@ struct DriverHomeTab: View {
                     Spacer(minLength: 100) // Space for the floating bottom tab bar
                 }
             }
+            .refreshable {
+                await vm.load()
+            }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationBarHidden(true)
         }
@@ -149,15 +152,41 @@ private struct GreetingRow: View {
 
             Spacer()
 
-            // System profile button on the right
-            Button {
-                vm.showProfile = true
-            } label: {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(Color.fmsIndigo)
+            // System profile & notification buttons on the right
+            HStack(spacing: 16) {
+                // Bell Button with unread badge count
+                Button {
+                    vm.showNotifications = true
+                } label: {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "bell.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(Color.fmsIndigo)
+                        
+                        let unreadCount = vm.notificationsList.filter { !$0.isRead }.count
+                        if unreadCount > 0 {
+                            Text("\(unreadCount)")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(4)
+                                .background(Color.red)
+                                .clipShape(Circle())
+                                .offset(x: 10, y: -10)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+
+                // Profile button
+                Button {
+                    vm.showProfile = true
+                } label: {
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(Color.fmsIndigo)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 }
