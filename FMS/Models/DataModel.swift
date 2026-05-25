@@ -188,6 +188,15 @@ enum WorkOrderStatus: String, Codable {
     case inProgress
     case completed
     case cancelled
+
+    var displayName: String {
+        switch self {
+        case .open:       return "Open"
+        case .inProgress: return "In Progress"
+        case .completed:  return "Completed"
+        case .cancelled:  return "Cancelled"
+        }
+    }
 }
 
 
@@ -291,6 +300,30 @@ struct DashboardActivity: Identifiable {
     let icon: String
     let iconColor: Color
     let iconBgColor: Color
+    /// Who triggered this event: "Fleet Manager", "Driver", or "System"
+    let source: String
+    /// Actual date for sorting
+    let date: Date
+
+    init(
+        title: String,
+        subtitle: String,
+        time: String,
+        icon: String,
+        iconColor: Color,
+        iconBgColor: Color,
+        source: String = "System",
+        date: Date = Date()
+    ) {
+        self.title      = title
+        self.subtitle   = subtitle
+        self.time       = time
+        self.icon       = icon
+        self.iconColor  = iconColor
+        self.iconBgColor = iconBgColor
+        self.source     = source
+        self.date       = date
+    }
 }
 
 
