@@ -47,7 +47,7 @@ struct DriverProfileSheet: View {
                         ProfileRow(icon: "person.fill",
                                    iconBg: AppTheme.Brand.primaryDeep,
                                    label: "Full Name",
-                                   value: vm.driverFirstName + " Yadav")
+                                   value: vm.driverFirstName)
                         Divider().padding(.leading, 56)
                         ProfileRow(icon: "creditcard.fill",
                                    iconBg: AppTheme.Brand.primaryDeep,

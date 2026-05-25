@@ -20,11 +20,11 @@ struct DriverHomeTab: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 20) {
 
-                    
-                    GreetingRow(vm: vm)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 20)
-                        .padding(.bottom, 12)
+                    // ── 1. Inline Header Row ────────────────────────────────────
+                    DashboardInlineHeader(vm: vm)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
 
                     
                     VStack(alignment: .leading, spacing: 12) {
@@ -36,7 +36,7 @@ struct DriverHomeTab: View {
                             Spacer()
                             Button {
                                 withAnimation {
-                                    selectedTab = 1 
+                                    selectedTab = 1
                                 }
                             } label: {
                                 Text("See All")
@@ -44,10 +44,10 @@ struct DriverHomeTab: View {
                                     .foregroundStyle(Color.fmsIndigo)
                             }
                         }
-                        
+
                         PrimaryCard(vm: vm)
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 20)
 
                     
                     VStack(alignment: .leading, spacing: 12) {
@@ -71,7 +71,7 @@ struct DriverHomeTab: View {
                             )
                         }
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 20)
                     .padding(.top, 14)
 
                     
@@ -98,15 +98,13 @@ struct DriverHomeTab: View {
                             )
                         }
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 20)
                     .padding(.top, 14)
 
-                    Spacer(minLength: 100) 
+                    Spacer(minLength: 100)
                 }
             }
-            .refreshable {
-                await vm.load()
-            }
+            .refreshable { await vm.load() }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationBarHidden(true)
         }
@@ -115,83 +113,84 @@ struct DriverHomeTab: View {
 
 
 
-private struct GreetingRow: View {
+private struct DashboardInlineHeader: View {
     @ObservedObject var vm: DriverDashboardViewModel
 
-    private var initials: String {
-        let components = vm.driverName.components(separatedBy: " ")
-        if components.count >= 2 {
-            let first = components[0].prefix(1)
-            let last = components[1].prefix(1)
-            return "\(first)\(last)".uppercased()
-        } else {
-            return String(vm.driverName.prefix(2)).uppercased()
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:  return "Good Morning,"
+        case 12..<17: return "Good Afternoon,"
+        default:      return "Good Evening,"
         }
     }
 
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            
-            Circle()
-                .fill(Color.fmsIndigo.opacity(0.12))
-                .frame(width: 44, height: 44)
-                .overlay(
-                    Text(initials)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(Color.fmsIndigo)
-                )
+    private var initials: String {
+        let parts = vm.driverName.components(separatedBy: " ")
+        if parts.count >= 2 {
+            return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
+        }
+        return String(vm.driverName.prefix(2)).uppercased()
+    }
 
+    var body: some View {
+        HStack(alignment: .center, spacing: 0) {
+            // ── Two-line greeting on the left ────────────────────────────
             VStack(alignment: .leading, spacing: 2) {
-                Text("Welcome Back,")
-                    .font(.system(size: 13, weight: .regular))
+                Text(greeting)
+                    .font(.system(size: 17, weight: .regular))
                     .foregroundStyle(.secondary)
                 Text(vm.driverName)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.primary)
             }
 
             Spacer()
 
-            
-            HStack(spacing: 16) {
-                
-                Button {
-                    vm.showNotifications = true
-                } label: {
-                    ZStack(alignment: .topTrailing) {
-                        Image(systemName: "bell.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(Color.fmsIndigo)
-                        
-                        let unreadCount = vm.notificationsList.filter { !$0.isRead }.count
-                        if unreadCount > 0 {
-                            Text("\(unreadCount)")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(4)
-                                .background(Color.red)
-                                .clipShape(Circle())
-                                .offset(x: 10, y: -10)
-                        }
+            // ── Bell button ────────────────────────────────────────
+            Button {
+                vm.showNotifications = true
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color(UIColor.label))
+                        .frame(width: 40, height: 40)
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .clipShape(Circle())
+
+                    let unread = vm.notificationsList.filter { !$0.isRead }.count
+                    if unread > 0 {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 10, height: 10)
+                            .offset(x: 1, y: 1)
                     }
                 }
-                .buttonStyle(.plain)
-
-                
-                Button {
-                    vm.showProfile = true
-                } label: {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(Color.fmsIndigo)
-                }
-                .buttonStyle(.plain)
             }
+            .buttonStyle(.plain)
+
+            // ── Gap between bell and avatar ───────────────────────────
+            Spacer().frame(width: 12)
+
+            // ── Driver initials avatar ──────────────────────────────
+            Button {
+                vm.showProfile = true
+            } label: {
+                Text(initials)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(Color.fmsIndigo)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
         }
     }
 }
 
 
+// MARK: - 2. Primary Card (Trip details)
 
 private struct PrimaryCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
