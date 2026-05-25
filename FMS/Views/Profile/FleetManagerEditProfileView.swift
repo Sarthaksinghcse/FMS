@@ -1,14 +1,14 @@
-//
-//  FleetManagerEditProfileView.swift
-//  FMS
-//
-//  Edit profile inner screen for Fleet Manager.
-//  Allows editing name, phone number, and profile image.
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Fleet Manager Edit Profile
+
 
 @available(iOS 26.0, *)
 struct FleetManagerEditProfileView: View {
@@ -38,7 +38,7 @@ struct FleetManagerEditProfileView: View {
 
                 ScrollView {
                     VStack(spacing: 28) {
-                        // Avatar preview
+                        
                         VStack(spacing: 14) {
                             ZStack {
                                 Circle()
@@ -65,7 +65,7 @@ struct FleetManagerEditProfileView: View {
                         }
                         .padding(.top, 8)
 
-                        // Form fields
+                        
                         VStack(spacing: 0) {
                             ProfileFormField(
                                 icon: "person.fill",
@@ -86,7 +86,7 @@ struct FleetManagerEditProfileView: View {
 
                             Divider().padding(.leading, 56)
 
-                            // Email (read-only)
+                            
                             HStack(spacing: 12) {
                                 Image(systemName: "envelope.fill")
                                     .font(.system(size: 15))
@@ -113,7 +113,7 @@ struct FleetManagerEditProfileView: View {
 
                             Divider().padding(.leading, 56)
 
-                            // Role (read-only)
+                            
                             HStack(spacing: 12) {
                                 Image(systemName: "shield.checkered")
                                     .font(.system(size: 15))
@@ -142,10 +142,10 @@ struct FleetManagerEditProfileView: View {
                         .cornerRadius(AppTheme.Radius.card)
                         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
 
-                        // Save Button
+                        
                         Button {
                             isSaving = true
-                            // Simulate save
+                            
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                                 isSaving = false
                                 showSaved = true
@@ -203,7 +203,7 @@ struct FleetManagerEditProfileView: View {
     }
 }
 
-// MARK: - Profile Form Field
+
 
 struct ProfileFormField: View {
     let icon: String
@@ -236,7 +236,7 @@ struct ProfileFormField: View {
     }
 }
 
-// MARK: - Preview
+
 
 @available(iOS 26.0, *)
 #Preview {

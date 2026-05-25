@@ -1,14 +1,14 @@
-//
-//  ProfileSharedComponents.swift
-//  FMS
-//
-//  Reusable components shared across all three profile views
-//  (Fleet Manager, Driver, Maintenance).
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Profile Stat Card (Light Theme)
+
 
 struct ProfileStatCard: View {
     let icon: String
@@ -48,7 +48,7 @@ struct ProfileStatCard: View {
     }
 }
 
-// MARK: - Profile Settings Row
+
 
 struct ProfileSettingsRow: View {
     let icon: String
@@ -91,7 +91,7 @@ struct ProfileSettingsRow: View {
     }
 }
 
-// MARK: - Profile Inner Screen Header
+
 
 struct ProfileInnerScreenHeader: View {
     let icon: String
@@ -122,7 +122,7 @@ struct ProfileInnerScreenHeader: View {
     }
 }
 
-// MARK: - Profile Toggle Row
+
 
 struct ProfileToggleRow: View {
     let icon: String
@@ -160,7 +160,7 @@ struct ProfileToggleRow: View {
     }
 }
 
-// MARK: - Profile Info Row
+
 
 struct ProfileInfoRow: View {
     let label: String

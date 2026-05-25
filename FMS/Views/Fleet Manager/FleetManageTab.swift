@@ -1,25 +1,25 @@
-//
-//  FleetManageTab.swift
-//  FMS
-//
-//  Consolidated "Manage" tab for the Fleet Manager dashboard.
-//  Contains: ManagementHubView, VehicleListView, DriverListView,
-//            MaintenanceStaffListView, TripListView — and all their
-//            supporting sub-views and stubs — in one file.
-//
+
+
+
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 1 ▸ Management Hub
-// ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Models
+
+
+
+
 
 struct CardMetric: Identifiable {
-    let id = UUID()
+    var id: String { label }
     let label: String
     let value: String
     let systemIcon: String
@@ -27,7 +27,7 @@ struct CardMetric: Identifiable {
 }
 
 struct ManagementCard: Identifiable {
-    let id = UUID()
+    var id: ManagementDestination { destination }
     let title: String
     let subtitle: String
     let icon: String
@@ -42,7 +42,7 @@ enum ManagementDestination: Hashable {
     case maintenanceStaff
 }
 
-// MARK: Hub View
+
 
 @available(iOS 26.0, *)
 struct ManagementHubView: View {
@@ -146,7 +146,7 @@ struct ManagementHubView: View {
         }
     }
 
-    // MARK: Cards Grid
+    
 
     private var cardsSection: some View {
         VStack(spacing: 20) {
@@ -162,7 +162,7 @@ struct ManagementHubView: View {
         }
     }
 
-    // MARK: Destination Router
+    
 
     @ViewBuilder
     private func destinationView(for destination: ManagementDestination) -> some View {
@@ -174,7 +174,7 @@ struct ManagementHubView: View {
     }
 }
 
-// MARK: Card View
+
 
 @available(iOS 26.0, *)
 struct ManagementCardView: View {
@@ -184,7 +184,7 @@ struct ManagementCardView: View {
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 14) {
-                // Header
+                
                 HStack(spacing: 14) {
                     ZStack {
                         Circle()
@@ -212,7 +212,7 @@ struct ManagementCardView: View {
                     .background(Color.black.opacity(0.06))
                     .padding(.vertical, 2)
 
-                // Metrics
+                
                 HStack(spacing: 0) {
                     ForEach(card.metrics) { metric in
                         HStack(spacing: 8) {
@@ -269,12 +269,12 @@ struct ManagementCardView: View {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 2 ▸ Vehicle List
-// ─────────────────────────────────────────────────────────────────────────────
 
 
-// MARK: Vehicle List View
+
+
+
+
 
 @available(iOS 26.0, *)
 struct VehicleListView: View {
@@ -445,7 +445,7 @@ struct VehicleListView: View {
     }
 }
 
-// MARK: Filter Chip
+
 
 @available(iOS 26.0, *)
 struct FilterChipView: View {
@@ -478,7 +478,7 @@ struct FilterChipView: View {
     }
 }
 
-// MARK: Vehicle Card
+
 
 @available(iOS 26.0, *)
 struct VehicleCardView: View {
@@ -567,12 +567,12 @@ struct VehicleCardView: View {
     }
 }
 
-// MARK: - Vehicle Stubs replaced by VehicleFormView.swift
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 3 ▸ Driver List
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
+
 
 @available(iOS 26.0, *)
 struct DriverListView: View {
@@ -794,7 +794,7 @@ struct DriverListView: View {
     }
 }
 
-// MARK: Add / Edit Driver Stubs
+
 
 @available(iOS 26.0, *)
 struct AddDriverStubView: View {
@@ -897,9 +897,9 @@ struct EditDriverStubView: View {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 4 ▸ Maintenance Staff List
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct MaintenanceStaffListView: View {
@@ -1083,7 +1083,7 @@ struct MaintenanceStaffListView: View {
     }
 }
 
-// MARK: Add / Edit Staff Stubs
+
 
 @available(iOS 26.0, *)
 struct AddStaffSheetView: View {
@@ -1167,12 +1167,12 @@ struct EditStaffSheetView: View {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 5 ▸ Trip List
-// ─────────────────────────────────────────────────────────────────────────────
 
 
-// MARK: Trip Category Filter
+
+
+
+
 enum TripCategoryFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case active = "Active"
@@ -1182,7 +1182,7 @@ enum TripCategoryFilter: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-// MARK: Trip List View
+
 
 @available(iOS 26.0, *)
 struct TripListView: View {
@@ -1295,10 +1295,10 @@ struct TripListView: View {
                     let isSelected = selectedFilter == filter
                     let chipColor: Color = {
                         switch filter {
-                        case .all:      return AppTheme.Brand.accent // Dark Orange in App Theme
-                        case .active:   return Color(red: 0.30, green: 0.70, blue: 0.46) // Fresh Green
-                        case .upcoming: return Color(red: 0.15, green: 0.38, blue: 0.90) // Royal Blue
-                        case .past:     return Color(red: 0.55, green: 0.58, blue: 0.62) // Slate-Silver (Completed success)
+                        case .all:      return AppTheme.Brand.accent 
+                        case .active:   return Color(red: 0.30, green: 0.70, blue: 0.46) 
+                        case .upcoming: return Color(red: 0.15, green: 0.38, blue: 0.90) 
+                        case .past:     return Color(red: 0.55, green: 0.58, blue: 0.62) 
                         }
                     }()
                     
@@ -1399,7 +1399,7 @@ struct TripListView: View {
     }
 }
 
-// MARK: Trip Card
+
 
 @available(iOS 26.0, *)
 struct TripCardView: View {
@@ -1413,7 +1413,7 @@ struct TripCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Top Row
+            
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
@@ -1440,7 +1440,7 @@ struct TripCardView: View {
                 .buttonStyle(ScaleButtonStyle())
             }
 
-            // Route
+            
             HStack(spacing: 8) {
                 Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(.green.opacity(0.7))
                 Text(trip.startLocation).font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
@@ -1453,7 +1453,7 @@ struct TripCardView: View {
             .background(Color.gray.opacity(0.04))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            // Stats row
+            
             HStack(spacing: 0) {
                 tripDetailCol(label: "DEPARTURE", value: Self.timeFmt.string(from: trip.scheduledStartTime), icon: "clock.fill")
                 Spacer()
@@ -1462,7 +1462,7 @@ struct TripCardView: View {
                 tripDetailCol(label: "DISTANCE",  value: String(format: "%.1f km", trip.distanceKm),         icon: "road.lanes")
             }
 
-            // Driver info
+            
             if let name = driverName {
                 Divider().background(AppTheme.Glass.border)
                 HStack(spacing: 10) {
@@ -1508,7 +1508,7 @@ struct TripCardView: View {
     }
 }
 
-// MARK: Add / Edit Trip Stubs
+
 
 @available(iOS 26.0, *)
 struct AddTripStubView: View {

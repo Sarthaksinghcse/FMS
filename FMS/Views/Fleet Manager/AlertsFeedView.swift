@@ -1,32 +1,32 @@
-//
-//  AlertsFeedView.swift
-//  FMS
-//
-//  Created on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 import Combine
 
-// The AlertsFeedViewModel has been extracted to ViewModels/Fleet Manager/AlertsFeedViewModel.swift
 
 
 
-// MARK: - Alerts Feed View
+
+
 struct AlertsFeedView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
     @StateObject private var viewModel = AlertsFeedViewModel()
     
-    // SwiftData Queries
+    
     @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]
     @Query(sort: \DefectReport.createdAt, order: .reverse) private var defectReports: [DefectReport]
     @Query private var users: [User]
     @Query private var vehicles: [Vehicle]
     
-    // State
+    
     @State private var selectedFilter: AlertFilterType = .all
     @State private var searchQuery: String = ""
     
@@ -38,7 +38,7 @@ struct AlertsFeedView: View {
         var id: String { self.rawValue }
     }
     
-    // MARK: - Helpers for UI matching/mapping
+    
     private func driverName(for id: UUID) -> String {
         users.first(where: { $0.id == id })?.fullName ?? "Unknown Driver"
     }
@@ -50,7 +50,7 @@ struct AlertsFeedView: View {
         return "Unknown Vehicle"
     }
     
-    // MARK: - Filtered Alert Lists
+    
     struct DisplayAlert: Identifiable {
         let id: UUID
         let type: AlertType
@@ -64,7 +64,7 @@ struct AlertsFeedView: View {
         let statusColor: Color
         let driverName: String
         let vehicleName: String
-        let rawObject: Any // Keep reference to trigger updates
+        let rawObject: Any 
         
         enum AlertType {
             case sos
@@ -75,7 +75,7 @@ struct AlertsFeedView: View {
     private var allDisplayAlerts: [DisplayAlert] {
         var list: [DisplayAlert] = []
         
-        // 1. Map SOS Alerts
+        
         for sos in sosAlerts {
             list.append(DisplayAlert(
                 id: sos.id,
@@ -94,7 +94,7 @@ struct AlertsFeedView: View {
             ))
         }
         
-        // 2. Map Defect Reports
+        
         for defect in defectReports {
             let sevColor: Color
             let sevBg: Color
@@ -137,7 +137,7 @@ struct AlertsFeedView: View {
             ))
         }
         
-        // Sort chronologically (newest first)
+        
         list.sort { $0.date > $1.date }
         return list
     }
@@ -145,7 +145,7 @@ struct AlertsFeedView: View {
     private var filteredAlerts: [DisplayAlert] {
         let alerts = allDisplayAlerts
         
-        // Filter by tab type
+        
         let typedAlerts: [DisplayAlert]
         switch selectedFilter {
         case .all:
@@ -156,7 +156,7 @@ struct AlertsFeedView: View {
             typedAlerts = alerts.filter { $0.type == .defect }
         }
         
-        // Filter by search query
+        
         if searchQuery.isEmpty {
             return typedAlerts
         } else {
@@ -170,7 +170,7 @@ struct AlertsFeedView: View {
         }
     }
     
-    // Counts
+    
     private var activeSOSCount: Int {
         sosAlerts.filter { $0.status == .active }.count
     }
@@ -193,9 +193,9 @@ struct AlertsFeedView: View {
                             .padding(.top, 12)
                     }
                     
-                    // Filter Selector & Search Bar
+                    
                     VStack(spacing: 12) {
-                        // Stat Counters Summary
+                        
                         HStack(spacing: 12) {
                             MiniStatBadge(
                                 title: "Active SOS",
@@ -229,7 +229,7 @@ struct AlertsFeedView: View {
                     .background(AppTheme.Background.card)
                     .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                     
-                    // Scroll Feed
+                    
                     ScrollView(.vertical, showsIndicators: false) {
                         LazyVStack(spacing: 14) {
                             if filteredAlerts.isEmpty {
@@ -268,7 +268,7 @@ struct AlertsFeedView: View {
         }
     }
     
-    // MARK: - Reusable Views
+    
     
     private func searchField(placeholder: String, text: Binding<String>) -> some View {
         HStack(spacing: 8) {
@@ -312,7 +312,7 @@ struct AlertsFeedView: View {
     }
 }
 
-// MARK: - Mini Stat Badge Helper
+
 struct MiniStatBadge: View {
     let title: String
     let count: Int
@@ -351,7 +351,7 @@ struct MiniStatBadge: View {
     }
 }
 
-// MARK: - Alert Feed Card Helper
+
 struct AlertFeedCard: View {
     let alert: AlertsFeedView.DisplayAlert
     let viewModel: AlertsFeedViewModel
@@ -361,7 +361,7 @@ struct AlertFeedCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header: Type + Severity Badge & Time
+            
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: alert.type == .sos ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill")
@@ -375,7 +375,7 @@ struct AlertFeedCard: View {
                 
                 Spacer()
                 
-                // Severity Badge
+                
                 Text(alert.severityText)
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundColor(alert.severityColor)
@@ -385,7 +385,7 @@ struct AlertFeedCard: View {
                     .cornerRadius(6)
             }
             
-            // Title & Description
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(alert.title)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -399,7 +399,7 @@ struct AlertFeedCard: View {
             
             Divider().background(Color.black.opacity(0.06))
             
-            // Driver & Vehicle Meta info
+            
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 4) {
@@ -447,7 +447,7 @@ struct AlertFeedCard: View {
                 }
             }
             
-            // Action buttons depending on Alert Type & current status
+            
             if alert.type == .sos {
                 if let sosAlert = alert.rawObject as? SOSAlert, sosAlert.status == .active {
                     Button {

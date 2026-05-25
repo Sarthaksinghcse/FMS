@@ -1,22 +1,22 @@
-//
-//   MaintenanceDashboardView.swift
-//  FMS
-//
-//  Created by Gauri Verma on 21/05/26.
-//
+
+
+
+
+
+
 
 
 import SwiftUI
 import SwiftData
 
-// MARK: - Dashboard View
+
 
 struct MaintenanceDashboardView: View {
 
-    // Logged-in maintenance user (pass from login flow)
+    
     let currentUser: User
 
-    // SwiftData queries
+    
     @Query private var allWorkOrders: [WorkOrder]
     @Query private var allInventory: [InventoryItem]
     @Query private var allNotifications: [AppNotification]
@@ -24,7 +24,7 @@ struct MaintenanceDashboardView: View {
     @State private var selectedTab: Int = 0
     @State private var showProfile: Bool = false
 
-    // MARK: Derived counts (computed from real data)
+    
 
     private var pendingOrders: [WorkOrder] {
         allWorkOrders.filter { $0.assignedTo == currentUser.id && $0.status == .open }
@@ -72,7 +72,7 @@ struct MaintenanceDashboardView: View {
         .accentColor(AppTheme.Brand.primary)
     }
 
-    // MARK: Dashboard Tab
+    
 
     private var dashboardTab: some View {
         NavigationView {
@@ -114,7 +114,7 @@ struct MaintenanceDashboardView: View {
         }
     }
 
-    // MARK: Overview Cards
+    
 
     private var overviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -166,7 +166,7 @@ struct MaintenanceDashboardView: View {
         .padding(.top, 16)
     }
 
-    // MARK: Quick Actions
+    
 
     private var quickActionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -181,7 +181,7 @@ struct MaintenanceDashboardView: View {
         }
     }
 
-    // MARK: Recent Work Orders
+    
 
     private var recentWorkOrdersSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -212,7 +212,7 @@ struct MaintenanceDashboardView: View {
         }
     }
 
-    // MARK: Empty State
+    
 
     private func emptyState(icon: String, message: String) -> some View {
         VStack(spacing: 10) {
@@ -231,7 +231,7 @@ struct MaintenanceDashboardView: View {
     }
 }
 
-// MARK: - Inventory Tab
+
 
 struct InventoryTabView: View {
     let items: [InventoryItem]
@@ -302,14 +302,14 @@ struct InventoryRow: View {
     }
 }
 
-// MARK: - Work Order Row
+
 
 struct WorkOrderRow: View {
     let order: WorkOrder
 
     var body: some View {
         HStack(spacing: 12) {
-            // Priority indicator + icon
+            
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(order.priority.color.opacity(0.12))
@@ -350,7 +350,7 @@ struct WorkOrderRow: View {
     }
 }
 
-// MARK: - Status Badge
+
 
 struct WorkOrderStatusBadge: View {
     let status: WorkOrderStatus
@@ -366,7 +366,7 @@ struct WorkOrderStatusBadge: View {
     }
 }
 
-// MARK: - Notification Bell
+
 
 struct NotificationBellButton: View {
     let count: Int
@@ -397,7 +397,7 @@ struct NotificationBellButton: View {
     }
 }
 
-// MARK: - Reusable Components
+
 
 struct SectionHeader: View {
     let title: String
@@ -478,7 +478,7 @@ struct QuickActionButton: View {
     }
 }
 
-// MARK: - Model Extensions (display helpers only — no data mutation)
+
 
 extension WorkOrderStatus {
     var displayLabel: String {
@@ -518,10 +518,10 @@ extension WorkOrderPriority {
     }
 }
 
-// MARK: - Preview
+
 
 #Preview {
-    // Build an in-memory SwiftData container with sample data
+    
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
         for: User.self, WorkOrder.self, InventoryItem.self, AppNotification.self,
@@ -530,7 +530,7 @@ extension WorkOrderPriority {
 
     let ctx = container.mainContext
 
-    // Sample user
+    
     let user = User(
         fullName: "Raj Kumar",
         email: "raj@fleet.com",
@@ -540,7 +540,7 @@ extension WorkOrderPriority {
     )
     ctx.insert(user)
 
-    // Sample work orders
+    
     let wo1 = WorkOrder(vehicleId: UUID(), assignedTo: user.id,
                         title: "Brake Issue – Truck 12",
                         workDescription: "Front brake pads worn",
@@ -556,7 +556,7 @@ extension WorkOrderPriority {
                         completedAt: .now)
     [wo1, wo2, wo3].forEach { ctx.insert($0) }
 
-    // Sample inventory
+    
     let inv1 = InventoryItem(partName: "Brake Pads", partNumber: "BP-204",
                              quantityInStock: 2, reorderThreshold: 5,
                              unitCost: 850, supplierName: "AutoParts Co.")
@@ -568,7 +568,7 @@ extension WorkOrderPriority {
                              unitCost: 450)
     [inv1, inv2, inv3].forEach { ctx.insert($0) }
 
-    // Sample notification
+    
     let notif = AppNotification(userId: user.id,
                                 title: "New Work Order",
                                 message: "WO assigned: Brake Issue Truck 12",

@@ -1,19 +1,16 @@
-//
-//  DataModel.swift
-//  FMS
-//
-//  Created by Naman Yadav on 21/05/26.
-//
+
+
+
+
+
+
 
 import Foundation
 import SwiftData
 import SwiftUI
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 1 ▸ Core Enums (Local / SwiftData)
-// ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: User Role
+
 enum UserRole: String, Codable, CaseIterable {
     case fleetManager
     case driver
@@ -30,7 +27,7 @@ enum UserRole: String, Codable, CaseIterable {
     static let allRoles: [UserRole] = [.fleetManager, .driver, .maintenance]
 }
 
-// MARK: Vehicle Type
+
 enum VehicleType: String, Codable, CaseIterable {
     case truck
     case van
@@ -65,7 +62,7 @@ enum VehicleType: String, Codable, CaseIterable {
     }
 }
 
-// MARK: Fuel Type
+
 enum FuelType: String, Codable, CaseIterable {
     case petrol
     case diesel
@@ -91,7 +88,7 @@ enum FuelType: String, Codable, CaseIterable {
     }
 }
 
-// MARK: Vehicle Status
+
 enum VehicleStatus: String, Codable {
     case active
     case inactive
@@ -120,7 +117,7 @@ enum VehicleStatus: String, Codable {
     }
 }
 
-// MARK: Trip Status
+
 enum TripStatus: String, Codable {
     case assigned
     case started
@@ -139,11 +136,11 @@ enum TripStatus: String, Codable {
     }
     var badgeColor: Color {
         switch self {
-        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90) // Royal Blue (Upcoming)
-        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46) // Fresh Green (Active)
-        case .inProgress: return Color(red: 0.30, green: 0.70, blue: 0.46) // Fresh Green (Active)
-        case .completed:  return Color(red: 0.55, green: 0.58, blue: 0.62) // Slate-Silver (Completed success)
-        case .cancelled:  return Color(red: 0.85, green: 0.25, blue: 0.25) // Soft Red
+        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90) 
+        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46) 
+        case .inProgress: return Color(red: 0.30, green: 0.70, blue: 0.46) 
+        case .completed:  return Color(red: 0.55, green: 0.58, blue: 0.62) 
+        case .cancelled:  return Color(red: 0.85, green: 0.25, blue: 0.25) 
         }
     }
     var badgeIcon: String {
@@ -157,27 +154,27 @@ enum TripStatus: String, Codable {
     }
 }
 
-// MARK: Inspection Type
+
 enum InspectionType: String, Codable {
     case preTrip
     case postTrip
 }
 
-// MARK: Defect Severity
+
 enum DefectSeverity: String, Codable {
     case low
     case medium
     case high
 }
 
-// MARK: Defect Status
+
 enum DefectStatus: String, Codable {
     case open
     case inProgress
     case resolved
 }
 
-// MARK: Work Order Priority
+
 enum WorkOrderPriority: String, Codable {
     case low
     case medium
@@ -185,21 +182,30 @@ enum WorkOrderPriority: String, Codable {
     case urgent
 }
 
-// MARK: Work Order Status
+
 enum WorkOrderStatus: String, Codable {
     case open
     case inProgress
     case completed
     case cancelled
+
+    var displayName: String {
+        switch self {
+        case .open:       return "Open"
+        case .inProgress: return "In Progress"
+        case .completed:  return "Completed"
+        case .cancelled:  return "Cancelled"
+        }
+    }
 }
 
-// MARK: SOS Status
+
 enum SOSStatus: String, Codable {
     case active
     case resolved
 }
 
-// MARK: Notification Type
+
 enum NotificationType: String, Codable {
     case tripAssigned
     case maintenanceAlert
@@ -208,11 +214,11 @@ enum NotificationType: String, Codable {
     case general
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 2 ▸ UI Filter Enums
-// ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Vehicle Status Filter (for VehicleListView)
+
+
+
+
 enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     case all          = "All"
     case active       = "Active"
@@ -239,7 +245,7 @@ enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: Trip Status Filter (for TripListView)
+
 enum TripStatusFilter: String, CaseIterable, Identifiable {
     case all        = "All"
     case assigned   = "Assigned"
@@ -262,9 +268,9 @@ enum TripStatusFilter: String, CaseIterable, Identifiable {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 3 ▸ Dashboard UI Models
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 struct DashboardStat: Identifiable {
     var id: String { label }
@@ -294,11 +300,35 @@ struct DashboardActivity: Identifiable {
     let icon: String
     let iconColor: Color
     let iconBgColor: Color
+    /// Who triggered this event: "Fleet Manager", "Driver", or "System"
+    let source: String
+    /// Actual date for sorting
+    let date: Date
+
+    init(
+        title: String,
+        subtitle: String,
+        time: String,
+        icon: String,
+        iconColor: Color,
+        iconBgColor: Color,
+        source: String = "System",
+        date: Date = Date()
+    ) {
+        self.title      = title
+        self.subtitle   = subtitle
+        self.time       = time
+        self.icon       = icon
+        self.iconColor  = iconColor
+        self.iconBgColor = iconBgColor
+        self.source     = source
+        self.date       = date
+    }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 4 ▸ Tracking Model
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 import MapKit
 
@@ -323,11 +353,11 @@ struct MappedVehicle: Identifiable, Hashable {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 5 ▸ Supabase DB Models (Codable structs matching schema)
-// ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: DBUserRole
+
+
+
+
 enum DBUserRole: String, Codable {
     case fleetManager = "fleet_manager"
     case driver       = "driver"
@@ -340,7 +370,7 @@ enum DBUserRole: String, Codable {
         case .maintenance:  return "Maintenance Personnel"
         }
     }
-    /// Converts to the SwiftData `UserRole` used by local model views.
+    
     var asLocalRole: UserRole {
         switch self {
         case .fleetManager: return .fleetManager
@@ -350,7 +380,7 @@ enum DBUserRole: String, Codable {
     }
 }
 
-// MARK: DBUser
+
 struct DBUser: Codable, Identifiable {
     let id: UUID
     var name: String
@@ -370,7 +400,7 @@ struct DBUser: Codable, Identifiable {
         case createdAt    = "created_at"
     }
 
-    /// Bridges to SwiftData `User` model used by local views.
+    
     var asLocalUser: User {
         User(
             id: id,
@@ -383,7 +413,7 @@ struct DBUser: Codable, Identifiable {
     }
 }
 
-// MARK: - User Mapping Extensions
+
 extension UserRole {
     var toDBUserRole: DBUserRole {
         switch self {
@@ -408,7 +438,7 @@ extension User {
     }
 }
 
-// MARK: DBVehicleStatus
+
 enum DBVehicleStatus: String, Codable {
     case available
     case inUse        = "in_use"
@@ -416,7 +446,7 @@ enum DBVehicleStatus: String, Codable {
     case inactive
 }
 
-// MARK: DBVehicle
+
 struct DBVehicle: Codable, Identifiable {
     let id: UUID
     var vehicleNumber: String
@@ -445,7 +475,7 @@ struct DBVehicle: Codable, Identifiable {
     }
 }
 
-// MARK: - Vehicle Mapping Extensions
+
 extension VehicleStatus {
     var toDBStatus: DBVehicleStatus {
         switch self {
@@ -475,8 +505,8 @@ extension DBVehicle {
             make: manufacturer,
             model: model,
             year: year,
-            vehicleType: .truck, // fallback/default
-            fuelType: .petrol, // fallback/default
+            vehicleType: .truck, 
+            fuelType: .petrol, 
             odometerReading: 0.0,
             status: status.toLocalStatus,
             assignedDriverId: assignedDriverId,
@@ -523,7 +553,7 @@ extension Trip {
     }
 }
 
-// MARK: - Trip Mapping Extensions
+
 extension TripStatus {
     var toDBStatus: DBTripStatus {
         switch self {
@@ -572,7 +602,7 @@ extension DBTrip {
     }
 }
 
-// MARK: DBTripStatus
+
 enum DBTripStatus: String, Codable {
     case assigned
     case started
@@ -580,7 +610,7 @@ enum DBTripStatus: String, Codable {
     case cancelled
 }
 
-// MARK: DBTrip
+
 struct DBTrip: Codable, Identifiable {
     let id: UUID
     var vehicleId: UUID
@@ -609,14 +639,14 @@ struct DBTrip: Codable, Identifiable {
     }
 }
 
-// MARK: DBInspectionStatus
+
 enum DBInspectionStatus: String, Codable {
     case passed
     case failed
     case needsRepair = "needs_repair"
 }
 
-// MARK: DBVehicleInspection
+
 struct DBVehicleInspection: Codable, Identifiable {
     let id: UUID
     var vehicleId: UUID
@@ -637,14 +667,14 @@ struct DBVehicleInspection: Codable, Identifiable {
     }
 }
 
-// MARK: DBMaintenanceStatus
+
 enum DBMaintenanceStatus: String, Codable {
     case pending
     case inProgress = "in_progress"
     case completed
 }
 
-// MARK: DBMaintenanceTask
+
 struct DBMaintenanceTask: Codable, Identifiable {
     let id: UUID
     var vehicleId: UUID
@@ -667,7 +697,7 @@ struct DBMaintenanceTask: Codable, Identifiable {
     }
 }
 
-// MARK: DBWorkOrderPriority
+
 enum DBWorkOrderPriority: String, Codable {
     case low
     case medium
@@ -675,7 +705,7 @@ enum DBWorkOrderPriority: String, Codable {
     case urgent
 }
 
-// MARK: DBWorkOrderStatus
+
 enum DBWorkOrderStatus: String, Codable {
     case open
     case inProgress = "in_progress"
@@ -683,7 +713,7 @@ enum DBWorkOrderStatus: String, Codable {
     case closed
 }
 
-// MARK: DBWorkOrder
+
 struct DBWorkOrder: Codable, Identifiable {
     let id: UUID
     var vehicleId: UUID
@@ -706,7 +736,7 @@ struct DBWorkOrder: Codable, Identifiable {
     }
 }
 
-// MARK: DBMessage
+
 struct DBMessage: Codable, Identifiable {
     let id: UUID
     var senderId: UUID
@@ -723,7 +753,7 @@ struct DBMessage: Codable, Identifiable {
     }
 }
 
-// MARK: DBNotificationType
+
 enum DBNotificationType: String, Codable {
     case info
     case warning
@@ -732,7 +762,7 @@ enum DBNotificationType: String, Codable {
     case emergency
 }
 
-// MARK: DBNotification
+
 struct DBNotification: Codable, Identifiable {
     let id: UUID
     var userId: UUID
@@ -753,7 +783,7 @@ struct DBNotification: Codable, Identifiable {
     }
 }
 
-// MARK: DBVehicleLocation
+
 struct DBVehicleLocation: Codable, Identifiable {
     let id: UUID
     var vehicleId: UUID
@@ -770,7 +800,7 @@ struct DBVehicleLocation: Codable, Identifiable {
     }
 }
 
-// MARK: - Extension Conversions
+
 
 extension WorkOrder {
     @MainActor
@@ -902,11 +932,11 @@ extension AppNotification {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - SECTION 6 ▸ SwiftData @Model Classes
-// ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: User Model
+
+
+
+
 @Model
 final class User {
     @Attribute(.unique) var id: UUID
@@ -945,7 +975,7 @@ final class User {
     }
 }
 
-// MARK: Vehicle Model
+
 @Model
 final class Vehicle {
     @Attribute(.unique) var id: UUID
@@ -1002,7 +1032,7 @@ final class Vehicle {
     }
 }
 
-// MARK: Trip Model
+
 @Model
 final class Trip {
     @Attribute(.unique) var id: UUID
@@ -1068,7 +1098,7 @@ final class Trip {
     }
 }
 
-// MARK: Vehicle Inspection Model
+
 @Model
 final class VehicleInspection {
     @Attribute(.unique) var id: UUID
@@ -1116,7 +1146,7 @@ final class VehicleInspection {
     }
 }
 
-// MARK: Defect Report Model
+
 @Model
 final class DefectReport {
     @Attribute(.unique) var id: UUID
@@ -1152,7 +1182,7 @@ final class DefectReport {
     }
 }
 
-// MARK: Work Order Model
+
 @Model
 final class WorkOrder {
     @Attribute(.unique) var id: UUID
@@ -1194,7 +1224,7 @@ final class WorkOrder {
     }
 }
 
-// MARK: Maintenance Record Model
+
 @Model
 final class MaintenanceRecord {
     @Attribute(.unique) var id: UUID
@@ -1230,7 +1260,7 @@ final class MaintenanceRecord {
     }
 }
 
-// MARK: SOS Alert Model
+
 @Model
 final class SOSAlert {
     @Attribute(.unique) var id: UUID
@@ -1266,7 +1296,7 @@ final class SOSAlert {
     }
 }
 
-// MARK: App Notification Model
+
 @Model
 final class AppNotification {
     @Attribute(.unique) var id: UUID
@@ -1296,7 +1326,7 @@ final class AppNotification {
     }
 }
 
-// MARK: Inventory Item Model
+
 @Model
 final class InventoryItem {
     @Attribute(.unique) var id: UUID

@@ -1,9 +1,9 @@
-//
-//  ReportsView.swift
-//  FMS
-//
-//  Created on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
@@ -11,7 +11,7 @@ import SwiftData
 struct ReportsView: View {
     @Environment(\.dismiss) private var dismiss
     
-    // SwiftData Queries
+    
     @Query private var vehicles: [Vehicle]
     @Query private var trips: [Trip]
     @Query private var maintenanceRecords: [MaintenanceRecord]
@@ -20,7 +20,7 @@ struct ReportsView: View {
     @State private var selectedPeriod: String = "This Month"
     let periods = ["Today", "This Week", "This Month"]
     
-    // MARK: - Computed Metrics for Analytics
+    
     
     private var totalVehicles: Int { vehicles.count }
     private var activeVehiclesCount: Int { vehicles.filter { $0.status == .active }.count }
@@ -65,7 +65,7 @@ struct ReportsView: View {
         defectReports.filter { $0.status == .open || $0.status == .inProgress }.count
     }
     
-    // Fuel Type counts
+    
     private var fuelTypeDistribution: [FuelType: Int] {
         var distribution: [FuelType: Int] = [.petrol: 0, .diesel: 0, .electric: 0, .hybrid: 0]
         for vehicle in vehicles {
@@ -74,7 +74,7 @@ struct ReportsView: View {
         return distribution
     }
     
-    // MARK: - Body
+    
     
     var body: some View {
         NavigationStack {
@@ -84,7 +84,7 @@ struct ReportsView: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
                         
-                        // Period Selector
+                        
                         Picker("Period", selection: $selectedPeriod) {
                             ForEach(periods, id: \.self) { period in
                                 Text(period).tag(period)
@@ -94,7 +94,7 @@ struct ReportsView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
                         
-                        // MARK: - Core Grid KPIs
+                        
                         LazyVGrid(
                             columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                             spacing: 12
@@ -137,7 +137,7 @@ struct ReportsView: View {
                         }
                         .padding(.horizontal, 16)
                         
-                        // MARK: - Fuel Type Breakdown
+                        
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Fuel Distribution")
                                 .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -162,7 +162,7 @@ struct ReportsView: View {
                         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                         .padding(.horizontal, 16)
                         
-                        // MARK: - Fleet Availability Breakdown
+                        
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Fleet Status Summary")
                                 .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -213,7 +213,7 @@ struct ReportsView: View {
     }
 }
 
-// MARK: - KPI Card Helper
+
 
 struct ReportKpiCard: View {
     let title: String
@@ -261,7 +261,7 @@ struct ReportKpiCard: View {
     }
 }
 
-// MARK: - Fuel Progress Row Helper
+
 
 struct FuelProgressRow: View {
     let fuelType: FuelType
@@ -294,7 +294,7 @@ struct FuelProgressRow: View {
                     .foregroundColor(.gray)
             }
             
-            // Progress Bar
+            
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
@@ -311,7 +311,7 @@ struct FuelProgressRow: View {
     }
 }
 
-// MARK: - Status Summary Row Helper
+
 
 struct StatusPillSummary: View {
     let label: String

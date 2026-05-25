@@ -1,21 +1,21 @@
-//
-//  ProfileMenuButton.swift
-//  FMS
-//
-//  Reusable round profile-avatar button.
-//  Works on all three dashboards (Fleet, Maintenance, Driver).
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Profile Menu Button
 
-/// A tappable circular avatar that triggers a profile screen presentation.
-/// - Parameters:
-///   - initials: 1-2 letters shown inside the circle (e.g. "FM", "M", "D")
-///   - avatarColor: Fill color of the circle
-///   - size: Diameter of the circle (default 38)
-///   - action: Closure executed when the avatar is tapped
+
+
+
+
+
+
+
 struct ProfileMenuButton: View {
 
     let initials: String

@@ -1,18 +1,18 @@
-//
-//  TripFormView.swift
-//  FMS
-//
-//  Full Add / Edit / Delete trip forms for the Fleet Manager's
-//  Trip Management screen. Follows the VehicleFormView.swift pattern.
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 import CoreLocation
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Add Trip Form
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct AddTripFormView: View {
@@ -23,7 +23,7 @@ struct AddTripFormView: View {
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
 
-    // ── Form State ────────────────────────────────────────────────────────────
+    
     @State private var tripCode         = ""
     @State private var selectedVehicle: Vehicle?
     @State private var selectedDriver: User?
@@ -38,13 +38,13 @@ struct AddTripFormView: View {
     @State private var distanceText     = ""
     @State private var notes            = ""
 
-    // ── Validation ────────────────────────────────────────────────────────────
+    
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
     @State private var isSaving             = false
 
-    // ── Focus ─────────────────────────────────────────────────────────────────
+    
     @FocusState private var focusedField: TripFocusField?
 
     private var drivers: [User] { allUsers.filter { $0.role == .driver } }
@@ -57,7 +57,7 @@ struct AddTripFormView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // ── Form sections ──────────────────────────────────
+                        
                         formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
@@ -91,7 +91,7 @@ struct AddTripFormView: View {
                                           text: $notes, focus: $focusedField, tag: .notes)
                         }
 
-                        // ── Save Button ────────────────────────────────────
+                        
                         saveButton
 
                         Spacer().frame(height: 40)
@@ -121,7 +121,7 @@ struct AddTripFormView: View {
         }
     }
 
-    // MARK: Save Button
+    
 
     private var saveButton: some View {
         Button {
@@ -153,10 +153,10 @@ struct AddTripFormView: View {
         .disabled(isSaving)
     }
 
-    // MARK: Save Action
+    
 
     private func saveTrip() {
-        // Validation
+        
         guard !tripCode.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Trip code is required."; showValidationAlert = true; return
         }
@@ -173,12 +173,12 @@ struct AddTripFormView: View {
             validationMessage = "End location is required."; showValidationAlert = true; return
         }
         
-        // Time validation
+        
         guard scheduledStartTime < scheduledEndTime else {
             validationMessage = "Scheduled end time must be after start time."; showValidationAlert = true; return
         }
         
-        // Distance validation
+        
         let distance = Double(distanceText)
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -189,7 +189,7 @@ struct AddTripFormView: View {
             let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
             let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
 
-            // Auto-calculate distance if distanceText is empty or invalid
+            
             let distance: Double
             if let userDistance = Double(distanceText), userDistance > 0 {
                 distance = userDistance
@@ -219,7 +219,7 @@ struct AddTripFormView: View {
             do {
                 try await SupabaseManager.shared.createTrip(trip.asDBTrip)
                 
-                // Send trip assignment notification email to the driver
+                
                 let driverEmail = driver.email
                 let driverName = driver.fullName
                 Task {
@@ -253,9 +253,9 @@ struct AddTripFormView: View {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Edit Trip Form
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct EditTripFormView: View {
@@ -268,7 +268,7 @@ struct EditTripFormView: View {
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
 
-    // ── Form State ────────────────────────────────────────────────────────────
+    
     @State private var tripCode: String
     @State private var selectedVehicle: Vehicle?
     @State private var selectedDriver: User?
@@ -318,10 +318,10 @@ struct EditTripFormView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // ── Trip badge ─────────────────────────────────────
+                        
                         tripBadge
 
-                        // ── Sections ───────────────────────────────────────
+                        
                         formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
@@ -357,10 +357,10 @@ struct EditTripFormView: View {
                                           text: $notes, focus: $focusedField, tag: .notes)
                         }
 
-                        // ── Save ───────────────────────────────────────────
+                        
                         saveButton
 
-                        // ── Delete ─────────────────────────────────────────
+                        
                         deleteButton
 
                         Spacer().frame(height: 40)
@@ -395,13 +395,13 @@ struct EditTripFormView: View {
             }
         }
         .onAppear {
-            // Set initial vehicle and driver selections
+            
             selectedVehicle = vehicles.first { $0.id == trip.vehicleId }
             selectedDriver = drivers.first { $0.id == trip.driverId }
         }
     }
 
-    // MARK: Trip Badge
+    
 
     private var tripBadge: some View {
         HStack(spacing: 16) {
@@ -434,7 +434,7 @@ struct EditTripFormView: View {
         .padding(.top, 8)
     }
 
-    // MARK: Save Button
+    
 
     private var saveButton: some View {
         Button { saveChanges() } label: {
@@ -459,7 +459,7 @@ struct EditTripFormView: View {
         .disabled(isSaving || isDeleting)
     }
 
-    // MARK: Delete Button
+    
 
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
@@ -482,10 +482,10 @@ struct EditTripFormView: View {
         .disabled(isSaving || isDeleting)
     }
 
-    // MARK: Actions
+    
 
     private func saveChanges() {
-        // Validation
+        
         guard !tripCode.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Trip code is required."; showValidationAlert = true; return
         }
@@ -587,7 +587,7 @@ struct EditTripFormView: View {
         
         Task {
             do {
-                // Delete from Supabase first
+                
                 try await SupabaseManager.shared.deleteTrip(id: trip.id)
                 
                 await MainActor.run {
@@ -598,7 +598,7 @@ struct EditTripFormView: View {
                 }
             } catch {
                 print("Failed to delete trip from Supabase: \(error)")
-                // Fallback to local delete
+                
                 await MainActor.run {
                     modelContext.delete(trip)
                     try? modelContext.save()
@@ -610,17 +610,17 @@ struct EditTripFormView: View {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Shared Form Components for Trip Forms
-// ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Field Tag Enum
+
+
+
+
 
 enum TripFocusField: Hashable {
     case tripCode, startLocation, endLocation, startLat, startLong, endLat, endLong, distance, notes
 }
 
-// MARK: Text Field Row
+
 
 struct TripFormField: View {
     let label: String
@@ -649,7 +649,7 @@ struct TripFormField: View {
     }
 }
 
-// MARK: Notes Field Row
+
 
 struct TripNotesField: View {
     let label: String
@@ -677,7 +677,7 @@ struct TripNotesField: View {
     }
 }
 
-// MARK: Vehicle Picker Row
+
 
 struct VehiclePickerRow: View {
     let label: String
@@ -714,7 +714,7 @@ struct VehiclePickerRow: View {
     }
 }
 
-// MARK: Driver Picker Row
+
 
 struct DriverPickerRow: View {
     let label: String
@@ -750,17 +750,17 @@ struct DriverPickerRow: View {
     }
 }
 
-// MARK: Trip Status Picker Row
+
 
 struct TripStatusPickerRow: View {
     @Binding var selection: TripStatus
 
     private let options: [(TripStatus, String, Color)] = [
-        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)), // Royal Blue (Upcoming)
-        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)), // Fresh Green (Active)
-        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)), // Fresh Green (Active)
-        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)), // Slate-Silver (Completed success)
-        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))  // Soft Red
+        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)), 
+        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)), 
+        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)), 
+        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)), 
+        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))  
     ]
 
     var body: some View {

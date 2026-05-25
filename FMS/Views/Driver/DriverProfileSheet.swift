@@ -1,15 +1,15 @@
-//
-//  DriverProfileSheet.swift
-//  FMS
-//
-//  iOS-native driver profile sheet — Apple Account style.
-//  Shows avatar, stats, vehicle, settings rows and sign-out.
-//  Target: iOS 26+
-//
+
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Driver Profile Sheet
+
 
 @available(iOS 26.0, *)
 struct DriverProfileSheet: View {
@@ -19,7 +19,7 @@ struct DriverProfileSheet: View {
     @StateObject private var supabase = SupabaseManager.shared
     @State private var showSignOutConfirm = false
 
-    // Mock performance stats (replace with real data from backend)
+    
     private let totalTrips    = 142
     private let totalKmDriven = 4_820.0
     private let joinDate      = "March 2023"
@@ -31,12 +31,12 @@ struct DriverProfileSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
 
-                    // ── Hero: Avatar + Name + ID ───────────────────────────
+                    
                     HeroHeader(vm: vm, employeeId: employeeId)
                         .padding(.top, 8)
                         .padding(.bottom, 28)
 
-                    // ── Stats strip (2 key numbers) ────────────────────────
+                    
                     StatsStrip(
                         totalTrips: totalTrips,
                         totalKm:    totalKmDriven
@@ -44,7 +44,7 @@ struct DriverProfileSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
 
-                    // ── Account info rows ──────────────────────────────────
+                    
                     ProfileSection(header: "Account") {
                         ProfileRow(icon: "person.fill",
                                    iconBg: AppTheme.Brand.primaryDeep,
@@ -69,7 +69,7 @@ struct DriverProfileSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
 
-                    // ── Vehicle rows ───────────────────────────────────────
+                    
                     ProfileSection(header: "Assigned Vehicle") {
                         ProfileRow(icon: "car.side.fill",
                                    iconBg: AppTheme.Brand.violet,
@@ -99,7 +99,7 @@ struct DriverProfileSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
 
-                    // ── Settings rows ──────────────────────────────────────
+                    
                     ProfileSection(header: "Settings") {
                         ProfileRow(icon: "bell.fill",
                                    iconBg: AppTheme.Brand.accent,
@@ -119,7 +119,7 @@ struct DriverProfileSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
 
-                    // ── Sign out ───────────────────────────────────────────
+                    
                     Button {
                         Task {
                             try? await SupabaseManager.shared.signOut()
@@ -165,7 +165,7 @@ struct DriverProfileSheet: View {
     }
 }
 
-// MARK: - Hero Header
+
 
 @available(iOS 26.0, *)
 private struct HeroHeader: View {
@@ -174,7 +174,7 @@ private struct HeroHeader: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            // Avatar
+            
             ZStack(alignment: .bottomTrailing) {
                 Circle()
                     .fill(
@@ -192,14 +192,14 @@ private struct HeroHeader: View {
                     )
                     .shadow(color: AppTheme.Brand.primaryDeep.opacity(0.30), radius: 12, y: 6)
 
-                // Status ring
+                
                 Circle()
                     .fill(vm.driverStatus.dot)
                     .frame(width: 20, height: 20)
                     .overlay(Circle().stroke(Color(UIColor.systemGroupedBackground), lineWidth: 3))
             }
 
-            // Name + ID
+            
             VStack(spacing: 4) {
                 Text(vm.driverFirstName + " Yadav")
                     .font(.system(size: 24, weight: .bold))
@@ -219,7 +219,7 @@ private struct HeroHeader: View {
     }
 }
 
-// MARK: - Stats Strip (2 KPIs)
+
 
 private struct StatsStrip: View {
     let totalTrips: Int
@@ -265,7 +265,7 @@ private struct StatPill: View {
 
 
 
-// MARK: - Profile Section wrapper
+
 
 private struct ProfileSection<Content: View>: View {
     let header: String
@@ -289,7 +289,7 @@ private struct ProfileSection<Content: View>: View {
     }
 }
 
-// MARK: - Profile Row
+
 
 private struct ProfileRow: View {
     let icon: String
@@ -301,7 +301,7 @@ private struct ProfileRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            // Coloured icon bubble (Apple Settings style)
+            
             RoundedRectangle(cornerRadius: 8)
                 .fill(iconBg)
                 .frame(width: 32, height: 32)
@@ -336,7 +336,7 @@ private struct ProfileRow: View {
     }
 }
 
-// MARK: - Preview
+
 
 @available(iOS 26.0, *)
 #Preview("Driver Profile") {

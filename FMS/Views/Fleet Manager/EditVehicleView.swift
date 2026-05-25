@@ -1,15 +1,15 @@
-//
-//  EditVehicleView.swift
-//  FMS
-//
-//  Created on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 import Combine
 
-// MARK: - Reusable Custom Text Field
+
 struct CustomAddTextField: View {
     let label: String
     let placeholder: String
@@ -48,11 +48,11 @@ struct CustomAddTextField: View {
     }
 }
 
-// The EditVehicleViewModel has been extracted to ViewModels/Fleet Manager/EditVehicleViewModel.swift
 
 
 
-// MARK: - Edit Vehicle View
+
+
 struct EditVehicleView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -78,7 +78,7 @@ struct EditVehicleView: View {
                         }
                         
                         VStack(spacing: 16) {
-                            // Basic Information section
+                            
                             VStack(alignment: .leading, spacing: 14) {
                                 sectionTitle("Basic Information")
                                 
@@ -97,7 +97,7 @@ struct EditVehicleView: View {
                             .cornerRadius(AppTheme.Radius.card)
                             .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                             
-                            // Specifications section
+                            
                             VStack(alignment: .leading, spacing: 16) {
                                 sectionTitle("Specifications")
                                 
@@ -107,17 +107,17 @@ struct EditVehicleView: View {
                                 
                                 Divider().background(Color.black.opacity(0.06))
                                 
-                                // Vehicle Type Grid Selector
+                                
                                 typeSelector
                                 
                                 Divider().background(Color.black.opacity(0.06))
                                 
-                                // Fuel Type Picker
+                                
                                 fuelSelector
                                 
                                 Divider().background(Color.black.opacity(0.06))
                                 
-                                // Status Selector
+                                
                                 statusSelector
                             }
                             .padding(18)
@@ -125,7 +125,7 @@ struct EditVehicleView: View {
                             .cornerRadius(AppTheme.Radius.card)
                             .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                             
-                            // Danger Zone
+                            
                             VStack(alignment: .leading, spacing: 12) {
                                 sectionTitle("Danger Zone")
                                     .foregroundColor(AppTheme.Status.danger)
@@ -191,7 +191,7 @@ struct EditVehicleView: View {
         }
     }
     
-    // MARK: - Subviews
+    
     
     private func sectionTitle(_ text: String) -> some View {
         Text(text)

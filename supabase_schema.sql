@@ -256,6 +256,7 @@ CREATE POLICY "trips_select_manager"    ON public.trips FOR SELECT USING (public
 CREATE POLICY "trips_insert_manager"    ON public.trips FOR INSERT WITH CHECK (public.current_user_role() = 'fleet_manager');
 CREATE POLICY "trips_update_driver"     ON public.trips FOR UPDATE USING (driver_id = auth.uid() AND status IN ('assigned','started')) WITH CHECK (driver_id = auth.uid() AND status IN ('assigned','started','completed'));
 CREATE POLICY "trips_update_manager"    ON public.trips FOR UPDATE USING (public.current_user_role() = 'fleet_manager');
+CREATE POLICY "trips_delete_manager"    ON public.trips FOR DELETE USING (public.current_user_role() = 'fleet_manager');
 
 -- ---- vehicle_inspections ----
 CREATE POLICY "inspections_select_manager"    ON public.vehicle_inspections FOR SELECT USING (public.current_user_role() = 'fleet_manager');
@@ -282,6 +283,8 @@ CREATE POLICY "messages_insert_own" ON public.messages FOR INSERT WITH CHECK (se
 -- ---- notifications ----
 CREATE POLICY "notifications_select_own" ON public.notifications FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY "notifications_update_own" ON public.notifications FOR UPDATE USING (user_id = auth.uid());
+CREATE POLICY "notifications_insert_own" ON public.notifications FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY "notifications_select_manager" ON public.notifications FOR SELECT USING (public.current_user_role() = 'fleet_manager');
 
 -- ---- vehicle_locations ----
 CREATE POLICY "locations_select_manager" ON public.vehicle_locations FOR SELECT USING (public.current_user_role() = 'fleet_manager');

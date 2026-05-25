@@ -1,15 +1,16 @@
-//
-//  DriverDashboardViewModel.swift
-//  FMS
-//
-//  Created by Sarthak Singh on 19/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 import MapKit
 import Combine
+import SwiftData
 
-// MARK: - Driver Status
+
 
 enum DriverOnlineStatus: String, CaseIterable {
     case active = "Active", idle = "Idle", maintenance = "Maintenance", offline = "Offline"
@@ -24,13 +25,13 @@ enum DriverOnlineStatus: String, CaseIterable {
     }
 }
 
-// MARK: - Dashboard Action
+
 
 enum DashboardAction {
     case voiceLog, reportIssue, preTrip, postTrip, defect, messaging
 }
 
-// MARK: - Local UI Models
+
 
 struct DriverQuickAction: Identifiable {
     let id   = UUID()
@@ -127,13 +128,13 @@ actor DriverDashboardDataStore {
     }
 }
 
-// MARK: - Completed Trip Record
+
 
 struct CompletedTripRecord: Identifiable {
     let id: UUID
     let trip: DBTrip
     let completedAt: Date
-    let elapsedSeconds: Int       // time taken in seconds
+    let elapsedSeconds: Int       
     let distanceKm: Double
     let inspectionPassed: Bool
     let issuesFound: Int
@@ -149,12 +150,12 @@ struct CompletedTripRecord: Identifiable {
     }
 }
 
-// MARK: - ViewModel
+
 
 @MainActor
 final class DriverDashboardViewModel: ObservableObject {
 
-    // MARK: State
+    
 
     @Published var driverStatus: DriverOnlineStatus = .idle
     @Published var currentTrip: DBTrip?
@@ -167,7 +168,7 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var fuelLevel: Double = 0.72
     @Published var isLoading     = false
 
-    // Sheet visibility
+    
     @Published var showVoiceLog  = false
     @Published var showIssue     = false
     @Published var showPreTrip   = false
@@ -189,11 +190,12 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var mapActiveTrip: DBTrip?
     @Published var completedTrips: [CompletedTripRecord] = []
 
-    // Post-trip inspection data captured when submitting
+    
     var lastInspectionPassed: Bool = true
     var lastIssuesFound: Int = 0
     var lastInspectionRemarks: String = ""
 
+    private var modelContext: ModelContext?
     private var tripTimer: Timer?
     private var tripStartDate: Date?
     private let db = DriverDashboardDataStore.shared
@@ -211,7 +213,11 @@ final class DriverDashboardViewModel: ObservableObject {
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 Task {
-                    await self.load()
+                    if let context = self.modelContext {
+                        await self.load(context: context)
+                    } else {
+                        await self.load()
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -223,12 +229,16 @@ final class DriverDashboardViewModel: ObservableObject {
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 Task {
-                    await self.load()
+                    if let context = self.modelContext {
+                        await self.load(context: context)
+                    } else {
+                        await self.load()
+                    }
                 }
             }
     }
 
-    // MARK: Driver Info
+    
     
     var driverId: UUID {
         SupabaseManager.shared.currentUser?.id ?? db.currentUser.id
@@ -238,14 +248,28 @@ final class DriverDashboardViewModel: ObservableObject {
         SupabaseManager.shared.currentUser?.name ?? db.currentUser.name
     }
 
-    // MARK: Load
+    
 
-    func load() async {
+    func load(context: ModelContext? = nil) async {
+        if let context = context {
+            self.modelContext = context
+        }
         isLoading = true; defer { isLoading = false }
         let uid = driverId
-        do {
-            let trips    = try await SupabaseManager.shared.fetchTrips()
-            let vehicles = try await SupabaseManager.shared.fetchVehicles()
+        
+        if let context = modelContext {
+            
+            await SupabaseManager.shared.syncAllData(context: context)
+            
+            
+            let descriptor = FetchDescriptor<Trip>()
+            let localTrips = (try? context.fetch(descriptor)) ?? []
+            let trips = localTrips.map { $0.asDBTrip }
+            
+            let vehicleDescriptor = FetchDescriptor<Vehicle>()
+            let localVehicles = (try? context.fetch(vehicleDescriptor)) ?? []
+            let vehicles = localVehicles.map { $0.asDBVehicle }
+            
             let mine = trips.filter { $0.driverId == uid }
             currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
             if let current = currentTrip {
@@ -262,7 +286,7 @@ final class DriverDashboardViewModel: ObservableObject {
             let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
             assignedVehicle = vehicles.first(where: { $0.id == vid })
             
-            // Load completed trips from Supabase
+            
             let completed = mine.filter { $0.status == .completed }
             self.completedTrips = completed.map { trip in
                 let elapsed = Int(trip.endTime?.timeIntervalSince(trip.startTime ?? Date()) ?? 0)
@@ -277,11 +301,11 @@ final class DriverDashboardViewModel: ObservableObject {
                     inspectionRemarks: "System logged"
                 )
             }.sorted(by: { $0.completedAt > $1.completedAt })
-        } catch {
-            print("Failed to fetch live driver data, using local fallback/mock: \(error.localizedDescription)")
+        } else {
+            
             do {
-                let trips    = try await db.fetchTrips()
-                let vehicles = try await db.fetchVehicles()
+                let trips    = try await SupabaseManager.shared.fetchTrips()
+                let vehicles = try await SupabaseManager.shared.fetchVehicles()
                 let mine = trips.filter { $0.driverId == uid }
                 currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
                 if let current = currentTrip {
@@ -298,7 +322,7 @@ final class DriverDashboardViewModel: ObservableObject {
                 let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                 assignedVehicle = vehicles.first(where: { $0.id == vid })
                 
-                // Load completed trips from local DB
+                
                 let completed = mine.filter { $0.status == .completed }
                 self.completedTrips = completed.map { trip in
                     let elapsed = Int(trip.endTime?.timeIntervalSince(trip.startTime ?? Date()) ?? 0)
@@ -314,11 +338,48 @@ final class DriverDashboardViewModel: ObservableObject {
                     )
                 }.sorted(by: { $0.completedAt > $1.completedAt })
             } catch {
-                // keep mock
+                print("Failed to fetch live driver data, using local fallback/mock: \(error.localizedDescription)")
+                do {
+                    let trips    = try await db.fetchTrips()
+                    let vehicles = try await db.fetchVehicles()
+                    let mine = trips.filter { $0.driverId == uid }
+                    currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
+                    if let current = currentTrip {
+                        activeTrip = current
+                    } else if let prevActive = activeTrip {
+                        let stillExists = mine.contains { $0.id == prevActive.id && ($0.status == .assigned || $0.status == .started) }
+                        if !stillExists {
+                            activeTrip = nil
+                        }
+                    }
+                    upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
+                    isTripActive  = currentTrip != nil
+                    driverStatus  = isTripActive ? .active : .idle
+                    let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
+                    assignedVehicle = vehicles.first(where: { $0.id == vid })
+                    
+                    
+                    let completed = mine.filter { $0.status == .completed }
+                    self.completedTrips = completed.map { trip in
+                        let elapsed = Int(trip.endTime?.timeIntervalSince(trip.startTime ?? Date()) ?? 0)
+                        return CompletedTripRecord(
+                            id: trip.id,
+                            trip: trip,
+                            completedAt: trip.endTime ?? trip.createdAt,
+                            elapsedSeconds: elapsed > 0 ? elapsed : 0,
+                            distanceKm: trip.distance,
+                            inspectionPassed: true,
+                            issuesFound: 0,
+                            inspectionRemarks: "System logged"
+                        )
+                    }.sorted(by: { $0.completedAt > $1.completedAt })
+                } catch {
+                    
+                }
             }
         }
 
-        // Global fallback: only load the mock trip if we are not connected to Supabase (offline/no user logged in)
+        
         if SupabaseManager.shared.currentUser == nil && upcomingTrips.isEmpty && currentTrip == nil {
             upcomingTrips = [
                 DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!,
@@ -332,7 +393,7 @@ final class DriverDashboardViewModel: ObservableObject {
             ]
         }
         
-        // Load messages and notifications from Supabase
+        
         await loadMessages()
         await loadNotifications()
         
@@ -353,7 +414,7 @@ final class DriverDashboardViewModel: ObservableObject {
         }
     }
 
-    // MARK: Trip control
+    
 
     func beginTrip(trip: DBTrip? = nil) {
         let selectedTrip = trip ?? upcomingTrips.first
@@ -363,9 +424,9 @@ final class DriverDashboardViewModel: ObservableObject {
         }
         showMaps = true
         mapActiveTrip = activeTrip
-        tripStartDate = Date()   // Record exact start time
+        tripStartDate = Date()   
         
-        // Sync trip start to Supabase in background and start location tracking
+        
         if var dbTrip = selectedTrip {
             dbTrip.status = .started
             dbTrip.startTime = Date()
@@ -387,7 +448,7 @@ final class DriverDashboardViewModel: ObservableObject {
         let endingId  = activeTrip?.id ?? currentTrip?.id
         let endingTrip = activeTrip ?? currentTrip
 
-        // Calculate elapsed from start date (more reliable than timer counter)
+        
         let elapsed: Int
         if let start = tripStartDate {
             elapsed = max(Int(Date().timeIntervalSince(start)), tripElapsed)
@@ -396,7 +457,7 @@ final class DriverDashboardViewModel: ObservableObject {
         }
         tripStartDate = nil
 
-        // Sync trip completion to Supabase and stop location tracking
+        
         if var dbTrip = endingTrip {
             dbTrip.status = .completed
             dbTrip.endTime = Date()
@@ -406,7 +467,7 @@ final class DriverDashboardViewModel: ObservableObject {
             }
         }
 
-        // Archive to completed list
+        
         if let trip = endingTrip {
             let record = CompletedTripRecord(
                 id: UUID(),
@@ -427,19 +488,19 @@ final class DriverDashboardViewModel: ObservableObject {
             showPostTripOnEnd = false
             tripElapsed = 0
         }
-        // Remove the completed trip from the assigned list
+        
         if let id = endingId {
             upcomingTrips.removeAll { $0.id == id }
         } else {
             upcomingTrips.removeAll()
         }
-        // Reset inspection capture
+        
         lastInspectionPassed = true
         lastIssuesFound = 0
         lastInspectionRemarks = ""
     }
 
-    // MARK: Helpers
+    
 
     var elapsedFormatted: String {
         let h = tripElapsed / 3600; let m = (tripElapsed % 3600) / 60; let s = tripElapsed % 60
@@ -475,13 +536,13 @@ final class DriverDashboardViewModel: ObservableObject {
         }
     }
 
-    // MARK: Messaging & Notifications
+    
     
     func loadMessages() async {
         do {
             let dbMessages = try await SupabaseManager.shared.fetchMessages()
             let uid = driverId
-            // Filter messages relevant to this driver (sent or received)
+            
             let relevant = dbMessages.filter { $0.senderId == uid || $0.receiverId == uid }
             self.messages = relevant.map { msg in
                 let isSentByMe = msg.senderId == uid
@@ -498,7 +559,7 @@ final class DriverDashboardViewModel: ObservableObject {
             }
         } catch {
             print("⚠️ Failed to load messages from Supabase: \(error.localizedDescription)")
-            // Keep mock messages as fallback
+            
         }
     }
     
@@ -509,14 +570,14 @@ final class DriverDashboardViewModel: ObservableObject {
         let dbMessage = DBMessage(
             id: UUID(),
             senderId: driverId,
-            receiverId: UUID(), // Fleet manager placeholder - in production this would be resolved
+            receiverId: UUID(), 
             message: trimmed,
             timestamp: Date()
         )
         
         do {
             try await SupabaseManager.shared.sendMessage(dbMessage)
-            // Add to local messages list immediately
+            
             let formatter = DateFormatter()
             formatter.dateFormat = "h:mm a"
             let localMsg = DriverChatMessage(
@@ -539,10 +600,10 @@ final class DriverDashboardViewModel: ObservableObject {
             let uid = driverId
             let mine = dbNotifications.filter { $0.userId == uid }
             
-            // Populate full notifications list sorted newest first
+            
             self.notificationsList = mine.sorted(by: { $0.createdAt > $1.createdAt })
             
-            // Update banners from real notifications
+            
             self.banners = mine.prefix(5).map { notif in
                 let kind: DashboardBanner.BannerKind
                 switch notif.type {
@@ -554,7 +615,7 @@ final class DriverDashboardViewModel: ObservableObject {
             }
         } catch {
             print("⚠️ Failed to load notifications from Supabase: \(error.localizedDescription)")
-            // Keep mock banners as fallback
+            
         }
     }
     
@@ -568,7 +629,7 @@ final class DriverDashboardViewModel: ObservableObject {
         await loadNotifications()
     }
     
-    // MARK: Mock seed
+    
 
     private func seedMock() {
         upcomingTrips = [
