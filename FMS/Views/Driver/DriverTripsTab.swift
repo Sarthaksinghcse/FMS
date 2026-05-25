@@ -17,59 +17,63 @@ struct DriverTripsTab: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @State private var selectedSegment = 0   // 0 = Upcoming, 1 = Completed
 
+    // ── Segment picker bar (pinned below nav bar) ─────────────────────────────
+    private var segmentPicker: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ForEach(["Upcoming", "Completed"].indices, id: \.self) { i in
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            selectedSegment = i
+                        }
+                    } label: {
+                        VStack(spacing: 6) {
+                            HStack(spacing: 6) {
+                                Text(i == 0 ? "Upcoming" : "Completed")
+                                    .font(.system(size: 14, weight: selectedSegment == i ? .bold : .medium))
+                                    .foregroundStyle(selectedSegment == i ? Color.fmsIndigo : .secondary)
+                                if i == 0 && !vm.upcomingTrips.isEmpty {
+                                    Text("\(vm.upcomingTrips.count)")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(Color.fmsIndigo)
+                                        .clipShape(Capsule())
+                                }
+                                if i == 1 && !vm.completedTrips.isEmpty {
+                                    Text("\(vm.completedTrips.count)")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(AppTheme.Status.success)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(selectedSegment == i ? Color.fmsIndigo : Color.clear)
+                                .frame(height: 3)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 20)
+            .background(Color.fmsBackground)
+            Divider()
+        }
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // ── Segment picker — sits below the large title, above the list ──
+                segmentPicker
 
-                // ── Segment Picker ───────────────────────────────────────
-                HStack(spacing: 0) {
-                    ForEach(["Upcoming", "Completed"].indices, id: \.self) { i in
-                        Button {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                selectedSegment = i
-                            }
-                        } label: {
-                            VStack(spacing: 6) {
-                                HStack(spacing: 6) {
-                                    Text(i == 0 ? "Upcoming" : "Completed")
-                                        .font(.system(size: 14, weight: selectedSegment == i ? .bold : .medium))
-                                        .foregroundStyle(selectedSegment == i ? Color.fmsIndigo : .secondary)
-                                    if i == 0 && !vm.upcomingTrips.isEmpty {
-                                        Text("\(vm.upcomingTrips.count)")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 6).padding(.vertical, 2)
-                                            .background(Color.fmsIndigo)
-                                            .clipShape(Capsule())
-                                    }
-                                    if i == 1 && !vm.completedTrips.isEmpty {
-                                        Text("\(vm.completedTrips.count)")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 6).padding(.vertical, 2)
-                                            .background(AppTheme.Status.success)
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                                // Active underline indicator
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(selectedSegment == i ? Color.fmsIndigo : Color.clear)
-                                    .frame(height: 3)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .background(Color.fmsBackground)
-
-                Divider()
-
-                // ── Tab Content ──────────────────────────────────────────
+                // ── Tab Content ───────────────────────────────────────────────
                 if selectedSegment == 0 {
-                    // ── UPCOMING TRIPS ───────────────────────────────────
+                    // ── UPCOMING TRIPS ────────────────────────────────────────
                     List {
                         if vm.isTripActive {
                             Section {
@@ -123,7 +127,7 @@ struct DriverTripsTab: View {
                     .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 80) }
 
                 } else {
-                    // ── COMPLETED TRIPS ──────────────────────────────────
+                    // ── COMPLETED TRIPS ───────────────────────────────────────
                     if vm.completedTrips.isEmpty {
                         Spacer()
                         EmptyTripsCell(icon: "checkmark.seal",
@@ -144,32 +148,10 @@ struct DriverTripsTab: View {
                     }
                 }
             }
-            .refreshable {
-                await vm.load()
-            }
+            .refreshable { await vm.load() }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trips")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button { vm.showVoiceLog  = true } label: { Label("Voice Log",        systemImage: "mic.fill") }
-                        Button { vm.showMessaging = true } label: { Label("Messages",          systemImage: "message.fill") }
-                        Divider()
-                        Button { vm.showPreTrip   = true } label: { Label("Pre-Trip Inspect",  systemImage: "checklist") }
-                        Button { vm.showPostTrip  = true } label: { Label("Post-Trip Inspect", systemImage: "checkmark.seal.fill") }
-                        Divider()
-                        Button { vm.showIssue     = true } label: { Label("Report Issue",  systemImage: "exclamationmark.bubble.fill") }
-                        Button(role: .destructive) { vm.showDefect = true } label: {
-                            Label("Report Defect", systemImage: "wrench.and.screwdriver.fill")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 17))
-                            .foregroundStyle(Color.fmsIndigo)
-                    }
-                }
-            }
         }
     }
 }
