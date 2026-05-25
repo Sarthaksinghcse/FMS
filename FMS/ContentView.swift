@@ -1,9 +1,9 @@
-//
-//  ContentView.swift
-//  FMS
-//
-//  Created by Sarthak Singh on 19/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 
@@ -18,7 +18,7 @@ struct ContentView: View {
                 case .fleetManager:
                     FleetContentView()
                 case .maintenance:
-                    // Bridge DBUser → the SwiftData User the MaintenanceDashboardView expects
+                    
                     MaintenanceDashboardView(currentUser: user.asLocalUser)
                 case .driver:
                     DriverDashboardView()
@@ -140,8 +140,8 @@ struct DashboardView: View {
     ContentView()
 }
 
-// MARK: - Driver Placeholder Dashboard
-/// Shown when a Driver logs in. Replace with the full DriverDashboardView when ready.
+
+
 @available(iOS 26.0, *)
 struct DriverPlaceholderView: View {
     let user: DBUser

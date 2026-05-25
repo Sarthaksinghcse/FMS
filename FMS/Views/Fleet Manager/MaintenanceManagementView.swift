@@ -1,26 +1,26 @@
-//
-//  MaintenanceManagementView.swift
-//  FMS
-//
-//  Created on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 import Combine
 
-// The MaintenanceManagementViewModel has been extracted to ViewModels/Fleet Manager/MaintenanceManagementViewModel.swift
 
 
 
-// MARK: - Maintenance Management View
+
+
 struct MaintenanceManagementView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
     @StateObject private var viewModel = MaintenanceManagementViewModel()
     
-    // SwiftData Queries
+    
     @Query(sort: \WorkOrder.createdAt, order: .reverse) private var workOrders: [WorkOrder]
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
@@ -29,7 +29,7 @@ struct MaintenanceManagementView: View {
     @State private var showingCompletionDialog = false
     @State private var selectedWorkOrderForCompletion: WorkOrder? = nil
     @State private var finalCostString: String = ""
-    @State private var selectedTab: Int = 0 // 0: Active, 1: History
+    @State private var selectedTab: Int = 0 
     
     private var maintenanceStaff: [User] {
         allUsers.filter { $0.role == .maintenance }
@@ -68,7 +68,7 @@ struct MaintenanceManagementView: View {
                             .padding(.top, 12)
                     }
                     
-                    // Top Segmented Picker
+                    
                     Picker("Orders", selection: $selectedTab) {
                         Text("Active (\(activeWorkOrders.count))").tag(0)
                         Text("History (\(historicWorkOrders.count))").tag(1)
@@ -104,7 +104,7 @@ struct MaintenanceManagementView: View {
                     }
                 }
                 
-                // Add Floating Action Button for scheduling
+                
                 VStack {
                     Spacer()
                     HStack {
@@ -142,11 +142,11 @@ struct MaintenanceManagementView: View {
                     .font(.system(.body, design: .rounded))
                 }
             }
-            // Sheet for Scheduling
+            
             .sheet(isPresented: $showingScheduler) {
                 ScheduleWorkOrderSheet(viewModel: viewModel, vehicles: vehicles, staff: maintenanceStaff, isPresented: $showingScheduler)
             }
-            // Dialog/Sheet for Completing
+            
             .sheet(isPresented: $showingCompletionDialog) {
                 if let wo = selectedWorkOrderForCompletion {
                     CompleteWorkOrderSheet(viewModel: viewModel, workOrder: wo, finalCostString: $finalCostString, isPresented: $showingCompletionDialog) { cost in
@@ -160,7 +160,7 @@ struct MaintenanceManagementView: View {
         }
     }
     
-    // MARK: - Work Order Card Helper View
+    
     
     private func workOrderCard(_ order: WorkOrder) -> some View {
         let priColor: Color
@@ -199,7 +199,7 @@ struct MaintenanceManagementView: View {
         
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
-                // Priority Badge
+                
                 Text(order.priority.rawValue.uppercased())
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundColor(priColor)
@@ -210,7 +210,7 @@ struct MaintenanceManagementView: View {
                 
                 Spacer()
                 
-                // Status Badge
+                
                 Text(statText)
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundColor(statColor)
@@ -262,7 +262,7 @@ struct MaintenanceManagementView: View {
                 }
             }
             
-            // Actions
+            
             if order.status == .open {
                 Button {
                     _ = viewModel.startWork(workOrderId: order.id, context: modelContext, workOrders: workOrders)
@@ -353,7 +353,7 @@ struct MaintenanceManagementView: View {
     }
 }
 
-// MARK: - Add / Schedule Work Order Sheet
+
 struct ScheduleWorkOrderSheet: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject var viewModel: MaintenanceManagementViewModel
@@ -375,7 +375,7 @@ struct ScheduleWorkOrderSheet: View {
                         
                         VStack(spacing: 16) {
                             
-                            // Vehicle Picker Selection
+                            
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("1. Select Vehicle")
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -400,7 +400,7 @@ struct ScheduleWorkOrderSheet: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            // Staff Picker Selection
+                            
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("2. Assign Maintenance Tech")
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -425,7 +425,7 @@ struct ScheduleWorkOrderSheet: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            // Details
+                            
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("3. Order Details")
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -451,7 +451,7 @@ struct ScheduleWorkOrderSheet: View {
                                 CustomAddTextField(label: "Estimated Cost (₹)", placeholder: "e.g. 5000", icon: "indianrupeesign.circle.fill", text: $viewModel.estimatedCostString, keyboardType: .decimalPad)
                             }
                             
-                            // Priority
+                            
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Priority Level")
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -519,7 +519,7 @@ struct ScheduleWorkOrderSheet: View {
     }
 }
 
-// MARK: - Complete Work Order Sheet (Input cost)
+
 struct CompleteWorkOrderSheet: View {
     @ObservedObject var viewModel: MaintenanceManagementViewModel
     let workOrder: WorkOrder

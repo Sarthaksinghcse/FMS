@@ -3,27 +3,27 @@ import Supabase
 
 
 
-// MARK: - Focus Enum for Premium Interaction
+
 enum FocusField: Hashable {
     case email, password
 }
 
-// MARK: - Premium Authentication View
+
 struct AuthView: View {
     @StateObject private var supabaseManager = SupabaseManager.shared
 
-    // User Input States
+    
     @State private var email = ""
     @State private var password = ""
     @State private var selectedRole: UserRole = .fleetManager
 
-    // Focus State for Native Feel
+    
     @FocusState private var focusedField: FocusField?
 
-    // Animation States
+    
     @State private var appearAnimation = false
 
-    // Error Alert State
+    
     @State private var showErrorAlert = false
     @State private var errorAlertMessage = ""
 
@@ -35,7 +35,7 @@ struct AuthView: View {
                 VStack(spacing: 0) {
                     Spacer()
 
-                    // MARK: Premium Header Section
+                    
                     VStack(spacing: 20) {
                         ZStack {
                             Circle()
@@ -80,10 +80,10 @@ struct AuthView: View {
                     .opacity(appearAnimation ? 1 : 0)
                     .offset(y: appearAnimation ? 0 : 20)
 
-                    // MARK: Form Section
+                    
                     VStack(spacing: 24) {
 
-                        // Role Selection
+                        
                         VStack(alignment: .leading, spacing: 8) {
                             Text("SELECT ROLE")
                                 .font(.system(size: 11, weight: .bold, design: .rounded))
@@ -117,7 +117,7 @@ struct AuthView: View {
                             }
                         }
 
-                        // Credentials
+                        
                         VStack(spacing: 16) {
                             PremiumInputField(
                                 icon: "envelope.fill",
@@ -137,7 +137,7 @@ struct AuthView: View {
                             .focused($focusedField, equals: .password)
                         }
 
-                        // Submit Button
+                        
                         Button(action: handleAuthentication) {
                             HStack {
                                 if supabaseManager.isLoading {
@@ -178,7 +178,7 @@ struct AuthView: View {
                     Spacer()
                 }
 
-                // MARK: Glass Error Alert Overlay
+                
                 if showErrorAlert {
                     GlassErrorAlert(
                         message: errorAlertMessage,
@@ -215,7 +215,7 @@ struct AuthView: View {
         }
     }
 
-    // MARK: - Actions
+    
     private func handleAuthentication() {
         let impactHeavy = UIImpactFeedbackGenerator(style: .medium)
         impactHeavy.impactOccurred()
@@ -240,7 +240,7 @@ struct AuthView: View {
     }
 }
 
-// MARK: - Glass Error Alert Component
+
 struct GlassErrorAlert: View {
     let message: String
     let onCancel: () -> Void
@@ -313,7 +313,7 @@ struct GlassErrorAlert: View {
     }
 }
 
-// MARK: - Reusable Premium Input Components
+
 
 struct PremiumInputField: View {
     let icon: String
@@ -382,7 +382,7 @@ struct PremiumSecureField: View {
     }
 }
 
-// MARK: - Custom Button Style for Premium Press Effect
+
 struct ScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -391,7 +391,7 @@ struct ScaleButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Preview
+
 #Preview {
     AuthView()
 }

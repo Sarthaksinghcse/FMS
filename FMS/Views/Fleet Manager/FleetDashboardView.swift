@@ -1,7 +1,7 @@
-//
-//  FleetDashboardView.swift
-//  FMS
-//
+
+
+
+
 
 import SwiftUI
 import SwiftData
@@ -177,10 +177,10 @@ struct FleetDashboardView: View {
             .task {
                 DatabaseSeeder.seedIfEmpty(context: modelContext)
                 
-                // Initial sync from Supabase
+                
                 await SupabaseManager.shared.syncAllData(context: modelContext)
                 
-                // Periodic background sync loop
+                
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .seconds(15))
                     await SupabaseManager.shared.syncAllData(context: modelContext)

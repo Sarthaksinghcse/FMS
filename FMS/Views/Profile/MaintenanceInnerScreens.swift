@@ -1,19 +1,19 @@
-//
-//  MaintenanceInnerScreens.swift
-//  FMS
-//
-//  Inner screens for Maintenance Personnel profile:
-//  - Edit Profile
-//  - Work History
-//  - Certifications & Training
-//  - Notification Settings
-//  - Security Settings
-//  - Help & Support
-//
+
+
+
+
+
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Maintenance Edit Profile
+
 
 @available(iOS 26.0, *)
 struct MaintenanceEditProfileView: View {
@@ -44,7 +44,7 @@ struct MaintenanceEditProfileView: View {
 
                 ScrollView {
                     VStack(spacing: 28) {
-                        // Avatar
+                        
                         VStack(spacing: 14) {
                             ZStack {
                                 Circle()
@@ -71,7 +71,7 @@ struct MaintenanceEditProfileView: View {
                         }
                         .padding(.top, 8)
 
-                        // Form
+                        
                         VStack(spacing: 0) {
                             ProfileFormField(icon: "person.fill", label: "Full Name", text: $fullName, placeholder: "Enter your name")
                             Divider().padding(.leading, 56)
@@ -80,7 +80,7 @@ struct MaintenanceEditProfileView: View {
                             ProfileFormField(icon: "wrench.and.screwdriver.fill", label: "Specialization", text: $specialization, placeholder: "e.g. Engine Repair, Brake Systems")
                             Divider().padding(.leading, 56)
 
-                            // Email (read-only)
+                            
                             HStack(spacing: 12) {
                                 Image(systemName: "envelope.fill")
                                     .font(.system(size: 15))
@@ -104,7 +104,7 @@ struct MaintenanceEditProfileView: View {
 
                             Divider().padding(.leading, 56)
 
-                            // Role (read-only)
+                            
                             HStack(spacing: 12) {
                                 Image(systemName: "shield.checkered")
                                     .font(.system(size: 15))
@@ -130,7 +130,7 @@ struct MaintenanceEditProfileView: View {
                         .cornerRadius(AppTheme.Radius.card)
                         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
 
-                        // Save
+                        
                         Button {
                             isSaving = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -184,7 +184,7 @@ struct MaintenanceEditProfileView: View {
     }
 }
 
-// MARK: - Work History
+
 
 @available(iOS 26.0, *)
 struct MaintenanceWorkHistoryView: View {
@@ -282,7 +282,7 @@ struct MaintenanceWorkHistoryView: View {
     }
 }
 
-// MARK: - Certifications & Training
+
 
 @available(iOS 26.0, *)
 struct MaintenanceCertificationsView: View {
@@ -315,7 +315,7 @@ struct MaintenanceCertificationsView: View {
                             subtitle: "Your professional qualifications"
                         )
 
-                        // Certifications
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CERTIFICATIONS")
                                 .font(.system(size: 11, weight: .semibold))
@@ -364,7 +364,7 @@ struct MaintenanceCertificationsView: View {
                             .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                         }
 
-                        // Training
+                        
                         VStack(alignment: .leading, spacing: 0) {
                             Text("TRAINING RECORDS")
                                 .font(.system(size: 11, weight: .semibold))
@@ -429,7 +429,7 @@ struct MaintenanceCertificationsView: View {
     }
 }
 
-// MARK: - Maintenance Notification Settings
+
 
 @available(iOS 26.0, *)
 struct MaintenanceNotificationSettingsView: View {
@@ -509,7 +509,7 @@ struct MaintenanceNotificationSettingsView: View {
     }
 }
 
-// MARK: - Maintenance Security Settings
+
 
 @available(iOS 26.0, *)
 struct MaintenanceSecuritySettingsView: View {
@@ -621,7 +621,7 @@ private struct MaintSecureField: View {
     }
 }
 
-// MARK: - Maintenance Help & Support
+
 
 @available(iOS 26.0, *)
 struct MaintenanceHelpSupportView: View {
@@ -703,7 +703,7 @@ struct MaintenanceHelpSupportView: View {
     }
 }
 
-// MARK: - Previews
+
 
 @available(iOS 26.0, *)
 #Preview("Edit Profile") { MaintenanceEditProfileView() }

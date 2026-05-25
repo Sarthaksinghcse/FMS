@@ -1,16 +1,16 @@
-//
-//  MaintenanceProfileView.swift
-//  FMS
-//
-//  Profile main screen for Maintenance Personnel role.
-//  Shows personal info, specialization, account settings, and work history.
-//  Styled consistently with Fleet Manager layout (light/adaptive theme).
-//
+
+
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 
-// MARK: - Maintenance Profile View
+
 
 @available(iOS 26.0, *)
 struct MaintenanceProfileView: View {
@@ -36,7 +36,7 @@ struct MaintenanceProfileView: View {
         return String(name.prefix(2)).uppercased()
     }
 
-    // Mock specialization data
+    
     private let specializations = ["Engine Repair", "Brake Systems", "Electrical", "Oil & Fluids"]
 
     var body: some View {
@@ -87,11 +87,11 @@ struct MaintenanceProfileView: View {
         }
     }
 
-    // MARK: - Profile Header
+    
 
     private var profileHeaderCard: some View {
         VStack(spacing: 20) {
-            // Avatar
+            
             ZStack {
                 Circle()
                     .fill(
@@ -129,7 +129,7 @@ struct MaintenanceProfileView: View {
                     .padding(.top, 2)
                 }
 
-                // Role Badge
+                
                 HStack(spacing: 6) {
                     Image(systemName: "wrench.and.screwdriver.fill")
                         .font(.system(size: 11, weight: .semibold))
@@ -144,7 +144,7 @@ struct MaintenanceProfileView: View {
                 .padding(.top, 4)
             }
 
-            // Edit Profile
+            
             Button {
                 showEditProfile = true
             } label: {
@@ -169,7 +169,7 @@ struct MaintenanceProfileView: View {
         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
     }
 
-    // MARK: - Specialization & Certifications
+    
 
     private var specializationSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -179,7 +179,7 @@ struct MaintenanceProfileView: View {
                 .padding(.leading, 4)
 
             VStack(spacing: 0) {
-                // Specialization tags
+                
                 VStack(alignment: .leading, spacing: 12) {
                     FlowLayout(spacing: 8) {
                         ForEach(specializations, id: \.self) { spec in
@@ -201,7 +201,7 @@ struct MaintenanceProfileView: View {
 
                 Divider().padding(.leading, 16)
 
-                // Certifications row
+                
                 Button {
                     showCertifications = true
                 } label: {
@@ -240,7 +240,7 @@ struct MaintenanceProfileView: View {
         }
     }
 
-    // MARK: - Account
+    
 
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -302,7 +302,7 @@ struct MaintenanceProfileView: View {
         }
     }
 
-    // MARK: - Sign Out
+    
 
     private var signOutSection: some View {
         Button {
@@ -324,7 +324,7 @@ struct MaintenanceProfileView: View {
     }
 }
 
-// MARK: - Flow Layout (for specialization tags)
+
 
 private struct FlowLayout: Layout {
     var spacing: CGFloat = 8
@@ -368,7 +368,7 @@ private struct FlowLayout: Layout {
     }
 }
 
-// MARK: - Preview
+
 
 @available(iOS 26.0, *)
 #Preview {

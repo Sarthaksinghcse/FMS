@@ -1,15 +1,15 @@
-//
-//  EditVehicleViewModel.swift
-//  FMS
-//
-//  Created on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 import Combine
 
-// MARK: - Edit Vehicle View Model
+
 @MainActor
 final class EditVehicleViewModel: ObservableObject {
     private let vehicle: Vehicle
@@ -41,7 +41,7 @@ final class EditVehicleViewModel: ObservableObject {
         self.status = vehicle.status
     }
     
-    /// Validates forms inputs and returns true if valid, else sets errorMessage
+    
     func validate() -> Bool {
         errorMessage = nil
         
@@ -83,8 +83,8 @@ final class EditVehicleViewModel: ObservableObject {
         return true
     }
     
-    /// Saves the edits into the vehicle object in SwiftData.
-    /// BACKEND DEVS: Add your cloud database/Supabase API sync/update calls inside this function.
+    
+    
     func saveEdits(context: ModelContext) -> Bool {
         guard validate() else { return false }
         
@@ -95,7 +95,7 @@ final class EditVehicleViewModel: ObservableObject {
         let year = Int(yearString) ?? vehicle.year
         let odometer = Double(odometerString) ?? vehicle.odometerReading
         
-        // Update SwiftData properties
+        
         vehicle.registrationNumber = cleanedReg
         vehicle.vinNumber = cleanedVin
         vehicle.make = cleanedMake
@@ -110,7 +110,7 @@ final class EditVehicleViewModel: ObservableObject {
         do {
             try context.save()
             
-            // Trigger feedback
+            
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
             
@@ -124,8 +124,8 @@ final class EditVehicleViewModel: ObservableObject {
         }
     }
     
-    /// Deletes the vehicle.
-    /// BACKEND DEVS: Hook up deletion API call here.
+    
+    
     func deleteVehicle(context: ModelContext) -> Bool {
         context.delete(vehicle)
         do {

@@ -1,9 +1,9 @@
-//
-//  LocationService.swift
-//  FMS
-//
-//  Created on 22/05/26.
-//
+
+
+
+
+
+
 
 import Foundation
 import CoreLocation
@@ -16,9 +16,9 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
     
     @Published public var lastLocation: CLLocation?
     
-    /// Flag indicating whether we should stream location updates to Supabase
+    
     public var isTrackingActive = false
-    /// Assigned vehicle ID to stream coordinates for
+    
     public var activeVehicleId: UUID?
     
     private var lastUploadTime: Date = Date.distantPast
@@ -27,7 +27,7 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
-        manager.distanceFilter = 10.0 // trigger updates every 10 meters
+        manager.distanceFilter = 10.0 
         manager.requestAlwaysAuthorization()
     }
     
@@ -43,13 +43,13 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
         manager.stopUpdatingLocation()
     }
     
-    // MARK: - CLLocationManagerDelegate
+    
     
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         self.lastLocation = location
         
-        // Throttling: upload at most once every 10 seconds to avoid spamming the database
+        
         guard isTrackingActive, let vehicleId = activeVehicleId else { return }
         let timeSinceLastUpload = Date().timeIntervalSince(lastUploadTime)
         guard timeSinceLastUpload >= 10.0 else { return }
