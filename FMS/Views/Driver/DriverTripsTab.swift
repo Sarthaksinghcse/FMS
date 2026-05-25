@@ -853,12 +853,12 @@ struct TripNavigationView: View {
 
                 
                 Map(position: $cameraPos) {
-                    if let s = sourceItem?.placemark.coordinate {
+                    if let s = sourceItem?.location.coordinate {
                         Annotation("Origin", coordinate: s, anchor: .bottom) {
                             mapPin(icon: "car.fill", color: Color.fmsIndigo)
                         }
                     }
-                    if let d = destItem?.placemark.coordinate {
+                    if let d = destItem?.location.coordinate {
                         Annotation("Destination", coordinate: d, anchor: .bottom) {
                             mapPin(icon: "flag.fill", color: AppTheme.Status.success)
                         }
