@@ -8,6 +8,7 @@
 
 import SwiftUI
 import SwiftData
+import CoreLocation
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MARK: - Add Trip Form
@@ -41,6 +42,7 @@ struct AddTripFormView: View {
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
+    @State private var isSaving             = false
 
     // ── Focus ─────────────────────────────────────────────────────────────────
     @FocusState private var focusedField: TripFocusField?
@@ -56,7 +58,7 @@ struct AddTripFormView: View {
                     VStack(spacing: 24) {
 
                         // ── Form sections ──────────────────────────────────
-                        formSection(title: "Trip Details", icon: "map.fill", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                         }
@@ -75,21 +77,7 @@ struct AddTripFormView: View {
                                          text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
                         }
 
-                        formSection(title: "Coordinates", icon: "location.circle.fill", iconColor: AppTheme.Brand.accent) {
-                            TripFormField(label: "Start Latitude", placeholder: "-90 to 90",
-                                         text: $startLatText, keyboardType: .decimalPad, focus: $focusedField, tag: .startLat)
-                            FormDivider()
-                            TripFormField(label: "Start Longitude", placeholder: "-180 to 180",
-                                         text: $startLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .startLong)
-                            FormDivider()
-                            TripFormField(label: "End Latitude", placeholder: "-90 to 90",
-                                         text: $endLatText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLat)
-                            FormDivider()
-                            TripFormField(label: "End Longitude", placeholder: "-180 to 180",
-                                         text: $endLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLong)
-                        }
-
-                        formSection(title: "Schedule", icon: "calendar", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             FormDivider()
                             DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
@@ -117,11 +105,7 @@ struct AddTripFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -144,9 +128,14 @@ struct AddTripFormView: View {
             saveTrip()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Create Trip")
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Creating..." : "Create Trip")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
@@ -154,13 +143,14 @@ struct AddTripFormView: View {
             .frame(height: 54)
             .background(
                 LinearGradient(
-                    colors: [Color(red: 0.58, green: 0.39, blue: 0.87), Color(red: 0.48, green: 0.29, blue: 0.77)],
+                    colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.primary],
                     startPoint: .leading, endPoint: .trailing
                 )
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.35), radius: 12, x: 0, y: 6)
+            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving)
     }
 
     // MARK: Save Action
@@ -183,52 +173,83 @@ struct AddTripFormView: View {
             validationMessage = "End location is required."; showValidationAlert = true; return
         }
         
-        // Coordinate validation
-        guard let startLat = Double(startLatText), startLat >= -90, startLat <= 90 else {
-            validationMessage = "Start latitude must be between -90 and 90."; showValidationAlert = true; return
-        }
-        guard let startLong = Double(startLongText), startLong >= -180, startLong <= 180 else {
-            validationMessage = "Start longitude must be between -180 and 180."; showValidationAlert = true; return
-        }
-        guard let endLat = Double(endLatText), endLat >= -90, endLat <= 90 else {
-            validationMessage = "End latitude must be between -90 and 90."; showValidationAlert = true; return
-        }
-        guard let endLong = Double(endLongText), endLong >= -180, endLong <= 180 else {
-            validationMessage = "End longitude must be between -180 and 180."; showValidationAlert = true; return
-        }
-        
         // Time validation
         guard scheduledStartTime < scheduledEndTime else {
             validationMessage = "Scheduled end time must be after start time."; showValidationAlert = true; return
         }
         
         // Distance validation
-        guard let distance = Double(distanceText), distance > 0 else {
-            validationMessage = "Please enter a valid distance."; showValidationAlert = true; return
-        }
+        let distance = Double(distanceText)
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        let trip = Trip(
-            tripCode:            tripCode.trimmingCharacters(in: .whitespaces).uppercased(),
-            vehicleId:           vehicle.id,
-            driverId:            driver.id,
-            startLocation:       startLocation.trimmingCharacters(in: .whitespaces),
-            endLocation:         endLocation.trimmingCharacters(in: .whitespaces),
-            startLatitude:       startLat,
-            startLongitude:      startLong,
-            endLatitude:         endLat,
-            endLongitude:        endLong,
-            scheduledStartTime:  scheduledStartTime,
-            scheduledEndTime:    scheduledEndTime,
-            distanceKm:          distance,
-            tripStatus:          .assigned,
-            notes:               notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
-        )
+        isSaving = true
 
-        modelContext.insert(trip)
-        try? modelContext.save()
-        saveSuccess = true
+        Task {
+            let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
+            let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
+
+            // Auto-calculate distance if distanceText is empty or invalid
+            let distance: Double
+            if let userDistance = Double(distanceText), userDistance > 0 {
+                distance = userDistance
+            } else {
+                let startLoc = CLLocation(latitude: startCoord.latitude, longitude: startCoord.longitude)
+                let endLoc = CLLocation(latitude: endCoord.latitude, longitude: endCoord.longitude)
+                distance = Double(String(format: "%.1f", startLoc.distance(from: endLoc) / 1000.0)) ?? 0.0
+            }
+
+            let trip = Trip(
+                tripCode:            tripCode.trimmingCharacters(in: .whitespaces).uppercased(),
+                vehicleId:           vehicle.id,
+                driverId:            driver.id,
+                startLocation:       startLocation.trimmingCharacters(in: .whitespaces),
+                endLocation:         endLocation.trimmingCharacters(in: .whitespaces),
+                startLatitude:       startCoord.latitude,
+                startLongitude:      startCoord.longitude,
+                endLatitude:         endCoord.latitude,
+                endLongitude:        endCoord.longitude,
+                scheduledStartTime:  scheduledStartTime,
+                scheduledEndTime:    scheduledEndTime,
+                distanceKm:          distance,
+                tripStatus:          .assigned,
+                notes:               notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+            )
+
+            do {
+                try await SupabaseManager.shared.createTrip(trip.asDBTrip)
+                
+                // Send trip assignment notification email to the driver
+                let driverEmail = driver.email
+                let driverName = driver.fullName
+                Task {
+                    try? await EmailManager.shared.sendTripAssignmentEmail(
+                        to: driverEmail,
+                        name: driverName,
+                        tripCode: trip.tripCode,
+                        source: trip.startLocation,
+                        destination: trip.endLocation,
+                        startTime: trip.scheduledStartTime,
+                        distance: trip.distanceKm
+                    )
+                }
+                
+                await MainActor.run {
+                    modelContext.insert(trip)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to save trip to Supabase: \(error)")
+                await MainActor.run {
+                    modelContext.insert(trip)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 }
 
@@ -267,6 +288,8 @@ struct EditTripFormView: View {
     @State private var validationMessage   = ""
     @State private var showDeleteConfirm   = false
     @State private var saveSuccess         = false
+    @State private var isSaving             = false
+    @State private var isDeleting           = false
     @FocusState private var focusedField: TripFocusField?
 
     private var drivers: [User] { allUsers.filter { $0.role == .driver } }
@@ -299,7 +322,7 @@ struct EditTripFormView: View {
                         tripBadge
 
                         // ── Sections ───────────────────────────────────────
-                        formSection(title: "Trip Details", icon: "map.fill", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                             FormDivider()
@@ -320,21 +343,7 @@ struct EditTripFormView: View {
                                          text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
                         }
 
-                        formSection(title: "Coordinates", icon: "location.circle.fill", iconColor: AppTheme.Brand.accent) {
-                            TripFormField(label: "Start Latitude", placeholder: "-90 to 90",
-                                         text: $startLatText, keyboardType: .decimalPad, focus: $focusedField, tag: .startLat)
-                            FormDivider()
-                            TripFormField(label: "Start Longitude", placeholder: "-180 to 180",
-                                         text: $startLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .startLong)
-                            FormDivider()
-                            TripFormField(label: "End Latitude", placeholder: "-90 to 90",
-                                         text: $endLatText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLat)
-                            FormDivider()
-                            TripFormField(label: "End Longitude", placeholder: "-180 to 180",
-                                         text: $endLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLong)
-                        }
-
-                        formSection(title: "Schedule", icon: "calendar", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             FormDivider()
                             DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
@@ -365,11 +374,7 @@ struct EditTripFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -403,11 +408,11 @@ struct EditTripFormView: View {
             ZStack {
                 Circle()
                     .fill(LinearGradient(
-                        colors: [Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.8), Color(red: 0.58, green: 0.39, blue: 0.87)],
+                        colors: [AppTheme.Brand.royalBlue.opacity(0.8), AppTheme.Brand.royalBlue],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ))
                     .frame(width: 60, height: 60)
-                    .shadow(color: Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.35), radius: 10, y: 4)
+                    .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 10, y: 4)
                 Image(systemName: "map.fill")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(.white)
@@ -434,18 +439,24 @@ struct EditTripFormView: View {
     private var saveButton: some View {
         Button { saveChanges() } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
-                Text("Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
             .background(LinearGradient(
-                colors: [Color(red: 0.58, green: 0.39, blue: 0.87), Color(red: 0.48, green: 0.29, blue: 0.77)],
+                colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.primary],
                 startPoint: .leading, endPoint: .trailing
             ))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color(red: 0.58, green: 0.39, blue: 0.87).opacity(0.35), radius: 12, x: 0, y: 6)
+            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving || isDeleting)
     }
 
     // MARK: Delete Button
@@ -453,8 +464,13 @@ struct EditTripFormView: View {
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
             HStack(spacing: 8) {
-                Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
-                Text("Delete Trip").font(.system(size: 15, weight: .semibold, design: .rounded))
+                if isDeleting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                } else {
+                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                }
+                Text(isDeleting ? "Deleting..." : "Delete Trip").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
             .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -463,6 +479,7 @@ struct EditTripFormView: View {
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
         }
+        .disabled(isSaving || isDeleting)
     }
 
     // MARK: Actions
@@ -485,19 +502,6 @@ struct EditTripFormView: View {
             validationMessage = "End location is required."; showValidationAlert = true; return
         }
         
-        guard let startLat = Double(startLatText), startLat >= -90, startLat <= 90 else {
-            validationMessage = "Start latitude must be between -90 and 90."; showValidationAlert = true; return
-        }
-        guard let startLong = Double(startLongText), startLong >= -180, startLong <= 180 else {
-            validationMessage = "Start longitude must be between -180 and 180."; showValidationAlert = true; return
-        }
-        guard let endLat = Double(endLatText), endLat >= -90, endLat <= 90 else {
-            validationMessage = "End latitude must be between -90 and 90."; showValidationAlert = true; return
-        }
-        guard let endLong = Double(endLongText), endLong >= -180, endLong <= 180 else {
-            validationMessage = "End longitude must be between -180 and 180."; showValidationAlert = true; return
-        }
-        
         guard scheduledStartTime < scheduledEndTime else {
             validationMessage = "Scheduled end time must be after start time."; showValidationAlert = true; return
         }
@@ -505,33 +509,104 @@ struct EditTripFormView: View {
         guard let distance = Double(distanceText), distance > 0 else {
             validationMessage = "Please enter a valid distance."; showValidationAlert = true; return
         }
-
+        
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        trip.tripCode           = tripCode.trimmingCharacters(in: .whitespaces).uppercased()
-        trip.vehicleId          = vehicle.id
-        trip.driverId           = driver.id
-        trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
-        trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
-        trip.startLatitude      = startLat
-        trip.startLongitude     = startLong
-        trip.endLatitude        = endLat
-        trip.endLongitude       = endLong
-        trip.scheduledStartTime = scheduledStartTime
-        trip.scheduledEndTime   = scheduledEndTime
-        trip.distanceKm         = distance
-        trip.tripStatus         = tripStatus
-        trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+        isSaving = true
 
-        try? modelContext.save()
-        saveSuccess = true
+        Task {
+            let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
+            let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
+
+            let updatedDBTrip = DBTrip(
+                id: trip.id,
+                vehicleId: vehicle.id,
+                driverId: driver.id,
+                source: startLocation.trimmingCharacters(in: .whitespaces),
+                destination: endLocation.trimmingCharacters(in: .whitespaces),
+                startTime: scheduledStartTime,
+                endTime: scheduledEndTime,
+                distance: distance,
+                status: tripStatus.toDBStatus,
+                notes: notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces),
+                createdAt: trip.createdAt
+            )
+
+            do {
+                try await SupabaseManager.shared.updateTrip(updatedDBTrip)
+                await MainActor.run {
+                    trip.tripCode           = tripCode.trimmingCharacters(in: .whitespaces).uppercased()
+                    trip.vehicleId          = vehicle.id
+                    trip.driverId           = driver.id
+                    trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
+                    trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
+                    trip.startLatitude      = startCoord.latitude
+                    trip.startLongitude     = startCoord.longitude
+                    trip.endLatitude        = endCoord.latitude
+                    trip.endLongitude       = endCoord.longitude
+                    trip.scheduledStartTime = scheduledStartTime
+                    trip.scheduledEndTime   = scheduledEndTime
+                    trip.distanceKm         = distance
+                    trip.tripStatus         = tripStatus
+                    trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to update trip on Supabase: \(error)")
+                await MainActor.run {
+                    trip.tripCode           = tripCode.trimmingCharacters(in: .whitespaces).uppercased()
+                    trip.vehicleId          = vehicle.id
+                    trip.driverId           = driver.id
+                    trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
+                    trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
+                    trip.startLatitude      = startCoord.latitude
+                    trip.startLongitude     = startCoord.longitude
+                    trip.endLatitude        = endCoord.latitude
+                    trip.endLongitude       = endCoord.longitude
+                    trip.scheduledStartTime = scheduledStartTime
+                    trip.scheduledEndTime   = scheduledEndTime
+                    trip.distanceKm         = distance
+                    trip.tripStatus         = tripStatus
+                    trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 
     private func deleteTrip() {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        modelContext.delete(trip)
-        try? modelContext.save()
-        dismiss()
+        
+        isDeleting = true
+        
+        Task {
+            do {
+                // Delete from Supabase first
+                try await SupabaseManager.shared.deleteTrip(id: trip.id)
+                
+                await MainActor.run {
+                    modelContext.delete(trip)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            } catch {
+                print("Failed to delete trip from Supabase: \(error)")
+                // Fallback to local delete
+                await MainActor.run {
+                    modelContext.delete(trip)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            }
+        }
     }
 }
 
@@ -610,20 +685,18 @@ struct VehiclePickerRow: View {
     @Binding var selection: Vehicle?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
+
+            Spacer()
 
             if vehicles.isEmpty {
-                Text("No vehicles available. Add vehicles first.")
+                Text("No vehicles available")
                     .font(.system(size: 13, design: .rounded))
                     .foregroundColor(.gray)
                     .italic()
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
             } else {
                 Picker("", selection: $selection) {
                     Text("Select Vehicle").tag(nil as Vehicle?)
@@ -634,10 +707,10 @@ struct VehiclePickerRow: View {
                 }
                 .pickerStyle(.menu)
                 .tint(AppTheme.Brand.royalBlue)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 14)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }
 
@@ -649,20 +722,18 @@ struct DriverPickerRow: View {
     @Binding var selection: User?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
+
+            Spacer()
 
             if drivers.isEmpty {
-                Text("No drivers available. Add drivers first.")
+                Text("No drivers available")
                     .font(.system(size: 13, design: .rounded))
                     .foregroundColor(.gray)
                     .italic()
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
             } else {
                 Picker("", selection: $selection) {
                     Text("Select Driver").tag(nil as User?)
@@ -672,10 +743,10 @@ struct DriverPickerRow: View {
                 }
                 .pickerStyle(.menu)
                 .tint(AppTheme.Brand.royalBlue)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 14)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }
 
@@ -685,11 +756,11 @@ struct TripStatusPickerRow: View {
     @Binding var selection: TripStatus
 
     private let options: [(TripStatus, String, Color)] = [
-        (.assigned,    "Assigned",    Color.orange),
-        (.started,     "Started",     Color.blue),
-        (.inProgress,  "In Progress", Color(red: 0.58, green: 0.39, blue: 0.87)),
-        (.completed,   "Completed",   Color(red: 0.30, green: 0.70, blue: 0.46)),
-        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))
+        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)), // Royal Blue (Upcoming)
+        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)), // Fresh Green (Active)
+        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)), // Fresh Green (Active)
+        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)), // Slate-Silver (Completed success)
+        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))  // Soft Red
     ]
 
     var body: some View {
@@ -723,4 +794,36 @@ struct TripStatusPickerRow: View {
             .padding(.bottom, 14)
         }
     }
+}
+
+@MainActor
+func geocodeAddress(_ address: String) async -> CLLocationCoordinate2D? {
+    let geocoder = CLGeocoder()
+    return await withCheckedContinuation { continuation in
+        geocoder.geocodeAddressString(address) { placemarks, error in
+            if let coordinate = placemarks?.first?.location?.coordinate {
+                continuation.resume(returning: coordinate)
+            } else {
+                continuation.resume(returning: nil)
+            }
+        }
+    }
+}
+
+func fallbackCoordinate(for address: String) -> CLLocationCoordinate2D {
+    let normalized = address.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    if normalized.contains("mumbai") {
+        return CLLocationCoordinate2D(latitude: 19.0760, longitude: 72.8777)
+    } else if normalized.contains("delhi") || normalized.contains("okhla") || normalized.contains("nehru") {
+        return CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+    } else if normalized.contains("pune") {
+        return CLLocationCoordinate2D(latitude: 18.5204, longitude: 73.8567)
+    } else if normalized.contains("gurgaon") {
+        return CLLocationCoordinate2D(latitude: 28.5034, longitude: 77.0841)
+    } else if normalized.contains("noida") {
+        return CLLocationCoordinate2D(latitude: 28.6256, longitude: 77.3789)
+    } else if normalized.contains("bangalore") || normalized.contains("bengaluru") {
+        return CLLocationCoordinate2D(latitude: 12.9716, longitude: 77.5946)
+    }
+    return CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020)
 }

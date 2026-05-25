@@ -77,11 +77,7 @@ struct AddMaintenanceFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -246,11 +242,7 @@ struct EditMaintenanceFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {

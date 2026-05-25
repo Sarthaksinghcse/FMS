@@ -1,65 +1,61 @@
-# Xcode
-#
-# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
+# ─── macOS ────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Icon?
 
-## User settings
+# ─── Xcode ────────────────────────────────────────────────────────────────────
+build/
+DerivedData/
+*.pbxuser
+*.xcuserstate
 xcuserdata/
 
-## Obj-C/Swift specific
-*.hmap
-
-## App packaging
-*.ipa
-*.dSYM.zip
-*.dSYM
-
-## Playgrounds
+# Playground
 timeline.xctimeline
 playground.xcworkspace
 
-# Swift Package Manager
-#
-# Add this line if you want to avoid checking in source code from Swift Package Manager dependencies.
-# Packages/
-# Package.pins
-# Package.resolved
-# *.xcodeproj
-#
-# Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
-# hence it is not needed unless you have added a package configuration file to your project
-# .swiftpm
-
+# Swift Package Manager cache
 .build/
+.swiftpm/
 
-# CocoaPods
-#
-# We recommend against adding the Pods directory to your .gitignore. However
-# you should judge for yourself, the pros and cons are mentioned at:
-# https://guides.cocoapods.org/using/using-cocoapods.html#should-i-check-the-pods-directory-into-source-control
-#
-# Pods/
-#
-# Add this line if you want to avoid checking in source code from the Xcode workspace
-# *.xcworkspace
+# ─── CocoaPods (future-proof) ─────────────────────────────────────────────────
+Pods/
+Podfile.lock
 
-# Carthage
-#
-# Add this line if you want to avoid checking in source code from Carthage dependencies.
-# Carthage/Checkouts
-
+# ─── Carthage ─────────────────────────────────────────────────────────────────
 Carthage/Build/
 
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo.
-# Instead, use fastlane to re-generate the screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/#source-control
+# ─── Secrets & environment ────────────────────────────────────────────────────
+.env
+.env.*
+Secrets.swift
+Config.xcconfig
+GoogleService-Info.plist
+secrets/
 
+# ─── Fastlane ─────────────────────────────────────────────────────────────────
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
-fastlane/test_output
+fastlane/test_output/
 
-# Antigravity CLI
-.antigravitycli/
+# ─── Test results ─────────────────────────────────────────────────────────────
+*.xcresult
+TestResults/
+
+# ─── Archives & exports ───────────────────────────────────────────────────────
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.app
+
+# ─── Editor cruft ─────────────────────────────────────────────────────────────
+*.orig
+*.swp
+*~
+.idea/
+.vscode/

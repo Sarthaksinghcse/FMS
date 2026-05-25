@@ -36,6 +36,7 @@ struct AddVehicleFormView: View {
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
+    @State private var isSaving             = false
 
     // ── Focus ─────────────────────────────────────────────────────────────────
     @FocusState private var focusedField: VehicleFocusField?
@@ -59,7 +60,7 @@ struct AddVehicleFormView: View {
                                             text: $vinNumber, keyboardType: .default, focus: $focusedField, tag: .vin)
                         }
 
-                        formSection(title: "Specifications", icon: "gearshape.2.fill", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Specifications", icon: "gearshape.2.fill", iconColor: AppTheme.Brand.teal) {
                             VehicleFormField(label: "Make", placeholder: "e.g. Tata, Mahindra",
                                             text: $make, keyboardType: .default, focus: $focusedField, tag: .make)
                             FormDivider()
@@ -107,13 +108,7 @@ struct AddVehicleFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -137,9 +132,14 @@ struct AddVehicleFormView: View {
             saveVehicle()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Save Vehicle")
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Saving..." : "Save Vehicle")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
@@ -154,6 +154,7 @@ struct AddVehicleFormView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving)
     }
 
     // MARK: Save Action
@@ -194,9 +195,30 @@ struct AddVehicleFormView: View {
             insuranceExpiryDate:insuranceExpiryDate
         )
 
-        modelContext.insert(vehicle)
-        try? modelContext.save()
-        saveSuccess = true
+        isSaving = true
+
+        Task {
+            do {
+                // Save to Supabase first
+                try await SupabaseManager.shared.createVehicle(vehicle.asDBVehicle)
+                
+                await MainActor.run {
+                    modelContext.insert(vehicle)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to save vehicle to Supabase: \(error)")
+                // Fallback to local cache so user can work offline
+                await MainActor.run {
+                    modelContext.insert(vehicle)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 }
 
@@ -230,6 +252,8 @@ struct EditVehicleFormView: View {
     @State private var validationMessage   = ""
     @State private var showDeleteConfirm   = false
     @State private var saveSuccess         = false
+    @State private var isSaving             = false
+    @State private var isDeleting           = false
     @FocusState private var focusedField: VehicleFocusField?
 
     init(vehicle: Vehicle) {
@@ -268,7 +292,7 @@ struct EditVehicleFormView: View {
                                             text: $vinNumber, keyboardType: .default, focus: $focusedField, tag: .vin)
                         }
 
-                        formSection(title: "Specifications", icon: "gearshape.2.fill", iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)) {
+                        formSection(title: "Specifications", icon: "gearshape.2.fill", iconColor: AppTheme.Brand.teal) {
                             VehicleFormField(label: "Make", placeholder: "e.g. Tata",
                                             text: $make, keyboardType: .default, focus: $focusedField, tag: .make)
                             FormDivider()
@@ -315,13 +339,7 @@ struct EditVehicleFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(.red)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -381,8 +399,13 @@ struct EditVehicleFormView: View {
     private var saveButton: some View {
         Button { saveChanges() } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
-                Text("Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
@@ -393,6 +416,7 @@ struct EditVehicleFormView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving || isDeleting)
     }
 
     // MARK: Delete Button
@@ -400,8 +424,13 @@ struct EditVehicleFormView: View {
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
             HStack(spacing: 8) {
-                Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
-                Text("Delete Vehicle").font(.system(size: 15, weight: .semibold, design: .rounded))
+                if isDeleting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                } else {
+                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                }
+                Text(isDeleting ? "Deleting..." : "Delete Vehicle").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
             .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -410,6 +439,7 @@ struct EditVehicleFormView: View {
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
         }
+        .disabled(isSaving || isDeleting)
     }
 
     // MARK: Actions
@@ -433,29 +463,100 @@ struct EditVehicleFormView: View {
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        vehicle.registrationNumber   = registrationNumber.trimmingCharacters(in: .whitespaces).uppercased()
-        vehicle.vinNumber            = vinNumber.trimmingCharacters(in: .whitespaces).uppercased()
-        vehicle.make                 = make.trimmingCharacters(in: .whitespaces)
-        vehicle.model                = model.trimmingCharacters(in: .whitespaces)
-        vehicle.year                 = year
-        vehicle.vehicleType          = vehicleType
-        vehicle.fuelType             = fuelType
-        vehicle.odometerReading      = Double(odometerText) ?? vehicle.odometerReading
-        vehicle.status               = status
-        vehicle.lastServiceDate      = lastServiceDate
-        vehicle.nextServiceDate      = nextServiceDate
-        vehicle.insuranceExpiryDate  = insuranceExpiryDate
-        vehicle.updatedAt            = .now
+        // Create updated DB model
+        let updatedDBVehicle = DBVehicle(
+            id: vehicle.id,
+            vehicleNumber: registrationNumber.trimmingCharacters(in: .whitespaces).uppercased(),
+            model: model.trimmingCharacters(in: .whitespaces),
+            manufacturer: make.trimmingCharacters(in: .whitespaces),
+            year: year,
+            vin: vinNumber.trimmingCharacters(in: .whitespaces).uppercased(),
+            licensePlate: registrationNumber.trimmingCharacters(in: .whitespaces).uppercased(),
+            status: status.toDBStatus,
+            assignedDriverId: vehicle.assignedDriverId,
+            lastServiceDate: lastServiceDate,
+            createdAt: vehicle.createdAt
+        )
 
-        try? modelContext.save()
-        saveSuccess = true
+        isSaving = true
+
+        Task {
+            do {
+                // Update on Supabase first
+                try await SupabaseManager.shared.updateVehicle(updatedDBVehicle)
+                
+                await MainActor.run {
+                    vehicle.registrationNumber   = registrationNumber.trimmingCharacters(in: .whitespaces).uppercased()
+                    vehicle.vinNumber            = vinNumber.trimmingCharacters(in: .whitespaces).uppercased()
+                    vehicle.make                 = make.trimmingCharacters(in: .whitespaces)
+                    vehicle.model                = model.trimmingCharacters(in: .whitespaces)
+                    vehicle.year                 = year
+                    vehicle.vehicleType          = vehicleType
+                    vehicle.fuelType             = fuelType
+                    vehicle.odometerReading      = Double(odometerText) ?? vehicle.odometerReading
+                    vehicle.status               = status
+                    vehicle.lastServiceDate      = lastServiceDate
+                    vehicle.nextServiceDate      = nextServiceDate
+                    vehicle.insuranceExpiryDate  = insuranceExpiryDate
+                    vehicle.updatedAt            = .now
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to update vehicle on Supabase: \(error)")
+                // Fallback to local cache update
+                await MainActor.run {
+                    vehicle.registrationNumber   = registrationNumber.trimmingCharacters(in: .whitespaces).uppercased()
+                    vehicle.vinNumber            = vinNumber.trimmingCharacters(in: .whitespaces).uppercased()
+                    vehicle.make                 = make.trimmingCharacters(in: .whitespaces)
+                    vehicle.model                = model.trimmingCharacters(in: .whitespaces)
+                    vehicle.year                 = year
+                    vehicle.vehicleType          = vehicleType
+                    vehicle.fuelType             = fuelType
+                    vehicle.odometerReading      = Double(odometerText) ?? vehicle.odometerReading
+                    vehicle.status               = status
+                    vehicle.lastServiceDate      = lastServiceDate
+                    vehicle.nextServiceDate      = nextServiceDate
+                    vehicle.insuranceExpiryDate  = insuranceExpiryDate
+                    vehicle.updatedAt            = .now
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 
     private func deleteVehicle() {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        modelContext.delete(vehicle)
-        try? modelContext.save()
-        dismiss()
+        
+        isDeleting = true
+        
+        Task {
+            do {
+                // Delete from Supabase first
+                try await SupabaseManager.shared.deleteVehicle(id: vehicle.id)
+                
+                await MainActor.run {
+                    modelContext.delete(vehicle)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            } catch {
+                print("Failed to delete vehicle from Supabase: \(error)")
+                // Fallback to local delete
+                await MainActor.run {
+                    modelContext.delete(vehicle)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            }
+        }
     }
 }
 
@@ -654,14 +755,3 @@ struct FormDivider: View {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - VehicleType / FuelType CaseIterable conformances
-// ─────────────────────────────────────────────────────────────────────────────
-
-extension VehicleType: CaseIterable {
-    public static var allCases: [VehicleType] { [.truck, .van, .car, .bike] }
-}
-
-extension FuelType: CaseIterable {
-    public static var allCases: [FuelType] { [.diesel, .petrol, .electric, .hybrid] }
-}

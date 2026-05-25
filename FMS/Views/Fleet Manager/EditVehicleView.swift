@@ -9,137 +9,48 @@ import SwiftUI
 import SwiftData
 import Combine
 
-// MARK: - Edit Vehicle View Model
-@MainActor
-final class EditVehicleViewModel: ObservableObject {
-    private let vehicle: Vehicle
-    
-    @Published var registrationNumber: String = ""
-    @Published var vinNumber: String = ""
-    @Published var make: String = ""
-    @Published var model: String = ""
-    @Published var yearString: String = ""
-    @Published var odometerString: String = ""
-    
-    @Published var vehicleType: VehicleType = .truck
-    @Published var fuelType: FuelType = .diesel
-    @Published var status: VehicleStatus = .active
-    
-    @Published var errorMessage: String? = nil
-    @Published var isSaveSuccessful: Bool = false
-    
-    init(vehicle: Vehicle) {
-        self.vehicle = vehicle
-        self.registrationNumber = vehicle.registrationNumber
-        self.vinNumber = vehicle.vinNumber
-        self.make = vehicle.make
-        self.model = vehicle.model
-        self.yearString = String(vehicle.year)
-        self.odometerString = String(vehicle.odometerReading)
-        self.vehicleType = vehicle.vehicleType
-        self.fuelType = vehicle.fuelType
-        self.status = vehicle.status
-    }
-    
-    /// Validates forms inputs and returns true if valid, else sets errorMessage
-    func validate() -> Bool {
-        errorMessage = nil
-        
-        let cleanedReg = registrationNumber.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanedVin = vinNumber.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanedMake = make.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        guard !cleanedReg.isEmpty else {
-            errorMessage = "Registration number is required."
-            return false
-        }
-        
-        guard !cleanedVin.isEmpty else {
-            errorMessage = "VIN is required."
-            return false
-        }
-        
-        guard !cleanedMake.isEmpty else {
-            errorMessage = "Manufacturer (Make) is required."
-            return false
-        }
-        
-        guard !cleanedModel.isEmpty else {
-            errorMessage = "Vehicle model is required."
-            return false
-        }
-        
-        guard let year = Int(yearString), year >= 1900 && year <= Calendar.current.component(.year, from: Date()) + 1 else {
-            errorMessage = "Please enter a valid manufacture year."
-            return false
-        }
-        
-        guard let odometer = Double(odometerString), odometer >= 0 else {
-            errorMessage = "Odometer reading must be a positive number."
-            return false
-        }
-        
-        return true
-    }
-    
-    /// Saves the edits into the vehicle object in SwiftData.
-    /// BACKEND DEVS: Add your cloud database/Supabase API sync/update calls inside this function.
-    func saveEdits(context: ModelContext) -> Bool {
-        guard validate() else { return false }
-        
-        let cleanedReg = registrationNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let cleanedVin = vinNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let cleanedMake = make.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        let year = Int(yearString) ?? vehicle.year
-        let odometer = Double(odometerString) ?? vehicle.odometerReading
-        
-        // Update SwiftData properties
-        vehicle.registrationNumber = cleanedReg
-        vehicle.vinNumber = cleanedVin
-        vehicle.make = cleanedMake
-        vehicle.model = cleanedModel
-        vehicle.year = year
-        vehicle.vehicleType = vehicleType
-        vehicle.fuelType = fuelType
-        vehicle.odometerReading = odometer
-        vehicle.status = status
-        vehicle.updatedAt = Date()
-        
-        do {
-            try context.save()
-            
-            // Trigger feedback
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
-            
-            isSaveSuccessful = true
-            return true
-        } catch {
-            errorMessage = "Failed to update vehicle: \(error.localizedDescription)"
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.error)
-            return false
-        }
-    }
-    
-    /// Deletes the vehicle.
-    /// BACKEND DEVS: Hook up deletion API call here.
-    func deleteVehicle(context: ModelContext) -> Bool {
-        context.delete(vehicle)
-        do {
-            try context.save()
-            
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
-            return true
-        } catch {
-            errorMessage = "Failed to delete vehicle: \(error.localizedDescription)"
-            return false
+// MARK: - Reusable Custom Text Field
+struct CustomAddTextField: View {
+    let label: String
+    let placeholder: String
+    let icon: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundColor(isFocused ? AppTheme.Brand.primary : AppTheme.Text.secondary)
+
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 15))
+                    .foregroundColor(isFocused ? AppTheme.Brand.primary : AppTheme.Text.tertiary)
+
+                TextField(placeholder, text: $text)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(.black)
+                    .focused($isFocused)
+                    .keyboardType(keyboardType)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.02))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isFocused ? AppTheme.Brand.primary : AppTheme.Glass.border, lineWidth: isFocused ? 1.5 : 1)
+            )
         }
     }
 }
+
+// The EditVehicleViewModel has been extracted to ViewModels/Fleet Manager/EditVehicleViewModel.swift
+
+
 
 // MARK: - Edit Vehicle View
 struct EditVehicleView: View {

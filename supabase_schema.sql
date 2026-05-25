@@ -243,6 +243,8 @@ CREATE POLICY "users_select_own"         ON public.users FOR SELECT USING (id = 
 CREATE POLICY "users_select_all_manager" ON public.users FOR SELECT USING (public.current_user_role() = 'fleet_manager');
 CREATE POLICY "users_update_own"         ON public.users FOR UPDATE USING (id = auth.uid());
 CREATE POLICY "users_insert_manager"     ON public.users FOR INSERT WITH CHECK (public.current_user_role() = 'fleet_manager');
+CREATE POLICY "users_update_manager"     ON public.users FOR UPDATE USING (public.current_user_role() = 'fleet_manager');
+CREATE POLICY "users_delete_manager"     ON public.users FOR DELETE USING (public.current_user_role() = 'fleet_manager');
 
 -- ---- vehicles ----
 CREATE POLICY "vehicles_select_all"     ON public.vehicles FOR SELECT USING (TRUE);
@@ -252,7 +254,7 @@ CREATE POLICY "vehicles_modify_manager" ON public.vehicles FOR ALL   USING (publ
 CREATE POLICY "trips_select_own_driver" ON public.trips FOR SELECT USING (driver_id = auth.uid());
 CREATE POLICY "trips_select_manager"    ON public.trips FOR SELECT USING (public.current_user_role() = 'fleet_manager');
 CREATE POLICY "trips_insert_manager"    ON public.trips FOR INSERT WITH CHECK (public.current_user_role() = 'fleet_manager');
-CREATE POLICY "trips_update_driver"     ON public.trips FOR UPDATE USING (driver_id = auth.uid() AND status IN ('assigned','started'));
+CREATE POLICY "trips_update_driver"     ON public.trips FOR UPDATE USING (driver_id = auth.uid() AND status IN ('assigned','started')) WITH CHECK (driver_id = auth.uid() AND status IN ('assigned','started','completed'));
 CREATE POLICY "trips_update_manager"    ON public.trips FOR UPDATE USING (public.current_user_role() = 'fleet_manager');
 
 -- ---- vehicle_inspections ----
@@ -322,7 +324,7 @@ GROUP BY user_id;
 
 -- Latest location per vehicle
 CREATE OR REPLACE VIEW public.v_latest_vehicle_location AS
-SELECT DISTINCT ON (vehicle_id) vehicle_id, latitude, longitude, timestamp
+SELECT DISTINCT ON (vehicle_id) id, vehicle_id, latitude, longitude, timestamp
 FROM public.vehicle_locations
 ORDER BY vehicle_id, timestamp DESC;
 

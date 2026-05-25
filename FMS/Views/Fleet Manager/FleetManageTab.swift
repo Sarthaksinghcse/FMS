@@ -40,7 +40,6 @@ enum ManagementDestination: Hashable {
     case vehicleList
     case driverList
     case maintenanceStaff
-    case tripList
 }
 
 // MARK: Hub View
@@ -49,8 +48,8 @@ enum ManagementDestination: Hashable {
 struct ManagementHubView: View {
 
     @State private var appearAnimation = false
-    @State private var cardAnimations: [Bool] = [false, false, false, false]
-    @State private var selectedDestination: ManagementDestination?
+    @State private var cardAnimations: [Bool] = [false, false, false]
+    @State private var path: [ManagementDestination] = []
 
     @Environment(\.modelContext) private var modelContext
 
@@ -87,7 +86,7 @@ struct ManagementHubView: View {
             ManagementCard(
                 title: "Driver Management",
                 subtitle: "Manage drivers & assignments",
-                icon: "person.fill.checkmark",
+                icon: "person.fill",
                 accentColor: Color(red: 0.30, green: 0.70, blue: 0.46),
                 metrics: [
                     CardMetric(label: "Total",   value: "\(driverCount)",
@@ -113,28 +112,12 @@ struct ManagementHubView: View {
                                systemIcon: "checkmark.seal.fill", iconColor: .green)
                 ],
                 destination: .maintenanceStaff
-            ),
-            ManagementCard(
-                title: "Trip Management",
-                subtitle: "Manage trips & schedules",
-                icon: "map.fill",
-                accentColor: Color(red: 0.58, green: 0.39, blue: 0.87),
-                metrics: [
-                    CardMetric(label: "Active",    value: "\(trips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }.count)",
-                               systemIcon: "arrow.triangle.turn.up.right.diamond.fill",
-                               iconColor: Color(red: 0.58, green: 0.39, blue: 0.87)),
-                    CardMetric(label: "Pending",   value: "\(trips.filter { $0.tripStatus == .assigned }.count)",
-                               systemIcon: "clock.fill",           iconColor: .orange),
-                    CardMetric(label: "Completed", value: "\(trips.filter { $0.tripStatus == .completed }.count)",
-                               systemIcon: "checkmark.circle.fill", iconColor: .green)
-                ],
-                destination: .tripList
             )
         ]
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
 
@@ -149,7 +132,7 @@ struct ManagementHubView: View {
             }
             .navigationTitle("Manage")
             .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(item: $selectedDestination) { destination in
+            .navigationDestination(for: ManagementDestination.self) { destination in
                 destinationView(for: destination)
             }
             .onAppear {
@@ -171,7 +154,7 @@ struct ManagementHubView: View {
                 let index = managementCards.firstIndex(where: { $0.id == card.id }) ?? 0
                 ManagementCardView(card: card) {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    selectedDestination = card.destination
+                    path.append(card.destination)
                 }
                 .opacity(cardAnimations.indices.contains(index) && cardAnimations[index] ? 1 : 0)
                 .offset(y: cardAnimations.indices.contains(index) && cardAnimations[index] ? 0 : 30)
@@ -187,7 +170,6 @@ struct ManagementHubView: View {
         case .vehicleList:      VehicleListView()
         case .driverList:       DriverListView()
         case .maintenanceStaff: MaintenanceStaffListView()
-        case .tripList:         TripListView()
         }
     }
 }
@@ -291,105 +273,6 @@ struct ManagementCardView: View {
 // MARK: - SECTION 2 ▸ Vehicle List
 // ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Filter Enum
-
-enum VehicleStatusFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case active = "Active"
-    case inactive = "Inactive"
-    case inMaintenance = "In Maintenance"
-
-    var id: String { rawValue }
-
-    var vehicleStatus: VehicleStatus? {
-        switch self {
-        case .all:           return nil
-        case .active:        return .active
-        case .inactive:      return .inactive
-        case .inMaintenance: return .inMaintenance
-        }
-    }
-
-    var chipColor: Color {
-        switch self {
-        case .all:           return AppTheme.Brand.royalBlue
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
-        }
-    }
-}
-
-// MARK: Model Extensions
-
-extension VehicleStatus {
-    var displayName: String {
-        switch self {
-        case .active:        return "Active"
-        case .inactive:      return "Inactive"
-        case .inMaintenance: return "Maintenance"
-        }
-    }
-    var statusColor: Color {
-        switch self {
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
-        }
-    }
-    var statusIcon: String {
-        switch self {
-        case .active:        return "checkmark.circle.fill"
-        case .inactive:      return "pause.circle.fill"
-        case .inMaintenance: return "wrench.and.screwdriver.fill"
-        }
-    }
-}
-
-extension VehicleType {
-    var displayName: String {
-        switch self {
-        case .truck: return "Truck"
-        case .van:   return "Van"
-        case .car:   return "Car"
-        case .bike:  return "Bike"
-        }
-    }
-    var icon: String {
-        switch self {
-        case .truck: return "truck.box.fill"
-        case .van:   return "bus.fill"
-        case .car:   return "car.fill"
-        case .bike:  return "bicycle"
-        }
-    }
-    var iconColor: Color {
-        switch self {
-        case .truck: return AppTheme.Brand.royalBlue
-        case .van:   return Color(red: 0.58, green: 0.39, blue: 0.87)
-        case .car:   return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .bike:  return AppTheme.Brand.accent
-        }
-    }
-}
-
-extension FuelType {
-    var displayName: String {
-        switch self {
-        case .petrol:   return "Petrol"
-        case .diesel:   return "Diesel"
-        case .electric: return "Electric"
-        case .hybrid:   return "Hybrid"
-        }
-    }
-    var icon: String {
-        switch self {
-        case .petrol, .diesel: return "fuelpump.fill"
-        case .electric:        return "bolt.fill"
-        case .hybrid:          return "leaf.fill"
-        }
-    }
-}
 
 // MARK: Vehicle List View
 
@@ -442,6 +325,9 @@ struct VehicleListView: View {
                 }
             }
         }
+        .refreshable {
+            await syncVehicles()
+        }
         .navigationTitle("Vehicle Management")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "Search registration, make, model…")
@@ -455,6 +341,9 @@ struct VehicleListView: View {
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) { appearAnimation = true }
+            Task {
+                await syncVehicles()
+            }
         }
         .sheet(isPresented: $showAddVehicle) {
             if #available(iOS 26.0, *) {
@@ -519,6 +408,40 @@ struct VehicleListView: View {
     private func countForFilter(_ filter: VehicleStatusFilter) -> Int {
         guard let status = filter.vehicleStatus else { return vehicles.count }
         return vehicles.filter { $0.status == status }.count
+    }
+
+    private func syncVehicles() async {
+        do {
+            let dbVehicles = try await SupabaseManager.shared.fetchVehicles()
+            await MainActor.run {
+                for dbv in dbVehicles {
+                    if let localVehicle = vehicles.first(where: { $0.id == dbv.id }) {
+                        localVehicle.registrationNumber = dbv.vehicleNumber
+                        localVehicle.vinNumber = dbv.vin
+                        localVehicle.make = dbv.manufacturer
+                        localVehicle.model = dbv.model
+                        localVehicle.year = dbv.year
+                        localVehicle.status = dbv.status.toLocalStatus
+                        localVehicle.assignedDriverId = dbv.assignedDriverId
+                        localVehicle.lastServiceDate = dbv.lastServiceDate
+                    } else {
+                        let newVehicle = dbv.asLocalVehicle
+                        modelContext.insert(newVehicle)
+                    }
+                }
+                
+                let remoteIds = Set(dbVehicles.map { $0.id })
+                for localVehicle in vehicles {
+                    if !remoteIds.contains(localVehicle.id) {
+                        modelContext.delete(localVehicle)
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("Failed to sync vehicles: \(error)")
+        }
     }
 }
 
@@ -703,6 +626,9 @@ struct DriverListView: View {
                 }
             }
         }
+        .refreshable {
+            await syncDrivers()
+        }
         .navigationTitle("Driver Management")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "Search drivers…")
@@ -716,7 +642,12 @@ struct DriverListView: View {
         }
         .sheet(isPresented: $showAddDriver) { AddDriverFormView() }
         .sheet(item: $selectedDriverForEdit) { d in EditDriverFormView(driver: d) }
-        .onAppear { triggerCardAnimations() }
+        .onAppear {
+            triggerCardAnimations()
+            Task {
+                await syncDrivers()
+            }
+        }
         .onChange(of: filteredDrivers.count) { triggerCardAnimations() }
     }
 
@@ -826,6 +757,39 @@ struct DriverListView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.08 + 0.15)) {
                 cardAnimations[driver.id] = true
             }
+        }
+    }
+
+    private func syncDrivers() async {
+        do {
+            let dbDrivers = try await SupabaseManager.shared.fetchDrivers()
+            await MainActor.run {
+                for dbd in dbDrivers {
+                    if let localDriver = allUsers.first(where: { $0.id == dbd.id }) {
+                        localDriver.fullName = dbd.name
+                        localDriver.email = dbd.email
+                        localDriver.phoneNumber = dbd.phoneNumber ?? ""
+                        localDriver.role = dbd.role.asLocalRole
+                    } else {
+                        let newDriver = dbd.asLocalUser
+                        modelContext.insert(newDriver)
+                    }
+                }
+                
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbDrivers.map { $0.id })
+                    let localDrivers = allUsers.filter { $0.role == .driver }
+                    for localDriver in localDrivers {
+                        if !remoteIds.contains(localDriver.id) {
+                            modelContext.delete(localDriver)
+                        }
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("Failed to sync drivers: \(error)")
         }
     }
 }
@@ -1207,60 +1171,15 @@ struct EditStaffSheetView: View {
 // MARK: - SECTION 5 ▸ Trip List
 // ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Filter Enum
 
-enum TripStatusFilter: String, CaseIterable, Identifiable {
+// MARK: Trip Category Filter
+enum TripCategoryFilter: String, CaseIterable, Identifiable {
     case all = "All"
-    case assigned = "Assigned"
-    case started = "Started"
-    case inProgress = "In Progress"
-    case completed = "Completed"
-    case cancelled = "Cancelled"
+    case active = "Active"
+    case upcoming = "Upcoming"
+    case past = "Past"
 
     var id: String { rawValue }
-
-    var tripStatus: TripStatus? {
-        switch self {
-        case .all:       return nil
-        case .assigned:  return .assigned
-        case .started:   return .started
-        case .inProgress:return .inProgress
-        case .completed: return .completed
-        case .cancelled: return .cancelled
-        }
-    }
-}
-
-// MARK: Trip Status Extension
-
-extension TripStatus {
-    var displayName: String {
-        switch self {
-        case .assigned:   return "Assigned"
-        case .started:    return "Started"
-        case .inProgress: return "In Progress"
-        case .completed:  return "Completed"
-        case .cancelled:  return "Cancelled"
-        }
-    }
-    var badgeColor: Color {
-        switch self {
-        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90)
-        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inProgress: return AppTheme.Brand.accent
-        case .completed:  return Color.gray
-        case .cancelled:  return Color.red
-        }
-    }
-    var badgeIcon: String {
-        switch self {
-        case .assigned:   return "person.badge.clock.fill"
-        case .started:    return "play.circle.fill"
-        case .inProgress: return "truck.box.fill"
-        case .completed:  return "checkmark.circle.fill"
-        case .cancelled:  return "xmark.circle.fill"
-        }
-    }
 }
 
 // MARK: Trip List View
@@ -1269,7 +1188,7 @@ extension TripStatus {
 struct TripListView: View {
 
     @State private var searchText = ""
-    @State private var selectedFilter: TripStatusFilter = .all
+    @State private var selectedFilter: TripCategoryFilter = .all
     @State private var showAddTrip = false
     @State private var editingTrip: Trip? = nil
     @State private var appearAnimation = false
@@ -1277,13 +1196,21 @@ struct TripListView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Trip.scheduledStartTime, order: .reverse) private var allTrips: [Trip]
-    @Query private var allUsers: [User]
-
-    private let tripPurple = Color(red: 0.58, green: 0.39, blue: 0.87)
+    @Query(sort: \User.fullName) private var allUsers: [User]
 
     private var filteredTrips: [Trip] {
         var trips = allTrips
-        if let status = selectedFilter.tripStatus { trips = trips.filter { $0.tripStatus == status } }
+        switch selectedFilter {
+        case .all:
+            break
+        case .active:
+            trips = trips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }
+        case .upcoming:
+            trips = trips.filter { $0.tripStatus == .assigned }
+        case .past:
+            trips = trips.filter { $0.tripStatus == .completed || $0.tripStatus == .cancelled }
+        }
+        
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if !q.isEmpty {
             trips = trips.filter {
@@ -1295,12 +1222,26 @@ struct TripListView: View {
         return trips
     }
 
+    private func countForFilter(_ filter: TripCategoryFilter) -> Int {
+        switch filter {
+        case .all:
+            return allTrips.count
+        case .active:
+            return allTrips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }.count
+        case .upcoming:
+            return allTrips.filter { $0.tripStatus == .assigned }.count
+        case .past:
+            return allTrips.filter { $0.tripStatus == .completed || $0.tripStatus == .cancelled }.count
+        }
+    }
+
     private func driverName(for driverId: UUID) -> String? {
         allUsers.first(where: { $0.id == driverId && $0.role == UserRole.driver })?.fullName
     }
 
     var body: some View {
-        ZStack {
+        NavigationStack {
+            ZStack {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChips.padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 8)
@@ -1312,7 +1253,7 @@ struct TripListView: View {
                             Text("Schedule or dispatch your first trip.")
                         } actions: {
                             Button("Add Trip") { showAddTrip = true }
-                                .buttonStyle(.borderedProminent).tint(tripPurple)
+                                .buttonStyle(.borderedProminent).tint(AppTheme.Brand.royalBlue)
                         }
                     } else {
                         ContentUnavailableView.search(text: searchText)
@@ -1321,6 +1262,9 @@ struct TripListView: View {
                     tripListContent
                 }
             }
+        }
+        .refreshable {
+            await syncTrips()
         }
         .navigationTitle("Trip Management")
         .navigationBarTitleDisplayMode(.large)
@@ -1335,26 +1279,50 @@ struct TripListView: View {
         }
         .sheet(isPresented: $showAddTrip) { AddTripFormView() }
         .sheet(item: $editingTrip) { t in EditTripFormView(trip: t) }
-        .onAppear { withAnimation(.easeOut(duration: 0.6)) { appearAnimation = true } }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.6)) { appearAnimation = true }
+            Task {
+                await syncTrips()
+            }
+        }
+        }
     }
 
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(TripStatusFilter.allCases) { filter in
+                ForEach(TripCategoryFilter.allCases) { filter in
                     let isSelected = selectedFilter == filter
+                    let chipColor: Color = {
+                        switch filter {
+                        case .all:      return AppTheme.Brand.accent // Dark Orange in App Theme
+                        case .active:   return Color(red: 0.30, green: 0.70, blue: 0.46) // Fresh Green
+                        case .upcoming: return Color(red: 0.15, green: 0.38, blue: 0.90) // Royal Blue
+                        case .past:     return Color(red: 0.55, green: 0.58, blue: 0.62) // Slate-Silver (Completed success)
+                        }
+                    }()
+                    
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { selectedFilter = filter }
                     } label: {
-                        Text(filter.rawValue)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(isSelected ? .white : .gray)
-                            .padding(.horizontal, 16).padding(.vertical, 9)
-                            .background { if isSelected { tripPurple } }
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(isSelected ? Color.clear : AppTheme.Glass.border, lineWidth: 1))
+                        HStack(spacing: 6) {
+                            Text(filter.rawValue)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            let count = countForFilter(filter)
+                            if count > 0 {
+                                Text("\(count)")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(isSelected ? Color.white.opacity(0.25) : chipColor.opacity(0.12))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .foregroundColor(isSelected ? .white : chipColor)
+                        .padding(.horizontal, 16).padding(.vertical, 9)
+                        .background(isSelected ? chipColor : chipColor.opacity(0.08))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(isSelected ? Color.clear : chipColor.opacity(0.2), lineWidth: 1))
                     }
                     .buttonStyle(ScaleButtonStyle())
                 }
@@ -1373,7 +1341,7 @@ struct TripListView: View {
                     TripCardView(
                         trip: trip,
                         driverName: driverName(for: trip.driverId),
-                        accentColor: tripPurple,
+                        accentColor: trip.tripStatus.badgeColor,
                         onEdit: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             editingTrip = trip
@@ -1389,6 +1357,44 @@ struct TripListView: View {
                 }
             }
             .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 100)
+        }
+    }
+
+    private func syncTrips() async {
+        do {
+            let dbTrips = try await SupabaseManager.shared.fetchTrips()
+            await MainActor.run {
+                for dbt in dbTrips {
+                    if let localTrip = allTrips.first(where: { $0.id == dbt.id }) {
+                        localTrip.vehicleId = dbt.vehicleId
+                        localTrip.driverId = dbt.driverId
+                        localTrip.startLocation = dbt.source
+                        localTrip.endLocation = dbt.destination
+                        localTrip.scheduledStartTime = dbt.startTime ?? Date()
+                        localTrip.scheduledEndTime = dbt.endTime ?? Date().addingTimeInterval(7200)
+                        localTrip.actualStartTime = dbt.startTime
+                        localTrip.actualEndTime = dbt.endTime
+                        localTrip.distanceKm = dbt.distance
+                        localTrip.tripStatus = dbt.status.toLocalStatus
+                        localTrip.notes = dbt.notes
+                    } else {
+                        modelContext.insert(dbt.asLocalTrip)
+                    }
+                }
+                
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbTrips.map { $0.id })
+                    for localTrip in allTrips {
+                        if !remoteIds.contains(localTrip.id) {
+                            modelContext.delete(localTrip)
+                        }
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("Failed to sync trips: \(error)")
         }
     }
 }
@@ -1479,12 +1485,18 @@ struct TripCardView: View {
 
     private var tripStatusBadge: some View {
         HStack(spacing: 4) {
-            Image(systemName: trip.tripStatus.badgeIcon).font(.system(size: 10, weight: .bold))
-            Text(trip.tripStatus.displayName).font(.system(size: 11, weight: .bold, design: .rounded))
+            Image(systemName: trip.tripStatus.badgeIcon)
+                .font(.system(size: 10, weight: .bold))
+            Text(trip.tripStatus.displayName)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .foregroundColor(.white)
         .padding(.horizontal, 10).padding(.vertical, 5)
-        .background(trip.tripStatus.badgeColor).clipShape(Capsule())
+        .background(trip.tripStatus.badgeColor)
+        .clipShape(Capsule())
+        .layoutPriority(1)
     }
 
     private func tripDetailCol(label: String, value: String, icon: String) -> some View {
@@ -1501,7 +1513,7 @@ struct TripCardView: View {
 @available(iOS 26.0, *)
 struct AddTripStubView: View {
     @Environment(\.dismiss) private var dismiss
-    private let tripPurple = Color(red: 0.58, green: 0.39, blue: 0.87)
+    private let tripBlue = AppTheme.Brand.royalBlue
 
     var body: some View {
         NavigationStack {
@@ -1510,9 +1522,9 @@ struct AddTripStubView: View {
                 VStack(spacing: 24) {
                     Spacer()
                     ZStack {
-                        Circle().fill(tripPurple.opacity(0.08)).frame(width: 100, height: 100)
+                        Circle().fill(tripBlue.opacity(0.08)).frame(width: 100, height: 100)
                         Image(systemName: "map.fill").font(.system(size: 38, weight: .medium))
-                            .foregroundColor(tripPurple.opacity(0.5)).symbolEffect(.bounce)
+                            .foregroundColor(tripBlue.opacity(0.5)).symbolEffect(.bounce)
                     }
                     VStack(spacing: 8) {
                         Text("Add New Trip").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
@@ -1525,7 +1537,7 @@ struct AddTripStubView: View {
             .navigationTitle("New Trip").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.foregroundColor(tripPurple)
+                    Button("Cancel") { dismiss() }.foregroundColor(tripBlue)
                 }
             }
         }
@@ -1536,7 +1548,7 @@ struct AddTripStubView: View {
 struct EditTripStubView: View {
     let trip: Trip
     @Environment(\.dismiss) private var dismiss
-    private let tripPurple = Color(red: 0.58, green: 0.39, blue: 0.87)
+    private let tripBlue = AppTheme.Brand.royalBlue
 
     var body: some View {
         NavigationStack {
@@ -1545,13 +1557,13 @@ struct EditTripStubView: View {
                 VStack(spacing: 24) {
                     Spacer()
                     ZStack {
-                        Circle().fill(tripPurple.opacity(0.08)).frame(width: 100, height: 100)
+                        Circle().fill(tripBlue.opacity(0.08)).frame(width: 100, height: 100)
                         Image(systemName: "pencil.and.list.clipboard").font(.system(size: 38, weight: .medium))
-                            .foregroundColor(tripPurple.opacity(0.5)).symbolEffect(.bounce)
+                            .foregroundColor(tripBlue.opacity(0.5)).symbolEffect(.bounce)
                     }
                     VStack(spacing: 8) {
                         Text("Edit Trip").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
-                        Text("Editing \(trip.tripCode)").font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundColor(tripPurple)
+                        Text("Editing \(trip.tripCode)").font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundColor(tripBlue)
                         Text("Trip editing form\ncoming soon.")
                             .font(.system(size: 14, design: .rounded)).foregroundColor(.gray).multilineTextAlignment(.center)
                     }
@@ -1561,7 +1573,7 @@ struct EditTripStubView: View {
             .navigationTitle("Edit Trip").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.foregroundColor(tripPurple)
+                    Button("Cancel") { dismiss() }.foregroundColor(tripBlue)
                 }
             }
         }

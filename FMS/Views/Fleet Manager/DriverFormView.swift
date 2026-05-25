@@ -30,6 +30,7 @@ struct AddDriverFormView: View {
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
+    @State private var isSaving             = false
 
     // ── Focus ─────────────────────────────────────────────────────────────────
     @FocusState private var focusedField: UserFocusField?
@@ -63,9 +64,6 @@ struct AddDriverFormView: View {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
-                        // ── Save Button ────────────────────────────────────
-                        saveButton
-
                         Spacer().frame(height: 40)
                     }
                     .padding(.horizontal, 20)
@@ -77,11 +75,14 @@ struct AddDriverFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(Color.red)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        saveDriver()
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
+                    .disabled(isSaving)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -105,9 +106,14 @@ struct AddDriverFormView: View {
             saveDriver()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Save Driver")
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Saving..." : "Save Driver")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
@@ -115,13 +121,14 @@ struct AddDriverFormView: View {
             .frame(height: 54)
             .background(
                 LinearGradient(
-                    colors: [Color(red: 0.30, green: 0.70, blue: 0.46), Color(red: 0.25, green: 0.60, blue: 0.40)],
+                    colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.primaryDeep],
                     startPoint: .leading, endPoint: .trailing
                 )
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color(red: 0.30, green: 0.70, blue: 0.46).opacity(0.35), radius: 12, x: 0, y: 6)
+            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving)
     }
 
     // MARK: Save Action
@@ -146,21 +153,82 @@ struct AddDriverFormView: View {
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        // Simple password hashing using base64 for demo purposes
-        let passwordHash = Data(password.utf8).base64EncodedString()
+        isSaving = true
 
-        let driver = User(
-            fullName:     fullName.trimmingCharacters(in: .whitespaces),
-            email:        email.trimmingCharacters(in: .whitespaces).lowercased(),
-            phoneNumber:  phoneNumber.trimmingCharacters(in: .whitespaces),
-            passwordHash: passwordHash,
-            role:         .driver,
-            isActive:     isActive
-        )
-
-        modelContext.insert(driver)
-        try? modelContext.save()
-        saveSuccess = true
+        Task {
+            let emailToSend = email.trimmingCharacters(in: .whitespaces).lowercased()
+            let nameToSend = fullName.trimmingCharacters(in: .whitespaces)
+            let phoneToSend = phoneNumber.trimmingCharacters(in: .whitespaces)
+            let rawPassword = password
+            
+            do {
+                // Save to Supabase first (both Auth and public.users profile table)
+                let dbUser = try await SupabaseManager.shared.createDriver(
+                    email: emailToSend,
+                    passwordString: rawPassword,
+                    fullName: nameToSend,
+                    phoneNumber: phoneToSend,
+                    isActive: isActive
+                )
+                
+                // Simple password hashing using base64 for demo purposes
+                let passwordHash = Data(rawPassword.utf8).base64EncodedString()
+                
+                let driver = User(
+                    id: dbUser.id, // Use the correct generated Auth UUID
+                    fullName: nameToSend,
+                    email: emailToSend,
+                    phoneNumber: phoneToSend,
+                    passwordHash: passwordHash,
+                    role: .driver,
+                    isActive: isActive
+                )
+                
+                // Attempt to send email with plain-text password
+                do {
+                    try await EmailManager.shared.sendWelcomeEmail(to: emailToSend, name: nameToSend, passwordString: rawPassword)
+                } catch {
+                    print("⚠️ Welcome email send failed: \(error.localizedDescription)")
+                }
+                
+                await MainActor.run {
+                    modelContext.insert(driver)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to save driver to Supabase: \(error)")
+                
+                // Fallback offline support: generate a local UUID
+                let fallbackId = UUID()
+                let passwordHash = Data(rawPassword.utf8).base64EncodedString()
+                let driver = User(
+                    id: fallbackId,
+                    fullName: nameToSend,
+                    email: emailToSend,
+                    phoneNumber: phoneToSend,
+                    passwordHash: passwordHash,
+                    role: .driver,
+                    isActive: isActive
+                )
+                
+                // Attempt welcome email even if Supabase profile insert failed (fallback offline mode)
+                do {
+                    try await EmailManager.shared.sendWelcomeEmail(to: emailToSend, name: nameToSend, passwordString: rawPassword)
+                } catch {
+                    print("⚠️ Welcome email send failed in offline fallback: \(error.localizedDescription)")
+                }
+                
+                // Fallback to local cache so user can work offline
+                await MainActor.run {
+                    modelContext.insert(driver)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 }
 
@@ -186,6 +254,8 @@ struct EditDriverFormView: View {
     @State private var validationMessage   = ""
     @State private var showDeleteConfirm   = false
     @State private var saveSuccess         = false
+    @State private var isSaving            = false
+    @State private var isDeleting          = false
     @FocusState private var focusedField: UserFocusField?
 
     init(driver: User) {
@@ -229,9 +299,6 @@ struct EditDriverFormView: View {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
-                        // ── Save ───────────────────────────────────────────
-                        saveButton
-
                         // ── Delete ─────────────────────────────────────────
                         deleteButton
 
@@ -246,11 +313,14 @@ struct EditDriverFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .foregroundColor(Color.red)
                 }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        saveChanges()
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
+                    .disabled(isSaving || isDeleting)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -310,18 +380,24 @@ struct EditDriverFormView: View {
     private var saveButton: some View {
         Button { saveChanges() } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
-                Text("Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
             .background(LinearGradient(
-                colors: [Color(red: 0.30, green: 0.70, blue: 0.46), Color(red: 0.25, green: 0.60, blue: 0.40)],
+                colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.primaryDeep],
                 startPoint: .leading, endPoint: .trailing
             ))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color(red: 0.30, green: 0.70, blue: 0.46).opacity(0.35), radius: 12, x: 0, y: 6)
+            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving || isDeleting)
     }
 
     // MARK: Delete Button
@@ -329,8 +405,13 @@ struct EditDriverFormView: View {
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
             HStack(spacing: 8) {
-                Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
-                Text("Delete Driver").font(.system(size: 15, weight: .semibold, design: .rounded))
+                if isDeleting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                } else {
+                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                }
+                Text(isDeleting ? "Deleting..." : "Delete Driver").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
             .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -339,6 +420,7 @@ struct EditDriverFormView: View {
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
         }
+        .disabled(isSaving || isDeleting)
     }
 
     // MARK: Actions
@@ -359,21 +441,75 @@ struct EditDriverFormView: View {
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        driver.fullName    = fullName.trimmingCharacters(in: .whitespaces)
-        driver.email       = email.trimmingCharacters(in: .whitespaces).lowercased()
-        driver.phoneNumber = phoneNumber.trimmingCharacters(in: .whitespaces)
-        driver.isActive    = isActive
-        driver.updatedAt   = .now
+        let updatedDBUser = DBUser(
+            id: driver.id,
+            name: fullName.trimmingCharacters(in: .whitespaces),
+            email: email.trimmingCharacters(in: .whitespaces).lowercased(),
+            role: driver.role.toDBUserRole,
+            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespaces).isEmpty ? nil : phoneNumber.trimmingCharacters(in: .whitespaces),
+            profileImage: driver.profileImageURL,
+            createdAt: driver.createdAt
+        )
 
-        try? modelContext.save()
-        saveSuccess = true
+        isSaving = true
+
+        Task {
+            do {
+                try await SupabaseManager.shared.updateDriver(updatedDBUser)
+                
+                await MainActor.run {
+                    driver.fullName    = fullName.trimmingCharacters(in: .whitespaces)
+                    driver.email       = email.trimmingCharacters(in: .whitespaces).lowercased()
+                    driver.phoneNumber = phoneNumber.trimmingCharacters(in: .whitespaces)
+                    driver.isActive    = isActive
+                    driver.updatedAt   = .now
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to update driver on Supabase: \(error)")
+                await MainActor.run {
+                    driver.fullName    = fullName.trimmingCharacters(in: .whitespaces)
+                    driver.email       = email.trimmingCharacters(in: .whitespaces).lowercased()
+                    driver.phoneNumber = phoneNumber.trimmingCharacters(in: .whitespaces)
+                    driver.isActive    = isActive
+                    driver.updatedAt   = .now
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 
     private func deleteDriver() {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        modelContext.delete(driver)
-        try? modelContext.save()
-        dismiss()
+        
+        isDeleting = true
+        
+        Task {
+            do {
+                try await SupabaseManager.shared.deleteDriver(id: driver.id)
+                
+                await MainActor.run {
+                    modelContext.delete(driver)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            } catch {
+                print("Failed to delete driver from Supabase: \(error)")
+                await MainActor.run {
+                    modelContext.delete(driver)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            }
+        }
     }
 }
 

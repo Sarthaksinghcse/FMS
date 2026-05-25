@@ -12,280 +12,22 @@ import MapKit
 import Combine
 
 
-// MARK: - Design Tokens
+// MARK: - Design Tokens (mapped to AppTheme — single source of truth)
 
 extension Color {
-    static let fmsIndigo      = Color(red: 0.20, green: 0.20, blue: 0.60)
-    static let fmsIndigoLight = Color(red: 0.20, green: 0.20, blue: 0.60).opacity(0.10)
-    static let fmsCard        = Color(UIColor.secondarySystemBackground)
-    static let fmsBackground  = Color(UIColor.systemBackground)
+    /// Primary brand accent — maps to AppTheme.Brand.primaryDeep
+    static let fmsIndigo      = AppTheme.Brand.primaryDeep
+    /// Light tint of the brand accent
+    static let fmsIndigoLight = AppTheme.Brand.primaryDeep.opacity(0.10)
+    /// Card surface — white
+    static let fmsCard        = AppTheme.Background.card
+    /// Page background — soft blue-white
+    static let fmsBackground  = AppTheme.Background.page
 }
 
-// MARK: - Driver Status
-
-enum DriverOnlineStatus: String, CaseIterable {
-    case active = "Active", idle = "Idle", maintenance = "Maintenance", offline = "Offline"
-
-    var dot: Color {
-        switch self {
-        case .active:      return Color(red: 0.2, green: 0.78, blue: 0.35)
-        case .idle:        return Color(red: 0.98, green: 0.78, blue: 0.10)
-        case .maintenance: return Color(red: 0.95, green: 0.50, blue: 0.15)
-        case .offline:     return Color(UIColor.systemGray3)
-        }
-    }
-}
-
-// MARK: - Dashboard Action
-
-enum DashboardAction {
-    case voiceLog, reportIssue, preTrip, postTrip, defect, messaging
-}
-
-// MARK: - Local UI Models
-
-struct DriverQuickAction: Identifiable {
-    let id   = UUID()
-    let title: String
-    let subtitle: String
-    let icon: String
-    let color: Color
-    let action: DashboardAction
-}
-
-struct DriverChatMessage: Identifiable {
-    let id       = UUID()
-    let sender: String
-    let role: String
-    let preview: String
-    let time: String
-    let unread: Bool
-    let initials: String
-}
-
-struct DashboardBanner: Identifiable {
-    let id    = UUID()
-    let title: String
-    let body: String
-    let kind: BannerKind
-
-    enum BannerKind { case info, warning, urgent }
-
-    var tint: Color {
-        switch kind {
-        case .info:    return .fmsIndigo
-        case .warning: return Color(red: 0.95, green: 0.50, blue: 0.15)
-        case .urgent:  return Color(red: 0.85, green: 0.15, blue: 0.15)
-        }
-    }
-    var icon: String {
-        switch kind {
-        case .info:    return "info.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .urgent:  return "exclamationmark.octagon.fill"
-        }
-    }
-}
-
-struct DashboardUser {
-    let id: UUID
-    let name: String
-}
+// The DriverOnlineStatus, DashboardAction, DriverQuickAction, DriverChatMessage, DashboardBanner, DashboardUser, DriverDashboardDataStore, CompletedTripRecord, and DriverDashboardViewModel have been extracted to ViewModels/Driver/DriverDashboardViewModel.swift
 
 
-
-private actor DriverDashboardDataStore {
-    static let shared = DriverDashboardDataStore()
-
-    let currentUser = DashboardUser(
-        id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
-        name: "Naman Yadav"
-    )
-    private let vehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
-
-    func fetchTrips() async throws -> [DBTrip] {
-        [
-            DBTrip(id: UUID(), vehicleId: vehicleId, driverId: currentUser.id,
-                   source: "Warehouse A - Sector 17",
-                   destination: "Distribution Hub - Phase 5",
-                   startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
-                   endTime: Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                   distance: 48.2, status: .assigned,
-                   notes: "Priority delivery", createdAt: .now),
-            DBTrip(id: UUID(), vehicleId: vehicleId, driverId: currentUser.id,
-                   source: "Distribution Hub - Phase 5",
-                   destination: "Client Site - Noida",
-                   startTime: Calendar.current.date(byAdding: .hour, value: 6, to: .now),
-                   endTime: Calendar.current.date(byAdding: .hour, value: 9, to: .now),
-                   distance: 31.0, status: .assigned,
-                   notes: nil, createdAt: .now)
-        ]
-    }
-
-    func fetchVehicles() async throws -> [DBVehicle] {
-        [
-            DBVehicle(
-                id: vehicleId,
-                vehicleNumber: "TN-07-AB-1234",
-                model: "Transit",
-                manufacturer: "Ford",
-                year: 2024,
-                vin: "FMSMOCKVIN000101",
-                licensePlate: "TN-07-AB-1234",
-                status: .inUse,
-                assignedDriverId: currentUser.id,
-                lastServiceDate: nil,
-                createdAt: .now
-            )
-        ]
-    }
-}
-
-// MARK: - ViewModel
-
-@MainActor
-final class DriverDashboardViewModel: ObservableObject {
-
-    // MARK: State
-
-    @Published var driverStatus: DriverOnlineStatus = .idle
-    @Published var currentTrip: DBTrip?
-    @Published var upcomingTrips: [DBTrip] = []
-    @Published var assignedVehicle: DBVehicle?
-    @Published var messages: [DriverChatMessage] = []
-    @Published var banners: [DashboardBanner] = []
-    @Published var isTripActive  = false
-    @Published var tripElapsed   = 0
-    @Published var fuelLevel: Double = 0.72
-    @Published var isLoading     = false
-
-    // Sheet visibility
-    @Published var showVoiceLog  = false
-    @Published var showIssue     = false
-    @Published var showPreTrip   = false
-    @Published var showPostTrip  = false
-    @Published var showDefect    = false
-    @Published var showMessaging = false
-
-    @Published var confirmEnd    = false
-    @Published var showMaps      = false
-    @Published var activeTrip: DBTrip?
-    @Published var mapActiveTrip: DBTrip?
-
-    private var tripTimer: Timer?
-    private let db = DriverDashboardDataStore.shared
-
-    init() { seedMock() }
-
-    // MARK: Load
-
-    func load() async {
-        isLoading = true; defer { isLoading = false }
-        do {
-            let trips    = try await db.fetchTrips()
-            let vehicles = try await db.fetchVehicles()
-            let uid = db.currentUser.id
-            let mine = trips.filter { $0.driverId == uid }
-            currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
-            activeTrip    = currentTrip ?? activeTrip
-            upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
-            isTripActive  = currentTrip != nil
-            driverStatus  = isTripActive ? .active : .idle
-            let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
-            assignedVehicle = vehicles.first(where: { $0.id == vid })
-        } catch { /* keep mock */ }
-    }
-
-    // MARK: Trip control
-
-    func beginTrip(trip: DBTrip? = nil) {
-        activeTrip = trip ?? upcomingTrips.first
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
-            isTripActive = true; driverStatus = .active; tripElapsed = 0
-        }
-        showMaps = true
-        mapActiveTrip = activeTrip
-        tripTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.tripElapsed += 1
-            }
-        }
-    }
-
-    func finishTrip() {
-        tripTimer?.invalidate(); tripTimer = nil
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
-            isTripActive = false; driverStatus = .idle
-            currentTrip = nil; activeTrip = nil
-        }
-    }
-
-    // MARK: Helpers
-
-    var elapsedFormatted: String {
-        let h = tripElapsed / 3600; let m = (tripElapsed % 3600) / 60; let s = tripElapsed % 60
-        return String(format: "%02d:%02d:%02d", h, m, s)
-    }
-
-    var greeting: String {
-        switch Calendar.current.component(.hour, from: Date()) {
-        case 0..<12:  return "Good morning"
-        case 12..<17: return "Good afternoon"
-        default:      return "Good evening"
-        }
-    }
-
-    var driverFirstName: String {
-        db.currentUser.name.components(separatedBy: " ").first ?? "Driver"
-    }
-
-    var totalKm: Double { upcomingTrips.reduce(0) { $0 + $1.distance } }
-    var assignedReg: String { assignedVehicle?.vehicleNumber ?? "TN-07-AB-1234" }
-
-    func fire(_ action: DashboardAction) {
-        switch action {
-        case .voiceLog:    showVoiceLog  = true
-        case .reportIssue: showIssue     = true
-        case .preTrip:     showPreTrip   = true
-        case .postTrip:    showPostTrip  = true
-        case .defect:      showDefect    = true
-        case .messaging:   showMessaging = true
-        }
-    }
-
-    // MARK: Mock seed
-
-    private func seedMock() {
-        upcomingTrips = [
-            DBTrip(id: UUID(), vehicleId: UUID(), driverId: UUID(),
-                   source: "Warehouse A – Sector 17",
-                   destination: "Distribution Hub – Phase 5",
-                   startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
-                   endTime:   Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                   distance: 48.2, status: .assigned, notes: "Priority delivery", createdAt: .now),
-            DBTrip(id: UUID(), vehicleId: UUID(), driverId: UUID(),
-                   source: "Distribution Hub – Phase 5",
-                   destination: "Client Site – Noida",
-                   startTime: Calendar.current.date(byAdding: .hour, value: 6, to: .now),
-                   endTime:   Calendar.current.date(byAdding: .hour, value: 9, to: .now),
-                   distance: 31.0, status: .assigned, notes: nil, createdAt: .now)
-        ]
-        messages = [
-            DriverChatMessage(sender: "Rajiv Sharma",     role: "Fleet Manager",
-                              preview: "Confirm ETA for Route 2.",    time: "10:32 AM", unread: true,  initials: "RS"),
-            DriverChatMessage(sender: "Maintenance Desk", role: "Maintenance",
-                              preview: "TN-07-AB-1234 ready for dispatch.", time: "9:15 AM",  unread: true,  initials: "MD"),
-            DriverChatMessage(sender: "Priya Menon",      role: "Fleet Manager",
-                              preview: "Updated route file sent.",    time: "Yesterday", unread: false, initials: "PM")
-        ]
-        banners = [
-            DashboardBanner(title: "Trip Assigned",
-                            body: "New trip #TRP-2240 at 12:30 PM", kind: .info),
-            DashboardBanner(title: "Pre-Trip Due",
-                            body: "Complete inspection before departure", kind: .warning)
-        ]
-    }
-}
 
 // MARK: - Root View
 
@@ -293,14 +35,45 @@ final class DriverDashboardViewModel: ObservableObject {
 struct DriverDashboardView: View {
 
     @StateObject private var vm = DriverDashboardViewModel()
+    @State private var selectedTab = 0
 
     var body: some View {
-        TabView {
-            Tab("Dashboard", systemImage: "square.grid.2x2") {
-                DriverHomeTab(vm: vm)
+        ZStack(alignment: .bottom) {
+            Group {
+                if selectedTab == 0 {
+                    DriverHomeTab(vm: vm, selectedTab: $selectedTab)
+                } else {
+                    DriverTripsTab(vm: vm)
+                }
             }
-            Tab("Trips", systemImage: "map") {
-                DriverTripsTab(vm: vm)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            DriverBottomTabBar(selectedTab: $selectedTab)
+                .padding(.bottom, 16)
+        }
+        // ── SOS Countdown Overlay ──────────────────────────────
+        .overlay {
+            if vm.showSOSCountdown {
+                SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
+                    vm.sosSentAlert = true
+                    
+                    // Live SOS emergency notification to Supabase
+                    let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+                    let notif = DBNotification(
+                        id: UUID(),
+                        userId: driverId,
+                        title: "🚨 EMERGENCY SOS SIGNAL TRIGGERED",
+                        message: "Driver \(SupabaseManager.shared.currentUser?.name ?? "Naman Yadav") has triggered a panic alarm. Assistance is required immediately.",
+                        type: .emergency,
+                        isRead: false,
+                        createdAt: Date()
+                    )
+                    Task {
+                        try? await SupabaseManager.shared.createNotification(notif)
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(999)
             }
         }
         .task { await vm.load() }
@@ -308,19 +81,93 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet() }
         .sheet(isPresented: $vm.showIssue)     { IssueReportSheet() }
         .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
-        .sheet(isPresented: $vm.showPostTrip)  { InspectionFormSheet(isPreTrip: false) }
+        .sheet(isPresented: $vm.showPostTrip, onDismiss: {
+            if vm.showPostTripOnEnd {
+                vm.finishTrip()
+            }
+        }) {
+            InspectionFormSheet(isPreTrip: false) { passed, issues, remarks in
+                vm.lastInspectionPassed = passed
+                vm.lastIssuesFound      = issues
+                vm.lastInspectionRemarks = remarks
+                vm.showPostTrip = false
+            }
+        }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatSheet(messages: vm.messages) }
-        .sheet(item: $vm.mapActiveTrip) { trip in
+        .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
+        .sheet(isPresented: $vm.showNotifications) {
+            DriverNotificationsSheet(vm: vm)
+        }
+        .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
         }
         // ─── Confirmations ──────────────────────────────────────
         .confirmationDialog("End Trip", isPresented: $vm.confirmEnd, titleVisibility: .visible) {
-            Button("End Trip", role: .destructive) { vm.finishTrip() }
+            Button("End Trip", role: .destructive) {
+                // Show post-trip inspection first — finishTrip() is called after the sheet closes
+                vm.showPostTripOnEnd = true
+                vm.showPostTrip = true
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Confirm you have completed all deliveries.")
+            Text("Please complete the post-trip inspection before ending.")
         }
+        .alert("🚨 SOS Triggered", isPresented: $vm.sosSentAlert) {
+            Button("OK") {}
+        } message: {
+            Text("Emergency alert has been sent to your fleet manager. Help is on the way.")
+        }
+    }
+}
+
+// ── Custom Bottom Tab Bar Capsule ──────────────────────────────────────────────
+struct DriverBottomTabBar: View {
+    @Binding var selectedTab: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            tabButton(index: 0, icon: "square.grid.2x2.fill", label: "Dashboard")
+            tabButton(index: 1, icon: "road.lanes", label: "Trips")
+        }
+        .padding(6)
+        .background(
+            Capsule()
+                .fill(Color(UIColor.systemBackground).opacity(0.95))
+                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 5)
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+    }
+
+    private func tabButton(index: Int, icon: String, label: String) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedTab = index
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .medium))
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundColor(selectedTab == index ? Color.fmsIndigo : Color.black.opacity(0.6))
+            .frame(width: 80, height: 48)
+            .background(
+                Group {
+                    if selectedTab == index {
+                        Capsule()
+                            .fill(Color.black.opacity(0.05))
+                    } else {
+                        Color.clear
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -340,13 +187,13 @@ struct FMSRouteRow: View {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.fmsIndigo.opacity(0.5), Color.green.opacity(0.5)],
+                            colors: [AppTheme.Brand.primaryDeep.opacity(0.5), AppTheme.Status.success.opacity(0.5)],
                             startPoint: .top, endPoint: .bottom
                         )
                     )
                     .frame(width: 2, height: 28)
                 Circle()
-                    .fill(Color(red: 0.2, green: 0.78, blue: 0.35))
+                    .fill(AppTheme.Status.success)
                     .frame(width: 9, height: 9)
             }
             VStack(alignment: .leading, spacing: 10) {
@@ -394,8 +241,8 @@ struct FMSMsgRow: View {
 
     private var roleColor: Color {
         switch msg.role {
-        case "Fleet Manager": return .fmsIndigo
-        case "Maintenance":   return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case "Fleet Manager": return AppTheme.Brand.primaryDeep
+        case "Maintenance":   return AppTheme.Brand.accent
         default:              return Color(UIColor.systemGray)
         }
     }
@@ -482,10 +329,9 @@ struct ActionTile: View {
 
 struct VoiceLogSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var recording  = false
+    @State private var voiceLogger = VoiceTripLogger()
     @State private var elapsed    = 0
     @State private var timer: Timer?
-    @State private var transcript = ""
     @State private var saved      = false
 
     var body: some View {
@@ -503,35 +349,35 @@ struct VoiceLogSheet: View {
                         ForEach(0..<3, id: \.self) { i in
                             Circle()
                                 .stroke(
-                                    recording ? Color.red.opacity(0.12) : Color.clear,
+                                    voiceLogger.isRecording ? Color.red.opacity(0.12) : Color.clear,
                                     lineWidth: 1.5
                                 )
                                 .frame(
                                     width: CGFloat(100 + i * 36),
                                     height: CGFloat(100 + i * 36)
                                 )
-                                .scaleEffect(recording ? 1.0 : 0.85)
+                                .scaleEffect(voiceLogger.isRecording ? 1.0 : 0.85)
                                 .animation(
-                                    recording
+                                    voiceLogger.isRecording
                                     ? .easeInOut(duration: 1.4).repeatForever().delay(Double(i) * 0.28)
                                     : .default,
-                                    value: recording
+                                    value: voiceLogger.isRecording
                                 )
                         }
                         Button(action: toggleRec) {
                             ZStack {
                                 Circle()
                                     .fill(
-                                        recording
+                                        voiceLogger.isRecording
                                         ? AnyShapeStyle(Color.red.gradient)
                                         : AnyShapeStyle(Color.fmsIndigo.gradient)
                                     )
                                     .frame(width: 88, height: 88)
                                     .shadow(
-                                        color: (recording ? Color.red : Color.fmsIndigo).opacity(0.35),
+                                        color: (voiceLogger.isRecording ? Color.red : Color.fmsIndigo).opacity(0.35),
                                         radius: 20, y: 6
                                     )
-                                Image(systemName: recording ? "stop.fill" : "mic.fill")
+                                Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundStyle(.white)
                             }
@@ -541,16 +387,16 @@ struct VoiceLogSheet: View {
 
                     VStack(spacing: 8) {
                         Text(
-                            recording
+                            voiceLogger.isRecording
                             ? String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
                             : "Tap to Record"
                         )
                         .font(.system(size: 30, weight: .bold, design: .monospaced))
-                        .foregroundStyle(recording ? Color.red : Color.fmsIndigo)
+                        .foregroundStyle(voiceLogger.isRecording ? Color.red : Color.fmsIndigo)
                         .contentTransition(.numericText())
 
                         Text(
-                            recording
+                            voiceLogger.isRecording
                             ? "Listening…"
                             : "Voice-log your trip notes, delays, or ETA"
                         )
@@ -560,14 +406,41 @@ struct VoiceLogSheet: View {
                         .padding(.horizontal, 40)
                     }
 
-                    if !transcript.isEmpty {
+                    if let err = voiceLogger.errorMessage {
+                        Text(err)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.red)
+                            .padding(.horizontal, 40)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    if !voiceLogger.transcribedText.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("Transcript", systemImage: "text.quote")
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(Color.fmsIndigo)
-                            Text(transcript)
+                            Text(voiceLogger.transcribedText)
                                 .font(.system(size: 13))
                                 .foregroundStyle(.secondary)
+                            
+                            if let parsed = voiceLogger.parsedData {
+                                Divider().padding(.vertical, 4)
+                                Label("Extracted Entities", systemImage: "wand.and.stars")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppTheme.Brand.accent)
+                                
+                                HStack(alignment: .top, spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if let sl = parsed.startLocation { Text("From: \(sl)").font(.caption) }
+                                        if let el = parsed.endLocation   { Text("To: \(el)").font(.caption) }
+                                    }
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if let st = parsed.startTime { Text("Start: \(st)").font(.caption) }
+                                        if let et = parsed.endTime   { Text("End: \(et)").font(.caption) }
+                                        if let mi = parsed.mileage   { Text("Dist: \(String(format: "%.1f", mi))").font(.caption) }
+                                    }
+                                }
+                            }
                         }
                         .padding(16)
                         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
@@ -576,7 +449,7 @@ struct VoiceLogSheet: View {
 
                     Spacer()
 
-                    if !transcript.isEmpty {
+                    if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
                         Button { saved = true } label: {
                             Text("Save Log")
                                 .font(.system(size: 16, weight: .semibold))
@@ -609,13 +482,15 @@ struct VoiceLogSheet: View {
     }
 
     private func toggleRec() {
-        recording.toggle()
-        if recording {
+        if voiceLogger.isRecording {
+            voiceLogger.stopRecording()
+            timer?.invalidate(); timer = nil
+        } else {
             elapsed = 0
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in elapsed += 1 }
-        } else {
-            timer?.invalidate(); timer = nil
-            transcript = "Log at \(Date().formatted(.dateTime.hour().minute())). Departed on schedule. Minor traffic on NH-8 near Sector 14. ETA revised to 2:45 PM."
+            Task {
+                await voiceLogger.startRecording()
+            }
         }
     }
 }
@@ -752,6 +627,8 @@ struct IssueReportSheet: View {
 struct InspectionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
+    /// Called when the user submits. (passed, issuesFound, remarks)
+    var onComplete: ((Bool, Int, String) -> Void)? = nil
 
     struct CheckItem: Identifiable {
         let id    = UUID()
@@ -782,6 +659,8 @@ struct InspectionFormSheet: View {
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
     private var passCount: Int { items.filter(\.passed).count }
+    /// For post-trip: items that are NOT checked = issues found
+    private var issuesFound: Int { isPreTrip ? 0 : items.filter { !$0.passed }.count }
 
     var body: some View {
         NavigationStack {
@@ -797,7 +676,7 @@ struct InspectionFormSheet: View {
                             Circle()
                                 .trim(from: 0, to: CGFloat(passCount) / CGFloat(items.count))
                                 .stroke(
-                                    allPass ? Color(red:0.2,green:0.78,blue:0.35) : Color.fmsIndigo,
+                                    allPass ? AppTheme.Status.success : Color.fmsIndigo,
                                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                                 )
                                 .rotationEffect(.degrees(-90))
@@ -820,7 +699,7 @@ struct InspectionFormSheet: View {
                             HStack(spacing: 14) {
                                 Image(systemName: item.icon)
                                     .font(.system(size: 16))
-                                    .foregroundStyle(item.passed ? Color(red:0.2,green:0.78,blue:0.35) : .secondary)
+                                    .foregroundStyle(item.passed ? AppTheme.Status.success : .secondary)
                                     .frame(width: 26)
                                 Text(item.label)
                                     .font(.system(size: 14))
@@ -845,9 +724,9 @@ struct InspectionFormSheet: View {
                     HStack {
                         Label("Defect Found", systemImage: "exclamationmark.triangle.fill")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(hasDefect ? Color(red:0.85,green:0.15,blue:0.15) : .secondary)
+                            .foregroundStyle(hasDefect ? AppTheme.Status.danger : .secondary)
                         Spacer()
-                        Toggle("", isOn: $hasDefect).tint(Color(red:0.85,green:0.15,blue:0.15))
+                        Toggle("", isOn: $hasDefect).tint(AppTheme.Status.danger)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
@@ -866,14 +745,24 @@ struct InspectionFormSheet: View {
                             if submitting {
                                 ProgressView().tint(.white)
                             } else {
-                                Text(allPass ? "Submit  ✓ All Passed" : "Submit Inspection")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(.white)
+                                if isPreTrip {
+                                    Text(allPass ? "Submit  ✓ All Passed" : "Submit Inspection")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                } else {
+                                    Text(issuesFound > 0 ? "Submit  ⚠ \(issuesFound) Issue(s) Found" : "Submit  ✓ All Good")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background((allPass ? Color(red:0.2,green:0.78,blue:0.35) : Color.fmsIndigo).gradient)
+                        .background(
+                            isPreTrip
+                            ? (allPass ? AppTheme.Status.success : Color.fmsIndigo).gradient
+                            : (issuesFound > 0 ? AppTheme.Brand.accent : AppTheme.Status.success).gradient
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }
@@ -887,12 +776,26 @@ struct InspectionFormSheet: View {
                     Button("Cancel") { dismiss() }.foregroundStyle(Color.fmsIndigo)
                 }
             }
-            .alert(allPass ? "Inspection Passed" : "Inspection Submitted", isPresented: $submitted) {
-                Button("Done") { dismiss() }
+            .alert(
+                isPreTrip
+                    ? (allPass ? "Inspection Passed" : "Inspection Submitted")
+                    : (issuesFound > 0 ? "Issues Reported" : "Post-Trip Complete"),
+                isPresented: $submitted
+            ) {
+                Button("Done") {
+                    onComplete?(allPass, issuesFound, remarks)
+                    dismiss()
+                }
             } message: {
-                Text(allPass
-                     ? "All items passed. You are cleared for departure."
-                     : "Recorded. Any issues have been flagged for maintenance.")
+                if isPreTrip {
+                    Text(allPass
+                         ? "All items passed. You are cleared for departure."
+                         : "Some items were not checked. Please resolve before starting the trip.")
+                } else {
+                    Text(issuesFound > 0
+                         ? "\(issuesFound) vehicle issue(s) have been flagged and logged for the maintenance team."
+                         : "Vehicle looks good! All post-trip checks passed.")
+                }
             }
         }
     }
@@ -900,8 +803,51 @@ struct InspectionFormSheet: View {
     @MainActor
     private func doSubmit() async {
         submitting = true
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        submitting = false; submitted = true
+        
+        let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+        var vehicleId = UUID()
+        
+        // Fetch vehicle assigned to current driver
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+           let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+            vehicleId = assignedVehicle.id
+        }
+        
+        let checklistStrings = items.map { "\($0.label): \($0.passed ? "passed" : "failed")" }
+        let status: DBInspectionStatus = allPass ? .passed : (hasDefect ? .failed : .needsRepair)
+        
+        let dbInspection = DBVehicleInspection(
+            id: UUID(),
+            vehicleId: vehicleId,
+            driverId: driverId,
+            checklist: checklistStrings,
+            defects: remarks.isEmpty ? nil : remarks,
+            inspectionDate: Date(),
+            status: status
+        )
+        
+        do {
+            try await SupabaseManager.shared.submitInspection(dbInspection)
+            
+            // Create a notification if a defect was reported
+            if !allPass || hasDefect {
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: driverId,
+                    title: "Defect Flagged: " + (isPreTrip ? "Pre-Trip" : "Post-Trip"),
+                    message: "Inspection for Vehicle \(vehicleId.uuidString.prefix(4)) flagged remarks: \(remarks)",
+                    type: .warning,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await SupabaseManager.shared.createNotification(notif)
+            }
+        } catch {
+            print("Failed to save inspection: \(error.localizedDescription)")
+        }
+        
+        submitting = false
+        submitted = true
     }
 }
 
@@ -1004,7 +950,7 @@ struct DefectReportSheet: View {
                             }
                         }
                         .frame(maxWidth: .infinity).frame(height: 52)
-                        .background(Color(red:0.85,green:0.15,blue:0.15).gradient)
+                        .background(AppTheme.Status.danger.gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                     .disabled(titleStr.isEmpty || desc.isEmpty)
@@ -1109,4 +1055,81 @@ struct ChatSheet: View {
 @available(iOS 26.0, *)
 #Preview("Driver Dashboard") {
     DriverDashboardView()
+}
+
+@available(iOS 26.0, *)
+struct DriverNotificationsSheet: View {
+    @ObservedObject var vm: DriverDashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Background.page.ignoresSafeArea()
+                
+                if vm.notificationsList.isEmpty {
+                    ContentUnavailableView {
+                        Label("No Notifications", systemImage: "bell.slash.fill")
+                    } description: {
+                        Text("You don't have any notifications right now.")
+                    }
+                } else {
+                    List {
+                        ForEach(vm.notificationsList) { notif in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text(notif.title)
+                                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                                        .foregroundColor(.black)
+                                    Spacer()
+                                    if !notif.isRead {
+                                        Circle()
+                                            .fill(AppTheme.Status.danger)
+                                            .frame(width: 8, height: 8)
+                                    }
+                                }
+                                Text(notif.message)
+                                    .font(.system(size: 13, design: .rounded))
+                                    .foregroundColor(.gray)
+                                
+                                Text(timeAgo(from: notif.createdAt))
+                                    .font(.system(size: 10, design: .rounded))
+                                    .foregroundColor(.gray.opacity(0.6))
+                                    .padding(.top, 2)
+                            }
+                            .padding(.vertical, 4)
+                            .listRowBackground(Color.white)
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("Notifications")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                        .foregroundColor(Color.fmsIndigo)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Mark all read") {
+                        Task {
+                            await vm.markAllNotificationsAsRead()
+                        }
+                    }
+                    .foregroundColor(Color.fmsIndigo)
+                    .disabled(vm.notificationsList.filter { !$0.isRead }.isEmpty)
+                }
+            }
+            .task {
+                await vm.loadNotifications()
+            }
+        }
+    }
+
+    private func timeAgo(from date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
 }
