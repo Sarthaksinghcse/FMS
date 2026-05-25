@@ -19,7 +19,7 @@ import SwiftData
 
 
 struct CardMetric: Identifiable {
-    let id = UUID()
+    var id: String { label }
     let label: String
     let value: String
     let systemIcon: String
@@ -27,7 +27,7 @@ struct CardMetric: Identifiable {
 }
 
 struct ManagementCard: Identifiable {
-    let id = UUID()
+    var id: ManagementDestination { destination }
     let title: String
     let subtitle: String
     let icon: String
