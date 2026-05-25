@@ -25,404 +25,9 @@ extension Color {
     static let fmsBackground  = AppTheme.Background.page
 }
 
-// MARK: - Driver Status
-
-enum DriverOnlineStatus: String, CaseIterable {
-    case active = "Active", idle = "Idle", maintenance = "Maintenance", offline = "Offline"
-
-    var dot: Color {
-        switch self {
-        case .active:      return AppTheme.Status.success
-        case .idle:        return AppTheme.Brand.amber
-        case .maintenance: return AppTheme.Brand.accent
-        case .offline:     return Color(UIColor.systemGray3)
-        }
-    }
-}
-
-// MARK: - Dashboard Action
-
-enum DashboardAction {
-    case voiceLog, reportIssue, preTrip, postTrip, defect, messaging
-}
-
-// MARK: - Local UI Models
-
-struct DriverQuickAction: Identifiable {
-    let id   = UUID()
-    let title: String
-    let subtitle: String
-    let icon: String
-    let color: Color
-    let action: DashboardAction
-}
-
-struct DriverChatMessage: Identifiable {
-    let id       = UUID()
-    let sender: String
-    let role: String
-    let preview: String
-    let time: String
-    let unread: Bool
-    let initials: String
-}
-
-struct DashboardBanner: Identifiable {
-    let id    = UUID()
-    let title: String
-    let body: String
-    let kind: BannerKind
-
-    enum BannerKind { case info, warning, urgent }
-
-    var tint: Color {
-        switch kind {
-        case .info:    return AppTheme.Brand.primaryDeep
-        case .warning: return AppTheme.Brand.accent
-        case .urgent:  return AppTheme.Status.danger
-        }
-    }
-    var icon: String {
-        switch kind {
-        case .info:    return "info.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .urgent:  return "exclamationmark.octagon.fill"
-        }
-    }
-}
-
-struct DashboardUser {
-    let id: UUID
-    let name: String
-}
+// The DriverOnlineStatus, DashboardAction, DriverQuickAction, DriverChatMessage, DashboardBanner, DashboardUser, DriverDashboardDataStore, CompletedTripRecord, and DriverDashboardViewModel have been extracted to ViewModels/Driver/DriverDashboardViewModel.swift
 
 
-
-private actor DriverDashboardDataStore {
-    static let shared = DriverDashboardDataStore()
-
-    let currentUser = DashboardUser(
-        id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
-        name: "Naman Yadav"
-    )
-    private let vehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
-
-    func fetchTrips() async throws -> [DBTrip] {
-        [
-            DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!, vehicleId: vehicleId, driverId: currentUser.id,
-                   source: "San Francisco Dock C",
-                   destination: "Los Angeles Warehouse 4",
-                   startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
-                   endTime: Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                   distance: 612.0, status: .assigned,
-                   notes: "Dry Van Food Grd", createdAt: .now),
-            DBTrip(id: UUID(), vehicleId: vehicleId, driverId: currentUser.id,
-                   source: "Distribution Hub - Phase 5",
-                   destination: "Client Site - Noida",
-                   startTime: Calendar.current.date(byAdding: .hour, value: 6, to: .now),
-                   endTime: Calendar.current.date(byAdding: .hour, value: 9, to: .now),
-                   distance: 31.0, status: .assigned,
-                   notes: nil, createdAt: .now)
-        ]
-    }
-
-    func fetchVehicles() async throws -> [DBVehicle] {
-        [
-            DBVehicle(
-                id: vehicleId,
-                vehicleNumber: "TN-07-AB-1234",
-                model: "Swift Dzire",
-                manufacturer: "Maruti Suzuki",
-                year: 2023,
-                vin: "FMSMOCKVIN000101",
-                licensePlate: "TN-07-AB-1234",
-                status: .inUse,
-                assignedDriverId: currentUser.id,
-                lastServiceDate: nil,
-                createdAt: .now
-            )
-        ]
-    }
-}
-
-// MARK: - Completed Trip Record
-
-struct CompletedTripRecord: Identifiable {
-    let id: UUID
-    let trip: DBTrip
-    let completedAt: Date
-    let elapsedSeconds: Int       // time taken in seconds
-    let distanceKm: Double
-    let inspectionPassed: Bool
-    let issuesFound: Int
-    let inspectionRemarks: String
-
-    var formattedDuration: String {
-        let h = elapsedSeconds / 3600
-        let m = (elapsedSeconds % 3600) / 60
-        let s = elapsedSeconds % 60
-        if h > 0 { return "\(h)h \(m)m" }
-        if m > 0 { return "\(m)m \(s)s" }
-        return "\(s)s"
-    }
-}
-
-// MARK: - ViewModel
-
-@MainActor
-final class DriverDashboardViewModel: ObservableObject {
-
-    // MARK: State
-
-    @Published var driverStatus: DriverOnlineStatus = .idle
-    @Published var currentTrip: DBTrip?
-    @Published var upcomingTrips: [DBTrip] = []
-    @Published var assignedVehicle: DBVehicle?
-    @Published var messages: [DriverChatMessage] = []
-    @Published var banners: [DashboardBanner] = []
-    @Published var isTripActive  = false
-    @Published var tripElapsed   = 0
-    @Published var fuelLevel: Double = 0.72
-    @Published var isLoading     = false
-
-    // Sheet visibility
-    @Published var showVoiceLog  = false
-    @Published var showIssue     = false
-    @Published var showPreTrip   = false
-    @Published var showPostTrip  = false
-    @Published var showDefect    = false
-    @Published var showMessaging = false
-    @Published var showProfile   = false
-    @Published var showSOSConfirm = false
-    @Published var showSOSCountdown = false
-    @Published var sosSentAlert   = false
-
-    @Published var confirmEnd    = false
-    @Published var showPostTripOnEnd = false
-    @Published var showMaps      = false
-    @Published var activeTrip: DBTrip?
-    @Published var mapActiveTrip: DBTrip?
-    @Published var completedTrips: [CompletedTripRecord] = []
-
-    // Post-trip inspection data captured when submitting
-    var lastInspectionPassed: Bool = true
-    var lastIssuesFound: Int = 0
-    var lastInspectionRemarks: String = ""
-
-    private var tripTimer: Timer?
-    private var tripStartDate: Date?
-    private let db = DriverDashboardDataStore.shared
-
-    init() { seedMock() }
-
-    // MARK: Driver Info
-    
-    var driverId: UUID {
-        SupabaseManager.shared.currentUser?.id ?? db.currentUser.id
-    }
-
-    var driverName: String {
-        SupabaseManager.shared.currentUser?.name ?? db.currentUser.name
-    }
-
-    // MARK: Load
-
-    func load() async {
-        isLoading = true; defer { isLoading = false }
-        let uid = driverId
-        do {
-            let trips    = try await SupabaseManager.shared.fetchTrips()
-            let vehicles = try await SupabaseManager.shared.fetchVehicles()
-            let mine = trips.filter { $0.driverId == uid }
-            currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
-            activeTrip    = currentTrip ?? activeTrip
-            upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
-            isTripActive  = currentTrip != nil
-            driverStatus  = isTripActive ? .active : .idle
-            let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
-            assignedVehicle = vehicles.first(where: { $0.id == vid })
-        } catch {
-            print("Failed to fetch live driver data, using local fallback/mock: \(error.localizedDescription)")
-            do {
-                let trips    = try await db.fetchTrips()
-                let vehicles = try await db.fetchVehicles()
-                let mine = trips.filter { $0.driverId == uid }
-                currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
-                activeTrip    = currentTrip ?? activeTrip
-                upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
-                isTripActive  = currentTrip != nil
-                driverStatus  = isTripActive ? .active : .idle
-                let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
-                assignedVehicle = vehicles.first(where: { $0.id == vid })
-            } catch {
-                // keep mock
-            }
-        }
-
-        // Global fallback: if no trips are assigned to the current driver, load the mock A8802 trip so the UI is populated
-        if upcomingTrips.isEmpty && currentTrip == nil {
-            upcomingTrips = [
-                DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!,
-                       vehicleId: assignedVehicle?.id ?? UUID(),
-                       driverId: uid,
-                       source: "San Francisco Dock C",
-                       destination: "Los Angeles Warehouse 4",
-                       startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
-                       endTime:   Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                       distance: 612.0, status: .assigned, notes: "Dry Van Food Grd", createdAt: .now)
-            ]
-        }
-        
-        if assignedVehicle == nil {
-            assignedVehicle = DBVehicle(
-                id: UUID(),
-                vehicleNumber: "TN-07-AB-1234",
-                model: "Swift Dzire",
-                manufacturer: "Maruti Suzuki",
-                year: 2023,
-                vin: "FMSMOCKVIN000101",
-                licensePlate: "TN-07-AB-1234",
-                status: .inUse,
-                assignedDriverId: uid,
-                lastServiceDate: nil,
-                createdAt: .now
-            )
-        }
-    }
-
-    // MARK: Trip control
-
-    func beginTrip(trip: DBTrip? = nil) {
-        activeTrip = trip ?? upcomingTrips.first
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
-            isTripActive = true; driverStatus = .active; tripElapsed = 0
-        }
-        showMaps = true
-        mapActiveTrip = activeTrip
-        tripStartDate = Date()   // Record exact start time
-        tripTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.tripElapsed += 1
-            }
-        }
-    }
-
-    func finishTrip() {
-        tripTimer?.invalidate(); tripTimer = nil
-        let endingId  = activeTrip?.id ?? currentTrip?.id
-        let endingTrip = activeTrip ?? currentTrip
-
-        // Calculate elapsed from start date (more reliable than timer counter)
-        let elapsed: Int
-        if let start = tripStartDate {
-            elapsed = max(Int(Date().timeIntervalSince(start)), tripElapsed)
-        } else {
-            elapsed = tripElapsed
-        }
-        tripStartDate = nil
-
-        // Archive to completed list
-        if let trip = endingTrip {
-            let record = CompletedTripRecord(
-                id: UUID(),
-                trip: trip,
-                completedAt: Date(),
-                elapsedSeconds: elapsed,
-                distanceKm: trip.distance,
-                inspectionPassed: lastInspectionPassed,
-                issuesFound: lastIssuesFound,
-                inspectionRemarks: lastInspectionRemarks
-            )
-            withAnimation { completedTrips.insert(record, at: 0) }
-        }
-
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
-            isTripActive = false; driverStatus = .idle
-            currentTrip = nil; activeTrip = nil
-            showPostTripOnEnd = false
-            tripElapsed = 0
-        }
-        // Remove the completed trip from the assigned list
-        if let id = endingId {
-            upcomingTrips.removeAll { $0.id == id }
-        } else {
-            upcomingTrips.removeAll()
-        }
-        // Reset inspection capture
-        lastInspectionPassed = true
-        lastIssuesFound = 0
-        lastInspectionRemarks = ""
-    }
-
-    // MARK: Helpers
-
-    var elapsedFormatted: String {
-        let h = tripElapsed / 3600; let m = (tripElapsed % 3600) / 60; let s = tripElapsed % 60
-        return String(format: "%02d:%02d:%02d", h, m, s)
-    }
-
-    var greeting: String {
-        switch Calendar.current.component(.hour, from: Date()) {
-        case 0..<12:  return "Good morning"
-        case 12..<17: return "Good afternoon"
-        default:      return "Good evening"
-        }
-    }
-
-    var driverFirstName: String {
-        driverName.components(separatedBy: " ").first ?? "Driver"
-    }
-
-    var totalKm: Double { upcomingTrips.reduce(0) { $0 + $1.distance } }
-    var assignedReg: String  { assignedVehicle?.vehicleNumber ?? "TN-07-AB-1234" }
-    var vehicleManufacturer: String { assignedVehicle?.manufacturer ?? "Maruti Suzuki" }
-    var vehicleModel: String        { assignedVehicle?.model       ?? "Swift Dzire" }
-    var vehicleYear: String         { assignedVehicle.map { String($0.year) } ?? "2023" }
-
-    func fire(_ action: DashboardAction) {
-        switch action {
-        case .voiceLog:    showVoiceLog  = true
-        case .reportIssue: showIssue     = true
-        case .preTrip:     showPreTrip   = true
-        case .postTrip:    showPostTrip  = true
-        case .defect:      showDefect    = true
-        case .messaging:   showMessaging = true
-        }
-    }
-
-    // MARK: Mock seed
-
-    private func seedMock() {
-        upcomingTrips = [
-            DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!, vehicleId: UUID(), driverId: UUID(),
-                   source: "San Francisco Dock C",
-                   destination: "Los Angeles Warehouse 4",
-                   startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
-                   endTime:   Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                   distance: 612.0, status: .assigned, notes: "Dry Van Food Grd", createdAt: .now),
-            DBTrip(id: UUID(), vehicleId: UUID(), driverId: UUID(),
-                   source: "Distribution Hub – Phase 5",
-                   destination: "Client Site – Noida",
-                   startTime: Calendar.current.date(byAdding: .hour, value: 6, to: .now),
-                   endTime:   Calendar.current.date(byAdding: .hour, value: 9, to: .now),
-                   distance: 31.0, status: .assigned, notes: nil, createdAt: .now)
-        ]
-        messages = [
-            DriverChatMessage(sender: "Rajiv Sharma",     role: "Fleet Manager",
-                              preview: "Confirm ETA for Route 2.",    time: "10:32 AM", unread: true,  initials: "RS"),
-            DriverChatMessage(sender: "Maintenance Desk", role: "Maintenance",
-                              preview: "TN-07-AB-1234 ready for dispatch.", time: "9:15 AM",  unread: true,  initials: "MD"),
-            DriverChatMessage(sender: "Priya Menon",      role: "Fleet Manager",
-                              preview: "Updated route file sent.",    time: "Yesterday", unread: false, initials: "PM")
-        ]
-        banners = [
-            DashboardBanner(title: "Trip Assigned",
-                            body: "New trip #TRP-2240 at 12:30 PM", kind: .info),
-            DashboardBanner(title: "Pre-Trip Due",
-                            body: "Complete inspection before departure", kind: .warning)
-        ]
-    }
-}
 
 // MARK: - Root View
 
@@ -451,6 +56,21 @@ struct DriverDashboardView: View {
             if vm.showSOSCountdown {
                 SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
                     vm.sosSentAlert = true
+                    
+                    // Live SOS emergency notification to Supabase
+                    let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+                    let notif = DBNotification(
+                        id: UUID(),
+                        userId: driverId,
+                        title: "🚨 EMERGENCY SOS SIGNAL TRIGGERED",
+                        message: "Driver \(SupabaseManager.shared.currentUser?.name ?? "Naman Yadav") has triggered a panic alarm. Assistance is required immediately.",
+                        type: .emergency,
+                        isRead: false,
+                        createdAt: Date()
+                    )
+                    Task {
+                        try? await SupabaseManager.shared.createNotification(notif)
+                    }
                 }
                 .transition(.opacity)
                 .zIndex(999)
@@ -476,6 +96,9 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatSheet(messages: vm.messages) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
+        .sheet(isPresented: $vm.showNotifications) {
+            DriverNotificationsSheet(vm: vm)
+        }
         .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
         }
@@ -1180,7 +803,49 @@ struct InspectionFormSheet: View {
     @MainActor
     private func doSubmit() async {
         submitting = true
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        
+        let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+        var vehicleId = UUID()
+        
+        // Fetch vehicle assigned to current driver
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+           let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+            vehicleId = assignedVehicle.id
+        }
+        
+        let checklistStrings = items.map { "\($0.label): \($0.passed ? "passed" : "failed")" }
+        let status: DBInspectionStatus = allPass ? .passed : (hasDefect ? .failed : .needsRepair)
+        
+        let dbInspection = DBVehicleInspection(
+            id: UUID(),
+            vehicleId: vehicleId,
+            driverId: driverId,
+            checklist: checklistStrings,
+            defects: remarks.isEmpty ? nil : remarks,
+            inspectionDate: Date(),
+            status: status
+        )
+        
+        do {
+            try await SupabaseManager.shared.submitInspection(dbInspection)
+            
+            // Create a notification if a defect was reported
+            if !allPass || hasDefect {
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: driverId,
+                    title: "Defect Flagged: " + (isPreTrip ? "Pre-Trip" : "Post-Trip"),
+                    message: "Inspection for Vehicle \(vehicleId.uuidString.prefix(4)) flagged remarks: \(remarks)",
+                    type: .warning,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await SupabaseManager.shared.createNotification(notif)
+            }
+        } catch {
+            print("Failed to save inspection: \(error.localizedDescription)")
+        }
+        
         submitting = false
         submitted = true
     }
@@ -1390,4 +1055,81 @@ struct ChatSheet: View {
 @available(iOS 26.0, *)
 #Preview("Driver Dashboard") {
     DriverDashboardView()
+}
+
+@available(iOS 26.0, *)
+struct DriverNotificationsSheet: View {
+    @ObservedObject var vm: DriverDashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Background.page.ignoresSafeArea()
+                
+                if vm.notificationsList.isEmpty {
+                    ContentUnavailableView {
+                        Label("No Notifications", systemImage: "bell.slash.fill")
+                    } description: {
+                        Text("You don't have any notifications right now.")
+                    }
+                } else {
+                    List {
+                        ForEach(vm.notificationsList) { notif in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text(notif.title)
+                                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                                        .foregroundColor(.black)
+                                    Spacer()
+                                    if !notif.isRead {
+                                        Circle()
+                                            .fill(AppTheme.Status.danger)
+                                            .frame(width: 8, height: 8)
+                                    }
+                                }
+                                Text(notif.message)
+                                    .font(.system(size: 13, design: .rounded))
+                                    .foregroundColor(.gray)
+                                
+                                Text(timeAgo(from: notif.createdAt))
+                                    .font(.system(size: 10, design: .rounded))
+                                    .foregroundColor(.gray.opacity(0.6))
+                                    .padding(.top, 2)
+                            }
+                            .padding(.vertical, 4)
+                            .listRowBackground(Color.white)
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("Notifications")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                        .foregroundColor(Color.fmsIndigo)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Mark all read") {
+                        Task {
+                            await vm.markAllNotificationsAsRead()
+                        }
+                    }
+                    .foregroundColor(Color.fmsIndigo)
+                    .disabled(vm.notificationsList.filter { !$0.isRead }.isEmpty)
+                }
+            }
+            .task {
+                await vm.loadNotifications()
+            }
+        }
+    }
+
+    private func timeAgo(from date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
 }

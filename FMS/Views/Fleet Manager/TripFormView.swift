@@ -8,6 +8,7 @@
 
 import SwiftUI
 import SwiftData
+import CoreLocation
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MARK: - Add Trip Form
@@ -74,20 +75,6 @@ struct AddTripFormView: View {
                             FormDivider()
                             TripFormField(label: "End Location", placeholder: "e.g. Delhi",
                                          text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
-                        }
-
-                        formSection(title: "Coordinates", icon: "location.circle.fill", iconColor: AppTheme.Brand.accent) {
-                            TripFormField(label: "Start Latitude", placeholder: "-90 to 90",
-                                         text: $startLatText, keyboardType: .decimalPad, focus: $focusedField, tag: .startLat)
-                            FormDivider()
-                            TripFormField(label: "Start Longitude", placeholder: "-180 to 180",
-                                         text: $startLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .startLong)
-                            FormDivider()
-                            TripFormField(label: "End Latitude", placeholder: "-90 to 90",
-                                         text: $endLatText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLat)
-                            FormDivider()
-                            TripFormField(label: "End Longitude", placeholder: "-180 to 180",
-                                         text: $endLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLong)
                         }
 
                         formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
@@ -186,55 +173,66 @@ struct AddTripFormView: View {
             validationMessage = "End location is required."; showValidationAlert = true; return
         }
         
-        // Coordinate validation
-        guard let startLat = Double(startLatText), startLat >= -90, startLat <= 90 else {
-            validationMessage = "Start latitude must be between -90 and 90."; showValidationAlert = true; return
-        }
-        guard let startLong = Double(startLongText), startLong >= -180, startLong <= 180 else {
-            validationMessage = "Start longitude must be between -180 and 180."; showValidationAlert = true; return
-        }
-        guard let endLat = Double(endLatText), endLat >= -90, endLat <= 90 else {
-            validationMessage = "End latitude must be between -90 and 90."; showValidationAlert = true; return
-        }
-        guard let endLong = Double(endLongText), endLong >= -180, endLong <= 180 else {
-            validationMessage = "End longitude must be between -180 and 180."; showValidationAlert = true; return
-        }
-        
         // Time validation
         guard scheduledStartTime < scheduledEndTime else {
             validationMessage = "Scheduled end time must be after start time."; showValidationAlert = true; return
         }
         
         // Distance validation
-        guard let distance = Double(distanceText), distance > 0 else {
-            validationMessage = "Please enter a valid distance."; showValidationAlert = true; return
-        }
+        let distance = Double(distanceText)
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
-        let trip = Trip(
-            tripCode:            tripCode.trimmingCharacters(in: .whitespaces).uppercased(),
-            vehicleId:           vehicle.id,
-            driverId:            driver.id,
-            startLocation:       startLocation.trimmingCharacters(in: .whitespaces),
-            endLocation:         endLocation.trimmingCharacters(in: .whitespaces),
-            startLatitude:       startLat,
-            startLongitude:      startLong,
-            endLatitude:         endLat,
-            endLongitude:        endLong,
-            scheduledStartTime:  scheduledStartTime,
-            scheduledEndTime:    scheduledEndTime,
-            distanceKm:          distance,
-            tripStatus:          .assigned,
-            notes:               notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
-        )
 
         isSaving = true
 
         Task {
+            let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
+            let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
+
+            // Auto-calculate distance if distanceText is empty or invalid
+            let distance: Double
+            if let userDistance = Double(distanceText), userDistance > 0 {
+                distance = userDistance
+            } else {
+                let startLoc = CLLocation(latitude: startCoord.latitude, longitude: startCoord.longitude)
+                let endLoc = CLLocation(latitude: endCoord.latitude, longitude: endCoord.longitude)
+                distance = Double(String(format: "%.1f", startLoc.distance(from: endLoc) / 1000.0)) ?? 0.0
+            }
+
+            let trip = Trip(
+                tripCode:            tripCode.trimmingCharacters(in: .whitespaces).uppercased(),
+                vehicleId:           vehicle.id,
+                driverId:            driver.id,
+                startLocation:       startLocation.trimmingCharacters(in: .whitespaces),
+                endLocation:         endLocation.trimmingCharacters(in: .whitespaces),
+                startLatitude:       startCoord.latitude,
+                startLongitude:      startCoord.longitude,
+                endLatitude:         endCoord.latitude,
+                endLongitude:        endCoord.longitude,
+                scheduledStartTime:  scheduledStartTime,
+                scheduledEndTime:    scheduledEndTime,
+                distanceKm:          distance,
+                tripStatus:          .assigned,
+                notes:               notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+            )
+
             do {
-                // Save to Supabase first
                 try await SupabaseManager.shared.createTrip(trip.asDBTrip)
+                
+                // Send trip assignment notification email to the driver
+                let driverEmail = driver.email
+                let driverName = driver.fullName
+                Task {
+                    try? await EmailManager.shared.sendTripAssignmentEmail(
+                        to: driverEmail,
+                        name: driverName,
+                        tripCode: trip.tripCode,
+                        source: trip.startLocation,
+                        destination: trip.endLocation,
+                        startTime: trip.scheduledStartTime,
+                        distance: trip.distanceKm
+                    )
+                }
                 
                 await MainActor.run {
                     modelContext.insert(trip)
@@ -244,7 +242,6 @@ struct AddTripFormView: View {
                 }
             } catch {
                 print("Failed to save trip to Supabase: \(error)")
-                // Fallback to local cache so user can work offline
                 await MainActor.run {
                     modelContext.insert(trip)
                     try? modelContext.save()
@@ -344,20 +341,6 @@ struct EditTripFormView: View {
                             FormDivider()
                             TripFormField(label: "End Location", placeholder: "e.g. Delhi",
                                          text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
-                        }
-
-                        formSection(title: "Coordinates", icon: "location.circle.fill", iconColor: AppTheme.Brand.accent) {
-                            TripFormField(label: "Start Latitude", placeholder: "-90 to 90",
-                                         text: $startLatText, keyboardType: .decimalPad, focus: $focusedField, tag: .startLat)
-                            FormDivider()
-                            TripFormField(label: "Start Longitude", placeholder: "-180 to 180",
-                                         text: $startLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .startLong)
-                            FormDivider()
-                            TripFormField(label: "End Latitude", placeholder: "-90 to 90",
-                                         text: $endLatText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLat)
-                            FormDivider()
-                            TripFormField(label: "End Longitude", placeholder: "-180 to 180",
-                                         text: $endLongText, keyboardType: .decimalPad, focus: $focusedField, tag: .endLong)
                         }
 
                         formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
@@ -519,19 +502,6 @@ struct EditTripFormView: View {
             validationMessage = "End location is required."; showValidationAlert = true; return
         }
         
-        guard let startLat = Double(startLatText), startLat >= -90, startLat <= 90 else {
-            validationMessage = "Start latitude must be between -90 and 90."; showValidationAlert = true; return
-        }
-        guard let startLong = Double(startLongText), startLong >= -180, startLong <= 180 else {
-            validationMessage = "Start longitude must be between -180 and 180."; showValidationAlert = true; return
-        }
-        guard let endLat = Double(endLatText), endLat >= -90, endLat <= 90 else {
-            validationMessage = "End latitude must be between -90 and 90."; showValidationAlert = true; return
-        }
-        guard let endLong = Double(endLongText), endLong >= -180, endLong <= 180 else {
-            validationMessage = "End longitude must be between -180 and 180."; showValidationAlert = true; return
-        }
-        
         guard scheduledStartTime < scheduledEndTime else {
             validationMessage = "Scheduled end time must be after start time."; showValidationAlert = true; return
         }
@@ -539,41 +509,41 @@ struct EditTripFormView: View {
         guard let distance = Double(distanceText), distance > 0 else {
             validationMessage = "Please enter a valid distance."; showValidationAlert = true; return
         }
-
+        
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
-        // Create updated DB model
-        let updatedDBTrip = DBTrip(
-            id: trip.id,
-            vehicleId: vehicle.id,
-            driverId: driver.id,
-            source: startLocation.trimmingCharacters(in: .whitespaces),
-            destination: endLocation.trimmingCharacters(in: .whitespaces),
-            startTime: scheduledStartTime,
-            endTime: scheduledEndTime,
-            distance: distance,
-            status: tripStatus.toDBStatus,
-            notes: notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces),
-            createdAt: trip.createdAt
-        )
 
         isSaving = true
 
         Task {
+            let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
+            let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
+
+            let updatedDBTrip = DBTrip(
+                id: trip.id,
+                vehicleId: vehicle.id,
+                driverId: driver.id,
+                source: startLocation.trimmingCharacters(in: .whitespaces),
+                destination: endLocation.trimmingCharacters(in: .whitespaces),
+                startTime: scheduledStartTime,
+                endTime: scheduledEndTime,
+                distance: distance,
+                status: tripStatus.toDBStatus,
+                notes: notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces),
+                createdAt: trip.createdAt
+            )
+
             do {
-                // Update on Supabase first
                 try await SupabaseManager.shared.updateTrip(updatedDBTrip)
-                
                 await MainActor.run {
                     trip.tripCode           = tripCode.trimmingCharacters(in: .whitespaces).uppercased()
                     trip.vehicleId          = vehicle.id
                     trip.driverId           = driver.id
                     trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
                     trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
-                    trip.startLatitude      = startLat
-                    trip.startLongitude     = startLong
-                    trip.endLatitude        = endLat
-                    trip.endLongitude       = endLong
+                    trip.startLatitude      = startCoord.latitude
+                    trip.startLongitude     = startCoord.longitude
+                    trip.endLatitude        = endCoord.latitude
+                    trip.endLongitude       = endCoord.longitude
                     trip.scheduledStartTime = scheduledStartTime
                     trip.scheduledEndTime   = scheduledEndTime
                     trip.distanceKm         = distance
@@ -586,17 +556,16 @@ struct EditTripFormView: View {
                 }
             } catch {
                 print("Failed to update trip on Supabase: \(error)")
-                // Fallback to local cache update
                 await MainActor.run {
                     trip.tripCode           = tripCode.trimmingCharacters(in: .whitespaces).uppercased()
                     trip.vehicleId          = vehicle.id
                     trip.driverId           = driver.id
                     trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
                     trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
-                    trip.startLatitude      = startLat
-                    trip.startLongitude     = startLong
-                    trip.endLatitude        = endLat
-                    trip.endLongitude       = endLong
+                    trip.startLatitude      = startCoord.latitude
+                    trip.startLongitude     = startCoord.longitude
+                    trip.endLatitude        = endCoord.latitude
+                    trip.endLongitude       = endCoord.longitude
                     trip.scheduledStartTime = scheduledStartTime
                     trip.scheduledEndTime   = scheduledEndTime
                     trip.distanceKm         = distance
@@ -825,4 +794,36 @@ struct TripStatusPickerRow: View {
             .padding(.bottom, 14)
         }
     }
+}
+
+@MainActor
+func geocodeAddress(_ address: String) async -> CLLocationCoordinate2D? {
+    let geocoder = CLGeocoder()
+    return await withCheckedContinuation { continuation in
+        geocoder.geocodeAddressString(address) { placemarks, error in
+            if let coordinate = placemarks?.first?.location?.coordinate {
+                continuation.resume(returning: coordinate)
+            } else {
+                continuation.resume(returning: nil)
+            }
+        }
+    }
+}
+
+func fallbackCoordinate(for address: String) -> CLLocationCoordinate2D {
+    let normalized = address.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    if normalized.contains("mumbai") {
+        return CLLocationCoordinate2D(latitude: 19.0760, longitude: 72.8777)
+    } else if normalized.contains("delhi") || normalized.contains("okhla") || normalized.contains("nehru") {
+        return CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+    } else if normalized.contains("pune") {
+        return CLLocationCoordinate2D(latitude: 18.5204, longitude: 73.8567)
+    } else if normalized.contains("gurgaon") {
+        return CLLocationCoordinate2D(latitude: 28.5034, longitude: 77.0841)
+    } else if normalized.contains("noida") {
+        return CLLocationCoordinate2D(latitude: 28.6256, longitude: 77.3789)
+    } else if normalized.contains("bangalore") || normalized.contains("bengaluru") {
+        return CLLocationCoordinate2D(latitude: 12.9716, longitude: 77.5946)
+    }
+    return CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020)
 }

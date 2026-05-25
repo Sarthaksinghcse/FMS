@@ -8,6 +8,7 @@
 import Foundation
 import Supabase
 import Combine
+import SwiftData
 
 // MARK: - InMemoryLocalStorage
 class InMemoryLocalStorage: AuthLocalStorage, @unchecked Sendable {
@@ -512,6 +513,291 @@ final class SupabaseManager: ObservableObject {
             .delete()
             .eq("id", value: id.uuidString)
             .execute()
+    }
+    
+    // MARK: - Work Order CRUD
+    
+    /// Fetches all work orders from public.work_orders.
+    func fetchWorkOrders() async throws -> [DBWorkOrder] {
+        return try await client
+            .from("work_orders")
+            .select()
+            .execute()
+            .value
+    }
+    
+    /// Creates a new work order.
+    func createWorkOrder(_ workOrder: DBWorkOrder) async throws {
+        try await client
+            .from("work_orders")
+            .insert(workOrder)
+            .execute()
+    }
+    
+    /// Updates an existing work order.
+    func updateWorkOrder(_ workOrder: DBWorkOrder) async throws {
+        try await client
+            .from("work_orders")
+            .update(workOrder)
+            .eq("id", value: workOrder.id.uuidString)
+            .execute()
+    }
+    
+    /// Deletes a work order.
+    func deleteWorkOrder(id: UUID) async throws {
+        try await client
+            .from("work_orders")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+    
+    // MARK: - Maintenance Tasks
+    
+    /// Fetches all maintenance tasks from public.maintenance_tasks.
+    func fetchMaintenanceTasks() async throws -> [DBMaintenanceTask] {
+        return try await client
+            .from("maintenance_tasks")
+            .select()
+            .execute()
+            .value
+    }
+    
+    /// Creates a new maintenance task.
+    func createMaintenanceTask(_ task: DBMaintenanceTask) async throws {
+        try await client
+            .from("maintenance_tasks")
+            .insert(task)
+            .execute()
+    }
+    
+    /// Updates an existing maintenance task.
+    func updateMaintenanceTask(_ task: DBMaintenanceTask) async throws {
+        try await client
+            .from("maintenance_tasks")
+            .update(task)
+            .eq("id", value: task.id.uuidString)
+            .execute()
+    }
+    
+    // MARK: - Messages
+    
+    /// Fetches all messages from public.messages.
+    func fetchMessages() async throws -> [DBMessage] {
+        return try await client
+            .from("messages")
+            .select()
+            .order("timestamp", ascending: true)
+            .execute()
+            .value
+    }
+    
+    /// Sends a new message.
+    func sendMessage(_ message: DBMessage) async throws {
+        try await client
+            .from("messages")
+            .insert(message)
+            .execute()
+    }
+    
+    // MARK: - Notifications
+    
+    /// Fetches all notifications from public.notifications.
+    func fetchNotifications() async throws -> [DBNotification] {
+        return try await client
+            .from("notifications")
+            .select()
+            .execute()
+            .value
+    }
+    
+    /// Creates a new notification.
+    func createNotification(_ notification: DBNotification) async throws {
+        try await client
+            .from("notifications")
+            .insert(notification)
+            .execute()
+    }
+    
+    /// Updates an existing notification.
+    func updateNotification(_ notification: DBNotification) async throws {
+        try await client
+            .from("notifications")
+            .update(notification)
+            .eq("id", value: notification.id.uuidString)
+            .execute()
+    }
+    
+    // MARK: - Vehicle Locations
+    
+    /// Inserts a new live GPS vehicle location entry.
+    func insertVehicleLocation(_ location: DBVehicleLocation) async throws {
+        try await client
+            .from("vehicle_locations")
+            .insert(location)
+            .execute()
+    }
+    
+    /// Fetches the latest coordinate for all active vehicles.
+    func fetchLatestVehicleLocations() async throws -> [DBVehicleLocation] {
+        return try await client
+            .from("v_latest_vehicle_location")
+            .select()
+            .execute()
+            .value
+    }
+    
+    // MARK: - Reconciled Syncer
+    
+    /// Synchronizes all Supabase data into SwiftData.
+    func syncAllData(context: ModelContext) async {
+        guard currentUser != nil else { return }
+        
+        do {
+            // 1. Sync Vehicles
+            if let remoteVehicles = try? await fetchVehicles() {
+                let descriptor = FetchDescriptor<Vehicle>()
+                let localVehicles = (try? context.fetch(descriptor)) ?? []
+                for rv in remoteVehicles {
+                    if let local = localVehicles.first(where: { $0.id == rv.id }) {
+                        local.registrationNumber = rv.vehicleNumber
+                        local.vinNumber = rv.vin
+                        local.make = rv.manufacturer
+                        local.model = rv.model
+                        local.year = rv.year
+                        local.status = rv.status.toLocalStatus
+                        local.assignedDriverId = rv.assignedDriverId
+                        local.lastServiceDate = rv.lastServiceDate
+                    } else {
+                        context.insert(rv.asLocalVehicle)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteVehicles.map { $0.id })
+                    for localVehicle in localVehicles {
+                        if !remoteIds.contains(localVehicle.id) {
+                            context.delete(localVehicle)
+                        }
+                    }
+                }
+            }
+            
+            // 2. Sync Users (Drivers)
+            if let remoteDrivers = try? await fetchDrivers() {
+                let descriptor = FetchDescriptor<User>()
+                let localUsers = (try? context.fetch(descriptor)) ?? []
+                for rd in remoteDrivers {
+                    if let local = localUsers.first(where: { $0.id == rd.id }) {
+                        local.fullName = rd.name
+                        local.email = rd.email
+                        local.phoneNumber = rd.phoneNumber ?? ""
+                        local.role = rd.role.asLocalRole
+                    } else {
+                        context.insert(rd.asLocalUser)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteDrivers.map { $0.id })
+                    let localDrivers = localUsers.filter { $0.role == .driver }
+                    for localDriver in localDrivers {
+                        if !remoteIds.contains(localDriver.id) {
+                            context.delete(localDriver)
+                        }
+                    }
+                }
+            }
+            
+            // 3. Sync Trips
+            if let remoteTrips = try? await fetchTrips() {
+                let descriptor = FetchDescriptor<Trip>()
+                let localTrips = (try? context.fetch(descriptor)) ?? []
+                for rt in remoteTrips {
+                    if let local = localTrips.first(where: { $0.id == rt.id }) {
+                        local.vehicleId = rt.vehicleId
+                        local.driverId = rt.driverId
+                        local.startLocation = rt.source
+                        local.endLocation = rt.destination
+                        local.scheduledStartTime = rt.startTime ?? Date()
+                        local.scheduledEndTime = rt.endTime ?? Date().addingTimeInterval(7200)
+                        local.actualStartTime = rt.startTime
+                        local.actualEndTime = rt.endTime
+                        local.distanceKm = rt.distance
+                        local.tripStatus = rt.status.toLocalStatus
+                        local.notes = rt.notes
+                    } else {
+                        context.insert(rt.asLocalTrip)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteTrips.map { $0.id })
+                    for localTrip in localTrips {
+                        if !remoteIds.contains(localTrip.id) {
+                            context.delete(localTrip)
+                        }
+                    }
+                }
+            }
+            
+            // 4. Sync Work Orders
+            if let remoteWorkOrders = try? await fetchWorkOrders() {
+                let descriptor = FetchDescriptor<WorkOrder>()
+                let localWorkOrders = (try? context.fetch(descriptor)) ?? []
+                for rwo in remoteWorkOrders {
+                    if let local = localWorkOrders.first(where: { $0.id == rwo.id }) {
+                        local.vehicleId = rwo.vehicleId
+                        local.assignedTo = rwo.assignedTo
+                        local.priority = rwo.priority.toLocalPriority
+                        local.workDescription = rwo.issueDescription
+                        local.status = rwo.status.toLocalStatus
+                    } else {
+                        context.insert(rwo.asLocalWorkOrder)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteWorkOrders.map { $0.id })
+                    for localWorkOrder in localWorkOrders {
+                        if !remoteIds.contains(localWorkOrder.id) {
+                            context.delete(localWorkOrder)
+                        }
+                    }
+                }
+            }
+            
+            // 5. Sync Notifications
+            if let remoteNotifications = try? await fetchNotifications() {
+                let descriptor = FetchDescriptor<AppNotification>()
+                let localNotifications = (try? context.fetch(descriptor)) ?? []
+                for rn in remoteNotifications {
+                    if let local = localNotifications.first(where: { $0.id == rn.id }) {
+                        local.userId = rn.userId
+                        local.title = rn.title
+                        local.message = rn.message
+                        local.type = rn.type.toLocalType
+                        local.isRead = rn.isRead
+                    } else {
+                        context.insert(rn.asLocalNotification)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteNotifications.map { $0.id })
+                    for localNotification in localNotifications {
+                        if !remoteIds.contains(localNotification.id) {
+                            context.delete(localNotification)
+                        }
+                    }
+                }
+            }
+            
+            try context.save()
+            print("Successfully synchronized and deduplicated all data from Supabase to SwiftData")
+        } catch {
+            print("⚠️ Reconciled data synchronization error: \(error.localizedDescription)")
+        }
     }
 }
 

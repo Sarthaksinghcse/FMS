@@ -30,7 +30,7 @@ public final class EmailManager {
     /// Sends an email through the Resend API.
     private func sendEmail(to recipient: String, subject: String, htmlContent: String) async throws {
         // If API key is not configured, print info and throw error so caller knows but can log/ignore.
-        guard apiKey != "re_YOUR_KEY" else {
+        guard apiKey != "re_U65DyUEE_LPnKJyDrj1m6qEHTY2MxePt8" else {
             print(" EmailManager: Resend API Key is not set. Skipping email send to \(recipient).")
             throw NSError(domain: "EmailManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "Resend API Key is not set."])
         }
@@ -141,6 +141,52 @@ public final class EmailManager {
         </html>
         """
         
+        try await sendEmail(to: email, subject: subject, htmlContent: html)
+    }
+    
+    /// Sends a notification email to a driver when they are assigned a trip.
+    public func sendTripAssignmentEmail(to email: String, name: String, tripCode: String, source: String, destination: String, startTime: Date, distance: Double) async throws {
+        let subject = "New Trip Assigned: \(tripCode) - Fleeto!"
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        
+        let html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f6f9fc; margin: 0; padding: 20px; }
+            .card { background-color: #ffffff; border-radius: 16px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb; }
+            .header { font-size: 24px; font-weight: bold; color: #1e3a8a; margin-bottom: 16px; }
+            .content { font-size: 16px; color: #374151; line-height: 1.6; }
+            .details { background-color: #f3f4f6; border-radius: 12px; padding: 16px; margin: 24px 0; border-left: 4px solid #1e3a8a; font-size: 14px; }
+            .footer { font-size: 12px; color: #9ca3af; margin-top: 32px; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="header">New Trip Assigned </div>
+            <div class="content">
+              <p>Hello <strong>\(name)</strong>,</p>
+              <p>A new trip has been assigned to you. Here are the route and departure details:</p>
+              <div class="details">
+                <strong>Trip Code:</strong> \(tripCode)<br>
+                <strong>Route:</strong> \(source) &rarr; \(destination)<br>
+                <strong>Departure Time:</strong> \(formatter.string(from: startTime))<br>
+                <strong>Distance:</strong> \(String(format: "%.1f km", distance))
+              </div>
+              <p>Please perform the pre-trip inspection and log in to the Fleeto app to navigate your trip.</p>
+            </div>
+            <div class="footer">
+              This is an automated notification from Fleeto. Please do not reply to this email.
+            </div>
+          </div>
+        </body>
+        </html>
+        """
         try await sendEmail(to: email, subject: subject, htmlContent: html)
     }
 }
