@@ -270,7 +270,7 @@ final class SupabaseManager: ObservableObject {
                         .eq("id", value: userId.uuidString)
                         .execute()
                 } catch {
-                    print("⚠️ Failed to sync database role: \(error.localizedDescription)")
+                    print("Failed to sync database role: \(error.localizedDescription)")
                 }
             }
             
@@ -629,6 +629,59 @@ final class SupabaseManager: ObservableObject {
     }
     
     
+    func fetchDefectReports() async throws -> [DBDefectReport] {
+        return try await client
+            .from("defect_reports")
+            .select()
+            .execute()
+            .value
+    }
+    
+    func createDefectReport(_ defect: DBDefectReport) async throws {
+        try await client
+            .from("defect_reports")
+            .insert(defect)
+            .execute()
+    }
+    
+    func updateDefectReport(_ defect: DBDefectReport) async throws {
+        try await client
+            .from("defect_reports")
+            .update(defect)
+            .eq("id", value: defect.id.uuidString)
+            .execute()
+    }
+    
+    func fetchFleetManagers() async throws -> [DBUser] {
+        return try await client
+            .from("users")
+            .select()
+            .eq("role", value: DBUserRole.fleetManager.rawValue)
+            .execute()
+            .value
+    }
+    
+    func notifyFleetManagers(title: String, message: String, type: DBNotificationType) async {
+        do {
+            let managers = try await fetchFleetManagers()
+            for manager in managers {
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: manager.id,
+                    title: title,
+                    message: message,
+                    type: type,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await createNotification(notif)
+            }
+        } catch {
+            print("Failed to notify fleet managers: \(error.localizedDescription)")
+        }
+    }
+    
+    
     
     
     func insertVehicleLocation(_ location: DBVehicleLocation) async throws {
@@ -800,10 +853,38 @@ final class SupabaseManager: ObservableObject {
                 }
             }
             
+            // Sync Defect Reports
+            if let remoteDefects = try? await fetchDefectReports() {
+                let descriptor = FetchDescriptor<DefectReport>()
+                let localDefects = (try? context.fetch(descriptor)) ?? []
+                for rd in remoteDefects {
+                    if let local = localDefects.first(where: { $0.id == rd.id }) {
+                        local.vehicleId = rd.vehicleId
+                        local.reportedBy = rd.reportedBy
+                        local.inspectionId = rd.inspectionId
+                        local.title = rd.title
+                        local.defectDescription = rd.defectDescription
+                        local.severity = rd.severity
+                        local.status = rd.status
+                    } else {
+                        context.insert(rd.asLocalDefectReport)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteDefects.map { $0.id })
+                    for localDefect in localDefects {
+                        if !remoteIds.contains(localDefect.id) {
+                            context.delete(localDefect)
+                        }
+                    }
+                }
+            }
+            
             try context.save()
             print("Successfully synchronized and deduplicated all data from Supabase to SwiftData")
         } catch {
-            print("⚠️ Reconciled data synchronization error: \(error.localizedDescription)")
+            print("Reconciled data synchronization error: \(error.localizedDescription)")
         }
     }
 }

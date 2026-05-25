@@ -759,6 +759,8 @@ struct InspectionFormSheet: View {
         ]
     }
 
+    @Environment(\.modelContext) private var modelContext
+
     @State private var items      = CheckItem.all
     @State private var remarks    = ""
     @State private var hasDefect  = false
@@ -877,6 +879,14 @@ struct InspectionFormSheet: View {
                 }
                 .padding(20)
             }
+            .onChange(of: items.map(\.passed)) {
+                let hasUnchecked = items.contains(where: { !$0.passed })
+                if hasUnchecked {
+                    hasDefect = true
+                } else {
+                    hasDefect = false
+                }
+            }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -916,10 +926,12 @@ struct InspectionFormSheet: View {
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
         var vehicleId = UUID()
         
-        
-        if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
-           let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-            vehicleId = assignedVehicle.id
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                vehicleId = assignedVehicle.id
+            } else if let firstVehicle = vehicles.first {
+                vehicleId = firstVehicle.id
+            }
         }
         
         let checklistStrings = items.map { "\($0.label): \($0.passed ? "passed" : "failed")" }
@@ -938,7 +950,6 @@ struct InspectionFormSheet: View {
         do {
             try await SupabaseManager.shared.submitInspection(dbInspection)
             
-            
             if !allPass || hasDefect {
                 let notif = DBNotification(
                     id: UUID(),
@@ -950,6 +961,41 @@ struct InspectionFormSheet: View {
                     createdAt: Date()
                 )
                 try await SupabaseManager.shared.createNotification(notif)
+                
+                // Create defect report
+                let defectId = UUID()
+                let severity: DefectSeverity = (status == .failed) ? .high : .medium
+                let defectTitle = "\(isPreTrip ? "Pre-Trip" : "Post-Trip") Defect"
+                let failedChecks = items.filter { !$0.passed }.map { $0.label }
+                let defectDesc = remarks.isEmpty ? "Inspection flagged issues: \(failedChecks.joined(separator: ", "))" : remarks
+                
+                let dbDefect = DBDefectReport(
+                    id: defectId,
+                    vehicleId: vehicleId,
+                    reportedBy: driverId,
+                    inspectionId: dbInspection.id,
+                    title: defectTitle,
+                    defectDescription: defectDesc,
+                    severity: severity,
+                    status: .open,
+                    createdAt: Date()
+                )
+                
+                // Submit to Supabase
+                try? await SupabaseManager.shared.createDefectReport(dbDefect)
+                
+                // Notify Fleet Managers
+                let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
+                let fleetMsg = "Driver \(driverName) flagged a defect on Vehicle \(vehicleId.uuidString.prefix(4)) during \(isPreTrip ? "pre-trip" : "post-trip") inspection: \(defectDesc)"
+                await SupabaseManager.shared.notifyFleetManagers(
+                    title: "⚠️ Defect Flagged (\(isPreTrip ? "Pre" : "Post")-Trip)",
+                    message: fleetMsg,
+                    type: .warning
+                )
+                
+                // Insert locally in SwiftData
+                modelContext.insert(dbDefect.asLocalDefectReport)
+                try? modelContext.save()
             }
         } catch {
             print("Failed to save inspection: \(error.localizedDescription)")
@@ -980,6 +1026,8 @@ struct DefectReportSheet: View {
         }
     }
     enum SevPick: String, CaseIterable { case low = "Low", medium = "Medium", high = "High" }
+
+    @Environment(\.modelContext) private var modelContext
 
     @State private var part       = Part.engine
     @State private var titleStr   = ""
@@ -1094,8 +1142,60 @@ struct DefectReportSheet: View {
     @MainActor
     private func doSubmit() async {
         submitting = true
-        try? await Task.sleep(nanoseconds: 1_200_000_000)
-        submitting = false; submitted = true
+        
+        let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+        var vehicleId = UUID()
+        
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                vehicleId = assignedVehicle.id
+            } else if let firstVehicle = vehicles.first {
+                vehicleId = firstVehicle.id
+            }
+        }
+        
+        let severity: DefectSeverity
+        switch sev {
+        case .low: severity = .low
+        case .medium: severity = .medium
+        case .high: severity = .high
+        }
+        
+        let dbDefect = DBDefectReport(
+            id: UUID(),
+            vehicleId: vehicleId,
+            reportedBy: driverId,
+            inspectionId: nil,
+            title: "\(part.rawValue): \(titleStr)",
+            defectDescription: desc,
+            severity: severity,
+            status: .open,
+            createdAt: Date()
+        )
+        
+        do {
+            // Save to Supabase
+            try await SupabaseManager.shared.createDefectReport(dbDefect)
+            
+            // Notify Fleet Managers
+            let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
+            let msg = "Driver \(driverName) reported a defect on Vehicle \(vehicleId.uuidString.prefix(4)): \(desc)"
+            await SupabaseManager.shared.notifyFleetManagers(
+                title: "⚠️ Mid-Trip Defect: \(titleStr)",
+                message: msg,
+                type: .warning
+            )
+            
+            // Insert locally
+            modelContext.insert(dbDefect.asLocalDefectReport)
+            try? modelContext.save()
+            
+        } catch {
+            print("Failed to submit defect report: \(error.localizedDescription)")
+        }
+        
+        submitting = false
+        submitted = true
     }
 }
 

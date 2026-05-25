@@ -784,6 +784,31 @@ struct DBNotification: Codable, Identifiable {
 }
 
 
+struct DBDefectReport: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var reportedBy: UUID
+    var inspectionId: UUID?
+    var title: String
+    var defectDescription: String
+    var severity: DefectSeverity
+    var status: DefectStatus
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId         = "vehicle_id"
+        case reportedBy        = "reported_by"
+        case inspectionId      = "inspection_id"
+        case title
+        case defectDescription = "defect_description"
+        case severity
+        case status
+        case createdAt         = "created_at"
+    }
+}
+
+
 struct DBVehicleLocation: Codable, Identifiable {
     let id: UUID
     var vehicleId: UUID
@@ -927,6 +952,40 @@ extension AppNotification {
             message: message,
             type: type.toDBType,
             isRead: isRead,
+            createdAt: createdAt
+        )
+    }
+}
+
+
+extension DBDefectReport {
+    var asLocalDefectReport: DefectReport {
+        DefectReport(
+            id: id,
+            vehicleId: vehicleId,
+            reportedBy: reportedBy,
+            inspectionId: inspectionId,
+            title: title,
+            defectDescription: defectDescription,
+            severity: severity,
+            status: status,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension DefectReport {
+    @MainActor
+    var asDBDefectReport: DBDefectReport {
+        DBDefectReport(
+            id: id,
+            vehicleId: vehicleId,
+            reportedBy: reportedBy,
+            inspectionId: inspectionId,
+            title: title,
+            defectDescription: defectDescription,
+            severity: severity,
+            status: status,
             createdAt: createdAt
         )
     }
@@ -1152,7 +1211,7 @@ final class DefectReport {
     @Attribute(.unique) var id: UUID
     var vehicleId: UUID
     var reportedBy: UUID
-    var inspectionId: UUID
+    var inspectionId: UUID?
     var title: String
     var defectDescription: String
     var severity: DefectSeverity
@@ -1163,7 +1222,7 @@ final class DefectReport {
         id: UUID = UUID(),
         vehicleId: UUID,
         reportedBy: UUID,
-        inspectionId: UUID,
+        inspectionId: UUID? = nil,
         title: String,
         defectDescription: String,
         severity: DefectSeverity,

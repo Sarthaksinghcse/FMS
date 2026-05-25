@@ -181,6 +181,19 @@ CREATE TABLE IF NOT EXISTS public.vehicle_locations (
     timestamp   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 2.10  defect_reports   (DefectReport.swift)
+CREATE TABLE IF NOT EXISTS public.defect_reports (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vehicle_id         UUID NOT NULL REFERENCES public.vehicles (id) ON DELETE CASCADE,
+    reported_by        UUID NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    inspection_id      UUID REFERENCES public.vehicle_inspections (id) ON DELETE SET NULL,
+    title              TEXT NOT NULL,
+    defect_description TEXT NOT NULL,
+    severity           TEXT NOT NULL, -- 'low', 'medium', 'high'
+    status             TEXT NOT NULL DEFAULT 'open', -- 'open', 'in_progress', 'resolved'
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 
 -- ============================================================
 -- 3. INDEXES
@@ -217,6 +230,10 @@ CREATE INDEX IF NOT EXISTS idx_notifications_is_read       ON public.notificatio
 CREATE INDEX IF NOT EXISTS idx_vehicle_locations_vehicle   ON public.vehicle_locations (vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_locations_timestamp ON public.vehicle_locations (vehicle_id, timestamp DESC);
 
+CREATE INDEX IF NOT EXISTS idx_defect_reports_vehicle      ON public.defect_reports (vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_defect_reports_reported_by  ON public.defect_reports (reported_by);
+CREATE INDEX IF NOT EXISTS idx_defect_reports_status       ON public.defect_reports (status);
+
 
 -- ============================================================
 -- 4. ROW LEVEL SECURITY (RLS)
@@ -231,6 +248,7 @@ ALTER TABLE public.work_orders         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vehicle_locations   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defect_reports       ENABLE ROW LEVEL SECURITY;
 
 -- Helper: get role of logged-in user
 CREATE OR REPLACE FUNCTION public.current_user_role()
@@ -241,6 +259,8 @@ $$;
 -- ---- users ----
 CREATE POLICY "users_select_own"         ON public.users FOR SELECT USING (id = auth.uid());
 CREATE POLICY "users_select_all_manager" ON public.users FOR SELECT USING (public.current_user_role() = 'fleet_manager');
+DROP POLICY IF EXISTS "users_select_managers"    ON public.users;
+CREATE POLICY "users_select_managers"    ON public.users FOR SELECT USING (role = 'fleet_manager');
 CREATE POLICY "users_update_own"         ON public.users FOR UPDATE USING (id = auth.uid());
 CREATE POLICY "users_insert_manager"     ON public.users FOR INSERT WITH CHECK (public.current_user_role() = 'fleet_manager');
 CREATE POLICY "users_update_manager"     ON public.users FOR UPDATE USING (public.current_user_role() = 'fleet_manager');
@@ -285,6 +305,25 @@ CREATE POLICY "notifications_select_own" ON public.notifications FOR SELECT USIN
 CREATE POLICY "notifications_update_own" ON public.notifications FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY "notifications_insert_own" ON public.notifications FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY "notifications_select_manager" ON public.notifications FOR SELECT USING (public.current_user_role() = 'fleet_manager');
+DROP POLICY IF EXISTS "notifications_insert_manager" ON public.notifications;
+CREATE POLICY "notifications_insert_manager" ON public.notifications FOR INSERT WITH CHECK (public.current_user_role() = 'fleet_manager');
+DROP POLICY IF EXISTS "notifications_insert_to_manager" ON public.notifications;
+CREATE POLICY "notifications_insert_to_manager" ON public.notifications FOR INSERT WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.users
+        WHERE id = user_id AND role = 'fleet_manager'
+    )
+);
+
+-- ---- defect_reports ----
+DROP POLICY IF EXISTS "defect_reports_select_all" ON public.defect_reports;
+CREATE POLICY "defect_reports_select_all" ON public.defect_reports FOR SELECT USING (TRUE);
+DROP POLICY IF EXISTS "defect_reports_insert_driver" ON public.defect_reports;
+CREATE POLICY "defect_reports_insert_driver" ON public.defect_reports FOR INSERT WITH CHECK (reported_by = auth.uid());
+DROP POLICY IF EXISTS "defect_reports_update_all" ON public.defect_reports;
+CREATE POLICY "defect_reports_update_all" ON public.defect_reports FOR UPDATE USING (TRUE);
+DROP POLICY IF EXISTS "defect_reports_delete_manager" ON public.defect_reports;
+CREATE POLICY "defect_reports_delete_manager" ON public.defect_reports FOR DELETE USING (public.current_user_role() = 'fleet_manager');
 
 -- ---- vehicle_locations ----
 CREATE POLICY "locations_select_manager" ON public.vehicle_locations FOR SELECT USING (public.current_user_role() = 'fleet_manager');
