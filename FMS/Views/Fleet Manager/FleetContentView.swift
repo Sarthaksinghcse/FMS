@@ -21,11 +21,11 @@ struct FleetContentView: View {
                     }
                     .tag(0)
 
-                FleetTrackingView()
-                    .tabItem {
-                        Label("Tracking", systemImage: "location.fill")
-                    }
-                    .tag(1)
+                //                FleetTrackingView()
+                //                    .tabItem {
+                //                        Label("Tracking", systemImage: "location.fill")
+                //                    }
+                //                    .tag(1)
 
                 TripListView()
                     .tabItem {
