@@ -30,21 +30,19 @@ struct DriverProfileSheet: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-
-                    
+                    // ── Hero: Avatar + Name + ID ───────────────────────────
                     HeroHeader(vm: vm, employeeId: employeeId)
                         .padding(.top, 8)
                         .padding(.bottom, 28)
-
                     
+                    // ── Stats strip (2 key numbers) ────────────────────────
                     StatsStrip(
                         totalTrips: totalTrips,
                         totalKm:    totalKmDriven
                     )
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
-
-                    
+                    // ── Account info rows ──────────────────────────────────
                     ProfileSection(header: "Account") {
                         ProfileRow(icon: "person.fill",
                                    iconBg: AppTheme.Brand.primaryDeep,
@@ -68,8 +66,7 @@ struct DriverProfileSheet: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
-
-                    
+                    // ── Vehicle rows ───────────────────────────────────────
                     ProfileSection(header: "Assigned Vehicle") {
                         ProfileRow(icon: "car.side.fill",
                                    iconBg: AppTheme.Brand.violet,
@@ -88,18 +85,17 @@ struct DriverProfileSheet: View {
                         Divider().padding(.leading, 56)
                         ProfileRow(icon: "fuelpump.fill",
                                    iconBg: vm.fuelLevel < 0.25
-                                        ? AppTheme.Status.danger
-                                        : AppTheme.Status.success,
+                                   ? AppTheme.Status.danger
+                                   : AppTheme.Status.success,
                                    label: "Fuel Level",
                                    value: String(format: "%.0f%%", vm.fuelLevel * 100),
                                    valueColor: vm.fuelLevel < 0.25
-                                        ? AppTheme.Status.danger
-                                        : AppTheme.Status.success)
+                                   ? AppTheme.Status.danger
+                                   : AppTheme.Status.success)
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
-
-                    
+                    // ── Settings rows ──────────────────────────────────────
                     ProfileSection(header: "Settings") {
                         ProfileRow(icon: "bell.fill",
                                    iconBg: AppTheme.Brand.accent,
@@ -118,8 +114,7 @@ struct DriverProfileSheet: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
-
-                    
+                    // ── Sign out ───────────────────────────────────────────
                     Button {
                         Task {
                             try? await SupabaseManager.shared.signOut()
@@ -142,16 +137,14 @@ struct DriverProfileSheet: View {
             .navigationTitle("Driver Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundStyle(Color(UIColor.systemGray3))
-                            .symbolRenderingMode(.hierarchical)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
                     }
+                    .buttonStyle(.plain)
                 }
+            }
+            .toolbarColorScheme(.dark, for: .navigationBar)
             }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
@@ -163,7 +156,7 @@ struct DriverProfileSheet: View {
             }
         }
     }
-}
+
 
 
 
@@ -201,7 +194,7 @@ private struct HeroHeader: View {
 
             
             VStack(spacing: 4) {
-                Text(vm.driverFirstName + " Yadav")
+                Text(vm.driverName)
                     .font(.system(size: 24, weight: .bold))
                 HStack(spacing: 6) {
                     Text(vm.driverStatus.rawValue)
