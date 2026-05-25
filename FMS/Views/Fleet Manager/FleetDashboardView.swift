@@ -46,13 +46,50 @@ struct FleetDashboardView: View {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(viewModel.getGreetingTime())
-                                .font(.system(size: 34, weight: .bold))
-                                .foregroundColor(.black)
-                            Text(viewModel.getGreetingPosition())
-                                .font(.system(size: 34, weight: .bold))
-                                .foregroundColor(.black)
+                        HStack(alignment: .center, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(viewModel.getGreetingTime() + ",")
+                                    .font(.system(size: 17, weight: .regular))
+                                    .foregroundStyle(.secondary)
+                                Text("Manager")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(.primary)
+                            }
+
+                            Spacer()
+
+                            HStack(spacing: 16) {
+                                Button {
+                                    viewModel.activeQuickAction = .alerts
+                                } label: {
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(systemName: "bell.fill")
+                                            .font(.system(size: 18))
+                                            .foregroundStyle(Color(UIColor.label))
+                                            .frame(width: 40, height: 40)
+                                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                                            .clipShape(Circle())
+                                        
+                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty {
+                                            Circle()
+                                                .fill(AppTheme.Status.danger)
+                                                .frame(width: 10, height: 10)
+                                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                                .offset(x: 2, y: -2)
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.plain)
+
+                                Button {
+                                    showProfile = true
+                                } label: {
+                                    Image(systemName: "person.crop.circle.fill")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(AppTheme.Brand.primary)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 16)
@@ -207,9 +244,9 @@ struct FleetDashboardView: View {
                     }
                     .padding(.top, 8)
                 }
+                .scrollIndicators(.hidden)
             }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(true)
             // Quick action sheets
             .sheet(item: $viewModel.activeQuickAction) { action in
                 Group {
@@ -241,44 +278,19 @@ struct FleetDashboardView: View {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        viewModel.activeQuickAction = .alerts
-                    } label: {
-                        ZStack(alignment: .topTrailing) {
-                            ZStack {
-                                Circle()
-                                    .fill(AppTheme.Background.card)
-                                    .frame(width: 38, height: 38)
-                                    .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
-                                Image(systemName: "bell.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(AppTheme.Text.primary.opacity(0.6))
-                            }
-                            if !sosAlerts.filter({ $0.status == .active }).isEmpty {
-                                Circle()
-                                    .fill(AppTheme.Status.danger)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: -2, y: 2)
-                            }
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    ProfileMenuButton(
-                        initials: "FM",
-                        avatarColor: AppTheme.Brand.primaryDeep
-                    ) {
-                        showProfile = true
-                    }
-                }
-            }
         }
     }
+//    private var initials: String {
+//        let parts = vm.driverName.components(separatedBy: " ")
+//        if parts.count >= 2 {
+//            return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
+//        }
+//        return String(vm.driverName.prefix(2)).uppercased()
+//    }
 }
+
+
 
 // MARK: - Circular progress
 
