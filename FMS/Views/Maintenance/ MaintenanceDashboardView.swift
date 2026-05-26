@@ -23,6 +23,7 @@ struct MaintenanceDashboardView: View {
     // SwiftData queries
     @Query private var allWorkOrders: [WorkOrder]
     @Query private var allNotifications: [AppNotification]
+    @Query private var allInventoryItems: [InventoryItem]
 
     @State private var selectedTab: Int = 0
     
@@ -52,6 +53,10 @@ struct MaintenanceDashboardView: View {
 
     private var unreadNotifications: [AppNotification] {
         allNotifications.filter { $0.userId == currentUser.id && !$0.isRead }
+    }
+
+    private var lowStockCount: Int {
+        allInventoryItems.filter { $0.quantityInStock <= $0.reorderThreshold }.count
     }
 
     private var recentWorkOrders: [WorkOrder] {
@@ -90,9 +95,18 @@ struct MaintenanceDashboardView: View {
                     Label("Schedule", systemImage: "calendar")
                 }
                 .tag(1)
+            
+            InventoryTabView(currentUser: currentUser, items: allInventoryItems)
+                .tabItem {
+                    Label("Inventory", systemImage: "shippingbox.fill")
+                }
+                .tag(2)
         }
         .accentColor(Color.fmsAmber)
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onAppear {
+            DatabaseSeeder.seedIfEmpty(context: modelContext)
+        }
         .sheet(isPresented: $isCreateSheetPresented) {
             CreateWorkOrderSheet(currentUser: currentUser)
         }
@@ -220,15 +234,27 @@ struct MaintenanceDashboardView: View {
                     )
                 }
                 
-                MaintenanceStatCard(
-                    icon: "clock.fill",
-                    iconColor: AppTheme.Status.warning,
-                    iconBgColor: AppTheme.IconBg.orange,
-                    title: "In Progress",
-                    value: "\(inProgressCountVal)",
-                    valueColor: AppTheme.Status.warning,
-                    subtext: "Active now"
-                )
+                HStack(spacing: 12) {
+                    MaintenanceStatCard(
+                        icon: "clock.fill",
+                        iconColor: AppTheme.Status.warning,
+                        iconBgColor: AppTheme.IconBg.orange,
+                        title: "In Progress",
+                        value: "\(inProgressCountVal)",
+                        valueColor: AppTheme.Status.warning,
+                        subtext: "Active now"
+                    )
+                    
+                    MaintenanceStatCard(
+                        icon: "exclamationmark.triangle.fill",
+                        iconColor: AppTheme.Status.danger,
+                        iconBgColor: AppTheme.IconBg.red,
+                        title: "Low Stock Parts",
+                        value: "\(lowStockCount)",
+                        valueColor: AppTheme.Status.danger,
+                        subtext: "Need reordering"
+                    )
+                }
             }
             .padding(.horizontal)
         }
