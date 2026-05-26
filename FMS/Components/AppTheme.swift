@@ -41,6 +41,10 @@ enum AppTheme {
         static let warning      = Color.orange
         
         static let purple       = Color.purple
+        /// Neutral gray — pending, secondary, or inactive status
+        static let neutral      = Color.gray
+        /// Progress / in-progress status color
+        static let progress     = Color(red: 0.93, green: 0.46, blue: 0.00)
     }
 
     
@@ -97,6 +101,7 @@ enum AppTheme {
         static let violet       = Brand.violet.opacity(0.12)
         static let teal         = Brand.teal.opacity(0.12)
         static let amber        = Brand.amber.opacity(0.12)
+        static let gray         = Color.gray.opacity(0.12)
     }
 
     
