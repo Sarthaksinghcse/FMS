@@ -1160,7 +1160,7 @@ enum TripCategoryFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case active = "Active"
     case upcoming = "Upcoming"
-    case past = "Past"
+    case completed = "Completed"
 
     var id: String { rawValue }
 }
@@ -1190,7 +1190,7 @@ struct TripListView: View {
             trips = trips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }
         case .upcoming:
             trips = trips.filter { $0.tripStatus == .assigned }
-        case .past:
+        case .completed:
             trips = trips.filter { $0.tripStatus == .completed || $0.tripStatus == .cancelled }
         }
         
@@ -1213,7 +1213,7 @@ struct TripListView: View {
             return allTrips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }.count
         case .upcoming:
             return allTrips.filter { $0.tripStatus == .assigned }.count
-        case .past:
+        case .completed:
             return allTrips.filter { $0.tripStatus == .completed || $0.tripStatus == .cancelled }.count
         }
     }
@@ -1281,7 +1281,7 @@ struct TripListView: View {
                         case .all:      return AppTheme.Brand.accent 
                         case .active:   return Color(red: 0.30, green: 0.70, blue: 0.46) 
                         case .upcoming: return Color(red: 0.15, green: 0.38, blue: 0.90) 
-                        case .past:     return Color(red: 0.55, green: 0.58, blue: 0.62) 
+                        case .completed: return Color(red: 0.55, green: 0.58, blue: 0.62) 
                         }
                     }()
                     

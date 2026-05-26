@@ -11,6 +11,7 @@ struct AddTripFormView: View {
     
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
+    @Query private var allTrips: [Trip]
     
     
     @State private var tripCode         = ""
@@ -52,10 +53,16 @@ struct AddTripFormView: View {
                                           text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                         }
                         
-                        formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
-                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle)
+                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
+                            DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             FormDivider()
-                            DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver)
+                            DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
+                        }
+                        
+                        formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
+                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: nil)
+                            FormDivider()
+                            DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: nil)
                         }
                         
                         formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
@@ -64,12 +71,6 @@ struct AddTripFormView: View {
                             FormDivider()
                             TripFormField(label: "End Location", placeholder: "e.g. Delhi",
                                           text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
-                        }
-                        
-                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
-                            DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
-                            FormDivider()
-                            DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
                         }
                         
                         formSection(title: "Distance & Notes", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
@@ -106,6 +107,19 @@ struct AddTripFormView: View {
                 Button("Done") { dismiss() }
             } message: {
                 Text("\(tripCode) has been created successfully.")
+            }
+            .onAppear {
+                if tripCode.isEmpty {
+                    let currentMax = allTrips.compactMap { trip -> Int? in
+                        let components = trip.tripCode.components(separatedBy: "-")
+                        if components.count == 2, let number = Int(components[1]) {
+                            return number
+                        }
+                        return nil
+                    }.max() ?? 0
+                    
+                    tripCode = String(format: "TRP-%03d", currentMax + 1)
+                }
             }
         }
     }
@@ -256,7 +270,7 @@ struct EditTripFormView: View {
     
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
-    
+    @Query private var allTrips: [Trip]
     
     @State private var tripCode: String
     @State private var selectedVehicle: Vehicle?
@@ -318,10 +332,16 @@ struct EditTripFormView: View {
                             TripStatusPickerRow(selection: $tripStatus)
                         }
                         
-                        formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
-                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle)
+                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
+                            DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             FormDivider()
-                            DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver)
+                            DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
+                        }
+                        
+                        formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
+                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: trip.id)
+                            FormDivider()
+                            DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: trip.id)
                         }
                         
                         formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
@@ -330,12 +350,6 @@ struct EditTripFormView: View {
                             FormDivider()
                             TripFormField(label: "End Location", placeholder: "e.g. Delhi",
                                           text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
-                        }
-                        
-                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
-                            DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
-                            FormDivider()
-                            DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
                         }
                         
                         formSection(title: "Distance & Notes", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
@@ -672,6 +686,31 @@ struct VehiclePickerRow: View {
     let label: String
     let vehicles: [Vehicle]
     @Binding var selection: Vehicle?
+    var allTrips: [Trip] = []
+    var startTime: Date = Date()
+    var endTime: Date = Date()
+    var currentTripId: UUID? = nil
+    
+    private var availableVehicles: [Vehicle] {
+        vehicles.filter { vehicle in
+            vehicle.status == .active && !hasOverlap(for: vehicle.id)
+        }
+    }
+    
+    private var unavailableVehicles: [Vehicle] {
+        vehicles.filter { vehicle in
+            vehicle.status != .active || hasOverlap(for: vehicle.id)
+        }
+    }
+    
+    private func hasOverlap(for entityId: UUID) -> Bool {
+        allTrips.contains { trip in
+            guard trip.id != currentTripId else { return false }
+            guard trip.vehicleId == entityId else { return false }
+            guard trip.tripStatus != .completed && trip.tripStatus != .cancelled else { return false }
+            return trip.scheduledStartTime < endTime && trip.scheduledEndTime > startTime
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -687,15 +726,52 @@ struct VehiclePickerRow: View {
                     .foregroundColor(.gray)
                     .italic()
             } else {
-                Picker("", selection: $selection) {
-                    Text("Select Vehicle").tag(nil as Vehicle?)
-                    ForEach(vehicles) { vehicle in
-                        Text("\(vehicle.registrationNumber) - \(vehicle.make) \(vehicle.model)")
-                            .tag(vehicle as Vehicle?)
+                Menu {
+                    Button("Select Vehicle") {
+                        selection = nil
                     }
+
+                    if !availableVehicles.isEmpty {
+                        Section("Available Vehicles") {
+                            ForEach(availableVehicles) { vehicle in
+                                Button {
+                                    selection = vehicle
+                                } label: {
+                                    Text("\(vehicle.registrationNumber) - \(vehicle.make) \(vehicle.model)")
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                    
+                    if !unavailableVehicles.isEmpty {
+                        Section("Unavailable Vehicles") {
+                            ForEach(unavailableVehicles) { vehicle in
+                                Button {
+                                    selection = vehicle
+                                } label: {
+                                    Text("\(vehicle.registrationNumber) - \(vehicle.make) \(vehicle.model)")
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(
+                            selection.map {
+                                "\($0.registrationNumber) - \($0.make) \($0.model)"
+                            } ?? "Select Vehicle"
+                        )
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: 170, alignment: .trailing)
+
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
-                .pickerStyle(.menu)
-                .tint(AppTheme.Brand.royalBlue)
             }
         }
         .padding(.horizontal, 16)
@@ -709,6 +785,31 @@ struct DriverPickerRow: View {
     let label: String
     let drivers: [User]
     @Binding var selection: User?
+    var allTrips: [Trip] = []
+    var startTime: Date = Date()
+    var endTime: Date = Date()
+    var currentTripId: UUID? = nil
+    
+    private var availableDrivers: [User] {
+        drivers.filter { driver in
+            driver.isActive && !hasOverlap(for: driver.id)
+        }
+    }
+    
+    private var unavailableDrivers: [User] {
+        drivers.filter { driver in
+            !driver.isActive || hasOverlap(for: driver.id)
+        }
+    }
+    
+    private func hasOverlap(for entityId: UUID) -> Bool {
+        allTrips.contains { trip in
+            guard trip.id != currentTripId else { return false }
+            guard trip.driverId == entityId else { return false }
+            guard trip.tripStatus != .completed && trip.tripStatus != .cancelled else { return false }
+            return trip.scheduledStartTime < endTime && trip.scheduledEndTime > startTime
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -724,14 +825,46 @@ struct DriverPickerRow: View {
                     .foregroundColor(.gray)
                     .italic()
             } else {
-                Picker("", selection: $selection) {
-                    Text("Select Driver").tag(nil as User?)
-                    ForEach(drivers) { driver in
-                        Text(driver.fullName).tag(driver as User?)
+                Menu {
+                    if !availableDrivers.isEmpty {
+                        Section("Available Drivers") {
+                            ForEach(availableDrivers) { driver in
+                                Button {
+                                    selection = driver
+                                } label: {
+                                    Text(driver.fullName)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
                     }
+                    
+                    if !unavailableDrivers.isEmpty {
+                        Section("Unavailable Drivers") {
+                            ForEach(unavailableDrivers) { driver in
+                                Button {
+                                    selection = driver
+                                } label: {
+                                    Text(driver.fullName)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    
+                    HStack(spacing: 4) {
+                        
+                        Text(selection?.fullName ?? "Select Driver")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: 170, alignment: .trailing)
+                        
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
-                .pickerStyle(.menu)
-                .tint(AppTheme.Brand.royalBlue)
             }
         }
         .padding(.horizontal, 16)
