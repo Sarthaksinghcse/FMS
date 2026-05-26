@@ -140,12 +140,13 @@ private struct DashboardInlineHeader: View {
                 Text(greeting)
                     .font(.system(size: 17, weight: .regular))
                     .foregroundStyle(.secondary)
-                Text(vm.driverName)
+                Text(vm.driverName.components(separatedBy: " ").first ?? vm.driverName)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.primary)
             }
 
             Spacer()
+
 
             // ── Bell button ────────────────────────────────────────
             Button {
