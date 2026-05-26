@@ -1,41 +1,41 @@
-//
-//  DriverDashboardView.swift
-//  FMS
-//
-//  Root entry point for the Driver experience.
-//  Hosts the two-tab layout and owns the shared ViewModel.
-//  Target: iOS 26+ — uses Liquid Glass materials throughout.
-//
+
+
+
+
+
+
+
+
 
 import SwiftUI
+import SwiftData
 import MapKit
 import Combine
+import Supabase
 
 
-// MARK: - Design Tokens (mapped to AppTheme — single source of truth)
+
 
 extension Color {
-    /// Primary brand accent — maps to AppTheme.Brand.primaryDeep
+    
     static let fmsIndigo      = AppTheme.Brand.primaryDeep
-    /// Light tint of the brand accent
+    
     static let fmsIndigoLight = AppTheme.Brand.primaryDeep.opacity(0.10)
-    /// Card surface — white
+    
     static let fmsCard        = AppTheme.Background.card
-    /// Page background — soft blue-white
+    
     static let fmsBackground  = AppTheme.Background.page
 }
 
-// The DriverOnlineStatus, DashboardAction, DriverQuickAction, DriverChatMessage, DashboardBanner, DashboardUser, DriverDashboardDataStore, CompletedTripRecord, and DriverDashboardViewModel have been extracted to ViewModels/Driver/DriverDashboardViewModel.swift
 
-
-
-// MARK: - Root View
 
 @available(iOS 26.0, *)
 struct DriverDashboardView: View {
+    @Environment(\.modelContext) private var modelContext
 
     @StateObject private var vm = DriverDashboardViewModel()
     @State private var selectedTab = 0
+    @State private var realtimeChannel: RealtimeChannelV2?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -51,13 +51,13 @@ struct DriverDashboardView: View {
             DriverBottomTabBar(selectedTab: $selectedTab)
                 .padding(.bottom, 16)
         }
-        // ── SOS Countdown Overlay ──────────────────────────────
+        
         .overlay {
             if vm.showSOSCountdown {
                 SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
                     vm.sosSentAlert = true
                     
-                    // Live SOS emergency notification to Supabase
+                    
                     let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
                     let notif = DBNotification(
                         id: UUID(),
@@ -70,14 +70,41 @@ struct DriverDashboardView: View {
                     )
                     Task {
                         try? await SupabaseManager.shared.createNotification(notif)
+                        await MainActor.run {
+                            modelContext.insert(notif.asLocalNotification)
+                            
+                            let localSOS = SOSAlert(
+                                id: notif.id,
+                                driverId: driverId,
+                                vehicleId: vm.assignedVehicle?.id ?? UUID(),
+                                tripId: vm.activeTrip?.id ?? UUID(),
+                                latitude: 28.5450,
+                                longitude: 77.2600,
+                                message: notif.message,
+                                status: .active,
+                                createdAt: notif.createdAt
+                            )
+                            modelContext.insert(localSOS)
+                            try? modelContext.save()
+                        }
                     }
                 }
                 .transition(.opacity)
                 .zIndex(999)
             }
         }
-        .task { await vm.load() }
-        // ─── Global Sheets ─────────────────────────────────────
+        .task {
+            await vm.load(context: modelContext)
+            startRealtimeTripsListener()
+        }
+        .onDisappear {
+            if let activeChannel = realtimeChannel {
+                Task {
+                    await activeChannel.unsubscribe()
+                }
+            }
+        }
+        
         .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet() }
         .sheet(isPresented: $vm.showIssue)     { IssueReportSheet() }
         .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
@@ -102,10 +129,10 @@ struct DriverDashboardView: View {
         .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
         }
-        // ─── Confirmations ──────────────────────────────────────
+        
         .confirmationDialog("End Trip", isPresented: $vm.confirmEnd, titleVisibility: .visible) {
             Button("End Trip", role: .destructive) {
-                // Show post-trip inspection first — finishTrip() is called after the sheet closes
+                
                 vm.showPostTripOnEnd = true
                 vm.showPostTrip = true
             }
@@ -119,9 +146,91 @@ struct DriverDashboardView: View {
             Text("Emergency alert has been sent to your fleet manager. Help is on the way.")
         }
     }
+
+    private func startRealtimeTripsListener() {
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("driver_trips_realtime")
+        
+        Task {
+            let changes = await channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "trips"
+            )
+            
+            await channel.subscribe()
+            self.realtimeChannel = channel
+            
+            for await change in changes {
+                switch change {
+                case .insert(let action):
+                    guard let dbTrip = try? action.record.decode(as: DBTrip.self) else { continue }
+                    if dbTrip.driverId == vm.driverId {
+                        await MainActor.run {
+                            modelContext.insert(dbTrip.asLocalTrip)
+                            try? modelContext.save()
+                            Task {
+                                await vm.load(context: modelContext)
+                            }
+                        }
+                    }
+                case .update(let action):
+                    guard let dbTrip = try? action.record.decode(as: DBTrip.self) else { continue }
+                    await MainActor.run {
+                        let id = dbTrip.id
+                        let descriptor = FetchDescriptor<Trip>()
+                        let localTrips = (try? modelContext.fetch(descriptor)) ?? []
+                        if let local = localTrips.first(where: { $0.id == id }) {
+                            if dbTrip.driverId == vm.driverId {
+                                
+                                local.vehicleId = dbTrip.vehicleId
+                                local.driverId = dbTrip.driverId
+                                local.startLocation = dbTrip.source
+                                local.endLocation = dbTrip.destination
+                                local.scheduledStartTime = dbTrip.startTime ?? Date()
+                                local.scheduledEndTime = dbTrip.endTime ?? Date().addingTimeInterval(7200)
+                                local.actualStartTime = dbTrip.startTime
+                                local.actualEndTime = dbTrip.endTime
+                                local.distanceKm = dbTrip.distance
+                                local.tripStatus = dbTrip.status.toLocalStatus
+                                local.notes = dbTrip.notes
+                            } else {
+                                
+                                modelContext.delete(local)
+                            }
+                            try? modelContext.save()
+                        } else if dbTrip.driverId == vm.driverId {
+                            
+                            modelContext.insert(dbTrip.asLocalTrip)
+                            try? modelContext.save()
+                        }
+                        Task {
+                            await vm.load(context: modelContext)
+                        }
+                    }
+                case .delete(let action):
+                    guard let dbTrip = try? action.oldRecord.decode(as: DBTrip.self) else { continue }
+                    await MainActor.run {
+                        let id = dbTrip.id
+                        let descriptor = FetchDescriptor<Trip>()
+                        let localTrips = (try? modelContext.fetch(descriptor)) ?? []
+                        if let local = localTrips.first(where: { $0.id == id }) {
+                            modelContext.delete(local)
+                            try? modelContext.save()
+                        }
+                        Task {
+                            await vm.load(context: modelContext)
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+        }
+    }
 }
 
-// ── Custom Bottom Tab Bar Capsule ──────────────────────────────────────────────
+
 struct DriverBottomTabBar: View {
     @Binding var selectedTab: Int
 
@@ -171,9 +280,9 @@ struct DriverBottomTabBar: View {
     }
 }
 
-// MARK: - Shared Subcomponents
 
-// ── Route Visual Row ───────────────────────────────────────────────────────────
+
+
 struct FMSRouteRow: View {
     let source: String
     let destination: String
@@ -211,7 +320,7 @@ struct FMSRouteRow: View {
     }
 }
 
-// ── Trip Meta Stat Cell ────────────────────────────────────────────────────────
+
 struct TripMetaCell: View {
     let icon: String
     let value: String
@@ -235,7 +344,7 @@ struct TripMetaCell: View {
     }
 }
 
-// ── Message Row ────────────────────────────────────────────────────────────────
+
 struct FMSMsgRow: View {
     let msg: DriverChatMessage
 
@@ -282,7 +391,7 @@ struct FMSMsgRow: View {
     }
 }
 
-// ── Quick Action Tile ──────────────────────────────────────────────────────────
+
 struct ActionTile: View {
     let qa: DriverQuickAction
     let onTap: () -> Void
@@ -325,7 +434,7 @@ struct ActionTile: View {
     }
 }
 
-// MARK: - Voice Log Sheet
+
 
 struct VoiceLogSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -344,7 +453,7 @@ struct VoiceLogSheet: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 36) {
-                    // Mic button
+                    
                     ZStack {
                         ForEach(0..<3, id: \.self) { i in
                             Circle()
@@ -495,7 +604,7 @@ struct VoiceLogSheet: View {
     }
 }
 
-// MARK: - Issue Report Sheet
+
 
 struct IssueReportSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -525,7 +634,7 @@ struct IssueReportSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Issue type picker
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Issue Type")
                         LazyVGrid(
@@ -564,7 +673,7 @@ struct IssueReportSheet: View {
                         }
                     }
 
-                    // Severity
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Severity")
                         Picker("Severity", selection: $severity) {
@@ -575,7 +684,7 @@ struct IssueReportSheet: View {
                         .pickerStyle(.segmented)
                     }
 
-                    // Description
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Description")
                         TextField("What's happening? Add any relevant details…", text: $desc, axis: .vertical)
@@ -622,12 +731,12 @@ struct IssueReportSheet: View {
     }
 }
 
-// MARK: - Inspection Sheet
+
 
 struct InspectionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
-    /// Called when the user submits. (passed, issuesFound, remarks)
+    
     var onComplete: ((Bool, Int, String) -> Void)? = nil
 
     struct CheckItem: Identifiable {
@@ -650,6 +759,8 @@ struct InspectionFormSheet: View {
         ]
     }
 
+    @Environment(\.modelContext) private var modelContext
+
     @State private var items      = CheckItem.all
     @State private var remarks    = ""
     @State private var hasDefect  = false
@@ -659,7 +770,7 @@ struct InspectionFormSheet: View {
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
     private var passCount: Int { items.filter(\.passed).count }
-    /// For post-trip: items that are NOT checked = issues found
+    
     private var issuesFound: Int { isPreTrip ? 0 : items.filter { !$0.passed }.count }
 
     var body: some View {
@@ -667,7 +778,7 @@ struct InspectionFormSheet: View {
             ScrollView {
                 VStack(spacing: 20) {
 
-                    // Progress ring summary
+                    
                     VStack(spacing: 6) {
                         ZStack {
                             Circle()
@@ -693,7 +804,7 @@ struct InspectionFormSheet: View {
                     .padding(.vertical, 24)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
 
-                    // Checklist
+                    
                     VStack(spacing: 0) {
                         ForEach($items) { $item in
                             HStack(spacing: 14) {
@@ -720,7 +831,7 @@ struct InspectionFormSheet: View {
                     }
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
 
-                    // Defect toggle
+                    
                     HStack {
                         Label("Defect Found", systemImage: "exclamationmark.triangle.fill")
                             .font(.system(size: 14, weight: .medium))
@@ -731,7 +842,7 @@ struct InspectionFormSheet: View {
                     .padding(.horizontal, 16).padding(.vertical, 14)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
 
-                    // Remarks
+                    
                     TextField("Remarks or additional notes…", text: $remarks, axis: .vertical)
                         .font(.system(size: 14))
                         .lineLimit(3...6)
@@ -767,6 +878,14 @@ struct InspectionFormSheet: View {
                     }
                 }
                 .padding(20)
+            }
+            .onChange(of: items.map(\.passed)) {
+                let hasUnchecked = items.contains(where: { !$0.passed })
+                if hasUnchecked {
+                    hasDefect = true
+                } else {
+                    hasDefect = false
+                }
             }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle(title)
@@ -807,10 +926,12 @@ struct InspectionFormSheet: View {
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
         var vehicleId = UUID()
         
-        // Fetch vehicle assigned to current driver
-        if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
-           let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-            vehicleId = assignedVehicle.id
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                vehicleId = assignedVehicle.id
+            } else if let firstVehicle = vehicles.first {
+                vehicleId = firstVehicle.id
+            }
         }
         
         let checklistStrings = items.map { "\($0.label): \($0.passed ? "passed" : "failed")" }
@@ -829,7 +950,6 @@ struct InspectionFormSheet: View {
         do {
             try await SupabaseManager.shared.submitInspection(dbInspection)
             
-            // Create a notification if a defect was reported
             if !allPass || hasDefect {
                 let notif = DBNotification(
                     id: UUID(),
@@ -841,6 +961,41 @@ struct InspectionFormSheet: View {
                     createdAt: Date()
                 )
                 try await SupabaseManager.shared.createNotification(notif)
+                
+                // Create defect report
+                let defectId = UUID()
+                let severity: DefectSeverity = (status == .failed) ? .high : .medium
+                let defectTitle = "\(isPreTrip ? "Pre-Trip" : "Post-Trip") Defect"
+                let failedChecks = items.filter { !$0.passed }.map { $0.label }
+                let defectDesc = remarks.isEmpty ? "Inspection flagged issues: \(failedChecks.joined(separator: ", "))" : remarks
+                
+                let dbDefect = DBDefectReport(
+                    id: defectId,
+                    vehicleId: vehicleId,
+                    reportedBy: driverId,
+                    inspectionId: dbInspection.id,
+                    title: defectTitle,
+                    defectDescription: defectDesc,
+                    severity: severity,
+                    status: .open,
+                    createdAt: Date()
+                )
+                
+                // Submit to Supabase
+                try? await SupabaseManager.shared.createDefectReport(dbDefect)
+                
+                // Notify Fleet Managers
+                let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
+                let fleetMsg = "Driver \(driverName) flagged a defect on Vehicle \(vehicleId.uuidString.prefix(4)) during \(isPreTrip ? "pre-trip" : "post-trip") inspection: \(defectDesc)"
+                await SupabaseManager.shared.notifyFleetManagers(
+                    title: "⚠️ Defect Flagged (\(isPreTrip ? "Pre" : "Post")-Trip)",
+                    message: fleetMsg,
+                    type: .warning
+                )
+                
+                // Insert locally in SwiftData
+                modelContext.insert(dbDefect.asLocalDefectReport)
+                try? modelContext.save()
             }
         } catch {
             print("Failed to save inspection: \(error.localizedDescription)")
@@ -851,7 +1006,7 @@ struct InspectionFormSheet: View {
     }
 }
 
-// MARK: - Defect Report Sheet
+
 
 struct DefectReportSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -872,6 +1027,8 @@ struct DefectReportSheet: View {
     }
     enum SevPick: String, CaseIterable { case low = "Low", medium = "Medium", high = "High" }
 
+    @Environment(\.modelContext) private var modelContext
+
     @State private var part       = Part.engine
     @State private var titleStr   = ""
     @State private var desc       = ""
@@ -883,7 +1040,7 @@ struct DefectReportSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Component picker
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Affected Component")
                         LazyVGrid(
@@ -985,12 +1142,64 @@ struct DefectReportSheet: View {
     @MainActor
     private func doSubmit() async {
         submitting = true
-        try? await Task.sleep(nanoseconds: 1_200_000_000)
-        submitting = false; submitted = true
+        
+        let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+        var vehicleId = UUID()
+        
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                vehicleId = assignedVehicle.id
+            } else if let firstVehicle = vehicles.first {
+                vehicleId = firstVehicle.id
+            }
+        }
+        
+        let severity: DefectSeverity
+        switch sev {
+        case .low: severity = .low
+        case .medium: severity = .medium
+        case .high: severity = .high
+        }
+        
+        let dbDefect = DBDefectReport(
+            id: UUID(),
+            vehicleId: vehicleId,
+            reportedBy: driverId,
+            inspectionId: nil,
+            title: "\(part.rawValue): \(titleStr)",
+            defectDescription: desc,
+            severity: severity,
+            status: .open,
+            createdAt: Date()
+        )
+        
+        do {
+            // Save to Supabase
+            try await SupabaseManager.shared.createDefectReport(dbDefect)
+            
+            // Notify Fleet Managers
+            let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
+            let msg = "Driver \(driverName) reported a defect on Vehicle \(vehicleId.uuidString.prefix(4)): \(desc)"
+            await SupabaseManager.shared.notifyFleetManagers(
+                title: "⚠️ Mid-Trip Defect: \(titleStr)",
+                message: msg,
+                type: .warning
+            )
+            
+            // Insert locally
+            modelContext.insert(dbDefect.asLocalDefectReport)
+            try? modelContext.save()
+            
+        } catch {
+            print("Failed to submit defect report: \(error.localizedDescription)")
+        }
+        
+        submitting = false
+        submitted = true
     }
 }
 
-// MARK: - Chat Sheet
+
 
 struct ChatSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -1050,7 +1259,7 @@ struct ChatSheet: View {
     }
 }
 
-// MARK: - Preview
+
 
 @available(iOS 26.0, *)
 #Preview("Driver Dashboard") {

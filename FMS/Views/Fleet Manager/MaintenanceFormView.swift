@@ -1,17 +1,17 @@
-//
-//  MaintenanceFormView.swift
-//  FMS
-//
-//  Full Add / Edit / Delete maintenance staff forms for the Fleet Manager's
-//  Maintenance Management screen. Follows the VehicleFormView.swift pattern.
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Add Maintenance Staff Form
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct AddMaintenanceFormView: View {
@@ -19,19 +19,19 @@ struct AddMaintenanceFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
 
-    // ── Form State ────────────────────────────────────────────────────────────
+    
     @State private var fullName     = ""
     @State private var email        = ""
     @State private var phoneNumber  = ""
     @State private var password     = ""
     @State private var isActive     = true
 
-    // ── Validation ────────────────────────────────────────────────────────────
+    
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
 
-    // ── Focus ─────────────────────────────────────────────────────────────────
+    
     @FocusState private var focusedField: UserFocusField?
 
     var body: some View {
@@ -42,7 +42,7 @@ struct AddMaintenanceFormView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // ── Form sections ──────────────────────────────────
+                        
                         formSection(title: "Personal Information", icon: "person.fill", iconColor: AppTheme.Brand.accent) {
                             UserFormField(label: "Full Name", placeholder: "e.g. Jane Smith",
                                          text: $fullName, keyboardType: .default, focus: $focusedField, tag: .fullName)
@@ -63,7 +63,7 @@ struct AddMaintenanceFormView: View {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
-                        // ── Save Button ────────────────────────────────────
+                        
                         saveButton
 
                         Spacer().frame(height: 40)
@@ -94,7 +94,7 @@ struct AddMaintenanceFormView: View {
     }
 
 
-    // MARK: Save Button
+    
 
     private var saveButton: some View {
         Button {
@@ -120,10 +120,10 @@ struct AddMaintenanceFormView: View {
         }
     }
 
-    // MARK: Save Action
+    
 
     private func saveStaff() {
-        // Validation
+        
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Full name is required."; showValidationAlert = true; return
         }
@@ -142,7 +142,7 @@ struct AddMaintenanceFormView: View {
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        // Simple password hashing using base64 for demo purposes
+        
         let passwordHash = Data(password.utf8).base64EncodedString()
 
         let staff = User(
@@ -160,9 +160,9 @@ struct AddMaintenanceFormView: View {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Edit Maintenance Staff Form
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct EditMaintenanceFormView: View {
@@ -172,7 +172,7 @@ struct EditMaintenanceFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
 
-    // ── Form State ────────────────────────────────────────────────────────────
+    
     @State private var fullName: String
     @State private var email: String
     @State private var phoneNumber: String
@@ -206,10 +206,10 @@ struct EditMaintenanceFormView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // ── Staff badge ────────────────────────────────────
+                        
                         staffBadge
 
-                        // ── Sections ───────────────────────────────────────
+                        
                         formSection(title: "Personal Information", icon: "person.fill", iconColor: AppTheme.Brand.accent) {
                             UserFormField(label: "Full Name", placeholder: "e.g. Jane Smith",
                                          text: $fullName, keyboardType: .default, focus: $focusedField, tag: .fullName)
@@ -225,10 +225,10 @@ struct EditMaintenanceFormView: View {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
-                        // ── Save ───────────────────────────────────────────
+                        
                         saveButton
 
-                        // ── Delete ─────────────────────────────────────────
+                        
                         deleteButton
 
                         Spacer().frame(height: 40)
@@ -264,7 +264,7 @@ struct EditMaintenanceFormView: View {
         }
     }
 
-    // MARK: Staff Badge
+    
 
     private var staffBadge: some View {
         HStack(spacing: 16) {
@@ -297,7 +297,7 @@ struct EditMaintenanceFormView: View {
         .padding(.top, 8)
     }
 
-    // MARK: Save Button
+    
 
     private var saveButton: some View {
         Button { saveChanges() } label: {
@@ -316,7 +316,7 @@ struct EditMaintenanceFormView: View {
         }
     }
 
-    // MARK: Delete Button
+    
 
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
@@ -333,7 +333,7 @@ struct EditMaintenanceFormView: View {
         }
     }
 
-    // MARK: Actions
+    
 
     private func saveChanges() {
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {

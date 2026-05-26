@@ -1,14 +1,14 @@
-//
-//  BottomTabBar.swift
-//  FMS
-//
-//  Created by Antigravity on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 
 struct DashboardBottomTabBar: View {
-    /// 0 = Dashboard  |  1 = Tracking  |  2 = Manage
+    
     @Binding var selectedTab: Int
 
     var body: some View {
@@ -21,11 +21,11 @@ struct DashboardBottomTabBar: View {
         .padding(.vertical, 10)
         .background(
             ZStack {
-                // Glassmorphic background
+                
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(.ultraThinMaterial)
                 
-                // Subtle gradient overlay
+                
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(
                         LinearGradient(
@@ -38,7 +38,7 @@ struct DashboardBottomTabBar: View {
                         )
                     )
                 
-                // Border
+                
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(
                         LinearGradient(
@@ -66,7 +66,7 @@ struct DashboardBottomTabBar: View {
         } label: {
             VStack(spacing: 6) {
                 ZStack {
-                    // Background circle for selected state
+                    
                     if selectedTab == index {
                         Circle()
                             .fill(

@@ -1,9 +1,9 @@
-//
-//  QuickActionCard.swift
-//  FMS
-//
-//  Created by Priyanshu Namdev on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 
@@ -14,7 +14,7 @@ struct DashboardQuickActionCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 10) {
-                // Rounded square pastel icon container
+                
                 ZStack {
                     RoundedRectangle(cornerRadius: 18)
                         .fill(action.bgColor)
@@ -25,7 +25,7 @@ struct DashboardQuickActionCard: View {
                         .foregroundColor(action.iconColor)
                 }
                 
-                // Label Text below
+                
                 Text(action.label)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color.black.opacity(0.8))

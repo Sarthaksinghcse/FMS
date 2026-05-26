@@ -1,9 +1,9 @@
-//
-//  DatabaseSeeder.swift
-//  FMS
-//
-//  Created by Antigravity on 21/05/26.
-//
+
+
+
+
+
+
 
 import Foundation
 import SwiftData
@@ -11,7 +11,7 @@ import SwiftData
 @MainActor
 struct DatabaseSeeder {
     static func seedIfEmpty(context: ModelContext) {
-        // Check if database is already seeded
+        
         do {
             let vehicleDescriptor = FetchDescriptor<Vehicle>()
             let existingVehicles = try context.fetch(vehicleDescriptor)
@@ -20,7 +20,7 @@ struct DatabaseSeeder {
             let existingUsers = try context.fetch(userDescriptor)
             
             guard existingVehicles.isEmpty && existingUsers.isEmpty else {
-                // Database already contains seeded data
+                
                 return
             }
         } catch {
@@ -30,7 +30,7 @@ struct DatabaseSeeder {
         
         print(" Seeding SwiftData database with premium mock data...")
         
-        // 1. Seed Users (Drivers & Maintenance)
+        
         let driver1 = User(
             id: UUID(uuidString: "d0000000-0000-0000-0000-000000000001")!,
             fullName: "Priyanshu Namdev",
@@ -83,7 +83,7 @@ struct DatabaseSeeder {
         
         [driver1, driver2, driver3, tech1, tech2].forEach { context.insert($0) }
         
-        // 2. Seed Vehicles
+        
         let v1 = Vehicle(
             id: UUID(uuidString: "e0000000-0000-0000-0000-000000000001")!,
             registrationNumber: "DL-01-MA-4532",
@@ -170,7 +170,7 @@ struct DatabaseSeeder {
         
         [v1, v2, v3, v4, v5, v6].forEach { context.insert($0) }
         
-        // 3. Seed Trips
+        
         let t1 = Trip(
             id: UUID(uuidString: "f0000000-0000-0000-0000-000000000184")!,
             tripCode: "TRIP-1842",
@@ -212,7 +212,7 @@ struct DatabaseSeeder {
         
         [t1, t2].forEach { context.insert($0) }
         
-        // 4. Seed Defect Reports
+        
         let defect1 = DefectReport(
             vehicleId: v3.id,
             reportedBy: driver1.id,
@@ -237,7 +237,7 @@ struct DatabaseSeeder {
         
         [defect1, defect2].forEach { context.insert($0) }
         
-        // 5. Seed SOS Alerts
+        
         let sos1 = SOSAlert(
             driverId: driver1.id,
             vehicleId: v1.id,
@@ -251,7 +251,7 @@ struct DatabaseSeeder {
         
         context.insert(sos1)
         
-        // 6. Seed Work Orders
+        
         let wo1 = WorkOrder(
             vehicleId: v3.id,
             defectReportId: defect1.id,
@@ -266,7 +266,7 @@ struct DatabaseSeeder {
         
         context.insert(wo1)
         
-        // 7. Seed Maintenance Records (for Report costs)
+        
         let record1 = MaintenanceRecord(
             vehicleId: v1.id,
             workOrderId: UUID(),

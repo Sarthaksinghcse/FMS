@@ -1,15 +1,15 @@
-//
-//  FleetManagerProfileView.swift
-//  FMS
-//
-//  Profile main screen for Fleet Manager role.
-//  Shows personal info, fleet overview stats, and quick-access settings.
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 
-// MARK: - Fleet Manager Profile View
+
 
 @available(iOS 26.0, *)
 struct FleetManagerProfileView: View {
@@ -77,12 +77,12 @@ struct FleetManagerProfileView: View {
         }
     }
 
-    // MARK: - Profile Header Card
+    
 
     private var profileHeaderCard: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 20) {
-                // Avatar
+                
                 ZStack {
                     Circle()
                         .fill(
@@ -100,7 +100,7 @@ struct FleetManagerProfileView: View {
                         .foregroundColor(.white)
                 }
 
-                // Name & Email
+                
                 VStack(spacing: 6) {
                     Text(user?.name ?? "Fleet Manager")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
@@ -110,7 +110,7 @@ struct FleetManagerProfileView: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(AppTheme.Text.secondary)
 
-                    // Role Badge
+                    
                     HStack(spacing: 6) {
                         Image(systemName: "shield.checkered")
                             .font(.system(size: 11, weight: .semibold))
@@ -128,7 +128,7 @@ struct FleetManagerProfileView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 28)
 
-            // Edit Profile Button (Top-Right)
+            
             Button {
                 showEditProfile = true
             } label: {
@@ -155,7 +155,7 @@ struct FleetManagerProfileView: View {
 
 
 
-    // MARK: - Account & Settings
+    
 
     private var accountSettingsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -217,7 +217,7 @@ struct FleetManagerProfileView: View {
         }
     }
 
-    // MARK: - Sign Out
+    
 
     private var signOutSection: some View {
         Button {
@@ -239,7 +239,7 @@ struct FleetManagerProfileView: View {
     }
 }
 
-// MARK: - Preview
+
 
 @available(iOS 26.0, *)
 #Preview {

@@ -1,7 +1,7 @@
-//
-//  FleetTrackingViewModel.swift
-//  FMS
-//
+
+
+
+
 
 import Foundation
 import MapKit
@@ -28,7 +28,7 @@ final class FleetTrackingViewModel {
         do {
             let fetchedVehicles = try await supabaseManager.fetchVehicles()
             
-            // Fetch real-time GPS coordinates from Supabase vehicle_locations
+            
             var locationMap: [UUID: CLLocationCoordinate2D] = [:]
             do {
                 let latestLocations = try await supabaseManager.fetchLatestVehicleLocations()
@@ -43,7 +43,7 @@ final class FleetTrackingViewModel {
             }
             
             self.mappedVehicles = fetchedVehicles.map { vehicle in
-                // Use real GPS coordinates if available, otherwise fall back to random offset
+                
                 let coordinate: CLLocationCoordinate2D
                 if let realCoord = locationMap[vehicle.id] {
                     coordinate = realCoord

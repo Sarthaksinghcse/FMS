@@ -1,25 +1,25 @@
-//
-//  EmailManager.swift
-//  FMS
-//  Created by Naman Yadav on 22/05/26.
-//
+
+
+
+
+
 
 import Foundation
 
-/// A manager to handle sending email notifications through the Resend REST API.
+
 public final class EmailManager {
     public static let shared = EmailManager()
     
-    // Developer should replace this placeholder with a valid Resend API Key:
-    // e.g. "re_1234567890..."
-    private let apiKey = "re_U65DyUEE_LPnKJyDrj1m6qEHTY2MxePt8"
     
-    // Sender configuration. Resend requires a verified domain unless sending from onboarding@resend.dev.
+    
+    private let apiKey = "re_bRqYRGAK_FBttSS7qNy8F4LboUz2HeavF"
+    
+    
     private let senderEmail = "FMS System <onboarding@resend.dev>"
     
     private init() {}
     
-    /// Struct representing the Resend API payload.
+    
     private struct ResendPayload: Codable {
         let from: String
         let to: [String]
@@ -27,12 +27,12 @@ public final class EmailManager {
         let html: String
     }
     
-    /// Sends an email through the Resend API.
+    
     private func sendEmail(to recipient: String, subject: String, htmlContent: String) async throws {
-        // If API key is not configured, print info and throw error so caller knows but can log/ignore.
-        guard apiKey != "re_U65DyUEE_LPnKJyDrj1m6qEHTY2MxePt8" else {
-            print(" EmailManager: Resend API Key is not set. Skipping email send to \(recipient).")
-            throw NSError(domain: "EmailManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "Resend API Key is not set."])
+        
+        guard apiKey.starts(with: "re_") && apiKey.count > 20 else {
+            print(" EmailManager: Resend API Key is not set or invalid. Skipping email send to \(recipient).")
+            throw NSError(domain: "EmailManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "Resend API Key is not set or invalid."])
         }
         
         let url = URL(string: "https://api.resend.com/emails")!
@@ -64,7 +64,7 @@ public final class EmailManager {
         }
     }
     
-    /// Sends a welcome email containing plain-text credentials to a newly created driver account.
+    
     public func sendWelcomeEmail(to email: String, name: String, passwordString: String) async throws {
         let subject = "Welcome to Fleeto!"
         let html = """
@@ -104,7 +104,7 @@ public final class EmailManager {
         try await sendEmail(to: email, subject: subject, htmlContent: html)
     }
     
-    /// Sends a notification email to a driver when they are assigned a vehicle.
+    
     public func sendVehicleAssignmentEmail(to email: String, name: String, vehicleReg: String, vehicleModel: String) async throws {
         let subject = "New Vehicle Assigned - Fleeto! "
         let html = """
@@ -144,7 +144,7 @@ public final class EmailManager {
         try await sendEmail(to: email, subject: subject, htmlContent: html)
     }
     
-    /// Sends a notification email to a driver when they are assigned a trip.
+    
     public func sendTripAssignmentEmail(to email: String, name: String, tripCode: String, source: String, destination: String, startTime: Date, distance: Double) async throws {
         let subject = "New Trip Assigned: \(tripCode) - Fleeto!"
         

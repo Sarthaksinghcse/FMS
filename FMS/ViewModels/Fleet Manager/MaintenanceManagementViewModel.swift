@@ -1,20 +1,20 @@
-//
-//  MaintenanceManagementViewModel.swift
-//  FMS
-//
-//  Created on 21/05/26.
-//
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 import Combine
 
-// MARK: - Maintenance Management View Model
+
 @MainActor
 final class MaintenanceManagementViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     
-    // Add work order state
+    
     @Published var newTitle: String = ""
     @Published var newDescription: String = ""
     @Published var selectedVehicleId: UUID? = nil
@@ -32,9 +32,9 @@ final class MaintenanceManagementViewModel: ObservableObject {
         errorMessage = nil
     }
     
-    /// Validates and schedules a new Work Order.
-    /// Updates the vehicle status to .inMaintenance.
-    /// BACKEND DEVS: Add Supabase integration inside this function.
+    
+    
+    
     func scheduleWorkOrder(context: ModelContext, vehicles: [Vehicle], staff: [User]) -> Bool {
         errorMessage = nil
         
@@ -72,7 +72,7 @@ final class MaintenanceManagementViewModel: ObservableObject {
             return false
         }
         
-        // 1. Create the work order
+        
         let workOrder = WorkOrder(
             vehicleId: vehicleId,
             assignedTo: staffId,
@@ -83,7 +83,7 @@ final class MaintenanceManagementViewModel: ObservableObject {
             estimatedCost: estCost
         )
         
-        // 2. Update vehicle status to inMaintenance
+        
         selectedVehicle.status = .inMaintenance
         selectedVehicle.updatedAt = Date()
         
@@ -94,12 +94,12 @@ final class MaintenanceManagementViewModel: ObservableObject {
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
             
-            // Sync work order to Supabase
+            
             let dbWorkOrder = workOrder.asDBWorkOrder
             Task {
                 do {
                     try await SupabaseManager.shared.createWorkOrder(dbWorkOrder)
-                    // Also update the vehicle status in Supabase
+                    
                     var dbVehicle = DBVehicle(
                         id: selectedVehicle.id,
                         vehicleNumber: selectedVehicle.registrationNumber,
@@ -128,8 +128,8 @@ final class MaintenanceManagementViewModel: ObservableObject {
         }
     }
     
-    /// Starts work on a Work Order (updates status to inProgress)
-    /// BACKEND DEVS: Sync with cloud DB here
+    
+    
     func startWork(workOrderId: UUID, context: ModelContext, workOrders: [WorkOrder]) -> Bool {
         errorMessage = nil
         guard let wo = workOrders.first(where: { $0.id == workOrderId }) else {
@@ -144,7 +144,7 @@ final class MaintenanceManagementViewModel: ObservableObject {
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
             
-            // Sync status change to Supabase
+            
             var dbWO = wo.asDBWorkOrder
             dbWO.status = .inProgress
             Task {
@@ -158,8 +158,8 @@ final class MaintenanceManagementViewModel: ObservableObject {
         }
     }
     
-    /// Completes the work order. Creates a MaintenanceRecord and resets the Vehicle status to .active
-    /// BACKEND DEVS: Sync with cloud DB here
+    
+    
     func completeWork(workOrderId: UUID, finalCost: Double, context: ModelContext, workOrders: [WorkOrder], vehicles: [Vehicle]) -> Bool {
         errorMessage = nil
         guard let wo = workOrders.first(where: { $0.id == workOrderId }) else {
@@ -172,18 +172,18 @@ final class MaintenanceManagementViewModel: ObservableObject {
             return false
         }
         
-        // 1. Mark completed
+        
         wo.status = .completed
         wo.completedAt = Date()
         
-        // 2. Restore vehicle status to active (or inactive depending on preference, active is default)
+        
         vehicle.status = .active
         vehicle.lastServiceDate = Date()
-        // Automatically schedule next service in 3 months
+        
         vehicle.nextServiceDate = Calendar.current.date(byAdding: .month, value: 3, to: Date())
         vehicle.updatedAt = Date()
         
-        // 3. Create MaintenanceRecord
+        
         let maintenanceRecord = MaintenanceRecord(
             vehicleId: wo.vehicleId,
             workOrderId: wo.id,
@@ -200,13 +200,13 @@ final class MaintenanceManagementViewModel: ObservableObject {
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
             
-            // Sync completion to Supabase
+            
             var dbWO = wo.asDBWorkOrder
             dbWO.status = .completed
             Task {
                 do {
                     try await SupabaseManager.shared.updateWorkOrder(dbWO)
-                    // Create maintenance task record in Supabase
+                    
                     let dbTask = DBMaintenanceTask(
                         id: UUID(),
                         vehicleId: wo.vehicleId,
@@ -230,8 +230,8 @@ final class MaintenanceManagementViewModel: ObservableObject {
         }
     }
     
-    /// Cancels a Work Order, restoring the Vehicle status to .active
-    /// BACKEND DEVS: Sync with cloud DB here
+    
+    
     func cancelWork(workOrderId: UUID, context: ModelContext, workOrders: [WorkOrder], vehicles: [Vehicle]) -> Bool {
         errorMessage = nil
         guard let wo = workOrders.first(where: { $0.id == workOrderId }) else {
@@ -242,7 +242,7 @@ final class MaintenanceManagementViewModel: ObservableObject {
         wo.status = .cancelled
         
         if let vehicle = vehicles.first(where: { $0.id == wo.vehicleId }) {
-            // Check if there are other active work orders for this vehicle before marking active
+            
             let otherActive = workOrders.contains { $0.vehicleId == wo.vehicleId && $0.id != wo.id && ($0.status == .open || $0.status == .inProgress) }
             if !otherActive {
                 vehicle.status = .active
@@ -253,7 +253,7 @@ final class MaintenanceManagementViewModel: ObservableObject {
         do {
             try context.save()
             
-            // Sync cancellation to Supabase
+            
             var dbWO = wo.asDBWorkOrder
             dbWO.status = .closed
             Task {

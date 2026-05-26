@@ -1,19 +1,19 @@
-//
-//  DriverInnerScreens.swift
-//  FMS
-//
-//  Inner screens for Driver profile:
-//  - Edit Profile
-//  - License Details
-//  - Trip History
-//  - Notification Settings
-//  - Security Settings
-//  - Help & Support
-//
+
+
+
+
+
+
+
+
+
+
+
+
 
 import SwiftUI
 
-// MARK: - Driver Edit Profile
+
 
 @available(iOS 26.0, *)
 struct DriverEditProfileView: View {
@@ -44,7 +44,7 @@ struct DriverEditProfileView: View {
 
                 ScrollView {
                     VStack(spacing: 28) {
-                        // Avatar
+                        
                         VStack(spacing: 14) {
                             ZStack {
                                 Circle()
@@ -71,7 +71,7 @@ struct DriverEditProfileView: View {
                         }
                         .padding(.top, 8)
 
-                        // Form
+                        
                         VStack(spacing: 0) {
                             ProfileFormField(icon: "person.fill", label: "Full Name", text: $fullName, placeholder: "Enter your name")
                             Divider().padding(.leading, 56)
@@ -80,7 +80,7 @@ struct DriverEditProfileView: View {
                             ProfileFormField(icon: "phone.arrow.up.right.fill", label: "Emergency Contact", text: $emergencyContact, placeholder: "+91 XXXXX XXXXX", keyboardType: .phonePad)
                             Divider().padding(.leading, 56)
 
-                            // Email (read-only)
+                            
                             HStack(spacing: 12) {
                                 Image(systemName: "envelope.fill")
                                     .font(.system(size: 15))
@@ -106,7 +106,7 @@ struct DriverEditProfileView: View {
                         .cornerRadius(AppTheme.Radius.card)
                         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
 
-                        // Save
+                        
                         Button {
                             isSaving = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -160,7 +160,7 @@ struct DriverEditProfileView: View {
     }
 }
 
-// MARK: - License Detail View
+
 
 @available(iOS 26.0, *)
 struct DriverLicenseDetailView: View {
@@ -173,7 +173,7 @@ struct DriverLicenseDetailView: View {
 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // License Card Visual
+                        
                         VStack(spacing: 16) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -220,7 +220,7 @@ struct DriverLicenseDetailView: View {
                         )
                         .shadow(color: AppTheme.Brand.primary.opacity(0.3), radius: 12, y: 6)
 
-                        // Additional details
+                        
                         VStack(spacing: 0) {
                             ProfileInfoRow(label: "Full Name", value: "Test Driver")
                             Divider().padding(.leading, 16)
@@ -271,7 +271,7 @@ private struct DriverLicenseInfo: View {
     }
 }
 
-// MARK: - Trip History
+
 
 @available(iOS 26.0, *)
 struct DriverTripHistoryView: View {
@@ -361,7 +361,7 @@ struct DriverTripHistoryView: View {
     }
 }
 
-// MARK: - Driver Notification Settings
+
 
 @available(iOS 26.0, *)
 struct DriverNotificationSettingsView: View {
@@ -420,7 +420,7 @@ struct DriverNotificationSettingsView: View {
     }
 }
 
-// MARK: - Driver Security Settings
+
 
 @available(iOS 26.0, *)
 struct DriverSecuritySettingsView: View {
@@ -521,7 +521,7 @@ private struct ProfileSecureField: View {
     }
 }
 
-// MARK: - Driver Help & Support
+
 
 @available(iOS 26.0, *)
 struct DriverHelpSupportView: View {
@@ -597,7 +597,7 @@ struct DriverHelpSupportView: View {
     }
 }
 
-// MARK: - Previews
+
 
 @available(iOS 26.0, *)
 #Preview("Edit Profile") { DriverEditProfileView() }

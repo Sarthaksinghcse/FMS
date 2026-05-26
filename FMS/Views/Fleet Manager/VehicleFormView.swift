@@ -1,17 +1,17 @@
-//
-//  VehicleFormView.swift
-//  FMS
-//
-//  Full Add / Edit / Delete vehicle forms for the Fleet Manager's
-//  Vehicle Management screen. Replaces the previous stub views.
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 import SwiftData
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Add Vehicle Form
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct AddVehicleFormView: View {
@@ -19,7 +19,7 @@ struct AddVehicleFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
 
-    // ── Form State ────────────────────────────────────────────────────────────
+    
     @State private var registrationNumber = ""
     @State private var vinNumber          = ""
     @State private var make               = ""
@@ -32,13 +32,13 @@ struct AddVehicleFormView: View {
     @State private var nextServiceDate    = Date()
     @State private var insuranceExpiryDate = Date()
 
-    // ── Validation ────────────────────────────────────────────────────────────
+    
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
     @State private var isSaving             = false
 
-    // ── Focus ─────────────────────────────────────────────────────────────────
+    
     @FocusState private var focusedField: VehicleFocusField?
 
     var body: some View {
@@ -49,9 +49,9 @@ struct AddVehicleFormView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // ── Hero header ──
+                        
 
-                        // ── Form sections ──────────────────────────────────
+                        
                         formSection(title: "Identity", icon: "doc.text.fill", iconColor: AppTheme.Brand.royalBlue) {
                             VehicleFormField(label: "Registration No.", placeholder: "e.g. KA-01-AB-1234",
                                             text: $registrationNumber, keyboardType: .default, focus: $focusedField, tag: .registration)
@@ -94,7 +94,7 @@ struct AddVehicleFormView: View {
                             DatePickerRow(label: "Insurance Expiry", date: $insuranceExpiryDate)
                         }
 
-                        // ── Save Button ────────────────────────────────────
+                        
                         saveButton
 
                         Spacer().frame(height: 40)
@@ -125,7 +125,7 @@ struct AddVehicleFormView: View {
     }
 
 
-    // MARK: Save Button
+    
 
     private var saveButton: some View {
         Button {
@@ -157,10 +157,10 @@ struct AddVehicleFormView: View {
         .disabled(isSaving)
     }
 
-    // MARK: Save Action
+    
 
     private func saveVehicle() {
-        // Validation
+        
         guard !registrationNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Registration number is required."; showValidationAlert = true; return
         }
@@ -199,7 +199,7 @@ struct AddVehicleFormView: View {
 
         Task {
             do {
-                // Save to Supabase first
+                
                 try await SupabaseManager.shared.createVehicle(vehicle.asDBVehicle)
                 
                 await MainActor.run {
@@ -210,7 +210,7 @@ struct AddVehicleFormView: View {
                 }
             } catch {
                 print("Failed to save vehicle to Supabase: \(error)")
-                // Fallback to local cache so user can work offline
+                
                 await MainActor.run {
                     modelContext.insert(vehicle)
                     try? modelContext.save()
@@ -222,9 +222,9 @@ struct AddVehicleFormView: View {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Edit Vehicle Form
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 @available(iOS 26.0, *)
 struct EditVehicleFormView: View {
@@ -234,7 +234,7 @@ struct EditVehicleFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
 
-    // ── Form State ────────────────────────────────────────────────────────────
+    
     @State private var registrationNumber: String
     @State private var vinNumber: String
     @State private var make: String
@@ -280,10 +280,10 @@ struct EditVehicleFormView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // ── Identity badge ─────────────────────────────────
+                        
                         vehicleBadge
 
-                        // ── Sections ───────────────────────────────────────
+                        
                         formSection(title: "Identity", icon: "doc.text.fill", iconColor: AppTheme.Brand.royalBlue) {
                             VehicleFormField(label: "Registration No.", placeholder: "e.g. KA-01-AB-1234",
                                             text: $registrationNumber, keyboardType: .default, focus: $focusedField, tag: .registration)
@@ -322,10 +322,10 @@ struct EditVehicleFormView: View {
                             DatePickerRow(label: "Insurance Expiry", date: $insuranceExpiryDate)
                         }
 
-                        // ── Save ───────────────────────────────────────────
+                        
                         saveButton
 
-                        // ── Delete ─────────────────────────────────────────
+                        
                         deleteButton
 
                         Spacer().frame(height: 40)
@@ -361,7 +361,7 @@ struct EditVehicleFormView: View {
         }
     }
 
-    // MARK: Vehicle Badge
+    
 
     private var vehicleBadge: some View {
         HStack(spacing: 16) {
@@ -394,7 +394,7 @@ struct EditVehicleFormView: View {
         .padding(.top, 8)
     }
 
-    // MARK: Save Button
+    
 
     private var saveButton: some View {
         Button { saveChanges() } label: {
@@ -419,7 +419,7 @@ struct EditVehicleFormView: View {
         .disabled(isSaving || isDeleting)
     }
 
-    // MARK: Delete Button
+    
 
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
@@ -442,7 +442,7 @@ struct EditVehicleFormView: View {
         .disabled(isSaving || isDeleting)
     }
 
-    // MARK: Actions
+    
 
     private func saveChanges() {
         guard !registrationNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -463,7 +463,7 @@ struct EditVehicleFormView: View {
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        // Create updated DB model
+        
         let updatedDBVehicle = DBVehicle(
             id: vehicle.id,
             vehicleNumber: registrationNumber.trimmingCharacters(in: .whitespaces).uppercased(),
@@ -482,7 +482,7 @@ struct EditVehicleFormView: View {
 
         Task {
             do {
-                // Update on Supabase first
+                
                 try await SupabaseManager.shared.updateVehicle(updatedDBVehicle)
                 
                 await MainActor.run {
@@ -506,7 +506,7 @@ struct EditVehicleFormView: View {
                 }
             } catch {
                 print("Failed to update vehicle on Supabase: \(error)")
-                // Fallback to local cache update
+                
                 await MainActor.run {
                     vehicle.registrationNumber   = registrationNumber.trimmingCharacters(in: .whitespaces).uppercased()
                     vehicle.vinNumber            = vinNumber.trimmingCharacters(in: .whitespaces).uppercased()
@@ -537,7 +537,7 @@ struct EditVehicleFormView: View {
         
         Task {
             do {
-                // Delete from Supabase first
+                
                 try await SupabaseManager.shared.deleteVehicle(id: vehicle.id)
                 
                 await MainActor.run {
@@ -548,7 +548,7 @@ struct EditVehicleFormView: View {
                 }
             } catch {
                 print("Failed to delete vehicle from Supabase: \(error)")
-                // Fallback to local delete
+                
                 await MainActor.run {
                     modelContext.delete(vehicle)
                     try? modelContext.save()
@@ -560,17 +560,17 @@ struct EditVehicleFormView: View {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Shared Form Components
-// ─────────────────────────────────────────────────────────────────────────────
 
-// MARK: Field Tag Enum
+
+
+
+
 
 enum VehicleFocusField: Hashable {
     case registration, vin, make, model, year, odometer
 }
 
-// MARK: Form Section Container
+
 
 @available(iOS 26.0, *)
 @ViewBuilder
@@ -581,7 +581,7 @@ func formSection<Content: View>(
     @ViewBuilder content: () -> Content
 ) -> some View {
     VStack(alignment: .leading, spacing: 0) {
-        // Section Header
+        
         HStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -600,7 +600,7 @@ func formSection<Content: View>(
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
 
-        // Card
+        
         VStack(spacing: 0) {
             content()
         }
@@ -611,7 +611,7 @@ func formSection<Content: View>(
     }
 }
 
-// MARK: Text Field Row
+
 
 struct VehicleFormField: View {
     let label: String
@@ -640,7 +640,7 @@ struct VehicleFormField: View {
     }
 }
 
-// MARK: Segment Picker Row
+
 
 struct SegmentPickerRow<T: Hashable>: View {
     let label: String
@@ -682,7 +682,7 @@ struct SegmentPickerRow<T: Hashable>: View {
     }
 }
 
-// MARK: Status Picker Row
+
 
 struct StatusPickerRow: View {
     @Binding var selection: VehicleStatus
@@ -725,7 +725,7 @@ struct StatusPickerRow: View {
     }
 }
 
-// MARK: Date Picker Row
+
 
 struct DatePickerRow: View {
     let label: String
@@ -746,7 +746,7 @@ struct DatePickerRow: View {
     }
 }
 
-// MARK: Divider
+
 
 struct FormDivider: View {
     var body: some View {
