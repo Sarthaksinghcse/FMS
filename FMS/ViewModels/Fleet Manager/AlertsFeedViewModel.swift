@@ -84,3 +84,4 @@ final class AlertsFeedViewModel: ObservableObject {
         }
     }
 }
+
