@@ -282,7 +282,7 @@ final class DriverDashboardViewModel: ObservableObject {
             }
             upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
             isTripActive  = currentTrip != nil
-            driverStatus  = isTripActive ? .active : .idle
+            if isTripActive { driverStatus = .active }
             let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
             assignedVehicle = vehicles.first(where: { $0.id == vid })
             
@@ -318,7 +318,7 @@ final class DriverDashboardViewModel: ObservableObject {
                 }
                 upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
                 isTripActive  = currentTrip != nil
-                driverStatus  = isTripActive ? .active : .idle
+                if isTripActive { driverStatus = .active }
                 let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                 assignedVehicle = vehicles.first(where: { $0.id == vid })
                 
@@ -354,7 +354,7 @@ final class DriverDashboardViewModel: ObservableObject {
                     }
                     upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
                     isTripActive  = currentTrip != nil
-                    driverStatus  = isTripActive ? .active : .idle
+                    if isTripActive { driverStatus = .active }
                     let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                     assignedVehicle = vehicles.first(where: { $0.id == vid })
                     
@@ -483,7 +483,7 @@ final class DriverDashboardViewModel: ObservableObject {
         }
 
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
-            isTripActive = false; driverStatus = .idle
+            isTripActive = false
             currentTrip = nil; activeTrip = nil
             showPostTripOnEnd = false
             tripElapsed = 0

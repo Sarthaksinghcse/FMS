@@ -42,6 +42,36 @@ struct DriverProfileSheet: View {
                     )
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
+                    // ── Status row ─────────────────────────────────────────
+                    ProfileSection(header: "Status") {
+                        HStack(spacing: 14) {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(vm.driverStatus.dot)
+                                .frame(width: 32, height: 32)
+                                .overlay(
+                                    Image(systemName: "dot.radiowaves.left.and.right")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(.white)
+                                )
+                            
+                            Toggle("Status", isOn: Binding(
+                                get: { vm.driverStatus == .active },
+                                set: { newValue in
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        vm.driverStatus = newValue ? .active : .offline
+                                    }
+                                }
+                            ))
+                            .font(.system(size: 16))
+                            .foregroundStyle(.primary)
+                            .tint(AppTheme.Status.success)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 13)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+
                     // ── Account info rows ──────────────────────────────────
                     ProfileSection(header: "Account") {
                         ProfileRow(icon: "person.fill",
@@ -137,6 +167,7 @@ struct DriverProfileSheet: View {
             .navigationTitle("Driver Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
