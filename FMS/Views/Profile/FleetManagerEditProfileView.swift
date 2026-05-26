@@ -20,6 +20,8 @@ struct FleetManagerEditProfileView: View {
     @State private var phoneNumber: String = ""
     @State private var isSaving = false
     @State private var showSaved = false
+    @State private var showErrorAlert = false
+    @State private var errorAlertMessage = ""
 
     private var user: DBUser? { supabase.currentUser }
 
@@ -144,6 +146,13 @@ struct FleetManagerEditProfileView: View {
 
                         
                         Button {
+                            let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
+                            guard trimmedPhone.isValidPhoneNumber else {
+                                errorAlertMessage = "Please enter a valid 10-digit phone number."
+                                showErrorAlert = true
+                                return
+                            }
+                            
                             isSaving = true
                             
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -198,6 +207,11 @@ struct FleetManagerEditProfileView: View {
                 Button("OK") { dismiss() }
             } message: {
                 Text("Your profile has been saved successfully.")
+            }
+            .alert("Validation Error", isPresented: $showErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorAlertMessage)
             }
         }
     }

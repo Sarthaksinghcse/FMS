@@ -138,14 +138,20 @@ struct AddDriverFormView: View {
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Full name is required."; showValidationAlert = true; return
         }
-        guard !email.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmedEmail.isEmpty else {
             validationMessage = "Email is required."; showValidationAlert = true; return
         }
-        guard email.contains("@") else {
+        guard trimmedEmail.isValidEmail else {
             validationMessage = "Please enter a valid email address."; showValidationAlert = true; return
         }
-        guard !phoneNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
+        
+        let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
+        guard !trimmedPhone.isEmpty else {
             validationMessage = "Phone number is required."; showValidationAlert = true; return
+        }
+        guard trimmedPhone.isValidPhoneNumber else {
+            validationMessage = "Please enter a valid 10-digit phone number."; showValidationAlert = true; return
         }
         guard !password.isEmpty else {
             validationMessage = "Password is required."; showValidationAlert = true; return
@@ -429,14 +435,20 @@ struct EditDriverFormView: View {
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Full name is required."; showValidationAlert = true; return
         }
-        guard !email.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmedEmail.isEmpty else {
             validationMessage = "Email is required."; showValidationAlert = true; return
         }
-        guard email.contains("@") else {
+        guard trimmedEmail.isValidEmail else {
             validationMessage = "Please enter a valid email address."; showValidationAlert = true; return
         }
-        guard !phoneNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
+        
+        let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
+        guard !trimmedPhone.isEmpty else {
             validationMessage = "Phone number is required."; showValidationAlert = true; return
+        }
+        guard trimmedPhone.isValidPhoneNumber else {
+            validationMessage = "Please enter a valid 10-digit phone number."; showValidationAlert = true; return
         }
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()

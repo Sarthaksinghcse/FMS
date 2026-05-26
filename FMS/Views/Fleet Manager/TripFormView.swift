@@ -11,6 +11,7 @@ struct AddTripFormView: View {
     
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
+    @Query private var allTrips: [Trip]
     
     
     @State private var tripCode         = ""
@@ -53,7 +54,7 @@ struct AddTripFormView: View {
                         }
                         
                         formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
-                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle)
+                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles,selection: $selectedVehicle)
                             FormDivider()
                             DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver)
                         }
@@ -106,6 +107,19 @@ struct AddTripFormView: View {
                 Button("Done") { dismiss() }
             } message: {
                 Text("\(tripCode) has been created successfully.")
+            }
+            .onAppear {
+                if tripCode.isEmpty {
+                    let currentMax = allTrips.compactMap { trip -> Int? in
+                        let components = trip.tripCode.components(separatedBy: "-")
+                        if components.count == 2, let number = Int(components[1]) {
+                            return number
+                        }
+                        return nil
+                    }.max() ?? 0
+                    
+                    tripCode = String(format: "TRP-%03d", currentMax + 1)
+                }
             }
         }
     }
@@ -687,15 +701,34 @@ struct VehiclePickerRow: View {
                     .foregroundColor(.gray)
                     .italic()
             } else {
-                Picker("", selection: $selection) {
-                    Text("Select Vehicle").tag(nil as Vehicle?)
-                    ForEach(vehicles) { vehicle in
-                        Text("\(vehicle.registrationNumber) - \(vehicle.make) \(vehicle.model)")
-                            .tag(vehicle as Vehicle?)
+                Menu {
+                    Button("Select Vehicle") {
+                        selection = nil
                     }
+
+                    ForEach(vehicles) { vehicle in
+                        Button {
+                            selection = vehicle
+                        } label: {
+                            Text("\(vehicle.registrationNumber) - \(vehicle.make) \(vehicle.model)")
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(
+                            selection.map {
+                                "\($0.registrationNumber) - \($0.make) \($0.model)"
+                            } ?? "Select Vehicle"
+                        )
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: 170, alignment: .trailing)
+
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
-                .pickerStyle(.menu)
-                .tint(AppTheme.Brand.royalBlue)
             }
         }
         .padding(.horizontal, 16)
@@ -709,6 +742,9 @@ struct DriverPickerRow: View {
     let label: String
     let drivers: [User]
     @Binding var selection: User?
+    
+    private var activeDrivers: [User] { drivers.filter { $0.isActive } }
+    private var inactiveDrivers: [User] { drivers.filter { !$0.isActive } }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -724,14 +760,46 @@ struct DriverPickerRow: View {
                     .foregroundColor(.gray)
                     .italic()
             } else {
-                Picker("", selection: $selection) {
-                    Text("Select Driver").tag(nil as User?)
-                    ForEach(drivers) { driver in
-                        Text(driver.fullName).tag(driver as User?)
+                Menu {
+                    
+                    if !activeDrivers.isEmpty {
+                        Section("Active Drivers") {
+                            ForEach(activeDrivers) { driver in
+                                Button {
+                                    selection = driver
+                                } label: {
+                                    Text(driver.fullName)
+                                }
+                            }
+                        }
                     }
+                    
+                    if !inactiveDrivers.isEmpty {
+                        Section("Inactive Drivers") {
+                            ForEach(inactiveDrivers) { driver in
+                                Button {
+                                    selection = driver
+                                } label: {
+                                    Text(driver.fullName)
+                                }
+                            }
+                        }
+                    }
+                    
+                } label: {
+                    
+                    HStack(spacing: 4) {
+                        
+                        Text(selection?.fullName ?? "Select Driver")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: 170, alignment: .trailing)
+                        
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
-                .pickerStyle(.menu)
-                .tint(AppTheme.Brand.royalBlue)
             }
         }
         .padding(.horizontal, 16)
