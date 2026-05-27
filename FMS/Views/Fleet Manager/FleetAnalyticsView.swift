@@ -52,6 +52,9 @@ struct FleetAnalyticsView: View {
                 withAnimation(.easeOut(duration: 0.6)) {
                     appearAnimation = true
                 }
+                Task {
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
+                }
             }
         }
     }

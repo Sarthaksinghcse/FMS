@@ -182,9 +182,26 @@ struct DriverProfileView: View {
                         .frame(width: 90, height: 90)
                         .shadow(color: AppTheme.Status.success.opacity(0.35), radius: 16, y: 6)
 
-                    Text(initials)
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                    if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
+                        AsyncImage(url: imageURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            default:
+                                Text(initials)
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .frame(width: 90, height: 90)
+                        .clipShape(Circle())
+                    } else {
+                        Text(initials)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
                 }
 
                 // Active duty status indicator

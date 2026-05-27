@@ -135,22 +135,25 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 16)
 
-                            HStack(spacing: 10) {
-                                ForEach(DashboardMockData.quickActions) { action in
-                                    DashboardQuickActionCard(action: action) {
-                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                        switch action.label {
-                                        case "Add Vehicle":    viewModel.activeQuickAction = .addVehicle
-                                        case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
-                                        case "Reports":        viewModel.activeQuickAction = .reports
-                                        case "Alerts":         viewModel.activeQuickAction = .alerts
-                                        case "Maintenance":    viewModel.activeQuickAction = .maintenance
-                                        default: break
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(viewModel.quickActions) { action in
+                                        DashboardQuickActionCard(action: action) {
+                                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                            switch action.label {
+                                            case "Add Vehicle":    viewModel.activeQuickAction = .addVehicle
+                                            case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
+                                            case "Reports":        viewModel.activeQuickAction = .reports
+                                            case "Alerts":         viewModel.activeQuickAction = .alerts
+                                            case "Maintenance":    viewModel.activeQuickAction = .maintenance
+                                            default: break
+                                            }
                                         }
+                                        .frame(width: 80)
                                     }
                                 }
+                                .padding(.horizontal, 16)
                             }
-                            .padding(.horizontal, 16)
                             .padding(.vertical, 4)
                         }
 

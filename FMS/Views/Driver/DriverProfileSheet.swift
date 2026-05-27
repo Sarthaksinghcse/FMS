@@ -9,6 +9,7 @@ struct DriverProfileSheet: View {
 
     @StateObject private var supabase = SupabaseManager.shared
     @State private var showSignOutConfirm = false
+    @State private var showNotificationsFromProfile = false
 
     
     private var totalTrips: Int {
@@ -74,7 +75,7 @@ struct DriverProfileSheet: View {
                     ProfileSection(header: "Account") {
                         ProfileRow(icon: "person.fill",
                                    iconBg: AppTheme.Brand.primaryDeep,
-                                   label: "Full Name",
+                                   label: "Name",
                                    value: vm.driverFirstName)
                         Divider().padding(.leading, 56)
                         ProfileRow(icon: "creditcard.fill",
@@ -94,51 +95,38 @@ struct DriverProfileSheet: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
-                    // ── Vehicle rows ───────────────────────────────────────
-                    ProfileSection(header: "Assigned Vehicle") {
-                        ProfileRow(icon: "car.side.fill",
-                                   iconBg: AppTheme.Brand.violet,
-                                   label: "Model",
-                                   value: "\(vm.vehicleModel)  (\(vm.vehicleYear))")
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "building.2.fill",
-                                   iconBg: AppTheme.Brand.violet,
-                                   label: "Manufacturer",
-                                   value: vm.vehicleManufacturer)
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "car.fill",
-                                   iconBg: AppTheme.Brand.violet,
-                                   label: "Plate",
-                                   value: vm.assignedReg)
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "fuelpump.fill",
-                                   iconBg: vm.fuelLevel < 0.25
-                                   ? AppTheme.Status.danger
-                                   : AppTheme.Status.success,
-                                   label: "Fuel Level",
-                                   value: String(format: "%.0f%%", vm.fuelLevel * 100),
-                                   valueColor: vm.fuelLevel < 0.25
-                                   ? AppTheme.Status.danger
-                                   : AppTheme.Status.success)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-                    // ── Settings rows ──────────────────────────────────────
+
+                    // ── Navigation Links (Settings) ───────────────────────────
                     ProfileSection(header: "Settings") {
-                        ProfileRow(icon: "bell.fill",
-                                   iconBg: AppTheme.Brand.accent,
-                                   label: "Notifications",
-                                   showChevron: true)
+                        NavigationLink {
+                            DriverNotificationsSheet(vm: vm)
+                        } label: {
+                            ProfileRow(icon: "bell.fill",
+                                       iconBg: AppTheme.Brand.accent,
+                                       label: "Notifications",
+                                       showChevron: false)  // NavigationLink adds its own
+                        }
+                        .buttonStyle(.plain)
                         Divider().padding(.leading, 56)
-                        ProfileRow(icon: "lock.fill",
-                                   iconBg: AppTheme.Brand.amber,
-                                   label: "Privacy & Security",
-                                   showChevron: true)
+                        NavigationLink {
+                            PrivacyPlaceholderView()
+                        } label: {
+                            ProfileRow(icon: "lock.fill",
+                                       iconBg: AppTheme.Brand.amber,
+                                       label: "Privacy & Security",
+                                       showChevron: false)
+                        }
+                        .buttonStyle(.plain)
                         Divider().padding(.leading, 56)
-                        ProfileRow(icon: "questionmark.circle.fill",
-                                   iconBg: Color(UIColor.systemGray),
-                                   label: "Help & Support",
-                                   showChevron: true)
+                        NavigationLink {
+                            HelpSupportPlaceholderView()
+                        } label: {
+                            ProfileRow(icon: "questionmark.circle.fill",
+                                       iconBg: Color(UIColor.systemGray),
+                                       label: "Help & Support",
+                                       showChevron: false)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
@@ -229,7 +217,7 @@ private struct HeroHeader: View {
                 Text(vm.driverName)
                     .font(.system(size: 24, weight: .bold))
                 HStack(spacing: 6) {
-                    Text(vm.driverStatus.rawValue)
+                    Text(vm.driverStatus.displayLabel)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(vm.driverStatus.dot)
                     Text("·")
@@ -366,4 +354,48 @@ private struct ProfileRow: View {
 @available(iOS 26.0, *)
 #Preview("Driver Profile") {
     DriverProfileSheet(vm: DriverDashboardViewModel())
+}
+
+// MARK: - Placeholder Views for Settings Navigation
+
+@available(iOS 26.0, *)
+struct PrivacyPlaceholderView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(AppTheme.Brand.amber)
+            Text("Privacy & Security")
+                .font(.system(size: 22, weight: .bold))
+            Text("This section is coming soon.\nYour data is always stored securely.")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("Privacy & Security")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+@available(iOS 26.0, *)
+struct HelpSupportPlaceholderView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "questionmark.circle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color(UIColor.systemGray))
+            Text("Help & Support")
+                .font(.system(size: 22, weight: .bold))
+            Text("Contact your fleet manager for assistance.\nIn-app support is coming soon.")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("Help & Support")
+        .navigationBarTitleDisplayMode(.inline)
+    }
 }
