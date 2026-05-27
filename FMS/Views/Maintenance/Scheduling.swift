@@ -83,6 +83,7 @@ extension WorkOrderPriority {
 struct ScheduledTasksView: View {
     let currentUser: User
     @StateObject private var vm: ScheduledTasksViewModel
+    @Environment(\.dismiss) private var dismiss
     private var externalFilter: Binding<Int>?
 
     @Query private var allNotifications: [AppNotification]
@@ -123,9 +124,23 @@ struct ScheduledTasksView: View {
             AppTheme.Background.page.ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // Back Button
+                HStack {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(AppTheme.Text.primary)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.top, 16)
+                .padding(.bottom, 8)
+                .background(AppTheme.Background.card)
+                
                 // Premium Custom Header
                 MaintenanceHeaderView(
-                    title: "Scheduling",
+                    title: "Pending Repairs",
                     subtitle: "Track and organize your maintenance work orders.",
                     initials: initials,
                     avatarColor: AppTheme.Brand.amber,

@@ -45,8 +45,8 @@ struct TappableOverviewCard<Destination: View>: View {
                 }
 
                 Text(title)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(AppTheme.Text.secondary)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
 
                 Text(value)
                     .font(.system(size: 26, weight: .bold, design: .rounded))
@@ -73,10 +73,6 @@ struct TappableOverviewCard<Destination: View>: View {
             )
             .cornerRadius(AppTheme.Radius.card)
             .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                    .stroke(Color.black.opacity(0.04), lineWidth: 1)
-            )
         }
         .buttonStyle(ScaleButtonStyle())
     }

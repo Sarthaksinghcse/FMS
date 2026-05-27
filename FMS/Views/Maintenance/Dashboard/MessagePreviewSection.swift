@@ -31,15 +31,7 @@ struct MessagesPreviewSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                HStack(spacing: 8) {
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(AppTheme.Brand.primary)
-                    
-                    Text("Messages")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.primary)
-                }
+                SectionHeader(title: "Messages")
                 
                 Spacer()
                 

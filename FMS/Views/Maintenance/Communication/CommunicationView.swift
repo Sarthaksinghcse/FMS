@@ -137,15 +137,25 @@ struct CommunicationView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottomTrailing) {
             AppTheme.Background.page.ignoresSafeArea()
 
-            VStack(spacing: 0) {
+            VStack(spacing: 20) {
+                // Premium Custom Header
+                MaintenanceHeaderView(
+                    title: "Messages",
+                    subtitle: "Stay connected with your team.",
+                    initials: "",
+                    avatarColor: AppTheme.Brand.primary,
+                    notificationCount: 0,
+                    showActions: false
+                )
+                .background(AppTheme.Background.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, y: 2)
+                
                 // Search Bar
                 TaskSearchBar(text: $searchText, placeholder: "Search messages...")
                     .padding(.horizontal)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
 
                 // Category filters
                 MessageFilterView(selectedCategory: $selectedCategory)
@@ -183,9 +193,22 @@ struct CommunicationView: View {
                     }
                 }
             }
+            
+            // New Chat Floating Action Button
+            Button(action: {
+                // Start new chat action
+            }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(AppTheme.Brand.primary)
+                    .clipShape(Circle())
+                    .shadow(color: AppTheme.Brand.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+            }
+            .padding(20)
         }
-        .navigationTitle("Messages")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
         .task {
             await loadMessages()
             startRealtimeListener()

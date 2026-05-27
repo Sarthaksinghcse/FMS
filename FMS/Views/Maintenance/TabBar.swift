@@ -33,12 +33,14 @@ struct MaintenanceDashboardView: View {
                     Label("Inventory", systemImage: "shippingbox")
                 }
                 .tag(1)
-
-            MaintenanceSchedulingTab(currentUser: currentUser, selectedFilter: $schedulingFilter)
-                .tabItem {
-                    Label("Scheduling", systemImage: "calendar")
-                }
-                .tag(2)
+                
+            NavigationStack {
+                CommunicationView()
+            }
+            .tabItem {
+                Label("Messages", systemImage: "message.fill")
+            }
+            .tag(2)
         }
         .accentColor(AppTheme.Brand.primary)
     }
