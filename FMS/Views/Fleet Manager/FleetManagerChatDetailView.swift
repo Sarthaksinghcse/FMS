@@ -130,7 +130,7 @@ struct FleetManagerChatDetailView: View {
                         proxy.scrollTo(lastMsg.id, anchor: .bottom)
                     }
                 }
-                .onChange(of: conversationMessages.count) { _, _ in
+                .onChange(of: conversationMessages.count) { oldValue, newValue in
                     if let lastMsg = conversationMessages.last {
                         withAnimation {
                             proxy.scrollTo(lastMsg.id, anchor: .bottom)
@@ -174,9 +174,11 @@ struct FleetManagerChatDetailView: View {
         }
         .onDisappear {
             if let activeChannel = realtimeChannel {
+                let client = supabase.client
                 Task {
-                    await activeChannel.unsubscribe()
+                    await client.removeChannel(activeChannel)
                 }
+                realtimeChannel = nil
             }
         }
     }
@@ -217,7 +219,7 @@ struct FleetManagerChatDetailView: View {
         Task {
             do {
                 try await supabase.sendMessage(dbMsg)
-                _ = await MainActor.run {
+                await MainActor.run {
                     self.messageText = ""
                     Task {
                         await loadMessages()
@@ -230,6 +232,7 @@ struct FleetManagerChatDetailView: View {
     }
     
     private func startRealtimeListener() {
+        guard realtimeChannel == nil else { return }
         let client = supabase.client
         let channel = client.channel("fleet_manager_chat_messages_realtime")
         
@@ -239,6 +242,7 @@ struct FleetManagerChatDetailView: View {
                 schema: "public",
                 table: "messages"
             )
+            
             try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             

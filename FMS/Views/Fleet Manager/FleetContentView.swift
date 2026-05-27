@@ -1,3 +1,5 @@
+//FMS
+
 import SwiftUI
 import SwiftData
 import Supabase
@@ -33,17 +35,11 @@ struct FleetContentView: View {
                     }
                     .tag(2)
 
-                FleetAnalyticsView()
-                    .tabItem {
-                        Label("Analytics", systemImage: "chart.bar.xaxis")
-                    }
-                    .tag(3)
-
                 ManagementHubView()
                     .tabItem {
                         Label("Manage", systemImage: "slider.horizontal.3")
                     }
-                    .tag(4)
+                    .tag(3)
             }
             .tint(AppTheme.Brand.primary)
             
@@ -134,14 +130,17 @@ struct FleetContentView: View {
         }
         .onDisappear {
             if let activeChannel = realtimeChannel {
+                let client = SupabaseManager.shared.client
                 Task {
-                    await activeChannel.unsubscribe()
+                    await client.removeChannel(activeChannel)
                 }
+                realtimeChannel = nil
             }
         }
     }
     
     private func startRealtimeSOSListener() {
+        guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
         let channel = client.channel("fleet_manager_notifications")
         
@@ -151,13 +150,14 @@ struct FleetContentView: View {
                 schema: "public",
                 table: "notifications"
             )
+            
             try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             for await change in changes {
                 guard let notif = try? change.record.decode(as: DBNotification.self) else { continue }
                 if notif.type == .emergency {
-                    await triggerEmergencySOS(notif: notif)
+                    triggerEmergencySOS(notif: notif)
                 }
             }
         }
