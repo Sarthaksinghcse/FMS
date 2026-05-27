@@ -388,168 +388,180 @@ private struct IdleCard: View {
 }
 
 
-// MARK: - Redesigned Assigned Trip Card
-
 private struct AssignedTripCard: View {
     let trip: DBTrip
     @ObservedObject var vm: DriverDashboardViewModel
-
-    // Trip progress steps
-    private let progressSteps = ["Assigned", "Started", "In Transit", "Reached", "Delivered"]
-
-    // Current step index — Assigned = 0 always for upcoming trips
-    private var currentStep: Int { 0 }
 
     private var tripCode: String {
         "TRIP-\(trip.id.uuidString.prefix(8).uppercased())"
     }
 
-    private var formattedScheduledDate: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d, hh:mm a"
+    /// Exact ETA: distance (km) ÷ 60 km/h average speed
+    private var etaString: String {
+        let hours = trip.distance / 60.0
+        let h = Int(hours)
+        let m = Int((hours - Double(h)) * 60)
+        if h > 0 { return "\(h)h \(m)m" }
+        return "\(m) min"
+    }
+
+    /// Arrival time = departure time + ETA duration
+    private var arrivalTimeString: String {
+        let departure = trip.startTime ?? trip.createdAt
+        let travelSeconds = (trip.distance / 60.0) * 3600
+        let arrival = departure.addingTimeInterval(travelSeconds)
+        let f = DateFormatter(); f.dateFormat = "hh:mm a"
+        return f.string(from: arrival)
+    }
+
+    private var departureTimeString: String {
+        let f = DateFormatter(); f.dateFormat = "MMM d · hh:mm a"
         return f.string(from: trip.startTime ?? trip.createdAt)
     }
 
-    private var etaString: String {
-        let secs = Int(trip.distance / 60 * 60)  // rough: 60km/h
-        let h = secs / 3600; let m = (secs % 3600) / 60
-        return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+    private var pickupTimeString: String {
+        let f = DateFormatter(); f.dateFormat = "hh:mm a"
+        return f.string(from: trip.startTime ?? trip.createdAt)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // ── Row 1: Trip ID + Badges ───────────────────────────────────
+            // ── Row 1: Trip ID + ASSIGNED badge ──────────────────────────────
             HStack(spacing: 8) {
                 Text(tripCode)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.primary)
                 Spacer()
-                // ASSIGNED badge
                 Text("ASSIGNED")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.fmsIndigo)
-                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(Color.fmsIndigo.opacity(0.10))
                     .clipShape(Capsule())
-                // HIGH PRIORITY badge
-                HStack(spacing: 3) {
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .font(.system(size: 9))
-                    Text("HIGH PRIORITY")
-                        .font(.system(size: 9, weight: .bold))
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 8).padding(.vertical, 4)
-                .background(Color.red.gradient)
-                .clipShape(Capsule())
             }
-            .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 14)
+            .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 12)
 
             Divider().padding(.horizontal, 16)
 
-            // ── Row 2: Route stops ────────────────────────────────────────
-            HStack(alignment: .top, spacing: 14) {
-                // Left: icon column
-                VStack(spacing: 0) {
-                    // Blue filled departure pin
+            // ── Row 2: Route — full width, no map ────────────────────────────
+            VStack(spacing: 0) {
+                // Departure row
+                HStack(alignment: .center, spacing: 14) {
+                    // Blue dot
                     ZStack {
                         Circle()
                             .fill(Color.fmsIndigo)
-                            .frame(width: 28, height: 28)
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 14, weight: .bold))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
                     }
-                    // Dashed connector
-                    VStack(spacing: 3) {
-                        ForEach(0..<8, id: \.self) { _ in
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("DEPARTURE")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.fmsIndigo)
+                            .tracking(0.5)
+                        Text(trip.source)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                        Text(departureTimeString)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+
+                // Dashed connector line
+                HStack(spacing: 0) {
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(width: 36)
+                    VStack(spacing: 0) {
+                        ForEach(0..<5, id: \.self) { _ in
                             Rectangle()
                                 .fill(Color(UIColor.systemGray4))
-                                .frame(width: 2, height: 4)
+                                .frame(width: 2, height: 5)
+                                .padding(.vertical, 2)
                         }
                     }
-                    .frame(width: 2)
-                    .padding(.vertical, 4)
-                    // Orange arrival pin
+                    Spacer()
+                }
+                .padding(.leading, 14)
+                .padding(.vertical, 2)
+
+                // Arrival row
+                HStack(alignment: .center, spacing: 14) {
+                    // Orange dot
                     ZStack {
                         Circle()
                             .fill(Color.orange)
-                            .frame(width: 28, height: 28)
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 14, weight: .bold))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "mappin.fill")
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
                     }
-                }
 
-                // Right: text column
-                VStack(alignment: .leading, spacing: 0) {
-                    // Departure
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("DEPARTURE PORT")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .tracking(0.4)
-                        Text(trip.source)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Text(formattedScheduledDate)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(height: 52, alignment: .center)
-
-                    // Arrival
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("ARRIVAL TERMINAL")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .tracking(0.4)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("ARRIVAL")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.orange)
+                            .tracking(0.5)
                         Text(trip.destination)
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Text("ETA · \(etaString)")
-                            .font(.system(size: 11))
+                            .lineLimit(2)
+                        Text("ETA \(arrivalTimeString)")
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
-                    .frame(height: 52, alignment: .center)
+                    Spacer()
                 }
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 16).padding(.vertical, 12)
+            .padding(.horizontal, 16).padding(.vertical, 14)
 
             Divider().padding(.horizontal, 16)
 
-            // ── Row 3: 4 Metric Chips ─────────────────────────────────────
+            // ── Row 3: 3 Metric Chips (Distance · ETA · Pickup) ──────────────
             HStack(spacing: 0) {
-                TripMetricChip(icon: "road.lanes",    label: "DISTANCE",     value: String(format: "%.0f km", trip.distance))
+                TripMetricChip(
+                    icon: "road.lanes",
+                    label: "DISTANCE",
+                    value: String(format: "%.0f km", trip.distance)
+                )
                 TripChipDivider()
-                TripMetricChip(icon: "clock",         label: "ETA",          value: etaString)
+                TripMetricChip(
+                    icon: "clock",
+                    label: "ETA",
+                    value: etaString
+                )
                 TripChipDivider()
-                TripMetricChip(icon: "calendar",      label: "PICKUP",       value: pickupTime)
-                TripChipDivider()
-                TripMetricChip(icon: "road.lanes.dashed", label: "REMAINING", value: String(format: "%.0f km", trip.distance))
+                TripMetricChip(
+                    icon: "clock.badge.checkmark",
+                    label: "PICKUP TIME",
+                    value: pickupTimeString
+                )
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 2)
 
             Divider().padding(.horizontal, 16)
 
-            // ── Row 4: Vehicle + Cargo ────────────────────────────────────
+            // ── Row 4: Vehicle + Cargo ────────────────────────────────────────
             HStack(spacing: 0) {
                 // Vehicle
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Image(systemName: "truck.box.fill")
-                            .font(.system(size: 14))
+                            .font(.system(size: 12))
                             .foregroundStyle(Color.fmsIndigo)
                         Text("VEHICLE")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.secondary)
                     }
                     Text(vm.assignedVehicle?.licensePlate ?? "Unassigned")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.primary)
                     Text(vm.assignedVehicle?.model ?? "—")
                         .font(.system(size: 11))
@@ -561,171 +573,82 @@ private struct AssignedTripCard: View {
 
                 // Cargo
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Image(systemName: "shippingbox.fill")
-                            .font(.system(size: 14))
+                            .font(.system(size: 12))
                             .foregroundStyle(Color.orange)
                         Text("CARGO")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.secondary)
                     }
-                    Text("Dry Van")
-                        .font(.system(size: 13, weight: .bold))
+                    Text("General Cargo")
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.primary)
-                    Text(trip.notes ?? "General")
+                    Text(String(format: "%.0f km route", trip.distance))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
                 .padding(.leading, 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
 
-            // ── Row 5: Special Instructions ───────────────────────────────
+            // ── Row 5: Fleet Manager Instructions (always shown if notes exist) ──
             if let notes = trip.notes, !notes.isEmpty {
-                HStack(alignment: .top, spacing: 10) {
+                Divider().padding(.horizontal, 16)
+
+                HStack(alignment: .top, spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.orange.opacity(0.15))
-                            .frame(width: 32, height: 32)
-                        Image(systemName: "text.badge.checkmark")
+                            .fill(Color.fmsIndigo.opacity(0.12))
+                            .frame(width: 34, height: 34)
+                        Image(systemName: "person.text.rectangle.fill")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(Color.fmsIndigo)
                     }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("SPECIAL INSTRUCTIONS")
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("FLEET MANAGER INSTRUCTIONS")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(Color.fmsIndigo)
                             .tracking(0.4)
                         Text(notes)
-                            .font(.system(size: 12))
+                            .font(.system(size: 13))
                             .foregroundStyle(.primary)
-                            .lineLimit(2)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .padding(12)
-                .background(Color.orange.opacity(0.07))
+                .padding(14)
+                .background(Color.fmsIndigo.opacity(0.05))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal, 16)
-                .padding(.bottom, 4)
+                .padding(.horizontal, 16).padding(.vertical, 10)
             }
 
             Divider().padding(.horizontal, 16)
 
-            // ── Row 6: Trip Progress Stepper ──────────────────────────────
-            VStack(alignment: .leading, spacing: 8) {
-                Text("TRIP PROGRESS")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .tracking(0.4)
-
-                HStack(spacing: 0) {
-                    ForEach(Array(progressSteps.enumerated()), id: \.offset) { idx, step in
-                        VStack(spacing: 4) {
-                            ZStack {
-                                Circle()
-                                    .fill(idx <= currentStep ? Color.fmsIndigo : Color(UIColor.systemGray5))
-                                    .frame(width: 22, height: 22)
-                                if idx < currentStep {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(.white)
-                                } else if idx == currentStep {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                            Text(step)
-                                .font(.system(size: 8, weight: idx == currentStep ? .bold : .regular))
-                                .foregroundStyle(idx <= currentStep ? Color.fmsIndigo : .secondary)
-                                .multilineTextAlignment(.center)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                        }
-                        .frame(maxWidth: .infinity)
-
-                        if idx < progressSteps.count - 1 {
-                            Rectangle()
-                                .fill(idx < currentStep ? Color.fmsIndigo : Color(UIColor.systemGray4))
-                                .frame(height: 2)
-                                .frame(maxWidth: .infinity)
-                                .offset(y: -10)
-                        }
-                    }
+            // ── Row 6: Message button ─────────────────────────────────────────
+            Button {
+                vm.showMessaging = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Message Fleet Manager")
+                        .font(.system(size: 13, weight: .semibold))
                 }
+                .foregroundStyle(Color.fmsIndigo)
+                .frame(maxWidth: .infinity)
+                .frame(height: 42)
+                .background(Color.fmsIndigo.opacity(0.07))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.fmsIndigo.opacity(0.20), lineWidth: 1)
+                )
             }
-            .padding(.horizontal, 16).padding(.vertical, 12)
+            .padding(.horizontal, 16).padding(.top, 12)
 
-            Divider().padding(.horizontal, 16)
-
-            // ── Row 7: 3 Secondary Action Buttons ────────────────────────
-            HStack(spacing: 8) {
-                // View Route
-                Button {
-                    vm.mapActiveTrip = trip
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "map")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("View Route")
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.fmsIndigo)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(Color.fmsIndigo.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.fmsIndigo.opacity(0.25), lineWidth: 1)
-                    )
-                }
-                // Call Manager
-                Button {
-                    vm.showMessaging = true
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "phone")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Call Manager")
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.fmsIndigo)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(Color.fmsIndigo.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.fmsIndigo.opacity(0.25), lineWidth: 1)
-                    )
-                }
-                // Message
-                Button {
-                    vm.showMessaging = true
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "bubble.left")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Message")
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.fmsIndigo)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(Color.fmsIndigo.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.fmsIndigo.opacity(0.25), lineWidth: 1)
-                    )
-                }
-            }
-            .padding(.horizontal, 16).padding(.top, 10)
-
-            // ── Row 8: Start Active Trip ───────────────────────────────────
+            // ── Row 7: Start Active Trip ──────────────────────────────────────
             Button {
                 vm.mapActiveTrip = trip
             } label: {
@@ -740,14 +663,14 @@ private struct AssignedTripCard: View {
                 .frame(height: 52)
                 .background(
                     LinearGradient(
-                        colors: [Color.fmsIndigo, Color.fmsIndigo.opacity(0.80)],
+                        colors: [Color.fmsIndigo, Color.fmsIndigo.opacity(0.82)],
                         startPoint: .leading, endPoint: .trailing
                     )
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: Color.fmsIndigo.opacity(0.35), radius: 8, y: 3)
+                .shadow(color: Color.fmsIndigo.opacity(0.30), radius: 8, y: 3)
             }
-            .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 16)
+            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
         }
         .background(Color.white)
         .cornerRadius(20)
@@ -757,12 +680,9 @@ private struct AssignedTripCard: View {
                 .stroke(Color.black.opacity(0.04), lineWidth: 1)
         )
     }
-
-    private var pickupTime: String {
-        let f = DateFormatter(); f.dateFormat = "hh:mm a"
-        return f.string(from: trip.startTime ?? trip.createdAt)
-    }
 }
+
+
 
 
 // MARK: - Trip Metric Chip
