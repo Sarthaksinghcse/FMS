@@ -264,6 +264,7 @@ struct VehicleListView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
+    @Query private var allRecords: [MaintenanceRecord]
 
     @State private var searchText = ""
     @State private var selectedFilter: VehicleStatusFilter = .all
@@ -369,10 +370,15 @@ struct VehicleListView: View {
             LazyVStack(spacing: 14) {
                 ForEach(filteredVehicles) { vehicle in
                     let idx = filteredVehicles.firstIndex(where: { $0.id == vehicle.id }) ?? 0
-                    VehicleCardView(vehicle: vehicle) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        editingVehicle = vehicle
+                    NavigationLink {
+                        VehicleMaintenanceHistoryView(vehicle: vehicle)
+                    } label: {
+                        VehicleCardView(vehicle: vehicle) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            editingVehicle = vehicle
+                        }
                     }
+                    .buttonStyle(PlainButtonStyle())
                     .opacity(cardsAppeared.contains(vehicle.id) ? 1 : 0)
                     .offset(y: cardsAppeared.contains(vehicle.id) ? 0 : 30)
                     .onAppear {

@@ -1,18 +1,5 @@
-
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
-
-
-
-
-
 @available(iOS 26.0, *)
 struct AddVehicleFormView: View {
 
@@ -322,8 +309,10 @@ struct EditVehicleFormView: View {
                             DatePickerRow(label: "Insurance Expiry", date: $insuranceExpiryDate)
                         }
 
+
                         
                         saveButton
+
 
                         
                         deleteButton
