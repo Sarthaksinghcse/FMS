@@ -32,6 +32,7 @@ struct MaintenanceDashboardView: View {
     @State private var isUpdateSheetPresented = false
     @State private var isUploadSheetPresented = false
     @State private var isCommunicationSheetPresented = false
+    @State private var showProfile = false
 
     // MARK: - Derived counts (computed dynamically, falling back to mockup defaults if empty)
 
@@ -120,6 +121,10 @@ struct MaintenanceDashboardView: View {
         .sheet(isPresented: $isCommunicationSheetPresented) {
             MaintenanceCommunicationSheet(currentUser: currentUser)
         }
+        .sheet(isPresented: $showProfile) {
+            MaintenanceProfileView()
+                .environment(\.modelContext, modelContext)
+        }
     }
 
     // MARK: - Dashboard Tab
@@ -174,20 +179,25 @@ struct MaintenanceDashboardView: View {
                         .offset(x: 8, y: -8)
                 }
                 
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.fmsAmber, Color.fmsAmber.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                Button {
+                    showProfile = true
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.fmsAmber, Color.fmsAmber.opacity(0.8)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .frame(width: 30, height: 30)
-                    Text("M")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                            .frame(width: 30, height: 30)
+                        Text("M")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
                 }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)

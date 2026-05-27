@@ -129,7 +129,10 @@ struct DriverDashboardView: View {
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatSheet(vm: vm) }
-        .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
+        .sheet(isPresented: $vm.showProfile)   {
+            DriverProfileView()
+                .environment(\.modelContext, modelContext)
+        }
         .sheet(isPresented: $vm.showNotifications) {
             DriverNotificationsSheet(vm: vm)
         }
