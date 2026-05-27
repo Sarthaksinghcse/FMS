@@ -23,6 +23,14 @@ enum DriverOnlineStatus: String, CaseIterable {
         case .offline:     return Color(UIColor.systemGray3)
         }
     }
+
+    /// Human-readable label — shows "Driving" when on an active trip.
+    var displayLabel: String {
+        switch self {
+        case .active: return "Driving"
+        default:      return rawValue
+        }
+    }
 }
 
 
@@ -189,6 +197,7 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showMaps      = false
     @Published var activeTrip: DBTrip?
     @Published var mapActiveTrip: DBTrip?
+    @Published var viewRouteTrip: DBTrip?   // opens map in route-view mode (no pre-inspection)
     @Published var completedTrips: [CompletedTripRecord] = []
 
     
@@ -674,13 +683,17 @@ final class DriverDashboardViewModel: ObservableObject {
     }
     
     func markAllNotificationsAsRead() async {
-        let unread = notificationsList.filter { !$0.isRead }
-        for notif in unread {
+        // 1. Instantly update local state so UI reflects immediately (no reload needed)
+        notificationsList = notificationsList.map { notif in
             var updated = notif
             updated.isRead = true
-            try? await SupabaseManager.shared.updateNotification(updated)
+            return updated
         }
-        await loadNotifications()
+        // 2. Persist to Supabase in the background
+        let unread = notificationsList  // all now have isRead = true
+        for notif in unread {
+            try? await SupabaseManager.shared.updateNotification(notif)
+        }
     }
     
     
