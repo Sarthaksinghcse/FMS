@@ -1234,13 +1234,13 @@ struct MaintenanceCommunicationSheet: View {
         let channel = client.channel("maintenance_list_messages_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "messages"
             )
             
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             struct MessageHeader: Codable {
@@ -1251,7 +1251,7 @@ struct MaintenanceCommunicationSheet: View {
             for await change in changes {
                 guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
                 if header.sender_id == currentUser.id || header.receiver_id == currentUser.id {
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         Task {
                             self.messages = (try? await supabase.fetchMessages()) ?? []
                         }
@@ -1327,7 +1327,7 @@ struct MaintenanceChatDetailView: View {
                         proxy.scrollTo(lastMsg.id, anchor: .bottom)
                     }
                 }
-                .onChange(of: conversationMessages.count) { _ in
+                .onChange(of: conversationMessages.count) { _, _ in
                     if let lastMsg = conversationMessages.last {
                         withAnimation {
                             proxy.scrollTo(lastMsg.id, anchor: .bottom)
@@ -1403,7 +1403,7 @@ struct MaintenanceChatDetailView: View {
         Task {
             do {
                 try await supabase.sendMessage(dbMsg)
-                await MainActor.run {
+                _ = await MainActor.run {
                     self.messageText = ""
                     Task {
                         await loadMessages()
@@ -1420,13 +1420,13 @@ struct MaintenanceChatDetailView: View {
         let channel = client.channel("maintenance_chat_messages_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "messages"
             )
             
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             struct MessageHeader: Codable {
@@ -1438,7 +1438,7 @@ struct MaintenanceChatDetailView: View {
                 guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
                 if (header.sender_id == currentUser.id && header.receiver_id == manager.id) ||
                    (header.sender_id == manager.id && header.receiver_id == currentUser.id) {
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         Task {
                             await loadMessages()
                         }
