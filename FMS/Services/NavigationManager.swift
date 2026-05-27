@@ -109,28 +109,39 @@ final class NavigationManager: NSObject, ObservableObject {
         }
     }
 
-    /// Geocode `address` via MKLocalSearch then calculate route to it.
-    func calculateRoute(toAddress address: String) async {
-        let req = MKLocalSearch.Request()
-        req.naturalLanguageQuery = address
-        if let item = try? await MKLocalSearch(request: req).start(),
-           let dest = item.mapItems.first?.placemark.coordinate {
-            await calculateRoute(to: dest, name: address)
-        } else {
-            routingError = "Could not find \"\(address)\""
+    /// Geocode `fromAddress` and `toAddress` via MKLocalSearch then calculate route between them.
+    func calculateRoute(fromAddress: String, toAddress: String) async {
+        isRouting = true
+        routingError = nil
+        
+        // Geocode source
+        let srcReq = MKLocalSearch.Request()
+        srcReq.naturalLanguageQuery = fromAddress
+        let srcItem = try? await MKLocalSearch(request: srcReq).start()
+        let srcCoord = srcItem?.mapItems.first?.placemark.coordinate
+        
+        // Geocode destination
+        let destReq = MKLocalSearch.Request()
+        destReq.naturalLanguageQuery = toAddress
+        let destItem = try? await MKLocalSearch(request: destReq).start()
+        guard let destCoord = destItem?.mapItems.first?.placemark.coordinate else {
+            routingError = "Could not find \"\(toAddress)\""
+            isRouting = false
+            return
         }
+        
+        // Use geocoded source, OR current location, OR fallback.
+        let originCoord = srcCoord ?? userLocation?.coordinate ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+        
+        await calculateRoute(from: originCoord, to: destCoord, name: toAddress)
     }
 
-    /// Calculate route from current location → destination and render polyline.
-    func calculateRoute(to destination: CLLocationCoordinate2D, name: String) async {
+    /// Calculate route from origin → destination and render polyline.
+    func calculateRoute(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, name: String) async {
         destinationCoordinate = destination
         destinationName       = name
         isRouting             = true
         routingError          = nil
-
-        // Use real user location if available, else a Delhi fallback for simulator.
-        let origin = userLocation?.coordinate
-            ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
 
         let request               = MKDirections.Request()
         request.source            = MKMapItem(placemark: MKPlacemark(coordinate: origin))
@@ -203,7 +214,9 @@ final class NavigationManager: NSObject, ObservableObject {
 
     /// Smooth 3D perspective — 500 m look-ahead, 65° pitch, heading-locked.
     private func animateTo3DPerspective(location: CLLocation?) {
+        // Fallback to the start of the route, then Delhi if all else fails
         let coord = location?.coordinate
+            ?? route?.polyline.coordinate
             ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
         let heading = userHeading?.trueHeading ?? 0
 

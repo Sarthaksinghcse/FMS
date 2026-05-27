@@ -986,7 +986,7 @@ struct TripNavigationView: View {
         // ── Lifecycle ────────────────────────────────────────────────────────
         .task {
             nav.requestPermissionAndStart()
-            await nav.calculateRoute(toAddress: trip.destination)
+            await nav.calculateRoute(fromAddress: trip.source, toAddress: trip.destination)
             checkForFasterAlternate()
         }
         .onAppear {
@@ -1145,9 +1145,12 @@ struct TripNavigationView: View {
                 withAnimation(.spring(response: 0.4)) {
                     if let alt = nav.alternateRoutes.first {
                         // Swap to faster route via NavigationManager
-                        Task { await nav.calculateRoute(
-                            to: destinationCoordinate!,
-                            name: trip.destination)
+                        Task { 
+                            let origin = nav.userLocation?.coordinate ?? nav.route?.polyline.coordinate ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+                            await nav.calculateRoute(
+                                from: origin,
+                                to: destinationCoordinate!,
+                                name: trip.destination)
                         }
                         _ = alt
                         showRerouteBanner = false
