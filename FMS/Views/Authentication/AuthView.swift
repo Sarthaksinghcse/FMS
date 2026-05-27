@@ -220,11 +220,27 @@ struct AuthView: View {
         let impactHeavy = UIImpactFeedbackGenerator(style: .medium)
         impactHeavy.impactOccurred()
         focusedField = nil
+        
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        guard trimmedEmail.isValidEmail else {
+            errorAlertMessage = "Please enter a valid email address."
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                showErrorAlert = true
+            }
+            return
+        }
+        guard !password.isEmpty else {
+            errorAlertMessage = "Please enter a password."
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                showErrorAlert = true
+            }
+            return
+        }
 
         Task {
             do {
                 try await supabaseManager.signIn(
-                    email: email,
+                    email: trimmedEmail,
                     passwordString: password,
                     expectedRole: selectedRole.toDBUserRole
                 )

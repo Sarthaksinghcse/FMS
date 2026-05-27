@@ -1,27 +1,22 @@
-
-
-
-
-
-
-
-
-
 import SwiftUI
-
-
+import SwiftData
 
 @available(iOS 26.0, *)
 struct DriverProfileSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @StateObject private var supabase = SupabaseManager.shared
     @State private var showSignOutConfirm = false
 
     
-    private let totalTrips    = 142
-    private let totalKmDriven = 4_820.0
+    private var totalTrips: Int {
+        vm.completedTrips.count
+    }
+    private var totalKmDriven: Double {
+        vm.completedTrips.reduce(0.0) { $0 + $1.distanceKm }
+    }
     private let joinDate      = "March 2023"
     private let employeeId    = "DRV-00412"
     private let licenseNo     = "TN-24-2019-0041823"
@@ -42,6 +37,39 @@ struct DriverProfileSheet: View {
                     )
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
+                    // ── Status row ─────────────────────────────────────────
+                    ProfileSection(header: "Status") {
+                        HStack(spacing: 14) {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(vm.driverStatus.dot)
+                                .frame(width: 32, height: 32)
+                                .overlay(
+                                    Image(systemName: "dot.radiowaves.left.and.right")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(.white)
+                                )
+                            
+                            Toggle("Status", isOn: Binding(
+                                get: { vm.driverStatus != .offline },
+                                set: { newValue in
+                                    withAnimation {
+                                        vm.driverStatus = newValue ? .idle : .offline
+                                    }
+                                    Task {
+                                        await vm.updateDriverActiveStatus(isActive: newValue)
+                                    }
+                                }
+                            ))
+                            .font(.system(size: 16))
+                            .foregroundStyle(.primary)
+                            .tint(AppTheme.Status.success)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 13)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+
                     // ── Account info rows ──────────────────────────────────
                     ProfileSection(header: "Account") {
                         ProfileRow(icon: "person.fill",
@@ -137,6 +165,7 @@ struct DriverProfileSheet: View {
             .navigationTitle("Driver Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
@@ -153,6 +182,9 @@ struct DriverProfileSheet: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to sign out of your Driver account?")
+            }
+            .task {
+                await vm.load(context: modelContext)
             }
         }
     }

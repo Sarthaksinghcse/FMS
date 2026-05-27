@@ -26,6 +26,8 @@ struct DriverEditProfileView: View {
     @State private var emergencyContact = ""
     @State private var isSaving = false
     @State private var showSaved = false
+    @State private var showErrorAlert = false
+    @State private var errorAlertMessage = ""
 
     private var user: DBUser? { supabase.currentUser }
 
@@ -108,6 +110,20 @@ struct DriverEditProfileView: View {
 
                         
                         Button {
+                            let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
+                            guard trimmedPhone.isValidPhoneNumber else {
+                                errorAlertMessage = "Please enter a valid 10-digit phone number."
+                                showErrorAlert = true
+                                return
+                            }
+                            
+                            let trimmedEmergency = emergencyContact.trimmingCharacters(in: .whitespaces)
+                            if !trimmedEmergency.isEmpty && !trimmedEmergency.isValidPhoneNumber {
+                                errorAlertMessage = "Please enter a valid 10-digit emergency contact number."
+                                showErrorAlert = true
+                                return
+                            }
+                            
                             isSaving = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                                 isSaving = false
@@ -155,6 +171,11 @@ struct DriverEditProfileView: View {
                 Button("OK") { dismiss() }
             } message: {
                 Text("Your profile has been saved successfully.")
+            }
+            .alert("Validation Error", isPresented: $showErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorAlertMessage)
             }
         }
     }

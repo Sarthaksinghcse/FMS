@@ -43,13 +43,14 @@ struct DriverQuickAction: Identifiable {
 }
 
 struct DriverChatMessage: Identifiable {
-    let id       = UUID()
+    let id: UUID
     let sender: String
     let role: String
     let preview: String
     let time: String
     let unread: Bool
     let initials: String
+    let isMe: Bool
 }
 
 struct DashboardBanner: Identifiable {
@@ -282,7 +283,7 @@ final class DriverDashboardViewModel: ObservableObject {
             }
             upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
             isTripActive  = currentTrip != nil
-            driverStatus  = isTripActive ? .active : .idle
+            updateLocalDriverStatusState()
             let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
             assignedVehicle = vehicles.first(where: { $0.id == vid })
             
@@ -318,7 +319,7 @@ final class DriverDashboardViewModel: ObservableObject {
                 }
                 upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
                 isTripActive  = currentTrip != nil
-                driverStatus  = isTripActive ? .active : .idle
+                updateLocalDriverStatusState()
                 let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                 assignedVehicle = vehicles.first(where: { $0.id == vid })
                 
@@ -354,7 +355,7 @@ final class DriverDashboardViewModel: ObservableObject {
                     }
                     upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
                     isTripActive  = currentTrip != nil
-                    driverStatus  = isTripActive ? .active : .idle
+                    updateLocalDriverStatusState()
                     let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                     assignedVehicle = vehicles.first(where: { $0.id == vid })
                     
@@ -483,7 +484,7 @@ final class DriverDashboardViewModel: ObservableObject {
         }
 
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
-            isTripActive = false; driverStatus = .idle
+            isTripActive = false
             currentTrip = nil; activeTrip = nil
             showPostTripOnEnd = false
             tripElapsed = 0
@@ -549,12 +550,14 @@ final class DriverDashboardViewModel: ObservableObject {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "h:mm a"
                 return DriverChatMessage(
+                    id: msg.id,
                     sender: isSentByMe ? driverName : "Fleet Manager",
                     role: isSentByMe ? "Driver" : "Fleet Manager",
                     preview: msg.message,
                     time: formatter.string(from: msg.timestamp),
                     unread: !isSentByMe,
-                    initials: isSentByMe ? String(driverName.prefix(2)).uppercased() : "FM"
+                    initials: isSentByMe ? String(driverName.prefix(2)).uppercased() : "FM",
+                    isMe: isSentByMe
                 )
             }
         } catch {
@@ -563,32 +566,83 @@ final class DriverDashboardViewModel: ObservableObject {
         }
     }
     
+    private func updateLocalDriverStatusState() {
+        if isTripActive {
+            driverStatus = .active
+        } else if let currentUser = SupabaseManager.shared.currentUser {
+            driverStatus = currentUser.isActive ? .idle : .offline
+        } else {
+            driverStatus = .idle
+        }
+    }
+
+    func updateDriverActiveStatus(isActive: Bool) async {
+        guard var updatedUser = SupabaseManager.shared.currentUser else { return }
+        updatedUser.isActive = isActive
+        do {
+            try await SupabaseManager.shared.updateDriver(updatedUser)
+            await MainActor.run {
+                if let context = self.modelContext {
+                    let descriptor = FetchDescriptor<User>()
+                    if let localUsers = try? context.fetch(descriptor),
+                       let localUser = localUsers.first(where: { $0.id == updatedUser.id }) {
+                        localUser.isActive = isActive
+                        try? context.save()
+                    }
+                }
+                self.updateLocalDriverStatusState()
+            }
+        } catch {
+            print("Failed to update status on Supabase: \(error)")
+        }
+    }
+
     func sendMessage(text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
+        var managerId: UUID? = nil
+        
+        // Find the last message received from any fleet manager
+        do {
+            let dbMessages = try await SupabaseManager.shared.fetchMessages()
+            let uid = driverId
+            let managers = try await SupabaseManager.shared.fetchFleetManagers()
+            let managerIds = Set(managers.map { $0.id })
+            
+            // Check messages where we were the receiver, and the sender was a manager
+            if let lastIncoming = dbMessages.last(where: { $0.receiverId == uid && managerIds.contains($0.senderId) }) {
+                managerId = lastIncoming.senderId
+            }
+        } catch {
+            print("Failed to find last manager sender: \(error)")
+        }
+        
+        // Fallback to first manager if no previous messages found
+        if managerId == nil {
+            do {
+                let managers = try await SupabaseManager.shared.fetchFleetManagers()
+                if let firstManager = managers.first {
+                    managerId = firstManager.id
+                }
+            } catch {
+                print("Failed to fetch manager ID for messaging: \(error)")
+            }
+        }
+        
+        let finalManagerId = managerId ?? UUID()
+        
         let dbMessage = DBMessage(
             id: UUID(),
             senderId: driverId,
-            receiverId: UUID(), 
+            receiverId: finalManagerId,
             message: trimmed,
             timestamp: Date()
         )
         
         do {
             try await SupabaseManager.shared.sendMessage(dbMessage)
-            
-            let formatter = DateFormatter()
-            formatter.dateFormat = "h:mm a"
-            let localMsg = DriverChatMessage(
-                sender: driverName,
-                role: "Driver",
-                preview: trimmed,
-                time: formatter.string(from: Date()),
-                unread: false,
-                initials: String(driverName.prefix(2)).uppercased()
-            )
-            messages.insert(localMsg, at: 0)
+            await loadMessages()
         } catch {
             print("⚠️ Failed to send message to Supabase: \(error.localizedDescription)")
         }
@@ -647,12 +701,12 @@ final class DriverDashboardViewModel: ObservableObject {
                    distance: 31.0, status: .assigned, notes: nil, createdAt: .now)
         ]
         messages = [
-            DriverChatMessage(sender: "Rajiv Sharma",     role: "Fleet Manager",
-                              preview: "Confirm ETA for Route 2.",    time: "10:32 AM", unread: true,  initials: "RS"),
-            DriverChatMessage(sender: "Maintenance Desk", role: "Maintenance",
-                              preview: "TN-07-AB-1234 ready for dispatch.", time: "9:15 AM",  unread: true,  initials: "MD"),
-            DriverChatMessage(sender: "Priya Menon",      role: "Fleet Manager",
-                              preview: "Updated route file sent.",    time: "Yesterday", unread: false, initials: "PM")
+            DriverChatMessage(id: UUID(), sender: "Rajiv Sharma",     role: "Fleet Manager",
+                              preview: "Confirm ETA for Route 2.",    time: "10:32 AM", unread: true,  initials: "RS", isMe: false),
+            DriverChatMessage(id: UUID(), sender: "Maintenance Desk", role: "Maintenance",
+                              preview: "TN-07-AB-1234 ready for dispatch.", time: "9:15 AM",  unread: true,  initials: "MD", isMe: false),
+            DriverChatMessage(id: UUID(), sender: "Priya Menon",      role: "Fleet Manager",
+                              preview: "Updated route file sent.",    time: "Yesterday", unread: false, initials: "PM", isMe: false)
         ]
         banners = [
             DashboardBanner(title: "Trip Assigned",

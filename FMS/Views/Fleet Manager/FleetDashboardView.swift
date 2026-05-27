@@ -15,6 +15,7 @@ struct FleetDashboardView: View {
 
     @State private var viewModel    = FleetDashboardViewModel()
     @State private var showProfile  = false
+    @State private var showChat     = false
 
     // Compute the full activity list once per body eval
     private var recentActivities: [DashboardActivity] {
@@ -37,6 +38,11 @@ struct FleetDashboardView: View {
         viewModel.recentBadgeCount(activities: recentActivities)
     }
 
+    private var managerFirstName: String {
+        guard let name = SupabaseManager.shared.currentUser?.name, !name.isEmpty else { return "Manager" }
+        return name.components(separatedBy: " ").first ?? name
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -51,7 +57,7 @@ struct FleetDashboardView: View {
                                 Text(viewModel.getGreetingTime() + ",")
                                     .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(.secondary)
-                                Text("Manager")
+                                Text(managerFirstName)
                                     .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(.primary)
                             }
@@ -59,6 +65,18 @@ struct FleetDashboardView: View {
                             Spacer()
 
                             HStack(spacing: 16) {
+                                Button {
+                                    showChat = true
+                                } label: {
+                                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(Color(UIColor.label))
+                                        .frame(width: 40, height: 40)
+                                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                                        .clipShape(Circle())
+                                }
+                                .buttonStyle(.plain)
+
                                 Button {
                                     viewModel.activeQuickAction = .alerts
                                 } label: {
@@ -269,6 +287,10 @@ struct FleetDashboardView: View {
             .sheet(isPresented: $showProfile) {
                 FleetManagerProfileView()
                     .environment(\.modelContext, modelContext)
+            }
+            // Chat sheet
+            .sheet(isPresented: $showChat) {
+                FleetManagerChatListView()
             }
             .task {
                 DatabaseSeeder.seedIfEmpty(context: modelContext)

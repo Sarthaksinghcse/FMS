@@ -84,14 +84,14 @@ struct DriverHomeTab: View {
                         HStack(spacing: 12) {
                             PerformanceCard(
                                 title: "Total Trips",
-                                value: "48 Runs",
+                                value: "\(vm.completedTrips.count) Runs",
                                 subtitle: "Completed runs",
                                 icon: "road.lanes",
                                 iconColor: Color.fmsIndigo
                             )
                             PerformanceCard(
                                 title: "Time Logged",
-                                value: "112 hrs",
+                                value: "\(vm.completedTrips.reduce(0) { $0 + $1.elapsedSeconds } / 3600) hrs",
                                 subtitle: "Within standard limits",
                                 icon: "clock.fill",
                                 iconColor: AppTheme.Brand.amber
@@ -140,12 +140,13 @@ private struct DashboardInlineHeader: View {
                 Text(greeting)
                     .font(.system(size: 17, weight: .regular))
                     .foregroundStyle(.secondary)
-                Text(vm.driverName)
+                Text(vm.driverName.components(separatedBy: " ").first ?? vm.driverName)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.primary)
             }
 
             Spacer()
+
 
             // ── Bell button ────────────────────────────────────────
             Button {

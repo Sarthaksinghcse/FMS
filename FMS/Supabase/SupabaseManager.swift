@@ -124,6 +124,7 @@ final class SupabaseManager: ObservableObject {
                 role: role,
                 phoneNumber: nil,
                 profileImage: nil,
+                isActive: true,
                 createdAt: Date()
             )
             
@@ -170,6 +171,7 @@ final class SupabaseManager: ObservableObject {
                 role: role,
                 phoneNumber: nil,
                 profileImage: nil,
+                isActive: true,
                 createdAt: Date()
             )
             
@@ -246,6 +248,7 @@ final class SupabaseManager: ObservableObject {
                     role: expectedRole,
                     phoneNumber: nil,
                     profileImage: nil,
+                    isActive: true,
                     createdAt: Date()
                 )
             }
@@ -345,6 +348,7 @@ final class SupabaseManager: ObservableObject {
                 role: resolvedRole,
                 phoneNumber: nil,
                 profileImage: nil,
+                isActive: true,
                 createdAt: Date()
             )
         }
@@ -441,6 +445,7 @@ final class SupabaseManager: ObservableObject {
             role: .driver,
             phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
             profileImage: nil,
+            isActive: isActive,
             createdAt: Date()
         )
         
@@ -464,6 +469,12 @@ final class SupabaseManager: ObservableObject {
             .update(driver)
             .eq("id", value: driver.id.uuidString)
             .execute()
+        
+        await MainActor.run {
+            if self.currentUser?.id == driver.id {
+                self.currentUser = driver
+            }
+        }
     }
     
     
@@ -661,6 +672,15 @@ final class SupabaseManager: ObservableObject {
             .value
     }
     
+    func fetchMaintenancePersonnel() async throws -> [DBUser] {
+        return try await client
+            .from("users")
+            .select()
+            .eq("role", value: DBUserRole.maintenance.rawValue)
+            .execute()
+            .value
+    }
+    
     func notifyFleetManagers(title: String, message: String, type: DBNotificationType) async {
         do {
             let managers = try await fetchFleetManagers()
@@ -746,6 +766,7 @@ final class SupabaseManager: ObservableObject {
                         local.email = rd.email
                         local.phoneNumber = rd.phoneNumber ?? ""
                         local.role = rd.role.asLocalRole
+                        local.isActive = rd.isActive
                     } else {
                         context.insert(rd.asLocalUser)
                     }
