@@ -128,7 +128,7 @@ struct DriverDashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
-        .sheet(isPresented: $vm.showMessaging) { ChatSheet(vm: vm) }
+        .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
         .sheet(isPresented: $vm.showNotifications) {
             DriverNotificationsSheet(vm: vm)
@@ -1376,6 +1376,107 @@ struct ChatSheet: View {
     DriverDashboardView()
 }
 
+// MARK: - Chat Hub Sheet
+
+@available(iOS 26.0, *)
+struct ChatHubSheet: View {
+    @ObservedObject var vm: DriverDashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showFleetManagerChat = false
+
+    private struct ContactEntry: Identifiable {
+        let id = UUID()
+        let name: String
+        let role: String
+        let icon: String
+        let iconColor: Color
+        let isEnabled: Bool
+    }
+
+    private let contacts: [ContactEntry] = [
+        ContactEntry(name: "Fleet Manager",       role: "Direct supervisor for your routes",
+                     icon: "person.badge.shield.checkmark.fill", iconColor: AppTheme.Brand.primaryDeep,  isEnabled: true),
+        ContactEntry(name: "Maintenance Worker",  role: "Vehicle maintenance & repairs",
+                     icon: "wrench.and.screwdriver.fill",          iconColor: AppTheme.Brand.accent,       isEnabled: false),
+        ContactEntry(name: "Maintenance Office",  role: "Schedule service & inspections",
+                     icon: "building.2.fill",                      iconColor: AppTheme.Brand.teal,         isEnabled: false),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(contacts) { contact in
+                        Button {
+                            if contact.isEnabled { showFleetManagerChat = true }
+                        } label: {
+                            HStack(spacing: 14) {
+                                // Icon bubble
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(contact.iconColor.opacity(contact.isEnabled ? 1 : 0.35))
+                                    .frame(width: 42, height: 42)
+                                    .overlay(
+                                        Image(systemName: contact.icon)
+                                            .font(.system(size: 17, weight: .medium))
+                                            .foregroundStyle(.white)
+                                    )
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(contact.name)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(contact.isEnabled ? .primary : .tertiary)
+                                    Text(contact.role)
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                if contact.isEnabled {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(.tertiary)
+                                } else {
+                                    Text("Soon")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 8).padding(.vertical, 3)
+                                        .background(Color(UIColor.systemGray3))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!contact.isEnabled)
+                    }
+                } header: {
+                    Text("Contacts")
+                }
+            }
+            .listStyle(.insetGrouped)
+            .background(Color.fmsBackground.ignoresSafeArea())
+            .navigationTitle("Messages")
+            .navigationBarTitleDisplayMode(.large)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.fmsIndigo)
+                    }
+                }
+            }
+            .sheet(isPresented: $showFleetManagerChat) {
+                ChatSheet(vm: vm)
+            }
+        }
+    }
+}
+
+
 @available(iOS 26.0, *)
 struct DriverNotificationsSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
@@ -1425,13 +1526,17 @@ struct DriverNotificationsSheet: View {
             }
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                        .foregroundColor(Color.fmsIndigo)
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.fmsIndigo)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Mark all read") {
+                    Button("Mark All Read") {
                         Task {
                             await vm.markAllNotificationsAsRead()
                         }

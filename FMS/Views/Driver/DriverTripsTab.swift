@@ -106,13 +106,14 @@ struct DriverTripsTab: View {
                                             .tint(Color.fmsIndigo)
                                         }
                                         .contextMenu {
-                                            Button { vm.mapActiveTrip = trip } label: {
+                                            Button {
+                                                vm.mapActiveTrip = trip
+                                            } label: {
                                                 Label("Start Trip", systemImage: "play.fill")
                                             }
                                             Button { vm.showPreTrip  = true } label: { Label("Pre-Trip Inspection",  systemImage: "checklist") }
                                             Button { vm.showPostTrip = true } label: { Label("Post-Trip Inspection", systemImage: "checkmark.seal.fill") }
                                             Divider()
-                                            Button { vm.showVoiceLog = true } label: { Label("Voice Log",    systemImage: "mic.fill") }
                                             Button { vm.showIssue    = true } label: { Label("Report Issue", systemImage: "exclamationmark.bubble.fill") }
                                             Button(role: .destructive) { vm.showDefect = true } label: {
                                                 Label("Report Defect", systemImage: "wrench.and.screwdriver.fill")
@@ -833,7 +834,7 @@ struct TripNavigationView: View {
         NavigationStack {
             ZStack(alignment: .bottom) {
 
-                
+                // ── REAL MapKit Map ────────────────────────────────────────
                 Map(position: $cameraPos) {
                     if let s = sourceItem?.location.coordinate {
                         Annotation("Origin", coordinate: s, anchor: .bottom) {
@@ -864,6 +865,68 @@ struct TripNavigationView: View {
                 }
                 .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll, showsTraffic: true))
                 .ignoresSafeArea(edges: .top)
+                // Auto-zoom tightly on driver location when trip becomes active
+                .onChange(of: isActiveTrip) { _, active in
+                    if active {
+                        withAnimation(.easeInOut(duration: 0.8)) {
+                            cameraPos = .region(MKCoordinateRegion(
+                                center: CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090),
+                                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+                            ))
+                        }
+                    }
+                }
+
+                // ── Apple Maps-style green turn instruction banner (shown when driving) ──
+                if isActiveTrip {
+                    VStack {
+                        HStack(spacing: 12) {
+                            // Direction arrow
+                            ZStack {
+                                Circle()
+                                    .fill(AppTheme.Status.success)
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "arrow.turn.up.right")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("In 500 ft")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.75))
+                                Text("Turn right onto Main St")
+                                    .font(.system(size: 17, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            // Speed indicator
+                            VStack(spacing: 1) {
+                                Text("45")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Text("km/h")
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.7))
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(AppTheme.Status.success.gradient)
+                                .shadow(color: AppTheme.Status.success.opacity(0.4), radius: 10, y: 4)
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        Spacer()
+                    }
+                    .ignoresSafeArea(edges: .top)
+                    .padding(.top, 100)  // below the navbar
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.spring(response: 0.4), value: isActiveTrip)
+                    .zIndex(10)
+                }
 
                 
                 if geocoding {
