@@ -460,6 +460,7 @@ struct EditDriverFormView: View {
             role: driver.role.toDBUserRole,
             phoneNumber: phoneNumber.trimmingCharacters(in: .whitespaces).isEmpty ? nil : phoneNumber.trimmingCharacters(in: .whitespaces),
             profileImage: driver.profileImageURL,
+            isActive: isActive,
             createdAt: driver.createdAt
         )
 

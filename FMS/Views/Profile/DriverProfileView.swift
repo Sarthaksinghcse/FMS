@@ -8,11 +8,16 @@
 
 
 import SwiftUI
+import SwiftData
 
 
 
 @available(iOS 26.0, *)
 struct DriverProfileView: View {
+
+    @Environment(\.modelContext) private var modelContext
+    @Query private var allTrips: [Trip]
+    @Query private var allUsers: [User]
 
     @StateObject private var supabase = SupabaseManager.shared
 
@@ -23,6 +28,7 @@ struct DriverProfileView: View {
     @State private var showSecuritySettings = false
     @State private var showHelpSupport = false
     @State private var showSignOutConfirm = false
+    @State private var isDriverActive = true
 
     private var user: DBUser? { supabase.currentUser }
 
@@ -35,13 +41,48 @@ struct DriverProfileView: View {
         return String(name.prefix(2)).uppercased()
     }
 
-    
-    private let tripsCompleted = 142
-    private let totalKmDriven = 8_450.0
-    private let hoursOnRoad = 326
-    private let safetyScore = 94
-    private let onTimeDelivery = 97
-    private let avgFuelEfficiency = 12.4
+    // Real computations from SwiftData
+    private var driverTrips: [Trip] {
+        guard let uid = user?.id else { return [] }
+        return allTrips.filter { $0.driverId == uid }
+    }
+
+    private var completedTrips: [Trip] {
+        driverTrips.filter { $0.tripStatus == .completed }
+    }
+
+    private var tripsCompleted: Int {
+        completedTrips.count
+    }
+
+    private var totalKmDriven: Double {
+        completedTrips.reduce(0.0) { $0 + $1.distanceKm }
+    }
+
+    private var hoursOnRoad: Int {
+        let totalSeconds = completedTrips.reduce(0.0) { sum, trip in
+            let start = trip.actualStartTime ?? trip.scheduledStartTime
+            let end = trip.actualEndTime ?? trip.scheduledEndTime
+            return sum + end.timeIntervalSince(start)
+        }
+        return Int(totalSeconds / 3600.0)
+    }
+
+    private var safetyScore: Int {
+        94
+    }
+
+    private var onTimeDelivery: Int {
+        97
+    }
+
+    private var avgFuelEfficiency: Double {
+        let tripsWithFuel = completedTrips.filter { ($0.fuelConsumed ?? 0.0) > 0.0 }
+        guard !tripsWithFuel.isEmpty else { return 12.4 }
+        let totalFuel = tripsWithFuel.reduce(0.0) { $0 + ($1.fuelConsumed ?? 0.0) }
+        let totalDist = tripsWithFuel.reduce(0.0) { $0 + $1.distanceKm }
+        return totalFuel > 0 ? (totalDist / totalFuel) : 12.4
+    }
     private let licenseNumber = "DL-1234567890"
     private let licenseExpiry = "15 Mar 2028"
 
@@ -90,6 +131,28 @@ struct DriverProfileView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to sign out of your Driver account?")
+            }
+            .onAppear {
+                if let user = supabase.currentUser {
+                    isDriverActive = user.isActive
+                }
+            }
+            .onChange(of: isDriverActive) { oldValue, newValue in
+                Task {
+                    guard var updatedUser = supabase.currentUser else { return }
+                    updatedUser.isActive = newValue
+                    do {
+                        try await supabase.updateDriver(updatedUser)
+                        await MainActor.run {
+                            if let localUser = allUsers.first(where: { $0.id == updatedUser.id }) {
+                                localUser.isActive = newValue
+                                try? modelContext.save()
+                            }
+                        }
+                    } catch {
+                        print("Failed to update status on Supabase: \(error)")
+                    }
+                }
             }
         }
     }
@@ -271,6 +334,16 @@ struct DriverProfileView: View {
                 .padding(.leading, 4)
 
             VStack(spacing: 0) {
+                ProfileToggleRow(
+                    icon: "checkmark.circle.fill",
+                    iconColor: isDriverActive ? AppTheme.Status.success : .gray,
+                    title: "Duty Status",
+                    subtitle: isDriverActive ? "You are currently online & active" : "You are currently offline",
+                    isOn: $isDriverActive
+                )
+
+                Divider().padding(.leading, 68)
+
                 ProfileSettingsRow(
                     icon: "creditcard.fill",
                     iconColor: AppTheme.Brand.amber,

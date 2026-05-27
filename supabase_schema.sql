@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     role            user_role   NOT NULL,
     phone_number    TEXT,
     profile_image   TEXT,
+    is_active       BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -297,7 +298,12 @@ CREATE POLICY "work_orders_insert_manager"  ON public.work_orders FOR INSERT WIT
 CREATE POLICY "work_orders_update_assigned" ON public.work_orders FOR UPDATE USING (assigned_to = auth.uid());
 
 -- ---- messages ----
-CREATE POLICY "messages_select_own" ON public.messages FOR SELECT USING (sender_id = auth.uid() OR receiver_id = auth.uid());
+DROP POLICY IF EXISTS "messages_select_own" ON public.messages;
+CREATE POLICY "messages_select_policy" ON public.messages FOR SELECT USING (
+    sender_id = auth.uid() OR 
+    receiver_id = auth.uid() OR 
+    (SELECT role FROM public.users WHERE id = auth.uid()) = 'fleet_manager'
+);
 CREATE POLICY "messages_insert_own" ON public.messages FOR INSERT WITH CHECK (sender_id = auth.uid());
 
 -- ---- notifications ----
