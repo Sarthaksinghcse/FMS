@@ -28,7 +28,9 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 10.0 
-        manager.requestAlwaysAuthorization()
+        manager.requestWhenInUseAuthorization()
+        manager.allowsBackgroundLocationUpdates = true
+        manager.showsBackgroundLocationIndicator = true
     }
     
     public func startTracking(vehicleId: UUID) {

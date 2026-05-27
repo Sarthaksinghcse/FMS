@@ -14,9 +14,22 @@
 		8F46AA892FBC54790060B0EA /* FMS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FMS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		69BCDDC22FC6B60D00CD775B /* Exceptions for "FMS" folder in "FMS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8F46AA882FBC54790060B0EA /* FMS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8F46AA8B2FBC54790060B0EA /* FMS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				69BCDDC22FC6B60D00CD775B /* Exceptions for "FMS" folder in "FMS" target */,
+			);
 			path = FMS;
 			sourceTree = "<group>";
 		};
@@ -271,7 +284,11 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FMS/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need access to your location to update your real time location";
+				INFOPLIST_KEY_UIBackgroundModes = (
+					location,
+				);
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone to log voice trips.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We need speech recognition to transcribe your trip logs.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -318,7 +335,11 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FMS/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need access to your location to update your real time location";
+				INFOPLIST_KEY_UIBackgroundModes = (
+					location,
+				);
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone to log voice trips.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We need speech recognition to transcribe your trip logs.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
