@@ -1,6 +1,6 @@
 import SwiftUI
 import SwiftData
-import CoreLocation
+import MapKit
 
 
 @available(iOS 26.0, *)
@@ -181,8 +181,6 @@ struct AddTripFormView: View {
             validationMessage = "Scheduled end time must be after start time."; showValidationAlert = true; return
         }
         
-        
-        let distance = Double(distanceText)
         
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         
@@ -920,15 +918,14 @@ struct TripStatusPickerRow: View {
 
 @MainActor
 func geocodeAddress(_ address: String) async -> CLLocationCoordinate2D? {
-    let geocoder = CLGeocoder()
-    return await withCheckedContinuation { continuation in
-        geocoder.geocodeAddressString(address) { placemarks, error in
-            if let coordinate = placemarks?.first?.location?.coordinate {
-                continuation.resume(returning: coordinate)
-            } else {
-                continuation.resume(returning: nil)
-            }
-        }
+    let request = MKLocalSearch.Request()
+    request.naturalLanguageQuery = address
+    let search = MKLocalSearch(request: request)
+    do {
+        let response = try await search.start()
+        return response.mapItems.first?.placemark.coordinate
+    } catch {
+        return nil
     }
 }
 

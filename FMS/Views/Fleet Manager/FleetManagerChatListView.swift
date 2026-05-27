@@ -184,9 +184,11 @@ struct FleetManagerChatListView: View {
             }
             .onDisappear {
                 if let activeChannel = realtimeChannel {
+                    let client = supabase.client
                     Task {
-                        await activeChannel.unsubscribe()
+                        await client.removeChannel(activeChannel)
                     }
+                    realtimeChannel = nil
                 }
             }
         }
@@ -290,17 +292,18 @@ struct FleetManagerChatListView: View {
     }
     
     private func startRealtimeListener() {
+        guard realtimeChannel == nil else { return }
         let client = supabase.client
         let channel = client.channel("fleet_manager_list_messages_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "messages"
             )
             
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             struct MessageHeader: Codable {
@@ -310,7 +313,7 @@ struct FleetManagerChatListView: View {
             
             for await change in changes {
                 guard let _ = try? change.record.decode(as: MessageHeader.self) else { continue }
-                await MainActor.run {
+                _ = await MainActor.run {
                     Task {
                         self.messages = (try? await supabase.fetchMessages()) ?? []
                     }

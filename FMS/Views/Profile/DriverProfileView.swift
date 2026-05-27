@@ -1,16 +1,5 @@
-
-
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
-
-
 
 @available(iOS 26.0, *)
 struct DriverProfileView: View {
@@ -18,6 +7,7 @@ struct DriverProfileView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allTrips: [Trip]
     @Query private var allUsers: [User]
+
 
     @StateObject private var supabase = SupabaseManager.shared
 
@@ -27,6 +17,7 @@ struct DriverProfileView: View {
     @State private var showNotificationSettings = false
     @State private var showSecuritySettings = false
     @State private var showHelpSupport = false
+    @State private var showPerformanceStats = false
     @State private var showSignOutConfirm = false
     @State private var isDriverActive = true
 
@@ -83,8 +74,8 @@ struct DriverProfileView: View {
         let totalDist = tripsWithFuel.reduce(0.0) { $0 + $1.distanceKm }
         return totalFuel > 0 ? (totalDist / totalFuel) : 12.4
     }
-    private let licenseNumber = "DL-1234567890"
-    private let licenseExpiry = "15 Mar 2028"
+
+
 
     var body: some View {
         NavigationStack {
@@ -94,8 +85,6 @@ struct DriverProfileView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
                         profileHeaderCard
-                        performanceSection
-                        drivingStatsSection
                         accountSection
                         signOutSection
                     }
@@ -106,6 +95,15 @@ struct DriverProfileView: View {
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Edit") {
+                        showEditProfile = true
+                    }
+                    .font(.system(size: 17))
+                    .foregroundColor(AppTheme.Status.success)
+                }
+            }
             .sheet(isPresented: $showEditProfile) {
                 DriverEditProfileView()
             }
@@ -123,6 +121,16 @@ struct DriverProfileView: View {
             }
             .sheet(isPresented: $showHelpSupport) {
                 DriverHelpSupportView()
+            }
+            .sheet(isPresented: $showPerformanceStats) {
+                DriverPerformanceStatsView(
+                    safetyScore: safetyScore,
+                    onTimeDelivery: onTimeDelivery,
+                    avgFuelEfficiency: avgFuelEfficiency,
+                    tripsCompleted: tripsCompleted,
+                    totalKmDriven: totalKmDriven,
+                    hoursOnRoad: hoursOnRoad
+                )
             }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
@@ -157,26 +165,37 @@ struct DriverProfileView: View {
         }
     }
 
-    
+    // MARK: - Header
 
     private var profileHeaderCard: some View {
-        VStack(spacing: 20) {
-            
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [AppTheme.Status.success, AppTheme.Brand.teal],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+        VStack(spacing: 16) {
+            ZStack(alignment: .bottomTrailing) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.Status.success, AppTheme.Brand.teal],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 90, height: 90)
-                    .shadow(color: AppTheme.Status.success.opacity(0.35), radius: 16, y: 6)
+                        .frame(width: 90, height: 90)
+                        .shadow(color: AppTheme.Status.success.opacity(0.35), radius: 16, y: 6)
 
-                Text(initials)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    Text(initials)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+
+                // Active duty status indicator
+                Circle()
+                    .fill(isDriverActive ? AppTheme.Status.success : AppTheme.Status.neutral)
+                    .frame(width: 20, height: 20)
+                    .overlay(
+                        Circle()
+                            .stroke(AppTheme.Background.card, lineWidth: 3)
+                    )
+                    .offset(x: -2, y: -2)
             }
 
             VStack(spacing: 6) {
@@ -201,24 +220,6 @@ struct DriverProfileView: View {
                 .clipShape(Capsule())
                 .padding(.top, 4)
             }
-
-            
-            Button {
-                showEditProfile = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "pencil.line")
-                        .font(.system(size: 13, weight: .medium))
-                    Text("Edit Profile")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .foregroundColor(AppTheme.Brand.primary)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 10)
-                .background(AppTheme.Brand.primary.opacity(0.08))
-                .clipShape(Capsule())
-            }
-            .buttonStyle(PlainButtonStyle())
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 28)
@@ -227,104 +228,8 @@ struct DriverProfileView: View {
         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
     }
 
-    
 
-    private var performanceSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Performance")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(AppTheme.Text.primary)
-                .padding(.leading, 4)
-
-            HStack(spacing: 12) {
-                DriverPerformanceRing(
-                    value: Double(safetyScore),
-                    maxValue: 100,
-                    label: "Safety",
-                    color: AppTheme.Status.success
-                )
-                DriverPerformanceRing(
-                    value: Double(onTimeDelivery),
-                    maxValue: 100,
-                    label: "On-Time",
-                    color: AppTheme.Brand.primary
-                )
-                DriverPerformanceRing(
-                    value: avgFuelEfficiency,
-                    maxValue: 20,
-                    label: "km/L",
-                    color: AppTheme.Brand.teal
-                )
-            }
-            .padding(18)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
-        }
-    }
-
-    
-
-    private var drivingStatsSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Driving Stats")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(AppTheme.Text.primary)
-
-                Spacer()
-
-                Button {
-                    showDrivingHistory = true
-                } label: {
-                    Text("View History")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(AppTheme.Brand.primary)
-                }
-            }
-            .padding(.leading, 4)
-
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                spacing: 12
-            ) {
-                ProfileStatCard(
-                    icon: "checkmark.circle.fill",
-                    iconColor: AppTheme.Status.success,
-                    iconBg: AppTheme.IconBg.green,
-                    title: "Trips Completed",
-                    value: "\(tripsCompleted)",
-                    subtitle: "Total history"
-                )
-                ProfileStatCard(
-                    icon: "road.lanes",
-                    iconColor: AppTheme.Brand.primary,
-                    iconBg: AppTheme.IconBg.blue,
-                    title: "Distance Driven",
-                    value: String(format: "%.0f km", totalKmDriven),
-                    subtitle: "Accumulated"
-                )
-                ProfileStatCard(
-                    icon: "clock.fill",
-                    iconColor: AppTheme.Brand.amber,
-                    iconBg: AppTheme.IconBg.amber,
-                    title: "Hours on Road",
-                    value: "\(hoursOnRoad) hrs",
-                    subtitle: "Time active"
-                )
-                ProfileStatCard(
-                    icon: "fuelpump.fill",
-                    iconColor: AppTheme.Brand.teal,
-                    iconBg: AppTheme.IconBg.teal,
-                    title: "Avg Fuel Efficiency",
-                    value: String(format: "%.1f km/L", avgFuelEfficiency),
-                    subtitle: "Average consumption"
-                )
-            }
-        }
-    }
-
-    
+    // MARK: - Account
 
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -336,13 +241,26 @@ struct DriverProfileView: View {
             VStack(spacing: 0) {
                 ProfileToggleRow(
                     icon: "checkmark.circle.fill",
-                    iconColor: isDriverActive ? AppTheme.Status.success : .gray,
+                    iconColor: isDriverActive ? AppTheme.Status.success : AppTheme.Status.neutral,
                     title: "Duty Status",
                     subtitle: isDriverActive ? "You are currently online & active" : "You are currently offline",
-                    isOn: $isDriverActive
+                    isOn: $isDriverActive,
+                    tintColor: AppTheme.Status.success
                 )
 
-                Divider().padding(.leading, 68)
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "chart.bar.xaxis",
+                    iconColor: AppTheme.Status.success,
+                    iconBg: AppTheme.IconBg.green,
+                    title: "Performance & Stats",
+                    subtitle: "View driving scores & history stats"
+                ) {
+                    showPerformanceStats = true
+                }
+
+                Divider().padding(.leading, 66)
 
                 ProfileSettingsRow(
                     icon: "creditcard.fill",
@@ -354,7 +272,7 @@ struct DriverProfileView: View {
                     showLicenseDetails = true
                 }
 
-                Divider().padding(.leading, 68)
+                Divider().padding(.leading, 66)
 
                 ProfileSettingsRow(
                     icon: "bell.badge.fill",
@@ -366,7 +284,7 @@ struct DriverProfileView: View {
                     showNotificationSettings = true
                 }
 
-                Divider().padding(.leading, 68)
+                Divider().padding(.leading, 66)
 
                 ProfileSettingsRow(
                     icon: "lock.shield.fill",
@@ -378,7 +296,7 @@ struct DriverProfileView: View {
                     showSecuritySettings = true
                 }
 
-                Divider().padding(.leading, 68)
+                Divider().padding(.leading, 66)
 
                 ProfileSettingsRow(
                     icon: "questionmark.circle.fill",
@@ -396,7 +314,7 @@ struct DriverProfileView: View {
         }
     }
 
-    
+    // MARK: - Sign Out
 
     private var signOutSection: some View {
         Button {
@@ -415,40 +333,6 @@ struct DriverProfileView: View {
             .cornerRadius(AppTheme.Radius.medium)
         }
         .buttonStyle(PlainButtonStyle())
-    }
-}
-
-
-
-@available(iOS 26.0, *)
-private struct DriverPerformanceRing: View {
-    let value: Double
-    let maxValue: Double
-    let label: String
-    let color: Color
-
-    private var progress: Double { min(value / maxValue, 1.0) }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .stroke(AppTheme.Glass.ringTrack, lineWidth: 5)
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Text(maxValue == 100 ? "\(Int(value))%" : String(format: "%.1f", value))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.primary)
-            }
-            .frame(width: 60, height: 60)
-
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(AppTheme.Text.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 

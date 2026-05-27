@@ -219,38 +219,6 @@ struct FleetManagerEditProfileView: View {
 
 
 
-struct ProfileFormField: View {
-    let icon: String
-    let label: String
-    @Binding var text: String
-    var placeholder: String = ""
-    var keyboardType: UIKeyboardType = .default
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15))
-                .foregroundColor(AppTheme.Brand.primary)
-                .frame(width: 32)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(label)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(AppTheme.Text.tertiary)
-                TextField(placeholder, text: $text)
-                    .font(.system(size: 15))
-                    .foregroundColor(AppTheme.Text.primary)
-                    .keyboardType(keyboardType)
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-    }
-}
-
-
 
 @available(iOS 26.0, *)
 #Preview {
