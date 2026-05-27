@@ -175,22 +175,10 @@ final class NavigationManager: NSObject, ObservableObject {
         isNavigating   = true
         currentStepIndex = 0
         
-        let startLoc = CLLocation(latitude: route?.polyline.coordinate.latitude ?? 28.61, 
-                                  longitude: route?.polyline.coordinate.longitude ?? 77.20)
+        // Use real GPS streaming instead of the simulator.
+        startStreaming()
         
-        // Auto-detect if user is testing on a simulator far away from the route
-        if let loc = userLocation, loc.distance(from: startLoc) > 50000 {
-            // User is >50km away. Assume they are testing. Use smooth simulator.
-            startSimulation()
-        } else if userLocation == nil {
-            // No GPS at all. Use simulator.
-            startSimulation()
-        } else {
-            // Use real GPS streaming.
-            startStreaming()
-            // Native tracking allows the user to pinch and zoom!
-            cameraPosition = .userLocation(followsHeading: true, fallback: .automatic)
-        }
+        animateTo3DPerspective(location: userLocation)
     }
 
     /// Stop navigation and reset state.
@@ -246,12 +234,7 @@ final class NavigationManager: NSObject, ObservableObject {
             
             self.userLocation = loc
             self.userHeading = nil // Fallback to loc.course
-            
-            // Only force camera once initially to avoid breaking user zoom gestures
-            if simulatedDistanceTravelled < 10 {
-                animateTo3DPerspective(location: loc)
-            }
-            
+            self.updateFollowCamera(location: loc)
             self.evaluateProgress(location: loc)
         } else {
             // Reached the destination
@@ -358,6 +341,22 @@ final class NavigationManager: NSObject, ObservableObject {
         }
     }
 
+    /// Update camera to follow user in 3D mode as they move.
+    private func updateFollowCamera(location: CLLocation) {
+        guard isNavigating else { return }
+        let heading = userHeading?.trueHeading ?? location.course
+
+        // Only reposition camera — no withAnimation here; MapKit handles interpolation.
+        cameraPosition = .camera(
+            MapCamera(
+                centerCoordinate: location.coordinate,
+                distance:  350,
+                heading:   heading.isNaN ? 0 : heading,
+                pitch:     65
+            )
+        )
+    }
+
     /// Evaluate which route step the user is currently on and update progress.
     private func evaluateProgress(location: CLLocation) {
         guard isNavigating, steps.indices.contains(currentStepIndex) else { return }
@@ -409,6 +408,7 @@ extension NavigationManager: CLLocationManagerDelegate {
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.userLocation = loc
+            self.updateFollowCamera(location: loc)
             self.evaluateProgress(location: loc)
         }
     }
@@ -419,6 +419,10 @@ extension NavigationManager: CLLocationManagerDelegate {
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.userHeading = newHeading
+            // Re-align camera heading in real-time.
+            if self.isNavigating, let loc = self.userLocation {
+                self.updateFollowCamera(location: loc)
+            }
         }
     }
 
