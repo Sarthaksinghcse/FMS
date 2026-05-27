@@ -182,8 +182,6 @@ struct AddTripFormView: View {
         }
         
         
-        let distance = Double(distanceText)
-        
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         
         isSaving = true
