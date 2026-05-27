@@ -939,6 +939,9 @@ struct MaintenanceStaffListView: View {
                 }
             }
         }
+        .refreshable {
+            await syncMaintenanceStaff()
+        }
         .navigationTitle("Maintenance Team")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "Search technicians…")
@@ -952,7 +955,12 @@ struct MaintenanceStaffListView: View {
         }
         .sheet(isPresented: $showAddStaffSheet) { AddMaintenanceFormView() }
         .sheet(item: $selectedStaffForEdit) { s in EditMaintenanceFormView(staff: s) }
-        .onAppear { triggerCardAnimations() }
+        .onAppear {
+            triggerCardAnimations()
+            Task {
+                await syncMaintenanceStaff()
+            }
+        }
         .onChange(of: filteredStaff.count) { triggerCardAnimations() }
     }
 
@@ -1064,6 +1072,40 @@ struct MaintenanceStaffListView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.08 + 0.15)) {
                 cardAnimations[staff.id] = true
             }
+        }
+    }
+
+    private func syncMaintenanceStaff() async {
+        do {
+            let dbStaff = try await SupabaseManager.shared.fetchMaintenancePersonnel()
+            await MainActor.run {
+                for dbs in dbStaff {
+                    if let localStaff = allUsers.first(where: { $0.id == dbs.id }) {
+                        localStaff.fullName = dbs.name
+                        localStaff.email = dbs.email
+                        localStaff.phoneNumber = dbs.phoneNumber ?? ""
+                        localStaff.role = dbs.role.asLocalRole
+                        localStaff.isActive = dbs.isActive
+                    } else {
+                        let newStaff = dbs.asLocalUser
+                        modelContext.insert(newStaff)
+                    }
+                }
+                
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbStaff.map { $0.id })
+                    let localStaff = allUsers.filter { $0.role == .maintenance }
+                    for s in localStaff {
+                        if !remoteIds.contains(s.id) {
+                            modelContext.delete(s)
+                        }
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("Failed to sync maintenance staff: \(error)")
         }
     }
 }
