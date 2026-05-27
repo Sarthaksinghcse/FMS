@@ -23,6 +23,19 @@ struct MaintenanceDashboardTab: View {
     @Binding var schedulingFilter: Int
 
     @State private var showingProfile = false
+    @State private var showChat = false
+
+    private var personnelFirstName: String {
+        guard !currentUser.fullName.isEmpty else { return "Staff" }
+        return currentUser.fullName.components(separatedBy: " ").first ?? currentUser.fullName
+    }
+
+    private func getGreetingTime() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return "Good Morning" }
+        else if hour < 17 { return "Good Afternoon" }
+        else { return "Good Evening" }
+    }
 
     // MARK: - Derived properties
 
@@ -93,14 +106,16 @@ struct MaintenanceDashboardTab: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Premium header
                         MaintenanceHeaderView(
-                            title: "Maintenance",
+                            title: personnelFirstName,
                             subtitle: "Maintenance Personnel",
-                            greeting: nil,
+                            greeting: getGreetingTime() + ",",
                             initials: initials,
                             avatarColor: AppTheme.Brand.primaryDeep,
                             notificationCount: unreadNotifications.count,
                             onNotificationTap: {},
-                            onProfileTap: { showingProfile = true }
+                            onProfileTap: { showingProfile = true },
+                            showChat: true,
+                            onChatTap: { showChat = true }
                         )
                         .padding(.top, 8)
 
@@ -117,6 +132,9 @@ struct MaintenanceDashboardTab: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showingProfile) {
                 MaintenanceProfileView()
+            }
+            .navigationDestination(isPresented: $showChat) {
+                CommunicationView()
             }
         }
     }
