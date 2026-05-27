@@ -785,6 +785,19 @@ private struct TripActionButton: View {
         case .warning:     return AppTheme.Brand.accent
         case .destructive: return .white
         }
+    }
+
+    private var backgroundContent: some ShapeStyle {
+        switch style {
+        case .primary:     return AnyShapeStyle(Color.fmsIndigo.gradient)
+        case .glass:       return AnyShapeStyle(Color.fmsIndigo.opacity(0.08))
+        case .warning:     return AnyShapeStyle(AppTheme.Brand.accent.opacity(0.10))
+        case .destructive: return AnyShapeStyle(Color.red.gradient)
+        }
+    }
+}
+
+
 @available(iOS 26.0, *)
 struct TripNavigationView: View {
     let trip: DBTrip
