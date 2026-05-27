@@ -62,6 +62,9 @@ final class NavigationManager: NSObject, ObservableObject {
 
     /// True once "Start Now" was tapped and the 3D perspective is active.
     @Published private(set) var isNavigating: Bool = false
+    
+    /// True when we are artificially driving the route (for demo/testing)
+    @Published private(set) var isSimulating: Bool = false
 
     /// ETA in seconds remaining along the current route.
     @Published private(set) var remainingTime: TimeInterval = 0
@@ -171,19 +174,126 @@ final class NavigationManager: NSObject, ObservableObject {
         guard !isNavigating else { return }
         isNavigating   = true
         currentStepIndex = 0
-        startStreaming()
+        
+        // For testing/demo purposes, we always simulate movement along the actual route.
+        // In a real environment, you would conditionally call startStreaming() based on environment variables.
+        startSimulation()
+        
         animateTo3DPerspective(location: userLocation)
     }
 
     /// Stop navigation and reset state.
     func endNavigation() {
         isNavigating = false
+        isSimulating = false
+        simulationTimer?.invalidate()
         clManager.stopUpdatingLocation()
         clManager.stopUpdatingHeading()
         cameraPosition = .automatic
     }
 
+    // MARK: - Simulator Logic
+    private var simulationTimer: Timer?
+    private var simulatedDistanceTravelled: CLLocationDistance = 0
+    private var lastSimUpdate: Date = Date()
+
+    private func startSimulation() {
+        guard route != nil else { return }
+        simulatedDistanceTravelled = 0
+        lastSimUpdate = Date()
+        isSimulating = true
+        
+        simulationTimer?.invalidate()
+        // Run simulator at 60 FPS
+        simulationTimer = Timer.scheduledTimer(withTimeInterval: 1.0/60.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.tickSimulation()
+            }
+        }
+    }
+
+    private func tickSimulation() {
+        guard isSimulating, let route = route else { return }
+        
+        let now = Date()
+        let dt = now.timeIntervalSince(lastSimUpdate)
+        lastSimUpdate = now
+        
+        let speedMetersPerSec = 22.0 // ~80 km/h for a smooth demo
+        simulatedDistanceTravelled += speedMetersPerSec * dt
+        
+        if let (coord, course) = coordinateAndCourse(along: route.polyline, atDistance: simulatedDistanceTravelled) {
+            let loc = CLLocation(
+                coordinate: coord,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5,
+                course: course,
+                speed: speedMetersPerSec,
+                timestamp: now
+            )
+            
+            self.userLocation = loc
+            self.userHeading = nil // Fallback to loc.course
+            self.updateFollowCamera(location: loc)
+            self.evaluateProgress(location: loc)
+        } else {
+            // Reached the destination
+            endNavigation()
+        }
+    }
+
+    private func coordinateAndCourse(along polyline: MKPolyline, atDistance targetDistance: CLLocationDistance) -> (CLLocationCoordinate2D, CLLocationDirection)? {
+        let pointCount = polyline.pointCount
+        var coords = [CLLocationCoordinate2D](repeating: kCLLocationCoordinate2DInvalid, count: pointCount)
+        polyline.getCoordinates(&coords, range: NSRange(location: 0, length: pointCount))
+        
+        var accumulated: CLLocationDistance = 0
+        
+        for i in 0..<(pointCount - 1) {
+            let p1 = coords[i]
+            let p2 = coords[i+1]
+            let loc1 = CLLocation(latitude: p1.latitude, longitude: p1.longitude)
+            let loc2 = CLLocation(latitude: p2.latitude, longitude: p2.longitude)
+            let segmentDistance = loc1.distance(from: loc2)
+            
+            if accumulated + segmentDistance >= targetDistance {
+                let remaining = targetDistance - accumulated
+                let fraction = segmentDistance > 0 ? remaining / segmentDistance : 0
+                
+                let lat = p1.latitude + (p2.latitude - p1.latitude) * fraction
+                let lon = p1.longitude + (p2.longitude - p1.longitude) * fraction
+                let course = bearing(from: p1, to: p2)
+                
+                return (CLLocationCoordinate2D(latitude: lat, longitude: lon), course)
+            }
+            accumulated += segmentDistance
+        }
+        
+        if pointCount >= 2 {
+            return (coords[pointCount-1], bearing(from: coords[pointCount-2], to: coords[pointCount-1]))
+        } else if pointCount == 1 {
+            return (coords[0], 0)
+        }
+        return nil
+    }
+
+    private func bearing(from p1: CLLocationCoordinate2D, to p2: CLLocationCoordinate2D) -> CLLocationDirection {
+        let lat1 = p1.latitude * .pi / 180
+        let lon1 = p1.longitude * .pi / 180
+        let lat2 = p2.latitude * .pi / 180
+        let lon2 = p2.longitude * .pi / 180
+        
+        let dLon = lon2 - lon1
+        let y = sin(dLon) * cos(lat2)
+        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        let radiansBearing = atan2(y, x)
+        
+        return (radiansBearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+    }
+
     // MARK: - Private helpers
+
 
     private func startStreaming() {
         clManager.startUpdatingLocation()

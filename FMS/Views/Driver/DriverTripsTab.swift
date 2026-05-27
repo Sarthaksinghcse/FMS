@@ -830,8 +830,25 @@ struct TripNavigationView: View {
                 // ── Live MapKit map ──────────────────────────────────────────
                 Map(position: $nav.cameraPosition) {
 
-                    // Blue pulsing user dot (follows real GPS)
-                    UserAnnotation()
+                    // Blue pulsing user dot (follows real GPS or simulated location)
+                    if nav.isSimulating, let loc = nav.userLocation?.coordinate {
+                        Annotation("Driver", coordinate: loc) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.blue.opacity(0.3))
+                                    .frame(width: 44, height: 44)
+                                Circle()
+                                    .fill(.white)
+                                    .frame(width: 22, height: 22)
+                                    .shadow(radius: 3)
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 14, height: 14)
+                            }
+                        }
+                    } else {
+                        UserAnnotation()
+                    }
 
                     // Alternate routes (grey dashed)
                     ForEach(nav.alternateRoutes, id: \.name) { alt in
