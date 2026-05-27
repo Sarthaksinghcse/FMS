@@ -462,6 +462,52 @@ final class SupabaseManager: ObservableObject {
         return dbUser
     }
     
+    func createMaintenanceStaff(email: String, passwordString: String, fullName: String, phoneNumber: String, isActive: Bool) async throws -> DBUser {
+        let tempClient = SupabaseClient(
+            supabaseURL: Self.supabaseURL,
+            supabaseKey: Self.supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    storage: InMemoryLocalStorage(),
+                    emitLocalSessionAsInitialSession: false
+                )
+            )
+        )
+        
+        let authResponse = try await tempClient.auth.signUp(
+            email: email,
+            password: passwordString,
+            data: [
+                "name": .string(fullName),
+                "role": .string(DBUserRole.maintenance.rawValue)
+            ]
+        )
+        
+        let authUserId = authResponse.user.id
+        
+        let dbUser = DBUser(
+            id: authUserId,
+            name: fullName,
+            email: email,
+            role: .maintenance,
+            phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
+            profileImage: nil,
+            isActive: isActive,
+            createdAt: Date()
+        )
+        
+        do {
+            try await client
+                .from("users")
+                .upsert(dbUser)
+                .execute()
+        } catch {
+            print("⚠️ Profile upsert failed (possibly auto-inserted by database trigger): \(error.localizedDescription)")
+        }
+            
+        return dbUser
+    }
+    
     
     func updateDriver(_ driver: DBUser) async throws {
         try await client
@@ -778,6 +824,32 @@ final class SupabaseManager: ObservableObject {
                     for localDriver in localDrivers {
                         if !remoteIds.contains(localDriver.id) {
                             context.delete(localDriver)
+                        }
+                    }
+                }
+            }
+            
+            if let remoteMaintenance = try? await fetchMaintenancePersonnel() {
+                let descriptor = FetchDescriptor<User>()
+                let localUsers = (try? context.fetch(descriptor)) ?? []
+                for rm in remoteMaintenance {
+                    if let local = localUsers.first(where: { $0.id == rm.id }) {
+                        local.fullName = rm.name
+                        local.email = rm.email
+                        local.phoneNumber = rm.phoneNumber ?? ""
+                        local.role = rm.role.asLocalRole
+                        local.isActive = rm.isActive
+                    } else {
+                        context.insert(rm.asLocalUser)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteMaintenance.map { $0.id })
+                    let localMaintenance = localUsers.filter { $0.role == .maintenance }
+                    for localStaff in localMaintenance {
+                        if !remoteIds.contains(localStaff.id) {
+                            context.delete(localStaff)
                         }
                     }
                 }
