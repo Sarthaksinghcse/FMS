@@ -286,15 +286,13 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FMS/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need access to your location to update your real time location";
-				INFOPLIST_KEY_UIBackgroundModes = (
-					location,
-				);
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone to log voice trips.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We need speech recognition to transcribe your trip logs.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UIBackgroundModes = location;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
@@ -337,15 +335,13 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FMS/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need access to your location to update your real time location";
-				INFOPLIST_KEY_UIBackgroundModes = (
-					location,
-				);
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone to log voice trips.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We need speech recognition to transcribe your trip logs.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UIBackgroundModes = location;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
