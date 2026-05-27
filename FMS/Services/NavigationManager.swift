@@ -175,9 +175,8 @@ final class NavigationManager: NSObject, ObservableObject {
         isNavigating   = true
         currentStepIndex = 0
         
-        // For testing/demo purposes, we always simulate movement along the actual route.
-        // In a real environment, you would conditionally call startStreaming() based on environment variables.
-        startSimulation()
+        // Use real GPS streaming instead of the simulator.
+        startStreaming()
         
         animateTo3DPerspective(location: userLocation)
     }
