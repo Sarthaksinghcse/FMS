@@ -1482,78 +1482,264 @@ struct DriverNotificationsSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
 
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                AppTheme.Background.page.ignoresSafeArea()
-                
-                if vm.notificationsList.isEmpty {
-                    ContentUnavailableView {
-                        Label("No Notifications", systemImage: "bell.slash.fill")
-                    } description: {
-                        Text("You don't have any notifications right now.")
-                    }
-                } else {
-                    List {
-                        ForEach(vm.notificationsList) { notif in
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text(notif.title)
-                                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                                        .foregroundColor(.black)
-                                    Spacer()
-                                    if !notif.isRead {
-                                        Circle()
-                                            .fill(AppTheme.Status.danger)
-                                            .frame(width: 8, height: 8)
-                                    }
-                                }
-                                Text(notif.message)
-                                    .font(.system(size: 13, design: .rounded))
-                                    .foregroundColor(.gray)
-                                
-                                Text(timeAgo(from: notif.createdAt))
-                                    .font(.system(size: 10, design: .rounded))
-                                    .foregroundColor(.gray.opacity(0.6))
-                                    .padding(.top, 2)
-                            }
-                            .padding(.vertical, 4)
-                            .listRowBackground(Color.white)
-                        }
-                    }
-                    .listStyle(.insetGrouped)
-                }
+    // Groups: "Now", "Earlier Today", "Older"
+    private var grouped: [(String, [DBNotification])] {
+        let now = Date()
+        let cal = Calendar.current
+        var nowGroup: [DBNotification] = []
+        var todayGroup: [DBNotification] = []
+        var olderGroup: [DBNotification] = []
+
+        for n in vm.notificationsList {
+            let diff = now.timeIntervalSince(n.createdAt)
+            if diff < 3600 {
+                nowGroup.append(n)
+            } else if cal.isDateInToday(n.createdAt) {
+                todayGroup.append(n)
+            } else {
+                olderGroup.append(n)
             }
-            .navigationTitle("Notifications")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+        }
+        var result: [(String, [DBNotification])] = []
+        if !nowGroup.isEmpty   { result.append(("Now", nowGroup)) }
+        if !todayGroup.isEmpty { result.append(("Earlier Today", todayGroup)) }
+        if !olderGroup.isEmpty { result.append(("Older", olderGroup)) }
+        return result
+    }
+
+    var body: some View {
+        ZStack {
+            // ── Dark blurred background (Notification Centre style) ──────────
+            Color.black.ignoresSafeArea()
+
+            // Subtle gradient overlay
+            LinearGradient(
+                colors: [Color.black.opacity(0.85), Color(white: 0.08, opacity: 0.95)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // ── Top bar ─────────────────────────────────────────────────
+                HStack {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.fmsIndigo)
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(Color.white.opacity(0.12))
+                            .clipShape(Circle())
                     }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Mark All Read") {
-                        Task {
-                            await vm.markAllNotificationsAsRead()
+
+                    Spacer()
+
+                    Text("Notifications")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+
+                    Spacer()
+
+                    Button {
+                        withAnimation(.spring(response: 0.4)) {
+                            Task { await vm.markAllNotificationsAsRead() }
                         }
+                    } label: {
+                        Text("Mark All Read")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(vm.notificationsList.filter { !$0.isRead }.isEmpty
+                                             ? Color.white.opacity(0.3) : Color.white)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Color.white.opacity(
+                                vm.notificationsList.filter { !$0.isRead }.isEmpty ? 0.06 : 0.14
+                            ))
+                            .clipShape(Capsule())
                     }
-                    .foregroundColor(Color.fmsIndigo)
                     .disabled(vm.notificationsList.filter { !$0.isRead }.isEmpty)
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 56)
+                .padding(.bottom, 16)
+
+                // ── Notification list ────────────────────────────────────────
+                if vm.notificationsList.isEmpty {
+                    Spacer()
+                    VStack(spacing: 14) {
+                        Image(systemName: "bell.slash.fill")
+                            .font(.system(size: 44, weight: .thin))
+                            .foregroundStyle(Color.white.opacity(0.25))
+                        Text("No Notifications")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.5))
+                        Text("You're all caught up.")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.white.opacity(0.3))
+                    }
+                    Spacer()
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(alignment: .leading, spacing: 24) {
+                            ForEach(grouped, id: \.0) { section, notifs in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    // Section header
+                                    Text(section)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.white.opacity(0.45))
+                                        .padding(.leading, 6)
+
+                                    ForEach(notifs) { notif in
+                                        NotifCard(notif: notif, onClear: {
+                                            withAnimation(.spring(response: 0.35)) {
+                                                // Mark as read on swipe-clear
+                                                Task { await vm.markAllNotificationsAsRead() }
+                                            }
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 40)
+                    }
+                }
             }
-            .task {
-                await vm.loadNotifications()
-            }
+        }
+        .task { await vm.loadNotifications() }
+    }
+}
+
+// MARK: - Individual Notification Card
+
+@available(iOS 26.0, *)
+private struct NotifCard: View {
+    let notif: DBNotification
+    let onClear: () -> Void
+
+    @State private var offset: CGFloat = 0
+    @State private var cleared = false
+
+    private var timeLabel: String {
+        let diff = Date().timeIntervalSince(notif.createdAt)
+        if diff < 60   { return "now" }
+        if diff < 3600 { return "\(Int(diff / 60))m ago" }
+        if diff < 86400 { return "\(Int(diff / 3600))h ago" }
+        let f = DateFormatter(); f.dateFormat = "MMM d"; return f.string(from: notif.createdAt)
+    }
+
+    private var typeIcon: (String, Color) {
+        switch notif.type {
+        case .emergency: return ("exclamationmark.triangle.fill", Color(red: 1, green: 0.3, blue: 0.3))
+        case .warning:   return ("exclamationmark.circle.fill",  Color(red: 1, green: 0.75, blue: 0.2))
+        case .info:      return ("info.circle.fill",             Color(red: 0.35, green: 0.65, blue: 1))
+        default:         return ("bell.fill",                    Color(red: 0.55, green: 0.55, blue: 0.6))
         }
     }
 
-    private func timeAgo(from date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: date, relativeTo: Date())
+    var body: some View {
+        if !cleared {
+            ZStack(alignment: .trailing) {
+                // Clear button revealed on swipe
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation(.spring(response: 0.35)) { cleared = true }
+                        onClear()
+                    } label: {
+                        Text("Clear")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 72, height: 72)
+                            .background(Color.white.opacity(0.18))
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                    }
+                    .padding(.trailing, 4)
+                }
+
+                // Card
+                HStack(alignment: .top, spacing: 12) {
+                    // App icon bubble (FMS brand)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(
+                                LinearGradient(colors: [Color.fmsIndigo, Color.fmsIndigo.opacity(0.7)],
+                                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                            )
+                            .frame(width: 40, height: 40)
+                        Image(systemName: typeIcon.0)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                    // Unread dot badge on icon
+                    .overlay(alignment: .topTrailing) {
+                        if !notif.isRead {
+                            Circle()
+                                .fill(Color(red: 1, green: 0.3, blue: 0.3))
+                                .frame(width: 10, height: 10)
+                                .offset(x: 3, y: -3)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("FMS")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.white.opacity(0.5))
+                            Spacer()
+                            Text(timeLabel)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(Color.white.opacity(0.45))
+                        }
+
+                        Text(notif.title)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+
+                        Text(notif.message)
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundStyle(Color.white.opacity(0.7))
+                            .lineLimit(2)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
+                .background(
+                    // Frosted glass dark card — matches Apple Notification Centre
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(
+                            notif.isRead
+                            ? Color(white: 0.14, opacity: 0.92)
+                            : Color(white: 0.18, opacity: 0.96)
+                        )
+                        .shadow(color: Color.black.opacity(0.35), radius: 10, x: 0, y: 4)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(Color.white.opacity(notif.isRead ? 0.06 : 0.13), lineWidth: 1)
+                )
+                .offset(x: offset)
+                .gesture(
+                    DragGesture()
+                        .onChanged { v in
+                            if v.translation.width < 0 {
+                                offset = max(v.translation.width, -100)
+                            }
+                        }
+                        .onEnded { v in
+                            if v.translation.width < -60 {
+                                withAnimation(.spring(response: 0.35)) { cleared = true }
+                                onClear()
+                            } else {
+                                withAnimation(.spring(response: 0.3)) { offset = 0 }
+                            }
+                        }
+                )
+                .animation(.spring(response: 0.3), value: offset)
+            }
+            .transition(.asymmetric(
+                insertion: .move(edge: .top).combined(with: .opacity),
+                removal:   .move(edge: .trailing).combined(with: .opacity)
+            ))
+        }
     }
 }
+
