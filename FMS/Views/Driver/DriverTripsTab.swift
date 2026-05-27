@@ -1038,11 +1038,11 @@ struct TripNavigationView: View {
 
             // Distance / elapsed chips
             HStack(spacing: 0) {
-                TripMetaCell(icon: "arrow.left.arrow.right",
-                             value: String(format: "%.1f km", trip.distance),
-                             label: "Distance")
-                TripMetaCell(icon: "clock",
-                             value: vm.elapsedFormatted, label: "Elapsed")
+                ActiveTripMetaCell(icon: "arrow.left.arrow.right",
+                                   value: String(format: "%.1f km", trip.distance),
+                                   label: "Distance")
+                ActiveTripMetaCell(icon: "clock",
+                                   value: vm.elapsedFormatted, label: "Elapsed")
             }
             .padding(.horizontal, 8).padding(.top, 8)
 
@@ -1219,9 +1219,9 @@ struct TripNavigationView: View {
 
 
 
-private enum MapActionStyle { case primary, glass, warning, destructive }
+enum MapActionStyle { case primary, glass, warning, destructive }
 
-private struct MapActionButton: View {
+struct MapActionButton: View {
     let label: String
     let icon: String
     let style: MapActionStyle
@@ -1316,7 +1316,7 @@ private struct TurnStepRow: View {
 }
 
 // MARK: - TripMetaCell
-private struct TripMetaCell: View {
+private struct ActiveTripMetaCell: View {
     let icon: String
     let value: String
     let label: String

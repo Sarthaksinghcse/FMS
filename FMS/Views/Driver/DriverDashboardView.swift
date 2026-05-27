@@ -1479,6 +1479,37 @@ struct ChatHubSheet: View {
 
 
 
+struct DriverNotificationRow: View {
+    let notification: DBNotification
+    let timeAgo: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(notification.title)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.black)
+                Spacer()
+                if !notification.isRead {
+                    Circle()
+                        .fill(AppTheme.Status.danger)
+                        .frame(width: 8, height: 8)
+                }
+            }
+
+            Text(notification.message)
+                .font(.system(size: 13, design: .rounded))
+                .foregroundColor(.gray)
+
+            Text(timeAgo)
+                .font(.system(size: 10, design: .rounded))
+                .foregroundColor(.gray.opacity(0.6))
+                .padding(.top, 2)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 @available(iOS 26.0, *)
 struct DriverNotificationsSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
@@ -1515,45 +1546,8 @@ struct DriverNotificationsSheet: View {
                         Text("You're all caught up.")
                     }
                 } else {
-                    List {
-                        ForEach(sections, id: \.title) { section in
-                            Section(header: Text(section.title)) {
-                                ForEach(section.items) { notif in
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack {
-                                            Text(notif.title)
-                                                .font(.system(size: 15, weight: .bold, design: .rounded))
-                                                .foregroundColor(.black)
-                                            Spacer()
-                                            if !notif.isRead {
-                                                Circle()
-                                                    .fill(AppTheme.Status.danger)
-                                                    .frame(width: 8, height: 8)
-                                            }
-                                        }
-                                        Text(notif.message)
-                                            .font(.system(size: 13, design: .rounded))
-                                            .foregroundColor(.gray)
-                                        Text(timeAgo(from: notif.createdAt))
-                                            .font(.system(size: 10, design: .rounded))
-                                            .foregroundColor(.gray.opacity(0.6))
-                                            .padding(.top, 2)
-                                    }
-                                    .padding(.vertical, 4)
-                                    .listRowBackground(Color.white)
-                                    // ── Swipe left to clear ──────────────────
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            withAnimation(.easeOut(duration: 0.25)) {
-                                                localList.removeAll { $0.id == notif.id }
-                                            }
-                                        } label: {
-                                            Label("Clear", systemImage: "xmark")
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    List(localList) { notification in
+                        notificationRow(notification)
                     }
                     .listStyle(.insetGrouped)
                     .animation(.easeOut(duration: 0.25), value: localList.count)
@@ -1572,7 +1566,9 @@ struct DriverNotificationsSheet: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Mark All Read") {
-                        Task { await vm.markAllNotificationsAsRead() }
+                        _Concurrency.Task {
+                            await vm.markAllNotificationsAsRead()
+                        }
                         // Also update local copy
                         withAnimation {
                             localList = localList.map {
@@ -1588,11 +1584,28 @@ struct DriverNotificationsSheet: View {
                 await vm.loadNotifications()
                 localList = vm.notificationsList
             }
-            .onChange(of: vm.notificationsList) { _, newVal in
+            .onChange(of: vm.notificationsList.map(\.id)) {
                 // Only sync additions from Supabase; don't restore cleared items
-                for item in newVal where !localList.contains(where: { $0.id == item.id }) {
+                for item in vm.notificationsList where !localList.contains(where: { $0.id == item.id }) {
                     withAnimation { localList.insert(item, at: 0) }
                 }
+            }
+        }
+    }
+
+    private func notificationRow(_ notification: DBNotification) -> some View {
+        DriverNotificationRow(
+            notification: notification,
+            timeAgo: timeAgo(from: notification.createdAt)
+        )
+        .listRowBackground(Color.white)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    localList.removeAll { $0.id == notification.id }
+                }
+            } label: {
+                Label("Clear", systemImage: "xmark")
             }
         }
     }
