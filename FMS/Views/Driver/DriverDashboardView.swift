@@ -136,6 +136,9 @@ struct DriverDashboardView: View {
         .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
         }
+        .fullScreenCover(item: $vm.viewRouteTrip) { trip in
+            TripNavigationView(trip: trip, vm: vm, viewRouteOnly: true)
+        }
         
         .confirmationDialog("End Trip", isPresented: $vm.confirmEnd, titleVisibility: .visible) {
             Button("End Trip", role: .destructive) {

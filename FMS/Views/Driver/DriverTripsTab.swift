@@ -785,29 +785,14 @@ private struct TripActionButton: View {
         case .warning:     return AppTheme.Brand.accent
         case .destructive: return .white
         }
-    }
-
-    private var backgroundContent: some ShapeStyle {
-        switch style {
-        case .primary:
-            return AnyShapeStyle(AppTheme.Brand.primaryDeep.gradient)
-        case .glass:
-            return AnyShapeStyle(AppTheme.Brand.primaryDeep.opacity(0.08))
-        case .warning:
-            return AnyShapeStyle(AppTheme.Brand.accent.opacity(0.10))
-        case .destructive:
-            return AnyShapeStyle(Color.red.gradient)
-        }
-    }
-}
-
-
-
 @available(iOS 26.0, *)
 struct TripNavigationView: View {
     let trip: DBTrip
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
+
+    /// When true: show map + route only, skip pre-trip inspection entirely.
+    var viewRouteOnly: Bool = false
 
     // ── NavigationManager owns CLLocationManager + MKDirections ─────────────
     @StateObject private var nav = NavigationManager()
@@ -992,13 +977,14 @@ struct TripNavigationView: View {
             checkForFasterAlternate()
         }
         .onAppear {
-            // Auto-open pre-trip only when trip is not already started
-            if !isActiveTrip {
+            if viewRouteOnly {
+                // View Route mode — skip inspection, just show the map
+                preTripPassed = true
+            } else if !isActiveTrip {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                     showPreTripNav = true
                 }
             } else {
-                // Trip already active — go straight to 3D navigation
                 nav.beginNavigation()
             }
         }

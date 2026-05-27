@@ -197,6 +197,7 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showMaps      = false
     @Published var activeTrip: DBTrip?
     @Published var mapActiveTrip: DBTrip?
+    @Published var viewRouteTrip: DBTrip?   // opens map in route-view mode (no pre-inspection)
     @Published var completedTrips: [CompletedTripRecord] = []
 
     
