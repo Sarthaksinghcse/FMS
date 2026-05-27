@@ -12,7 +12,7 @@ import Combine
 public final class LocationService: NSObject, CLLocationManagerDelegate, ObservableObject {
     public static let shared = LocationService()
     
-    private let manager = CLLocationManager()
+    public let manager = CLLocationManager()
     
     @Published public var lastLocation: CLLocation?
     
