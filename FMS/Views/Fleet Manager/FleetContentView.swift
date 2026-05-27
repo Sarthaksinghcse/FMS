@@ -21,11 +21,11 @@ struct FleetContentView: View {
                     }
                     .tag(0)
 
-                //                FleetTrackingView()
-                //                    .tabItem {
-                //                        Label("Tracking", systemImage: "location.fill")
-                //                    }
-                //                    .tag(1)
+                FleetTrackingView()
+                    .tabItem {
+                        Label("Tracking", systemImage: "location.fill")
+                    }
+                    .tag(1)
 
                 TripListView()
                     .tabItem {
@@ -33,11 +33,17 @@ struct FleetContentView: View {
                     }
                     .tag(2)
 
+                FleetAnalyticsView()
+                    .tabItem {
+                        Label("Analytics", systemImage: "chart.bar.xaxis")
+                    }
+                    .tag(3)
+
                 ManagementHubView()
                     .tabItem {
                         Label("Manage", systemImage: "slider.horizontal.3")
                     }
-                    .tag(3)
+                    .tag(4)
             }
             .tint(AppTheme.Brand.primary)
             
@@ -140,13 +146,12 @@ struct FleetContentView: View {
         let channel = client.channel("fleet_manager_notifications")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "notifications"
             )
-            
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             for await change in changes {

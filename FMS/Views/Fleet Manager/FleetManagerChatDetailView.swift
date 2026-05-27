@@ -130,7 +130,7 @@ struct FleetManagerChatDetailView: View {
                         proxy.scrollTo(lastMsg.id, anchor: .bottom)
                     }
                 }
-                .onChange(of: conversationMessages.count) { _ in
+                .onChange(of: conversationMessages.count) { _, _ in
                     if let lastMsg = conversationMessages.last {
                         withAnimation {
                             proxy.scrollTo(lastMsg.id, anchor: .bottom)
@@ -217,7 +217,7 @@ struct FleetManagerChatDetailView: View {
         Task {
             do {
                 try await supabase.sendMessage(dbMsg)
-                await MainActor.run {
+                _ = await MainActor.run {
                     self.messageText = ""
                     Task {
                         await loadMessages()
@@ -234,13 +234,12 @@ struct FleetManagerChatDetailView: View {
         let channel = client.channel("fleet_manager_chat_messages_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "messages"
             )
-            
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             struct MessageHeader: Codable {
@@ -251,7 +250,7 @@ struct FleetManagerChatDetailView: View {
             for await change in changes {
                 guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
                 if header.sender_id == chatUser.id || header.receiver_id == chatUser.id {
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         Task {
                             await loadMessages()
                         }

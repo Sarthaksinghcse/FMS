@@ -162,13 +162,13 @@ struct DriverDashboardView: View {
         let channel = client.channel("driver_trips_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 AnyAction.self,
                 schema: "public",
                 table: "trips"
             )
             
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             for await change in changes {
@@ -176,7 +176,7 @@ struct DriverDashboardView: View {
                 case .insert(let action):
                     guard let dbTrip = try? action.record.decode(as: DBTrip.self) else { continue }
                     if dbTrip.driverId == vm.driverId {
-                        await MainActor.run {
+                        _ = await MainActor.run {
                             modelContext.insert(dbTrip.asLocalTrip)
                             try? modelContext.save()
                             Task {
@@ -186,7 +186,7 @@ struct DriverDashboardView: View {
                     }
                 case .update(let action):
                     guard let dbTrip = try? action.record.decode(as: DBTrip.self) else { continue }
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         let id = dbTrip.id
                         let descriptor = FetchDescriptor<Trip>()
                         let localTrips = (try? modelContext.fetch(descriptor)) ?? []
@@ -220,7 +220,7 @@ struct DriverDashboardView: View {
                     }
                 case .delete(let action):
                     guard let dbTrip = try? action.oldRecord.decode(as: DBTrip.self) else { continue }
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         let id = dbTrip.id
                         let descriptor = FetchDescriptor<Trip>()
                         let localTrips = (try? modelContext.fetch(descriptor)) ?? []
@@ -232,8 +232,6 @@ struct DriverDashboardView: View {
                             await vm.load(context: modelContext)
                         }
                     }
-                default:
-                    break
                 }
             }
         }
@@ -244,13 +242,13 @@ struct DriverDashboardView: View {
         let channel = client.channel("driver_messages_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "messages"
             )
             
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeMessagesChannel = channel
             
             struct MessageHeader: Codable {
@@ -261,7 +259,7 @@ struct DriverDashboardView: View {
             for await change in changes {
                 guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
                 if header.sender_id == vm.driverId || header.receiver_id == vm.driverId {
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         Task {
                             await vm.loadMessages()
                         }
@@ -921,7 +919,7 @@ struct InspectionFormSheet: View {
                 }
                 .padding(20)
             }
-            .onChange(of: items.map(\.passed)) {
+            .onChange(of: items.map(\.passed)) { _, _ in
                 let hasUnchecked = items.contains(where: { !$0.passed })
                 if hasUnchecked {
                     hasDefect = true
@@ -1316,7 +1314,7 @@ struct ChatSheet: View {
                             proxy.scrollTo(lastMsg.id, anchor: .bottom)
                         }
                     }
-                    .onChange(of: vm.messages.count) { _ in
+                    .onChange(of: vm.messages.count) { _, _ in
                         if let lastMsg = vm.messages.last {
                             withAnimation {
                                 proxy.scrollTo(lastMsg.id, anchor: .bottom)
