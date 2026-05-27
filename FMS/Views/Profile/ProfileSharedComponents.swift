@@ -1,14 +1,17 @@
-
-
-
-
-
-
-
-
 import SwiftUI
 
+// MARK: - Button Style
 
+struct PremiumRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Color.black.opacity(0.04) : Color.clear)
+            .contentShape(Rectangle())
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Stat Card
 
 struct ProfileStatCard: View {
     let icon: String
@@ -19,7 +22,7 @@ struct ProfileStatCard: View {
     let subtitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 16))
                 .foregroundColor(iconColor)
@@ -48,7 +51,7 @@ struct ProfileStatCard: View {
     }
 }
 
-
+// MARK: - Settings Row
 
 struct ProfileSettingsRow: View {
     let icon: String
@@ -64,17 +67,19 @@ struct ProfileSettingsRow: View {
                 Image(systemName: icon)
                     .font(.system(size: 16))
                     .foregroundColor(iconColor)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 36, height: 36)
                     .background(iconBg)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 9))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(AppTheme.Text.primary)
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundColor(AppTheme.Text.secondary)
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 12))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
                 }
 
                 Spacer()
@@ -84,14 +89,13 @@ struct ProfileSettingsRow: View {
                     .foregroundColor(AppTheme.Text.tertiary.opacity(0.7))
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
+            .padding(.vertical, 12)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(PremiumRowButtonStyle())
     }
 }
 
-
+// MARK: - Inner Screen Header
 
 struct ProfileInnerScreenHeader: View {
     let icon: String
@@ -122,7 +126,7 @@ struct ProfileInnerScreenHeader: View {
     }
 }
 
-
+// MARK: - Toggle Row
 
 struct ProfileToggleRow: View {
     let icon: String
@@ -130,6 +134,7 @@ struct ProfileToggleRow: View {
     let title: String
     let subtitle: String
     @Binding var isOn: Bool
+    var tintColor: Color = AppTheme.Brand.primary
 
     var body: some View {
         HStack(spacing: 14) {
@@ -142,25 +147,27 @@ struct ProfileToggleRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(AppTheme.Text.primary)
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundColor(AppTheme.Text.secondary)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(AppTheme.Text.secondary)
+                }
             }
 
             Spacer()
 
             Toggle("", isOn: $isOn)
                 .labelsHidden()
-                .tint(AppTheme.Brand.primary)
+                .tint(tintColor)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
 }
 
-
+// MARK: - Info Row
 
 struct ProfileInfoRow: View {
     let label: String
@@ -179,5 +186,39 @@ struct ProfileInfoRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+}
+
+// MARK: - Form Field
+
+struct ProfileFormField: View {
+    let icon: String
+    let label: String
+    @Binding var text: String
+    var placeholder: String = ""
+    var keyboardType: UIKeyboardType = .default
+    var iconColor: Color = AppTheme.Brand.primary
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundColor(iconColor)
+                .frame(width: 32)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppTheme.Text.tertiary)
+                TextField(placeholder, text: $text)
+                    .font(.system(size: 15))
+                    .foregroundColor(AppTheme.Text.primary)
+                    .keyboardType(keyboardType)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }

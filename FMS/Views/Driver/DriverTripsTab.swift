@@ -835,6 +835,18 @@ struct TripNavigationView: View {
 
                 
                 Map(position: $cameraPos) {
+                    UserAnnotation {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 32, height: 32)
+                                .shadow(radius: 4)
+                            Image(systemName: "location.north.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(Color.fmsIndigo)
+                        }
+                    }
+                    
                     if let s = sourceItem?.location.coordinate {
                         Annotation("Origin", coordinate: s, anchor: .bottom) {
                             mapPin(icon: "car.fill", color: Color.fmsIndigo)
@@ -864,6 +876,37 @@ struct TripNavigationView: View {
                 }
                 .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll, showsTraffic: true))
                 .ignoresSafeArea(edges: .top)
+                .onChange(of: vm.isTripActive) { _, active in
+                    if active && vm.activeTrip?.id == trip.id {
+                        withAnimation {
+                            cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
+                        }
+                    }
+                }
+
+                if isActiveTrip {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button {
+                                withAnimation {
+                                    cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
+                                }
+                            } label: {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .frame(width: 44, height: 44)
+                                    .background(Color(UIColor.systemBackground))
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                            }
+                            .padding(.trailing, 16)
+                            .padding(.top, 16)
+                        }
+                        Spacer()
+                    }
+                }
 
                 
                 if geocoding {
@@ -1201,11 +1244,15 @@ struct TripNavigationView: View {
     
     @MainActor
     private func geocodeAndRoute() async {
-        async let source = mapItem(for: trip.source)
-        async let destination = mapItem(for: trip.destination)
-
-        sourceItem = await source
-        destItem = await destination
+        let startItem: MKMapItem?
+        if isActiveTrip, let currentCoord = LocationService.shared.manager.location?.coordinate {
+            startItem = MKMapItem(placemark: MKPlacemark(coordinate: currentCoord))
+        } else {
+            startItem = await mapItem(for: trip.source)
+        }
+        
+        sourceItem = startItem
+        destItem = await mapItem(for: trip.destination)
 
         if let sourceItem, let destItem {
             let req = MKDirections.Request()
@@ -1235,8 +1282,12 @@ struct TripNavigationView: View {
                 }
 
                 if let r = route {
-                    let rect = r.polyline.boundingMapRect
-                    cameraPos = .rect(rect.insetBy(dx: -rect.size.width * 0.18, dy: -rect.size.height * 0.18))
+                    if isActiveTrip {
+                        cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
+                    } else {
+                        let rect = r.polyline.boundingMapRect
+                        cameraPos = .rect(rect.insetBy(dx: -rect.size.width * 0.18, dy: -rect.size.height * 0.18))
+                    }
                 }
             }
         } else {
