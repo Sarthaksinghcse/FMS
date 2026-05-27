@@ -407,7 +407,7 @@ private struct AssignedTripCard: View {
     private var formattedScheduledDate: String {
         let f = DateFormatter()
         f.dateFormat = "MMM d, hh:mm a"
-        return f.string(from: trip.scheduledDate)
+        return f.string(from: trip.startTime ?? trip.createdAt)
     }
 
     private var etaString: String {
@@ -760,7 +760,7 @@ private struct AssignedTripCard: View {
 
     private var pickupTime: String {
         let f = DateFormatter(); f.dateFormat = "hh:mm a"
-        return f.string(from: trip.scheduledDate)
+        return f.string(from: trip.startTime ?? trip.createdAt)
     }
 }
 
