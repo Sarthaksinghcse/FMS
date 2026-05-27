@@ -216,7 +216,7 @@ struct MaintenanceDashboardTab: View {
                 GridQuickActionButton(
                     icon: "checkmark.square.fill",
                     label: "Update Maintenance",
-                    destination: UpdateMaintenanceView()
+                    destination: UpdateMaintenanceView(currentUser: currentUser)
                 )
                 
                 GridQuickActionButton(

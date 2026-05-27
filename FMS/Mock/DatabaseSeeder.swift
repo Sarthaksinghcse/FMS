@@ -276,6 +276,7 @@ struct DatabaseSeeder {
             serviceDate: Date().addingTimeInterval(-86400 * 5),
             cost: 3200.0,
             notes: "Replaced oil with Shell Helix 5W-40. Replaced air and oil filters.",
+            replacedParts: ["Engine Oil (Shell Helix 5W-40)", "Oil Filter", "Air Filter"],
             performedBy: tech2.id
         )
         
@@ -286,6 +287,7 @@ struct DatabaseSeeder {
             serviceDate: Date().addingTimeInterval(-86400 * 12),
             cost: 1800.0,
             notes: "Rotated all 4 tires and calibrated laser wheel alignment.",
+            replacedParts: ["Wheel Weights"],
             performedBy: tech1.id
         )
         
