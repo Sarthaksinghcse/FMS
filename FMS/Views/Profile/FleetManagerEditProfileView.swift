@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import PhotosUI
 
 
 
@@ -22,6 +23,9 @@ struct FleetManagerEditProfileView: View {
     @State private var showSaved = false
     @State private var showErrorAlert = false
     @State private var errorAlertMessage = ""
+
+    @State private var selectedItem: PhotosPickerItem? = nil
+    @State private var selectedImageData: Data? = nil
 
     private var user: DBUser? { supabase.currentUser }
 
@@ -54,12 +58,35 @@ struct FleetManagerEditProfileView: View {
                                     .frame(width: 80, height: 80)
                                     .shadow(color: AppTheme.Brand.primary.opacity(0.30), radius: 12, y: 4)
 
-                                Text(initials.isEmpty ? "FM" : initials)
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                                if let data = selectedImageData, let uiImage = UIImage(data: data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(Circle())
+                                } else if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
+                                    AsyncImage(url: imageURL) { phase in
+                                        switch phase {
+                                        case .success(let image):
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        default:
+                                            Text(initials.isEmpty ? "FM" : initials)
+                                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                                } else {
+                                    Text(initials.isEmpty ? "FM" : initials)
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
                             }
 
-                            Button { } label: {
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
                                 Text("Change Photo")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(AppTheme.Brand.primary)
@@ -155,9 +182,34 @@ struct FleetManagerEditProfileView: View {
                             
                             isSaving = true
                             
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                                isSaving = false
-                                showSaved = true
+                            Task {
+                                guard var updatedUser = user else {
+                                    await MainActor.run { isSaving = false }
+                                    return
+                                }
+                                
+                                updatedUser.name = fullName
+                                updatedUser.phoneNumber = phoneNumber.isEmpty ? nil : phoneNumber
+                                
+                                do {
+                                    if let imgData = selectedImageData {
+                                        let urlString = try await supabase.uploadAvatar(userId: updatedUser.id, imageData: imgData)
+                                        updatedUser.profileImage = urlString
+                                    }
+                                    
+                                    try await supabase.updateDriver(updatedUser)
+                                    
+                                    await MainActor.run {
+                                        isSaving = false
+                                        showSaved = true
+                                    }
+                                } catch {
+                                    await MainActor.run {
+                                        isSaving = false
+                                        errorAlertMessage = error.localizedDescription
+                                        showErrorAlert = true
+                                    }
+                                }
                             }
                         } label: {
                             HStack(spacing: 8) {
@@ -202,6 +254,15 @@ struct FleetManagerEditProfileView: View {
             .onAppear {
                 fullName = user?.name ?? ""
                 phoneNumber = user?.phoneNumber ?? ""
+            }
+            .onChange(of: selectedItem) { _, newValue in
+                Task {
+                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            self.selectedImageData = data
+                        }
+                    }
+                }
             }
             .alert("Profile Updated", isPresented: $showSaved) {
                 Button("OK") { dismiss() }

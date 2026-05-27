@@ -110,6 +110,14 @@ final class EditVehicleViewModel: ObservableObject {
         do {
             try context.save()
             
+            let dbVehicle = vehicle.asDBVehicle
+            Task {
+                do {
+                    try await SupabaseManager.shared.updateVehicle(dbVehicle)
+                } catch {
+                    print("Failed to sync vehicle edits to Supabase: \(error)")
+                }
+            }
             
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)

@@ -7,9 +7,11 @@
 
 
 import SwiftUI
+import SwiftData
+import Supabase
 
 struct CommunicationChannel: Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
     let senderName: String
     let textPreview: String
     let timestamp: String
@@ -29,71 +31,99 @@ struct CommunicationChannel: Identifiable, Hashable {
 }
 
 struct CommunicationView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var allUsers: [User]
+    
+    @StateObject private var supabase = SupabaseManager.shared
+    
     @State private var searchText: String = ""
     @State private var selectedCategory: ChatCategory = .all
+    @State private var dbMessages: [DBMessage] = []
+    @State private var realtimeChannel: RealtimeChannelV2?
 
-    @State private var channels = [
-        CommunicationChannel(
-            senderName: "Alex Johnson",
-            textPreview: "Truck 12 repair completed",
-            timestamp: "2m ago",
-            unreadCount: 1,
-            initials: "AJ",
-            avatarColor: AppTheme.Brand.primary,
-            category: .drivers,
-            autoReplies: [
-                "Thanks! I'm back on route now.",
-                "Let me know if you need to run another odometer scan later.",
-                "Awesome! Brakes feel highly responsive now."
-            ]
-        ),
-        CommunicationChannel(
-            senderName: "Fleet Manager",
-            textPreview: "Check overdue maintenance tasks",
-            timestamp: "10m ago",
-            unreadCount: 2,
-            initials: "FM",
-            avatarColor: AppTheme.Brand.violet,
-            category: .managers,
-            autoReplies: [
-                "Please prioritize the brakes repair on Truck 12.",
-                "Diagnostics received. Ensure the checklist is completed by Thursday.",
-                "Great! I will authorize the procurement budget right away."
-            ]
-        ),
-        CommunicationChannel(
-            senderName: "Mechanic Raj",
-            textPreview: "Spark plugs catalog updated in inventory",
-            timestamp: "1h ago",
-            unreadCount: 0,
-            initials: "MR",
-            avatarColor: AppTheme.Brand.teal,
-            category: .maintenance,
-            autoReplies: [
-                "Perfect! We got the spark plugs stored in Bin B.",
-                "Caliper inventory is also checked and accounted for.",
-                "I've placed the diagnostic scanner back on the charger."
-            ]
-        ),
-        CommunicationChannel(
-            senderName: "Driver David",
-            textPreview: "Slight squealing noise detected on Van 05",
-            timestamp: "2h ago",
-            unreadCount: 0,
-            initials: "DD",
-            avatarColor: AppTheme.Brand.violet,
-            category: .drivers,
-            autoReplies: [
-                "I'll bring the van into Service Bay 2 after my shift.",
-                "Notes logged. Thanks for checking it so quickly.",
-                "Yes, standard fluid check was successfully logged too."
-            ]
-        )
-    ]
+    private var computedChannels: [CommunicationChannel] {
+        guard let currentUserId = supabase.currentUser?.id else { return [] }
+        
+        let otherUsers = allUsers.filter { $0.id != currentUserId }
+        var list: [CommunicationChannel] = []
+        
+        for user in otherUsers {
+            let userMessages = dbMessages.filter {
+                ($0.senderId == currentUserId && $0.receiverId == user.id) ||
+                ($0.senderId == user.id && $0.receiverId == currentUserId)
+            }.sorted(by: { $0.timestamp < $1.timestamp })
+            
+            let textPreview: String
+            let timestamp: String
+            let unreadCount: Int
+            
+            if let lastMsg = userMessages.last {
+                textPreview = lastMsg.message
+                
+                let formatter = DateFormatter()
+                if Calendar.current.isDateInToday(lastMsg.timestamp) {
+                    formatter.dateFormat = "h:mm a"
+                } else {
+                    formatter.dateFormat = "MMM d"
+                }
+                timestamp = formatter.string(from: lastMsg.timestamp)
+                unreadCount = 0
+            } else {
+                textPreview = "Start conversation"
+                timestamp = ""
+                unreadCount = 0
+            }
+            
+            let category: ChatCategory
+            switch user.role {
+            case .driver: category = .drivers
+            case .fleetManager: category = .managers
+            case .maintenance: category = .maintenance
+            }
+            
+            let avatarColor: Color
+            switch user.role {
+            case .driver: avatarColor = AppTheme.Brand.primary
+            case .fleetManager: avatarColor = AppTheme.Brand.violet
+            case .maintenance: avatarColor = AppTheme.Brand.teal
+            }
+            
+            let parts = user.fullName.split(separator: " ")
+            let initials: String
+            if parts.count >= 2 {
+                initials = String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+            } else {
+                initials = String(user.fullName.prefix(2)).uppercased()
+            }
+            
+            let channel = CommunicationChannel(
+                id: user.id,
+                senderName: user.fullName,
+                textPreview: textPreview,
+                timestamp: timestamp,
+                unreadCount: unreadCount,
+                initials: initials,
+                avatarColor: avatarColor,
+                category: category,
+                autoReplies: []
+            )
+            
+            list.append(channel)
+        }
+        
+        return list.sorted { c1, c2 in
+            let m1 = dbMessages.last(where: { ($0.senderId == currentUserId && $0.receiverId == c1.id) || ($0.senderId == c1.id && $0.receiverId == currentUserId) })
+            let m2 = dbMessages.last(where: { ($0.senderId == currentUserId && $0.receiverId == c2.id) || ($0.senderId == c2.id && $0.receiverId == currentUserId) })
+            if let t1 = m1?.timestamp, let t2 = m2?.timestamp {
+                return t1 > t2
+            }
+            return m1 != nil && m2 == nil
+        }
+    }
 
     // Filtered channels list
     private var filteredChannels: [CommunicationChannel] {
-        channels.filter { channel in
+        computedChannels.filter { channel in
             // Filter by search query
             let matchesSearch = searchText.isEmpty ||
                                 channel.senderName.localizedCaseInsensitiveContains(searchText) ||
@@ -133,13 +163,13 @@ struct CommunicationView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
-                            ForEach(filteredChannels.indices, id: \.self) { idx in
-                                NavigationLink(destination: ChatDetailView(channel: binding(for: filteredChannels[idx]))) {
-                                    CommunicationRow(channel: filteredChannels[idx])
+                            ForEach(filteredChannels) { channel in
+                                NavigationLink(destination: ChatDetailView(channel: channel)) {
+                                    CommunicationRow(channel: channel)
                                 }
                                 .buttonStyle(PlainButtonStyle())
 
-                                if idx < filteredChannels.count - 1 {
+                                if channel.id != filteredChannels.last?.id {
                                     Divider().padding(.leading, 74)
                                 }
                             }
@@ -156,14 +186,51 @@ struct CommunicationView: View {
         }
         .navigationTitle("Messages")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadMessages()
+            startRealtimeListener()
+        }
+        .onDisappear {
+            if let activeChannel = realtimeChannel {
+                let client = supabase.client
+                Task {
+                    await client.removeChannel(activeChannel)
+                }
+                realtimeChannel = nil
+            }
+        }
     }
 
-    // Dynamic Binding Helper for array indexing
-    private func binding(for channel: CommunicationChannel) -> Binding<CommunicationChannel> {
-        guard let index = channels.firstIndex(where: { $0.id == channel.id }) else {
-            fatalError("Channel not found")
+    func loadMessages() async {
+        do {
+            let msgs = try await supabase.fetchMessages()
+            await MainActor.run {
+                self.dbMessages = msgs
+            }
+        } catch {
+            print("Failed to fetch messages: \(error)")
         }
-        return $channels[index]
+    }
+    
+    func startRealtimeListener() {
+        guard realtimeChannel == nil else { return }
+        let client = supabase.client
+        let channel = client.channel("maintenance_messages_realtime")
+        
+        Task {
+            let changes = channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "messages"
+            )
+            
+            try? await channel.subscribeWithError()
+            self.realtimeChannel = channel
+            
+            for await _ in changes {
+                await loadMessages()
+            }
+        }
     }
 }
 

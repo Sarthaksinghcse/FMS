@@ -71,20 +71,23 @@ struct DriverDashboardView: View {
                     )
                     Task {
                         try? await SupabaseManager.shared.createNotification(notif)
+                        
+                        let localSOS = SOSAlert(
+                            id: notif.id,
+                            driverId: driverId,
+                            vehicleId: vm.assignedVehicle?.id ?? UUID(),
+                            tripId: vm.activeTrip?.id ?? UUID(),
+                            latitude: 28.5450,
+                            longitude: 77.2600,
+                            message: notif.message,
+                            status: .active,
+                            createdAt: notif.createdAt
+                        )
+                        
+                        try? await SupabaseManager.shared.createSOSAlert(localSOS.asDBSOSAlert)
+                        
                         await MainActor.run {
                             modelContext.insert(notif.asLocalNotification)
-                            
-                            let localSOS = SOSAlert(
-                                id: notif.id,
-                                driverId: driverId,
-                                vehicleId: vm.assignedVehicle?.id ?? UUID(),
-                                tripId: vm.activeTrip?.id ?? UUID(),
-                                latitude: 28.5450,
-                                longitude: 77.2600,
-                                message: notif.message,
-                                status: .active,
-                                createdAt: notif.createdAt
-                            )
                             modelContext.insert(localSOS)
                             try? modelContext.save()
                         }

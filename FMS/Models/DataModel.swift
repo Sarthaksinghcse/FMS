@@ -988,8 +988,196 @@ extension DefectReport {
 }
 
 
+enum DBSOSStatus: String, Codable {
+    case active
+    case resolved
+}
 
+struct DBSOSAlert: Codable, Identifiable {
+    let id: UUID
+    var driverId: UUID
+    var vehicleId: UUID?
+    var tripId: UUID?
+    var latitude: Double
+    var longitude: Double
+    var message: String?
+    var status: DBSOSStatus
+    var createdAt: Date
 
+    enum CodingKeys: String, CodingKey {
+        case id
+        case driverId = "driver_id"
+        case vehicleId = "vehicle_id"
+        case tripId = "trip_id"
+        case latitude
+        case longitude
+        case message
+        case status
+        case createdAt = "created_at"
+    }
+}
+
+extension SOSStatus {
+    var toDBStatus: DBSOSStatus {
+        switch self {
+        case .active: return .active
+        case .resolved: return .resolved
+        }
+    }
+}
+
+extension DBSOSStatus {
+    var toLocalStatus: SOSStatus {
+        switch self {
+        case .active: return .active
+        case .resolved: return .resolved
+        }
+    }
+}
+
+extension DBSOSAlert {
+    var asLocalSOS: SOSAlert {
+        SOSAlert(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId ?? UUID(),
+            tripId: tripId,
+            latitude: latitude,
+            longitude: longitude,
+            message: message,
+            status: status.toLocalStatus,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension SOSAlert {
+    var asDBSOSAlert: DBSOSAlert {
+        DBSOSAlert(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId,
+            tripId: tripId,
+            latitude: latitude,
+            longitude: longitude,
+            message: message,
+            status: status.toDBStatus,
+            createdAt: createdAt
+        )
+    }
+}
+
+struct DBInventoryItem: Codable, Identifiable {
+    let id: UUID
+    var partName: String
+    var partNumber: String
+    var quantityInStock: Int
+    var reorderThreshold: Int
+    var unitCost: Double
+    var supplierName: String?
+    var createdAt: Date
+    var updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case partName = "part_name"
+        case partNumber = "part_number"
+        case quantityInStock = "quantity_in_stock"
+        case reorderThreshold = "reorder_threshold"
+        case unitCost = "unit_cost"
+        case supplierName = "supplier_name"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+extension DBInventoryItem {
+    var asLocalItem: InventoryItem {
+        InventoryItem(
+            id: id,
+            partName: partName,
+            partNumber: partNumber,
+            quantityInStock: quantityInStock,
+            reorderThreshold: reorderThreshold,
+            unitCost: unitCost,
+            supplierName: supplierName,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}
+
+extension InventoryItem {
+    var asDBItem: DBInventoryItem {
+        DBInventoryItem(
+            id: id,
+            partName: partName,
+            partNumber: partNumber,
+            quantityInStock: quantityInStock,
+            reorderThreshold: reorderThreshold,
+            unitCost: unitCost,
+            supplierName: supplierName,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}
+
+struct DBMaintenanceRecord: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var workOrderId: UUID?
+    var serviceType: String
+    var serviceDate: Date
+    var cost: Double
+    var notes: String?
+    var performedBy: UUID
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case workOrderId = "work_order_id"
+        case serviceType = "service_type"
+        case serviceDate = "service_date"
+        case cost
+        case notes
+        case performedBy = "performed_by"
+        case createdAt = "created_at"
+    }
+}
+
+extension DBMaintenanceRecord {
+    var asLocalRecord: MaintenanceRecord {
+        MaintenanceRecord(
+            id: id,
+            vehicleId: vehicleId,
+            workOrderId: workOrderId,
+            serviceType: serviceType,
+            serviceDate: serviceDate,
+            cost: cost,
+            notes: notes,
+            performedBy: performedBy,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension MaintenanceRecord {
+    var asDBRecord: DBMaintenanceRecord {
+        DBMaintenanceRecord(
+            id: id,
+            vehicleId: vehicleId,
+            workOrderId: workOrderId,
+            serviceType: serviceType,
+            serviceDate: serviceDate,
+            cost: cost,
+            notes: notes,
+            performedBy: performedBy,
+            createdAt: createdAt
+        )
+    }
+}
 
 
 @Model
