@@ -184,9 +184,11 @@ struct FleetManagerChatListView: View {
             }
             .onDisappear {
                 if let activeChannel = realtimeChannel {
+                    let client = supabase.client
                     Task {
-                        await activeChannel.unsubscribe()
+                        await client.removeChannel(activeChannel)
                     }
+                    realtimeChannel = nil
                 }
             }
         }
@@ -290,6 +292,7 @@ struct FleetManagerChatListView: View {
     }
     
     private func startRealtimeListener() {
+        guard realtimeChannel == nil else { return }
         let client = supabase.client
         let channel = client.channel("fleet_manager_list_messages_realtime")
         
@@ -299,6 +302,7 @@ struct FleetManagerChatListView: View {
                 schema: "public",
                 table: "messages"
             )
+            
             try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             

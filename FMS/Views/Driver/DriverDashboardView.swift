@@ -101,14 +101,18 @@ struct DriverDashboardView: View {
         }
         .onDisappear {
             if let activeChannel = realtimeChannel {
+                let client = SupabaseManager.shared.client
                 Task {
-                    await activeChannel.unsubscribe()
+                    await client.removeChannel(activeChannel)
                 }
+                realtimeChannel = nil
             }
             if let activeMsgChannel = realtimeMessagesChannel {
+                let client = SupabaseManager.shared.client
                 Task {
-                    await activeMsgChannel.unsubscribe()
+                    await client.removeChannel(activeMsgChannel)
                 }
+                realtimeMessagesChannel = nil
             }
         }
         
@@ -158,6 +162,7 @@ struct DriverDashboardView: View {
     }
 
     private func startRealtimeTripsListener() {
+        guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
         let channel = client.channel("driver_trips_realtime")
         
@@ -176,7 +181,7 @@ struct DriverDashboardView: View {
                 case .insert(let action):
                     guard let dbTrip = try? action.record.decode(as: DBTrip.self) else { continue }
                     if dbTrip.driverId == vm.driverId {
-                        _ = await MainActor.run {
+                        await MainActor.run {
                             modelContext.insert(dbTrip.asLocalTrip)
                             try? modelContext.save()
                             Task {
@@ -186,13 +191,12 @@ struct DriverDashboardView: View {
                     }
                 case .update(let action):
                     guard let dbTrip = try? action.record.decode(as: DBTrip.self) else { continue }
-                    _ = await MainActor.run {
+                    await MainActor.run {
                         let id = dbTrip.id
                         let descriptor = FetchDescriptor<Trip>()
                         let localTrips = (try? modelContext.fetch(descriptor)) ?? []
                         if let local = localTrips.first(where: { $0.id == id }) {
                             if dbTrip.driverId == vm.driverId {
-                                
                                 local.vehicleId = dbTrip.vehicleId
                                 local.driverId = dbTrip.driverId
                                 local.startLocation = dbTrip.source
@@ -205,12 +209,10 @@ struct DriverDashboardView: View {
                                 local.tripStatus = dbTrip.status.toLocalStatus
                                 local.notes = dbTrip.notes
                             } else {
-                                
                                 modelContext.delete(local)
                             }
                             try? modelContext.save()
                         } else if dbTrip.driverId == vm.driverId {
-                            
                             modelContext.insert(dbTrip.asLocalTrip)
                             try? modelContext.save()
                         }
@@ -220,7 +222,7 @@ struct DriverDashboardView: View {
                     }
                 case .delete(let action):
                     guard let dbTrip = try? action.oldRecord.decode(as: DBTrip.self) else { continue }
-                    _ = await MainActor.run {
+                    await MainActor.run {
                         let id = dbTrip.id
                         let descriptor = FetchDescriptor<Trip>()
                         let localTrips = (try? modelContext.fetch(descriptor)) ?? []
@@ -238,6 +240,7 @@ struct DriverDashboardView: View {
     }
 
     private func startRealtimeMessagesListener() {
+        guard realtimeMessagesChannel == nil else { return }
         let client = SupabaseManager.shared.client
         let channel = client.channel("driver_messages_realtime")
         
@@ -919,7 +922,7 @@ struct InspectionFormSheet: View {
                 }
                 .padding(20)
             }
-            .onChange(of: items.map(\.passed)) { _, _ in
+            .onChange(of: items.map(\.passed)) {
                 let hasUnchecked = items.contains(where: { !$0.passed })
                 if hasUnchecked {
                     hasDefect = true
@@ -1314,7 +1317,7 @@ struct ChatSheet: View {
                             proxy.scrollTo(lastMsg.id, anchor: .bottom)
                         }
                     }
-                    .onChange(of: vm.messages.count) { _, _ in
+                    .onChange(of: vm.messages.count) { oldValue, newValue in
                         if let lastMsg = vm.messages.last {
                             withAnimation {
                                 proxy.scrollTo(lastMsg.id, anchor: .bottom)
