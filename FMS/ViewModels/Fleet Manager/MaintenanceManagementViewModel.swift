@@ -100,7 +100,7 @@ final class MaintenanceManagementViewModel: ObservableObject {
                 do {
                     try await SupabaseManager.shared.createWorkOrder(dbWorkOrder)
                     
-                    var dbVehicle = DBVehicle(
+                    let dbVehicle = DBVehicle(
                         id: selectedVehicle.id,
                         vehicleNumber: selectedVehicle.registrationNumber,
                         model: selectedVehicle.model,
