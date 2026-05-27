@@ -1,15 +1,7 @@
 
-
-
-
-
-
-
 import Foundation
 import SwiftData
 import SwiftUI
-
-
 
 enum UserRole: String, Codable, CaseIterable {
     case fleetManager
