@@ -36,6 +36,7 @@ struct DriverDashboardView: View {
     @StateObject private var vm = DriverDashboardViewModel()
     @State private var selectedTab = 0
     @State private var realtimeChannel: RealtimeChannelV2?
+    @State private var realtimeMessagesChannel: RealtimeChannelV2?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -96,11 +97,17 @@ struct DriverDashboardView: View {
         .task {
             await vm.load(context: modelContext)
             startRealtimeTripsListener()
+            startRealtimeMessagesListener()
         }
         .onDisappear {
             if let activeChannel = realtimeChannel {
                 Task {
                     await activeChannel.unsubscribe()
+                }
+            }
+            if let activeMsgChannel = realtimeMessagesChannel {
+                Task {
+                    await activeMsgChannel.unsubscribe()
                 }
             }
         }
@@ -121,7 +128,7 @@ struct DriverDashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
-        .sheet(isPresented: $vm.showMessaging) { ChatSheet(messages: vm.messages) }
+        .sheet(isPresented: $vm.showMessaging) { ChatSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
         .sheet(isPresented: $vm.showNotifications) {
             DriverNotificationsSheet(vm: vm)
@@ -224,6 +231,38 @@ struct DriverDashboardView: View {
                     }
                 default:
                     break
+                }
+            }
+        }
+    }
+
+    private func startRealtimeMessagesListener() {
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("driver_messages_realtime")
+        
+        Task {
+            let changes = await channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "messages"
+            )
+            
+            await channel.subscribe()
+            self.realtimeMessagesChannel = channel
+            
+            struct MessageHeader: Codable {
+                let sender_id: UUID
+                let receiver_id: UUID
+            }
+            
+            for await change in changes {
+                guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
+                if header.sender_id == vm.driverId || header.receiver_id == vm.driverId {
+                    await MainActor.run {
+                        Task {
+                            await vm.loadMessages()
+                        }
+                    }
                 }
             }
         }
@@ -1202,57 +1241,128 @@ struct DefectReportSheet: View {
 
 
 struct ChatSheet: View {
+    @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
-    let messages: [DriverChatMessage]
-    @State private var compose     = ""
-    @State private var showCompose = false
+    @State private var messageText = ""
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    if showCompose {
-                        HStack(spacing: 12) {
-                            TextField("Message fleet manager…", text: $compose)
-                                .font(.system(size: 14))
-                            Button {
-                                withAnimation { compose = ""; showCompose = false }
-                            } label: {
-                                Image(systemName: "paperplane.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(Color.fmsIndigo)
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            if vm.messages.isEmpty {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "bubble.left.and.bubble.right")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(.gray.opacity(0.4))
+                                        .padding(.top, 40)
+                                    Text("No messages yet")
+                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.gray)
+                                    Text("Type below to send a message to the Fleet Manager.")
+                                        .font(.system(size: 12, design: .rounded))
+                                        .foregroundColor(.gray)
+                                        .multilineTextAlignment(.center)
+                                }
+                                .frame(maxWidth: .infinity)
+                            } else {
+                                ForEach(vm.messages) { message in
+                                    HStack {
+                                        if message.isMe {
+                                            Spacer()
+                                            VStack(alignment: .trailing, spacing: 4) {
+                                                Text(message.preview)
+                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                                    .foregroundColor(.white)
+                                                    .padding(.horizontal, 14)
+                                                    .padding(.vertical, 10)
+                                                    .background(AppTheme.Brand.primary)
+                                                    .cornerRadius(16)
+                                                Text(message.time)
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.gray)
+                                                    .padding(.trailing, 4)
+                                            }
+                                        } else {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(message.preview)
+                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                                    .foregroundColor(.black)
+                                                    .padding(.horizontal, 14)
+                                                    .padding(.vertical, 10)
+                                                    .background(Color(.systemGray6))
+                                                    .cornerRadius(16)
+                                                Text(message.time)
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.gray)
+                                                    .padding(.leading, 4)
+                                            }
+                                            Spacer()
+                                        }
+                                    }
+                                    .id(message.id)
+                                }
                             }
-                            .disabled(compose.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
-                        .padding(14)
-                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
-                        .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 8)
+                        .padding()
                     }
-
-                    VStack(spacing: 0) {
-                        ForEach(Array(messages.enumerated()), id: \.offset) { i, m in
-                            FMSMsgRow(msg: m).padding(.horizontal, 16).padding(.vertical, 12)
-                            if i < messages.count - 1 { Divider().padding(.leading, 64) }
+                    .background(Color(red: 0.98, green: 0.98, blue: 0.99))
+                    .onAppear {
+                        if let lastMsg = vm.messages.last {
+                            proxy.scrollTo(lastMsg.id, anchor: .bottom)
                         }
                     }
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
-                    .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 32)
+                    .onChange(of: vm.messages.count) { _ in
+                        if let lastMsg = vm.messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMsg.id, anchor: .bottom)
+                            }
+                        }
+                    }
                 }
+                
+                // Bottom Input Bar
+                HStack(spacing: 12) {
+                    TextField("Type a message...", text: $messageText)
+                        .font(.system(size: 15))
+                        .padding(10)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(20)
+                    
+                    Button(action: {
+                        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !text.isEmpty {
+                            Task {
+                                await vm.sendMessage(text: text)
+                                await MainActor.run {
+                                    messageText = ""
+                                }
+                            }
+                        }
+                    }) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(Color.white)
+                            .padding(10)
+                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : AppTheme.Brand.primary)
+                            .clipShape(Circle())
+                    }
+                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding()
+                .background(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
             }
-            .background(Color.fmsBackground.ignoresSafeArea())
-            .navigationTitle("Messages")
+            .navigationTitle("Chat with Manager")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }.foregroundStyle(Color.fmsIndigo)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        withAnimation { showCompose.toggle() }
-                    } label: {
-                        Image(systemName: showCompose ? "xmark" : "square.and.pencil")
-                            .foregroundStyle(Color.fmsIndigo)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close") {
+                        dismiss()
                     }
+                    .foregroundColor(AppTheme.Brand.primary)
+                    .bold()
                 }
             }
         }

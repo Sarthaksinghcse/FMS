@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import Supabase
 
 extension Color {
     static let fmsAmber       = AppTheme.Brand.royalBlue
@@ -117,7 +118,7 @@ struct MaintenanceDashboardView: View {
             UploadRepairNotesSheet()
         }
         .sheet(isPresented: $isCommunicationSheetPresented) {
-            MaintenanceCommunicationSheet()
+            MaintenanceCommunicationSheet(currentUser: currentUser)
         }
     }
 
@@ -1048,106 +1049,54 @@ struct UploadRepairNotesSheet: View {
 // MARK: - Maintenance Communication & Chat Views
 
 struct MaintenanceCommunicationSheet: View {
+    let currentUser: User
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var supabase = SupabaseManager.shared
     @State private var searchText = ""
-    @State private var selectedFilter = 0 // 0: All, 1: Managers, 2: Drivers
     
-    // Custom Struct for Maintenance Chats
-    struct MaintenanceChatThread: Identifiable {
-        let id = UUID()
-        var sender: String
-        var role: String
-        var roleLabel: String
-        var time: String
-        var lastMessage: String
-        var initials: String
-        var avatarColor: Color
-        var unread: Bool
-        var messages: [ChatMessage]
-    }
-    
-    struct ChatMessage: Identifiable {
-        let id = UUID()
-        let isMe: Bool
-        let text: String
-        let time: String
-    }
-    
-    @State private var threads = [
-        MaintenanceChatThread(
-            sender: "Priya Menon",
-            role: "manager",
-            roleLabel: "Fleet Manager",
-            time: "10:30 AM",
-            lastMessage: "Please check the brakes on Truck 12 immediately.",
-            initials: "PM",
-            avatarColor: Color(red: 0.0, green: 55/255, blue: 176/255),
-            unread: true,
-            messages: [
-                ChatMessage(isMe: false, text: "Hello, we noticed an alert for Truck 12 brakes.", time: "10:28 AM"),
-                ChatMessage(isMe: false, text: "Please check the brakes on Truck 12 immediately.", time: "10:30 AM")
-            ]
-        ),
-        MaintenanceChatThread(
-            sender: "Rajesh Kumar",
-            role: "driver",
-            roleLabel: "Driver (Truck 12)",
-            time: "09:45 AM",
-            lastMessage: "The brake pedal feels spongy when stopping. I have parked it in Bay 2.",
-            initials: "RK",
-            avatarColor: Color(red: 242/255, green: 153/255, blue: 74/255),
-            unread: true,
-            messages: [
-                ChatMessage(isMe: false, text: "The brake pedal feels spongy when stopping. I have parked it in Bay 2.", time: "09:45 AM")
-            ]
-        ),
-        MaintenanceChatThread(
-            sender: "Amit Patel",
-            role: "driver",
-            roleLabel: "Driver (Van 05)",
-            time: "Yesterday",
-            lastMessage: "AC coolant levels were topped up. Works perfectly now, thanks!",
-            initials: "AP",
-            avatarColor: Color(red: 39/255, green: 174/255, blue: 96/255),
-            unread: false,
-            messages: [
-                ChatMessage(isMe: true, text: "AC is serviced. Let me know if it cools fine.", time: "Yesterday, 3:15 PM"),
-                ChatMessage(isMe: false, text: "AC coolant levels were topped up. Works perfectly now, thanks!", time: "Yesterday, 3:30 PM")
-            ]
-        ),
-        MaintenanceChatThread(
-            sender: "Suresh Rao",
-            role: "manager",
-            roleLabel: "Operations Manager",
-            time: "2 days ago",
-            lastMessage: "Weekly inventory order approved. Parts arriving Monday.",
-            initials: "SR",
-            avatarColor: Color(red: 99/255, green: 81/255, blue: 242/255),
-            unread: false,
-            messages: [
-                ChatMessage(isMe: true, text: "Requesting inventory approval for 10 brake pads.", time: "2 days ago"),
-                ChatMessage(isMe: false, text: "Weekly inventory order approved. Parts arriving Monday.", time: "2 days ago")
-            ]
-        )
-    ]
-    
-    var filteredThreads: [MaintenanceChatThread] {
-        threads.filter { thread in
-            let matchesSearch = searchText.isEmpty || thread.sender.localizedCaseInsensitiveContains(searchText) || thread.lastMessage.localizedCaseInsensitiveContains(searchText)
-            
-            let matchesFilter: Bool
-            if selectedFilter == 1 {
-                matchesFilter = thread.role == "manager"
-            } else if selectedFilter == 2 {
-                matchesFilter = thread.role == "driver"
-            } else {
-                matchesFilter = true
-            }
-            
-            return matchesSearch && matchesFilter
+    @State private var managers: [DBUser] = []
+    @State private var messages: [DBMessage] = []
+    @State private var isLoading = false
+    @State private var realtimeChannel: RealtimeChannelV2?
+
+    private var filteredManagers: [DBUser] {
+        managers.filter { mgr in
+            searchText.isEmpty || mgr.name.localizedCaseInsensitiveContains(searchText)
         }
     }
-    
+
+    private func lastMessageText(for managerId: UUID) -> String {
+        guard let msg = messages.filter({ 
+            ($0.senderId == currentUser.id && $0.receiverId == managerId) ||
+            ($0.senderId == managerId && $0.receiverId == currentUser.id)
+        }).last else {
+            return "No messages yet"
+        }
+        return msg.message
+    }
+
+    private func lastMessageTime(for managerId: UUID) -> String {
+        guard let msg = messages.filter({ 
+            ($0.senderId == currentUser.id && $0.receiverId == managerId) ||
+            ($0.senderId == managerId && $0.receiverId == currentUser.id)
+        }).last else {
+            return ""
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: msg.timestamp)
+    }
+
+    private func hasUnread(for managerId: UUID) -> Bool {
+        guard let msg = messages.filter({ 
+            ($0.senderId == currentUser.id && $0.receiverId == managerId) ||
+            ($0.senderId == managerId && $0.receiverId == currentUser.id)
+        }).last else {
+            return false
+        }
+        return msg.senderId == managerId
+    }
+
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -1163,77 +1112,64 @@ struct MaintenanceCommunicationSheet: View {
                 .cornerRadius(10)
                 .padding(.horizontal)
                 .padding(.top, 12)
-                
-                // Filter Segment Control
-                Picker("Filter", selection: $selectedFilter) {
-                    Text("All").tag(0)
-                    Text("Managers").tag(1)
-                    Text("Drivers").tag(2)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                .padding(.vertical, 12)
+                .padding(.bottom, 12)
                 
                 // Chats List
                 ScrollView {
                     VStack(spacing: 12) {
-                        if filteredThreads.isEmpty {
+                        if isLoading {
+                            ProgressView()
+                                .padding(.top, 40)
+                        } else if filteredManagers.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "bubble.left.and.bubble.right")
                                     .font(.system(size: 40))
                                     .foregroundColor(.gray.opacity(0.5))
                                     .padding(.top, 40)
-                                Text("No conversations found")
+                                Text("No managers found")
                                     .font(.system(size: 15, weight: .bold, design: .rounded))
                                     .foregroundColor(.gray)
                             }
                             .frame(maxWidth: .infinity)
                         } else {
-                            ForEach(filteredThreads) { thread in
-                                NavigationLink(destination: MaintenanceChatDetailView(thread: thread, onMessageSent: { newMsg in
-                                    if let idx = threads.firstIndex(where: { $0.id == thread.id }) {
-                                        threads[idx].messages.append(ChatMessage(isMe: true, text: newMsg, time: "Just Now"))
-                                        threads[idx].lastMessage = newMsg
-                                        threads[idx].time = "Just Now"
-                                        threads[idx].unread = false
-                                    }
-                                })) {
+                            ForEach(filteredManagers) { manager in
+                                NavigationLink(destination: MaintenanceChatDetailView(currentUser: currentUser, manager: manager)) {
                                     HStack(spacing: 14) {
                                         // Avatar Circle
                                         ZStack {
                                             Circle()
-                                                .fill(thread.avatarColor.opacity(0.12))
+                                                .fill(Color.fmsAmber.opacity(0.12))
                                                 .frame(width: 48, height: 48)
-                                            Text(thread.initials)
+                                            Text(String(manager.name.prefix(2)).uppercased())
                                                 .font(.system(size: 16, weight: .bold, design: .rounded))
-                                                .foregroundColor(thread.avatarColor)
+                                                .foregroundColor(Color.fmsAmber)
                                         }
                                         
                                         // Chat Info
                                         VStack(alignment: .leading, spacing: 4) {
                                             HStack {
-                                                Text(thread.sender)
+                                                Text(manager.name)
                                                     .font(.system(size: 15, weight: .bold, design: .rounded))
                                                     .foregroundColor(.black)
                                                 
                                                 Spacer()
                                                 
-                                                Text(thread.time)
+                                                Text(lastMessageTime(for: manager.id))
                                                     .font(.system(size: 11))
                                                     .foregroundColor(.gray)
                                             }
                                             
-                                            Text(thread.roleLabel)
+                                            Text("Fleet Manager")
                                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                                .foregroundColor(thread.role == "manager" ? AppTheme.Brand.primaryDeep : Color.fmsAmber)
+                                                .foregroundColor(Color.fmsAmber)
                                             
-                                            Text(thread.lastMessage)
-                                                .font(.system(size: 13, weight: thread.unread ? .semibold : .regular, design: .rounded))
-                                                .foregroundColor(thread.unread ? .black : .gray)
+                                            Text(lastMessageText(for: manager.id))
+                                                .font(.system(size: 13, weight: hasUnread(for: manager.id) ? .semibold : .regular, design: .rounded))
+                                                .foregroundColor(hasUnread(for: manager.id) ? .black : .gray)
                                                 .lineLimit(1)
                                         }
                                         
-                                        if thread.unread {
+                                        if hasUnread(for: manager.id) {
                                             Circle()
                                                 .fill(Color.fmsAmber)
                                                 .frame(width: 8, height: 8)
@@ -1268,48 +1204,113 @@ struct MaintenanceCommunicationSheet: View {
                     .bold()
                 }
             }
+            .task {
+                await loadData()
+                startRealtimeListener()
+            }
+            .onDisappear {
+                if let activeChannel = realtimeChannel {
+                    Task {
+                        await activeChannel.unsubscribe()
+                    }
+                }
+            }
+        }
+    }
+
+    private func loadData() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            self.managers = try await supabase.fetchFleetManagers()
+            self.messages = try await supabase.fetchMessages()
+        } catch {
+            print("Failed to load maintenance chat data: \(error)")
+        }
+    }
+
+    private func startRealtimeListener() {
+        let client = supabase.client
+        let channel = client.channel("maintenance_list_messages_realtime")
+        
+        Task {
+            let changes = await channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "messages"
+            )
+            
+            await channel.subscribe()
+            self.realtimeChannel = channel
+            
+            struct MessageHeader: Codable {
+                let sender_id: UUID
+                let receiver_id: UUID
+            }
+            
+            for await change in changes {
+                guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
+                if header.sender_id == currentUser.id || header.receiver_id == currentUser.id {
+                    await MainActor.run {
+                        Task {
+                            self.messages = (try? await supabase.fetchMessages()) ?? []
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 struct MaintenanceChatDetailView: View {
-    @State var thread: MaintenanceCommunicationSheet.MaintenanceChatThread
-    var onMessageSent: (String) -> Void
+    let currentUser: User
+    let manager: DBUser
     
+    @StateObject private var supabase = SupabaseManager.shared
     @State private var messageText = ""
+    @State private var messages: [DBMessage] = []
+    @State private var realtimeChannel: RealtimeChannelV2?
     @Environment(\.dismiss) private var dismiss
+    
+    private var conversationMessages: [DBMessage] {
+        messages.filter {
+            ($0.senderId == currentUser.id && $0.receiverId == manager.id) ||
+            ($0.senderId == manager.id && $0.receiverId == currentUser.id)
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(thread.messages) { message in
+                        ForEach(conversationMessages) { message in
+                            let isMe = message.senderId == currentUser.id
                             HStack {
-                                if message.isMe {
+                                if isMe {
                                     Spacer()
                                     VStack(alignment: .trailing, spacing: 4) {
-                                        Text(message.text)
+                                        Text(message.message)
                                             .font(.system(size: 14, weight: .medium, design: .rounded))
                                             .foregroundColor(.white)
                                             .padding(.horizontal, 14)
                                             .padding(.vertical, 10)
                                             .background(Color.fmsAmber)
                                             .cornerRadius(16)
-                                        Text(message.time)
+                                        Text(formatTime(message.timestamp))
                                             .font(.system(size: 9))
                                             .foregroundColor(.gray)
                                     }
                                 } else {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(message.text)
+                                        Text(message.message)
                                             .font(.system(size: 14, weight: .medium, design: .rounded))
                                             .foregroundColor(.black)
                                             .padding(.horizontal, 14)
                                             .padding(.vertical, 10)
                                             .background(Color(.systemGray6))
                                             .cornerRadius(16)
-                                        Text(message.time)
+                                        Text(formatTime(message.timestamp))
                                             .font(.system(size: 9))
                                             .foregroundColor(.gray)
                                     }
@@ -1322,12 +1323,12 @@ struct MaintenanceChatDetailView: View {
                     .padding()
                 }
                 .onAppear {
-                    if let lastMsg = thread.messages.last {
+                    if let lastMsg = conversationMessages.last {
                         proxy.scrollTo(lastMsg.id, anchor: .bottom)
                     }
                 }
-                .onChange(of: thread.messages.count) { _ in
-                    if let lastMsg = thread.messages.last {
+                .onChange(of: conversationMessages.count) { _ in
+                    if let lastMsg = conversationMessages.last {
                         withAnimation {
                             proxy.scrollTo(lastMsg.id, anchor: .bottom)
                         }
@@ -1346,17 +1347,14 @@ struct MaintenanceChatDetailView: View {
                 Button(action: {
                     let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !text.isEmpty {
-                        onMessageSent(text)
-                        let newMsg = MaintenanceCommunicationSheet.ChatMessage(isMe: true, text: text, time: "Just Now")
-                        thread.messages.append(newMsg)
-                        messageText = ""
+                        sendMessage(text)
                     }
                 }) {
                     Image(systemName: "paperplane.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(Color.fmsAmber)
+                        .foregroundColor(Color.white)
                         .padding(10)
-                        .background(Color.fmsAmberLight)
+                        .background(Color.fmsAmber)
                         .clipShape(Circle())
                 }
                 .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -1365,7 +1363,88 @@ struct MaintenanceChatDetailView: View {
             .background(Color.white)
             .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
         }
-        .navigationTitle(thread.sender)
+        .navigationTitle(manager.name)
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadMessages()
+            startRealtimeListener()
+        }
+        .onDisappear {
+            if let activeChannel = realtimeChannel {
+                Task {
+                    await activeChannel.unsubscribe()
+                }
+            }
+        }
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
+    }
+
+    private func loadMessages() async {
+        do {
+            self.messages = try await supabase.fetchMessages()
+        } catch {
+            print("Failed to load chat messages: \(error)")
+        }
+    }
+
+    private func sendMessage(_ text: String) {
+        let dbMsg = DBMessage(
+            id: UUID(),
+            senderId: currentUser.id,
+            receiverId: manager.id,
+            message: text,
+            timestamp: Date()
+        )
+        Task {
+            do {
+                try await supabase.sendMessage(dbMsg)
+                await MainActor.run {
+                    self.messageText = ""
+                    Task {
+                        await loadMessages()
+                    }
+                }
+            } catch {
+                print("Failed to send message: \(error)")
+            }
+        }
+    }
+
+    private func startRealtimeListener() {
+        let client = supabase.client
+        let channel = client.channel("maintenance_chat_messages_realtime")
+        
+        Task {
+            let changes = await channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "messages"
+            )
+            
+            await channel.subscribe()
+            self.realtimeChannel = channel
+            
+            struct MessageHeader: Codable {
+                let sender_id: UUID
+                let receiver_id: UUID
+            }
+            
+            for await change in changes {
+                guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
+                if (header.sender_id == currentUser.id && header.receiver_id == manager.id) ||
+                   (header.sender_id == manager.id && header.receiver_id == currentUser.id) {
+                    await MainActor.run {
+                        Task {
+                            await loadMessages()
+                        }
+                    }
+                }
+            }
+        }
     }
 }

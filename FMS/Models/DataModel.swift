@@ -388,6 +388,7 @@ struct DBUser: Codable, Identifiable {
     var role: DBUserRole
     var phoneNumber: String?
     var profileImage: String?
+    var isActive: Bool
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -397,6 +398,7 @@ struct DBUser: Codable, Identifiable {
         case role
         case phoneNumber  = "phone_number"
         case profileImage = "profile_image"
+        case isActive     = "is_active"
         case createdAt    = "created_at"
     }
 
@@ -408,7 +410,8 @@ struct DBUser: Codable, Identifiable {
             email: email,
             phoneNumber: phoneNumber ?? "",
             passwordHash: "",
-            role: role.asLocalRole
+            role: role.asLocalRole,
+            isActive: isActive
         )
     }
 }
@@ -433,6 +436,7 @@ extension User {
             role: role.toDBUserRole,
             phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
             profileImage: profileImageURL,
+            isActive: isActive,
             createdAt: createdAt
         )
     }

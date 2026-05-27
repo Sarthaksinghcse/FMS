@@ -1,16 +1,22 @@
 import SwiftUI
+import SwiftData
 
 @available(iOS 26.0, *)
 struct DriverProfileSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @StateObject private var supabase = SupabaseManager.shared
     @State private var showSignOutConfirm = false
 
     
-    private let totalTrips    = 142
-    private let totalKmDriven = 4_820.0
+    private var totalTrips: Int {
+        vm.completedTrips.count
+    }
+    private var totalKmDriven: Double {
+        vm.completedTrips.reduce(0.0) { $0 + $1.distanceKm }
+    }
     private let joinDate      = "March 2023"
     private let employeeId    = "DRV-00412"
     private let licenseNo     = "TN-24-2019-0041823"
@@ -44,10 +50,13 @@ struct DriverProfileSheet: View {
                                 )
                             
                             Toggle("Status", isOn: Binding(
-                                get: { vm.driverStatus == .active },
+                                get: { vm.driverStatus != .offline },
                                 set: { newValue in
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        vm.driverStatus = newValue ? .active : .offline
+                                    withAnimation {
+                                        vm.driverStatus = newValue ? .idle : .offline
+                                    }
+                                    Task {
+                                        await vm.updateDriverActiveStatus(isActive: newValue)
                                     }
                                 }
                             ))
@@ -173,6 +182,9 @@ struct DriverProfileSheet: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to sign out of your Driver account?")
+            }
+            .task {
+                await vm.load(context: modelContext)
             }
         }
     }

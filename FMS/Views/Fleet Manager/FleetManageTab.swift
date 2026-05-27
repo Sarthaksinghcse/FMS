@@ -625,10 +625,11 @@ struct DriverListView: View {
         }
         .sheet(isPresented: $showAddDriver) { AddDriverFormView() }
         .sheet(item: $selectedDriverForEdit) { d in EditDriverFormView(driver: d) }
-        .onAppear {
+        .task {
             triggerCardAnimations()
-            Task {
+            while !Task.isCancelled {
                 await syncDrivers()
+                try? await Task.sleep(for: .seconds(5))
             }
         }
         .onChange(of: filteredDrivers.count) { triggerCardAnimations() }
@@ -753,6 +754,7 @@ struct DriverListView: View {
                         localDriver.email = dbd.email
                         localDriver.phoneNumber = dbd.phoneNumber ?? ""
                         localDriver.role = dbd.role.asLocalRole
+                        localDriver.isActive = dbd.isActive
                     } else {
                         let newDriver = dbd.asLocalUser
                         modelContext.insert(newDriver)

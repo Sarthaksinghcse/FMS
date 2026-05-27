@@ -798,7 +798,7 @@ struct DriverPickerRow: View {
     
     private var unavailableDrivers: [User] {
         drivers.filter { driver in
-            !driver.isActive || hasOverlap(for: driver.id)
+            driver.isActive && hasOverlap(for: driver.id)
         }
     }
     
