@@ -23,11 +23,11 @@ struct FleetContentView: View {
                     }
                     .tag(0)
 
-                //                FleetTrackingView()
-                //                    .tabItem {
-                //                        Label("Tracking", systemImage: "location.fill")
-                //                    }
-                //                    .tag(1)
+                FleetTrackingView()
+                    .tabItem {
+                        Label("Tracking", systemImage: "location.fill")
+                    }
+                    .tag(1)
 
                 TripListView()
                     .tabItem {
@@ -40,6 +40,12 @@ struct FleetContentView: View {
                         Label("Manage", systemImage: "slider.horizontal.3")
                     }
                     .tag(3)
+                
+                FleetAnalyticsView()
+                    .tabItem{
+                        Label("Analytics", systemImage: "chart.bar.xaxis")
+                    }
+                    .tag(4)
             }
             .tint(AppTheme.Brand.primary)
             
