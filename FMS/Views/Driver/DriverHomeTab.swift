@@ -1,16 +1,6 @@
 
 
-
-
-
-
-
-
 import SwiftUI
-
-
-
-@available(iOS 26.0, *)
 struct DriverHomeTab: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTab: Int

@@ -884,6 +884,37 @@ struct TripNavigationView: View {
                     // Hide default controls — we own the camera entirely
                 }
                 .ignoresSafeArea(edges: .top)
+                .onChange(of: vm.isTripActive) { _, active in
+                    if active && vm.activeTrip?.id == trip.id {
+                        withAnimation {
+                            cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
+                        }
+                    }
+                }
+
+                if isActiveTrip {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button {
+                                withAnimation {
+                                    cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
+                                }
+                            } label: {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .frame(width: 44, height: 44)
+                                    .background(Color(UIColor.systemBackground))
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                            }
+                            .padding(.trailing, 16)
+                            .padding(.top, 16)
+                        }
+                        Spacer()
+                    }
+                }
 
                 // ── Route loading indicator ──────────────────────────────────
                 if nav.isRouting {
@@ -1231,6 +1262,94 @@ struct TripNavigationView: View {
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.white)
         }
+    }
+
+    
+    @MainActor
+    private func geocodeAndRoute() async {
+        let startItem: MKMapItem?
+        if isActiveTrip, let currentCoord = LocationService.shared.manager.location?.coordinate {
+            startItem = MKMapItem(placemark: MKPlacemark(coordinate: currentCoord))
+        } else {
+            startItem = await mapItem(for: trip.source)
+        }
+        
+        sourceItem = startItem
+        destItem = await mapItem(for: trip.destination)
+
+        if let sourceItem, let destItem {
+            let req = MKDirections.Request()
+            req.source = sourceItem
+            req.destination = destItem
+            req.transportType = .automobile
+            req.requestsAlternateRoutes = true  
+
+            if let result = try? await MKDirections(request: req).calculate() {
+                let allRoutes = result.routes
+                route = allRoutes.first
+
+                
+                if allRoutes.count > 1, let primary = route {
+                    let alts = Array(allRoutes.dropFirst())
+                    alternateRoutes = alts
+
+                    
+                    if let fastest = alts.min(by: { $0.expectedTravelTime < $1.expectedTravelTime }),
+                       fastest.expectedTravelTime < primary.expectedTravelTime - 120 {
+                        bestAlternate = fastest
+                        timeSavedMin = Int((primary.expectedTravelTime - fastest.expectedTravelTime) / 60)
+                        withAnimation(.spring(response: 0.5).delay(1.5)) {
+                            showRerouteBanner = true
+                        }
+                    }
+                }
+
+                if let r = route {
+                    if isActiveTrip {
+                        cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
+                    } else {
+                        let rect = r.polyline.boundingMapRect
+                        cameraPos = .rect(rect.insetBy(dx: -rect.size.width * 0.18, dy: -rect.size.height * 0.18))
+                    }
+                }
+            }
+        } else {
+            cameraPos = .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 28.61, longitude: 77.21),
+                span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
+            ))
+        }
+        geocoding = false
+    }
+
+    private func mapItem(for address: String) async -> MKMapItem? {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = address
+        let search = MKLocalSearch(request: request)
+        let response = try? await search.start()
+        return response?.mapItems.first
+    }
+
+    private func openInAppleMaps() {
+        guard let item = destItem else { return }
+        item.name = trip.destination
+        item.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+        ])
+    }
+
+    
+    private func turnIcon(for instruction: String) -> String {
+        let lower = instruction.lowercased()
+        if lower.contains("left")  { return "arrow.turn.up.left" }
+        if lower.contains("right") { return "arrow.turn.up.right" }
+        if lower.contains("u-turn") || lower.contains("u turn") { return "arrow.uturn.left" }
+        if lower.contains("merge") { return "arrow.merge" }
+        if lower.contains("ramp") || lower.contains("exit") { return "arrow.up.right" }
+        if lower.contains("roundabout") || lower.contains("circle") { return "arrow.triangle.capsulepath" }
+        if lower.contains("arrive") || lower.contains("destination") { return "mappin.circle.fill" }
+        if lower.contains("straight") || lower.contains("continue") { return "arrow.up" }
+        return "arrow.up"
     }
 }
 

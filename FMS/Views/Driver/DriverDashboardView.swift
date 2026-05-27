@@ -101,14 +101,18 @@ struct DriverDashboardView: View {
         }
         .onDisappear {
             if let activeChannel = realtimeChannel {
+                let client = SupabaseManager.shared.client
                 Task {
-                    await activeChannel.unsubscribe()
+                    await client.removeChannel(activeChannel)
                 }
+                realtimeChannel = nil
             }
             if let activeMsgChannel = realtimeMessagesChannel {
+                let client = SupabaseManager.shared.client
                 Task {
-                    await activeMsgChannel.unsubscribe()
+                    await client.removeChannel(activeMsgChannel)
                 }
+                realtimeMessagesChannel = nil
             }
         }
         
@@ -158,17 +162,18 @@ struct DriverDashboardView: View {
     }
 
     private func startRealtimeTripsListener() {
+        guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
         let channel = client.channel("driver_trips_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 AnyAction.self,
                 schema: "public",
                 table: "trips"
             )
             
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             for await change in changes {
@@ -192,7 +197,6 @@ struct DriverDashboardView: View {
                         let localTrips = (try? modelContext.fetch(descriptor)) ?? []
                         if let local = localTrips.first(where: { $0.id == id }) {
                             if dbTrip.driverId == vm.driverId {
-                                
                                 local.vehicleId = dbTrip.vehicleId
                                 local.driverId = dbTrip.driverId
                                 local.startLocation = dbTrip.source
@@ -205,12 +209,10 @@ struct DriverDashboardView: View {
                                 local.tripStatus = dbTrip.status.toLocalStatus
                                 local.notes = dbTrip.notes
                             } else {
-                                
                                 modelContext.delete(local)
                             }
                             try? modelContext.save()
                         } else if dbTrip.driverId == vm.driverId {
-                            
                             modelContext.insert(dbTrip.asLocalTrip)
                             try? modelContext.save()
                         }
@@ -232,25 +234,24 @@ struct DriverDashboardView: View {
                             await vm.load(context: modelContext)
                         }
                     }
-                default:
-                    break
                 }
             }
         }
     }
 
     private func startRealtimeMessagesListener() {
+        guard realtimeMessagesChannel == nil else { return }
         let client = SupabaseManager.shared.client
         let channel = client.channel("driver_messages_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "messages"
             )
             
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeMessagesChannel = channel
             
             struct MessageHeader: Codable {
@@ -261,7 +262,7 @@ struct DriverDashboardView: View {
             for await change in changes {
                 guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
                 if header.sender_id == vm.driverId || header.receiver_id == vm.driverId {
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         Task {
                             await vm.loadMessages()
                         }

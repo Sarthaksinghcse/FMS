@@ -21,13 +21,33 @@ final class FleetTrackingViewModel {
     
     private let supabaseManager = SupabaseManager.shared
     
-    func loadVehicles() async {
-        isLoading = true
-        errorMessage = nil
+    private var isLiveTracking = false
+    private var trackingTask: Task<Void, Never>?
+    
+    func startLiveTracking() {
+        guard !isLiveTracking else { return }
+        isLiveTracking = true
+        trackingTask = Task {
+            while isLiveTracking {
+                await loadVehicles(isBackgroundRefresh: true)
+                try? await Task.sleep(for: .seconds(10))
+            }
+        }
+    }
+    
+    func stopLiveTracking() {
+        isLiveTracking = false
+        trackingTask?.cancel()
+        trackingTask = nil
+    }
+    
+    func loadVehicles(isBackgroundRefresh: Bool = false) async {
+        if !isBackgroundRefresh && mappedVehicles.isEmpty {
+            isLoading = true
+        }
         
         do {
             let fetchedVehicles = try await supabaseManager.fetchVehicles()
-            
             
             var locationMap: [UUID: CLLocationCoordinate2D] = [:]
             do {
@@ -42,26 +62,23 @@ final class FleetTrackingViewModel {
                 print("⚠️ Could not fetch live vehicle locations, falling back to defaults: \(error.localizedDescription)")
             }
             
-            self.mappedVehicles = fetchedVehicles.map { vehicle in
-                
-                let coordinate: CLLocationCoordinate2D
-                if let realCoord = locationMap[vehicle.id] {
-                    coordinate = realCoord
-                } else {
-                    let randomLatOffset = Double.random(in: -0.04...0.04)
-                    let randomLonOffset = Double.random(in: -0.04...0.04)
-                    coordinate = CLLocationCoordinate2D(
-                        latitude: hubCoordinate.latitude + randomLatOffset,
-                        longitude: hubCoordinate.longitude + randomLonOffset
-                    )
+            self.mappedVehicles = fetchedVehicles.compactMap { vehicle in
+                guard let realCoord = locationMap[vehicle.id] else {
+                    return nil
                 }
-                
-                return MappedVehicle(vehicle: vehicle, coordinate: coordinate)
+                return MappedVehicle(vehicle: vehicle, coordinate: realCoord)
+            }
+            if !isBackgroundRefresh {
+                self.errorMessage = nil
             }
         } catch {
-            self.errorMessage = "Failed to load vehicles: \(error.localizedDescription)"
+            if !isBackgroundRefresh {
+                self.errorMessage = "Failed to load vehicles: \(error.localizedDescription)"
+            }
         }
         
-        isLoading = false
+        if !isBackgroundRefresh {
+            isLoading = false
+        }
     }
 }
