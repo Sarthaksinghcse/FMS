@@ -505,11 +505,9 @@ struct DBVehicle: Codable, Identifiable {
     var year: Int
     var vin: String
     var licensePlate: String
-    var type: String?
     var status: DBVehicleStatus
     var assignedDriverId: UUID?
     var lastServiceDate: Date?
-    var insuranceExpiryDate: Date?
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -520,11 +518,9 @@ struct DBVehicle: Codable, Identifiable {
         case year
         case vin
         case licensePlate     = "license_plate"
-        case type             = "vehicle_type"
         case status
         case assignedDriverId = "assigned_driver_id"
         case lastServiceDate  = "last_service_date"
-        case insuranceExpiryDate = "insurance_expiry_date"
         case createdAt        = "created_at"
     }
 }
@@ -593,7 +589,6 @@ extension Trip {
     var asDBTrip: DBTrip {
         DBTrip(
             id: id,
-            tripCode: tripCode,
             vehicleId: vehicleId,
             driverId: driverId,
             source: startLocation,
@@ -635,7 +630,7 @@ extension DBTrip {
     var asLocalTrip: Trip {
         Trip(
             id: id,
-            tripCode: tripCode,
+            tripCode: "TRP-\(id.uuidString.prefix(4).uppercased())",
             vehicleId: vehicleId,
             driverId: driverId,
             startLocation: source,
@@ -668,7 +663,6 @@ enum DBTripStatus: String, Codable {
 
 struct DBTrip: Codable, Identifiable {
     let id: UUID
-    var tripCode: String
     var vehicleId: UUID
     var driverId: UUID
     var source: String
@@ -680,9 +674,12 @@ struct DBTrip: Codable, Identifiable {
     var notes: String?
     var createdAt: Date
 
+    var tripCode: String {
+        "TRP-\(id.uuidString.prefix(4).uppercased())"
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
-        case tripCode    = "trip_code"
         case vehicleId   = "vehicle_id"
         case driverId    = "driver_id"
         case source
@@ -1611,8 +1608,8 @@ final class MaintenanceRecord {
     var serviceDate: Date
     var cost: Double
     var notes: String?
-    var replacedParts: [String]
     var repairImages: [String]?
+    var replacedParts: [String]
     var performedBy: UUID
     var createdAt: Date
 
@@ -1624,8 +1621,8 @@ final class MaintenanceRecord {
         serviceDate: Date,
         cost: Double,
         notes: String? = nil,
-        replacedParts: [String] = [],
         repairImages: [String]? = nil,
+        replacedParts: [String] = [],
         performedBy: UUID,
         createdAt: Date = .now
     ) {
@@ -1636,8 +1633,8 @@ final class MaintenanceRecord {
         self.serviceDate = serviceDate
         self.cost = cost
         self.notes = notes
-        self.replacedParts = replacedParts
         self.repairImages = repairImages
+        self.replacedParts = replacedParts
         self.performedBy = performedBy
         self.createdAt = createdAt
     }
@@ -1746,34 +1743,46 @@ final class InventoryItem {
 }
 
 
+// MARK: - Fuel Log
+
+/// Local SwiftData model – persisted on device
 @Model
-final class ComplianceAlert {
+final class FuelLog {
     @Attribute(.unique) var id: UUID
-    var vehicleId: UUID
-    var alertType: ComplianceAlertType
-    var status: ComplianceAlertStatus
-    var deadlineDate: Date
-    var resolvedAt: Date?
+    var driverId: UUID
+    var vehicleId: UUID?
+    var tripId: UUID?
+    var fuelType: String          // "petrol" | "diesel" | "electric" | "hybrid"
+    var litres: Double            // quantity filled
+    var amountPaid: Double        // cost in local currency
+    var odometer: Double?
+    var receiptImageData: Data?   // local receipt photo cache
     var notes: String?
-    var createdAt: Date
+    var loggedAt: Date
 
     init(
         id: UUID = UUID(),
-        vehicleId: UUID,
-        alertType: ComplianceAlertType,
-        status: ComplianceAlertStatus,
-        deadlineDate: Date,
-        resolvedAt: Date? = nil,
+        driverId: UUID,
+        vehicleId: UUID? = nil,
+        tripId: UUID? = nil,
+        fuelType: String = "petrol",
+        litres: Double,
+        amountPaid: Double,
+        odometer: Double? = nil,
+        receiptImageData: Data? = nil,
         notes: String? = nil,
-        createdAt: Date = .now
+        loggedAt: Date = .now
     ) {
         self.id = id
+        self.driverId = driverId
         self.vehicleId = vehicleId
-        self.alertType = alertType
-        self.status = status
-        self.deadlineDate = deadlineDate
-        self.resolvedAt = resolvedAt
+        self.tripId = tripId
+        self.fuelType = fuelType
+        self.litres = litres
+        self.amountPaid = amountPaid
+        self.odometer = odometer
+        self.receiptImageData = receiptImageData
         self.notes = notes
-        self.createdAt = createdAt
+        self.loggedAt = loggedAt
     }
 }
