@@ -297,31 +297,63 @@ struct VehicleListView: View {
     var body: some View {
         ZStack {
             AppTheme.Background.page.ignoresSafeArea()
-            VStack(spacing: 0) {
-                filterChipsSection
-                if vehicles.isEmpty && isLoading {
-                    Spacer()
-                    ProgressView("Syncing vehicles...")
-                        .tint(AppTheme.Brand.royalBlue)
-                        .foregroundStyle(AppTheme.Text.secondary)
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                    Spacer()
-                } else if filteredVehicles.isEmpty {
-                    if searchText.isEmpty && selectedFilter == .all {
-                        ContentUnavailableView {
-                            Label("No Vehicles Yet", systemImage: "car.fill")
-                        } description: {
-                            Text("Add your first vehicle to the fleet.")
-                        } actions: {
-                            Button("Add Vehicle") { showAddVehicle = true }
-                                .buttonStyle(.borderedProminent)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    filterChipsSection
+                    
+                    if vehicles.isEmpty && isLoading {
+                        VStack {
+                            Spacer()
+                            ProgressView("Syncing vehicles...")
                                 .tint(AppTheme.Brand.royalBlue)
+                                .foregroundStyle(AppTheme.Text.secondary)
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                            Spacer()
                         }
+                        .frame(minHeight: 200)
+                    } else if filteredVehicles.isEmpty {
+                        Group {
+                            if searchText.isEmpty && selectedFilter == .all {
+                                ContentUnavailableView {
+                                    Label("No Vehicles Yet", systemImage: "car.fill")
+                                } description: {
+                                    Text("Add your first vehicle to the fleet.")
+                                } actions: {
+                                    Button("Add Vehicle") { showAddVehicle = true }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(AppTheme.Brand.royalBlue)
+                                }
+                            } else {
+                                ContentUnavailableView.search(text: searchText)
+                            }
+                        }
+                        .padding(.top, 40)
                     } else {
-                        ContentUnavailableView.search(text: searchText)
+                        LazyVStack(spacing: 14) {
+                            ForEach(filteredVehicles) { vehicle in
+                                let idx = filteredVehicles.firstIndex(where: { $0.id == vehicle.id }) ?? 0
+                                NavigationLink {
+                                    VehicleMaintenanceHistoryView(vehicle: vehicle)
+                                } label: {
+                                    VehicleCardView(vehicle: vehicle) {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        editingVehicle = vehicle
+                                    }
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .opacity(cardsAppeared.contains(vehicle.id) ? 1 : 0)
+                                .offset(y: cardsAppeared.contains(vehicle.id) ? 0 : 30)
+                                .onAppear {
+                                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(idx) * 0.07)) {
+                                        _ = cardsAppeared.insert(vehicle.id)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 4)
+                        .padding(.bottom, 100)
                     }
-                } else {
-                    vehicleListSection
                 }
             }
         }
@@ -379,35 +411,6 @@ struct VehicleListView: View {
         }
         .opacity(appearAnimation ? 1 : 0)
         .offset(y: appearAnimation ? 0 : 10)
-    }
-
-    private var vehicleListSection: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 14) {
-                ForEach(filteredVehicles) { vehicle in
-                    let idx = filteredVehicles.firstIndex(where: { $0.id == vehicle.id }) ?? 0
-                    NavigationLink {
-                        VehicleMaintenanceHistoryView(vehicle: vehicle)
-                    } label: {
-                        VehicleCardView(vehicle: vehicle) {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            editingVehicle = vehicle
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .opacity(cardsAppeared.contains(vehicle.id) ? 1 : 0)
-                    .offset(y: cardsAppeared.contains(vehicle.id) ? 0 : 30)
-                    .onAppear {
-                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(idx) * 0.07)) {
-                            _ = cardsAppeared.insert(vehicle.id)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 100)
-            .padding(.top, 4)
-        }
     }
 
     private func countForFilter(_ filter: VehicleStatusFilter) -> Int {
@@ -649,30 +652,48 @@ struct DriverListView: View {
     var body: some View {
         ZStack {
             AppTheme.Background.page.ignoresSafeArea()
-            VStack(spacing: 0) {
-                filterChipsSection
-                if drivers.isEmpty && isLoading {
-                    Spacer()
-                    ProgressView("Syncing drivers...")
-                        .tint(AppTheme.Brand.royalBlue)
-                        .foregroundStyle(AppTheme.Text.secondary)
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                    Spacer()
-                } else if filteredDrivers.isEmpty {
-                    if searchText.isEmpty {
-                        ContentUnavailableView {
-                            Label("No Drivers Yet", systemImage: "person.2.fill")
-                        } description: {
-                            Text("Add your first driver to start managing your fleet team.")
-                        } actions: {
-                            Button("Add Driver") { showAddDriver = true }
-                                .buttonStyle(.borderedProminent).tint(AppTheme.Brand.royalBlue)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    filterChipsSection
+                    
+                    if drivers.isEmpty && isLoading {
+                        VStack {
+                            Spacer()
+                            ProgressView("Syncing drivers...")
+                                .tint(AppTheme.Brand.royalBlue)
+                                .foregroundStyle(AppTheme.Text.secondary)
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                            Spacer()
                         }
+                        .frame(minHeight: 200)
+                    } else if filteredDrivers.isEmpty {
+                        Group {
+                            if searchText.isEmpty {
+                                ContentUnavailableView {
+                                    Label("No Drivers Yet", systemImage: "person.2.fill")
+                                } description: {
+                                    Text("Add your first driver to start managing your fleet team.")
+                                } actions: {
+                                    Button("Add Driver") { showAddDriver = true }
+                                        .buttonStyle(.borderedProminent).tint(AppTheme.Brand.royalBlue)
+                                }
+                            } else {
+                                ContentUnavailableView.search(text: searchText)
+                            }
+                        }
+                        .padding(.top, 40)
                     } else {
-                        ContentUnavailableView.search(text: searchText)
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredDrivers) { driver in
+                                driverCard(driver)
+                                    .opacity(cardAnimations[driver.id] == true ? 1 : 0)
+                                    .offset(y: cardAnimations[driver.id] == true ? 0 : 30)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 12)
+                        .padding(.bottom, 100)
                     }
-                } else {
-                    driverList
                 }
             }
         }
@@ -729,19 +750,6 @@ struct DriverListView: View {
         case .all: return drivers.count
         case .online: return drivers.filter { $0.isActive }.count
         case .offline: return drivers.filter { !$0.isActive }.count
-        }
-    }
-
-    private var driverList: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 16) {
-                ForEach(filteredDrivers) { driver in
-                    driverCard(driver)
-                        .opacity(cardAnimations[driver.id] == true ? 1 : 0)
-                        .offset(y: cardAnimations[driver.id] == true ? 0 : 30)
-                }
-            }
-            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 100)
         }
     }
 
@@ -1024,22 +1032,36 @@ struct MaintenanceStaffListView: View {
     var body: some View {
         ZStack {
             AppTheme.Background.page.ignoresSafeArea()
-            VStack(spacing: 0) {
-                if filteredStaff.isEmpty {
-                    if searchText.isEmpty {
-                        ContentUnavailableView {
-                            Label("No Maintenance Staff", systemImage: "wrench.and.screwdriver.fill")
-                        } description: {
-                            Text("Add your first technician to get started.")
-                        } actions: {
-                            Button("Add Staff Member") { showAddStaffSheet = true }
-                                .buttonStyle(.borderedProminent).tint(AppTheme.Brand.accent)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    if filteredStaff.isEmpty {
+                        Group {
+                            if searchText.isEmpty {
+                                ContentUnavailableView {
+                                    Label("No Maintenance Staff", systemImage: "wrench.and.screwdriver.fill")
+                                } description: {
+                                    Text("Add your first technician to get started.")
+                                } actions: {
+                                    Button("Add Staff Member") { showAddStaffSheet = true }
+                                        .buttonStyle(.borderedProminent).tint(AppTheme.Brand.accent)
+                                }
+                            } else {
+                                ContentUnavailableView.search(text: searchText)
+                            }
                         }
+                        .padding(.top, 40)
                     } else {
-                        ContentUnavailableView.search(text: searchText)
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredStaff) { staff in
+                                staffCard(for: staff)
+                                    .opacity(cardAnimations[staff.id] == true ? 1 : 0)
+                                    .offset(y: cardAnimations[staff.id] == true ? 0 : 30)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 12)
+                        .padding(.bottom, 100)
                     }
-                } else {
-                    staffListView
                 }
             }
         }
@@ -1066,19 +1088,6 @@ struct MaintenanceStaffListView: View {
             }
         }
         .onChange(of: filteredStaff.count) { triggerCardAnimations() }
-    }
-
-    private var staffListView: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 16) {
-                ForEach(filteredStaff) { staff in
-                    staffCard(for: staff)
-                        .opacity(cardAnimations[staff.id] == true ? 1 : 0)
-                        .offset(y: cardAnimations[staff.id] == true ? 0 : 30)
-                }
-            }
-            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 100)
-        }
     }
 
     private func staffCard(for staff: User) -> some View {

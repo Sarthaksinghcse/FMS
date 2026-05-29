@@ -4,13 +4,14 @@ import SwiftData
 @available(iOS 26.0, *)
 struct FleetManagerProfileView: View {
 
-    @StateObject private var supabase = SupabaseManager.shared
+    @ObservedObject private var supabase = SupabaseManager.shared
     @State private var showEditProfile = false
     @State private var showNotificationSettings = false
     @State private var showSecuritySettings = false
     @State private var showHelpSupport = false
     @State private var showAbout = false
     @State private var showSignOutConfirm = false
+    @State private var signOutError: String?
 
     private var user: DBUser? { supabase.currentUser }
 
@@ -67,11 +68,25 @@ struct FleetManagerProfileView: View {
             }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
-                    Task { try? await supabase.signOut() }
+                    Task {
+                        do {
+                            try await SupabaseManager.shared.signOut()
+                        } catch {
+                            signOutError = error.localizedDescription
+                        }
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to sign out of your Fleet Manager account?")
+            }
+            .alert("Sign Out Failed", isPresented: Binding(
+                get: { signOutError != nil },
+                set: { if !$0 { signOutError = nil } }
+            )) {
+                Button("OK", role: .cancel) { signOutError = nil }
+            } message: {
+                Text(signOutError ?? "")
             }
         }
     }

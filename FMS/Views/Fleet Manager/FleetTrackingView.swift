@@ -4,76 +4,91 @@ import MapKit
 struct FleetTrackingView: View {
     @State private var viewModel = FleetTrackingViewModel()
     @State private var selectedVehicle: MappedVehicle?
+    @Environment(\.dismiss) private var dismiss
     
     @State private var cameraPosition: MapCameraPosition = .automatic
     
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .bottom) {
-                Map(position: $cameraPosition, selection: $selectedVehicle) {
-                    MapCircle(center: viewModel.hubCoordinate, radius: viewModel.geofenceRadius)
-                        .foregroundStyle(AppTheme.Brand.primary.opacity(0.1))
-                        .stroke(AppTheme.Brand.primary, lineWidth: 2)
-                    
-                    ForEach(viewModel.mappedVehicles) { mappedVehicle in
-                        Marker(
-                            mappedVehicle.vehicle.vehicleNumber,
-                            systemImage: "car.fill",
-                            coordinate: mappedVehicle.coordinate
-                        )
-                        .tint(mappedVehicle.statusColor)
-                        .tag(mappedVehicle)
-                    }
-                }
-                .mapStyle(.standard(elevation: .realistic))
-                .ignoresSafeArea()
+        ZStack(alignment: .bottom) {
+            Map(position: $cameraPosition, selection: $selectedVehicle) {
+                MapCircle(center: viewModel.hubCoordinate, radius: viewModel.geofenceRadius)
+                    .foregroundStyle(AppTheme.Brand.primary.opacity(0.1))
+                    .stroke(AppTheme.Brand.primary, lineWidth: 2)
                 
-                if viewModel.isLoading {
-                    VStack {
-                        ProgressView("Loading vehicles...")
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .cornerRadius(12)
-                    }
-                    .frame(maxHeight: .infinity, alignment: .center)
-                } else if let error = viewModel.errorMessage {
-                    VStack {
-                        Text(error)
-                            .foregroundColor(AppTheme.Status.danger)
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .cornerRadius(12)
-                    }
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .padding(.top, 40)
-                }
-                
-                if let selected = selectedVehicle {
-                    VehicleDetailCard(mappedVehicle: selected, onClose: {
-                        selectedVehicle = nil
-                    })
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                ForEach(viewModel.mappedVehicles) { mappedVehicle in
+                    Marker(
+                        mappedVehicle.vehicle.vehicleNumber,
+                        systemImage: "car.fill",
+                        coordinate: mappedVehicle.coordinate
+                    )
+                    .tint(mappedVehicle.statusColor)
+                    .tag(mappedVehicle)
                 }
             }
-            .navigationTitle("Live Tracking")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        Task { await viewModel.loadVehicles() }
-                    }) {
-                        Image(systemName: "arrow.clockwise")
-                    }
+            .mapStyle(.standard(elevation: .realistic))
+            .ignoresSafeArea()
+            
+            if viewModel.isLoading {
+                VStack {
+                    ProgressView("Loading vehicles...")
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
                 }
+                .frame(maxHeight: .infinity, alignment: .center)
+            } else if let error = viewModel.errorMessage {
+                VStack {
+                    Text(error)
+                        .foregroundColor(AppTheme.Status.danger)
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
+                .padding(.top, 40)
             }
-            .onAppear {
-                viewModel.startLiveTracking()
+            
+            if let selected = selectedVehicle {
+                VehicleDetailCard(mappedVehicle: selected, onClose: {
+                    selectedVehicle = nil
+                })
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .onDisappear {
-                viewModel.stopLiveTracking()
-            }
-            .animation(.easeInOut, value: selectedVehicle?.id)
         }
+        .navigationTitle("Live Tracking")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Dashboard")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .foregroundColor(AppTheme.Brand.primary)
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    Task { await viewModel.loadVehicles() }
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .foregroundColor(AppTheme.Brand.primary)
+                }
+            }
+        }
+        .onAppear {
+            viewModel.startLiveTracking()
+        }
+        .onDisappear {
+            viewModel.stopLiveTracking()
+        }
+        .animation(.easeInOut, value: selectedVehicle?.id)
     }
 }
 
