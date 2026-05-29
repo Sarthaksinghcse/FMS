@@ -958,7 +958,7 @@ struct TripNavigationView: View {
                     if !nav.isNavigating {
                         Button {
                             guard let dest = destinationCoordinate else { return }
-                            let item = MKMapItem(placemark: MKPlacemark(coordinate: dest))
+                            let item = MKMapItem(location: CLLocation(latitude: dest.latitude, longitude: dest.longitude), address: nil)
                             item.name = trip.destination
                             item.openInMaps(launchOptions: [
                                 MKLaunchOptionsDirectionsModeKey:

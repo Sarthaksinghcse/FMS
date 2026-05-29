@@ -110,7 +110,7 @@ struct MaintenanceDashboardTab: View {
                         recentWorkOrdersSection
                         MessagesPreviewSection()
                     }
-                    .frame(width: UIScreen.main.bounds.width)
+                    .frame(maxWidth: .infinity)
                     .padding(.bottom, 32)
                 }
             }
