@@ -215,7 +215,7 @@ enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     case all          = "All"
     case active       = "Active"
     case inactive     = "Inactive"
-    case inMaintenance = "In Maintenance"
+    case inMaintenance = "Maintenance"
 
     var id: String { rawValue }
 
