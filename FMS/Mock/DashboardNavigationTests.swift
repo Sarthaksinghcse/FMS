@@ -58,6 +58,6 @@ struct DashboardNavigationTests {
         assert(destinationFor(label: "Drivers Online") == .driversOnline)
         assert(destinationFor(label: "Live Trips") == .liveTrips)
         
-        print("✅ All Dashboard Navigation Tests Passed successfully!")
+        print(" All Dashboard Navigation Tests Passed successfully!")
     }
 }

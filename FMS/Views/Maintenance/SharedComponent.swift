@@ -22,43 +22,87 @@ struct MaintenanceHeaderView: View {
     var onNotificationTap: () -> Void = {}
     var onProfileTap: () -> Void = {}
     var showActions: Bool = true
+    var showBackButton: Bool = false
+    var showChat: Bool = false
+    var onChatTap: () -> Void = {}
+    
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         HStack(alignment: .top) {
+            if showBackButton {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(AppTheme.Text.primary)
+                }
+                .padding(.top, 4)
+                .padding(.trailing, 8)
+            }
+            
             VStack(alignment: .leading, spacing: 4) {
                 if let greeting = greeting, !greeting.isEmpty {
                     Text(greeting)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundStyle(.secondary)
+                    Text(title)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(.primary)
+                } else {
+                    Text(title)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundColor(AppTheme.Text.secondary)
                 }
                 
                 Text(title)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
                 
-                Text(subtitle)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundColor(AppTheme.Text.secondary)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundColor(AppTheme.Text.secondary)
+                }
             }
             
             Spacer()
             
             if showActions {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
+                    if showChat {
+                        Button(action: onChatTap) {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color(UIColor.label))
+                                .frame(width: 40, height: 40)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
                     Button(action: onNotificationTap) {
                         ZStack(alignment: .topTrailing) {
                             Image(systemName: "bell.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(AppTheme.Text.primary.opacity(0.6))
+                                .font(.system(size: 18))
+                                .foregroundStyle(Color(UIColor.label))
+                                .frame(width: 40, height: 40)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
+                                .clipShape(Circle())
+                            
                             if notificationCount > 0 {
                                 Circle()
                                     .fill(AppTheme.Status.danger)
-                                    .frame(width: 7, height: 7)
-                                    .offset(x: 4, y: -4)
+                                    .frame(width: 10, height: 10)
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                    .offset(x: 2, y: -2)
                             }
                         }
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(.plain)
                     
                     Button(action: onProfileTap) {
                         ZStack {
@@ -70,29 +114,53 @@ struct MaintenanceHeaderView: View {
                                         endPoint: .bottomTrailing
                                     )
                                 )
-                                .frame(width: 30, height: 30)
+                                .frame(width: 40, height: 40)
                             Text(initials)
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                         }
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(AppTheme.Background.card)
-                .clipShape(Capsule())
-                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
-                .overlay(
-                    Capsule()
-                        .stroke(Color.black.opacity(0.05), lineWidth: 1)
-                )
-                .padding(.top, 4)
             }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
+    }
+}
+
+struct CustomCenteredHeaderView: View {
+    let title: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.black)
+                    .frame(width: 44, height: 44)
+                    .background(Color.white)
+                    .clipShape(Circle())
+                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+            }
+            
+            Spacer()
+            
+            Text(title)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.Text.primary)
+            
+            Spacer()
+            
+            // Dummy view to ensure exact centering
+            Color.clear.frame(width: 44, height: 44)
         }
         .padding(.horizontal)
         .padding(.top, 16)
         .padding(.bottom, 8)
+        .background(AppTheme.Background.page)
     }
 }
 

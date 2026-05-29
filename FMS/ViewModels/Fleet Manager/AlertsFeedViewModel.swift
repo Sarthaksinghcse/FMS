@@ -40,7 +40,9 @@ final class AlertsFeedViewModel: ObservableObject {
                 isRead: false,
                 createdAt: Date()
             )
+            let dbAlert = alert.asDBSOSAlert
             Task {
+                try? await SupabaseManager.shared.updateSOSAlert(dbAlert)
                 try? await SupabaseManager.shared.createNotification(notification)
             }
             

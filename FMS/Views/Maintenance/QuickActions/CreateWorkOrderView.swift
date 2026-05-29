@@ -12,11 +12,11 @@ import SwiftData
 struct CreateWorkOrderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-
+    
     // SwiftData Queries
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query private var allUsers: [User]
-
+    
     // Form State
     @State private var selectedVehicleId: UUID?
     @State private var title: String = ""
@@ -25,187 +25,191 @@ struct CreateWorkOrderView: View {
     @State private var selectedMechanicId: UUID?
     @State private var notes: String = ""
     @State private var estimatedCost: String = ""
-
+    
     // UI state
     @State private var showSuccessOverlay = false
     @State private var hasAttemptedSave = false
-
+    
     // Filter maintenance personnel
     private var mechanics: [User] {
         allUsers.filter { $0.role == .maintenance }
     }
-
+    
     var body: some View {
         ZStack {
             AppTheme.Background.page.ignoresSafeArea()
-
-            ScrollView {
-                VStack(spacing: 20) {
-                    
-                    // Form Card
-                    VStack(alignment: .leading, spacing: 20) {
+            
+            VStack(spacing: 0) {
+                CustomCenteredHeaderView(title: "New Work Order")
+                
+                ScrollView {
+                    VStack(spacing: 20) {
                         
-                        // Section 1: Vehicle & Mechanic
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Assignment")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Brand.primary)
-                                .textCase(.uppercase)
+                        // Form Card
+                        VStack(alignment: .leading, spacing: 20) {
                             
-                            // Vehicle Selector
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Select Vehicle")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.secondary)
+                            // Section 1: Vehicle & Mechanic
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Assignment")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppTheme.Brand.primary)
+                                    .textCase(.uppercase)
                                 
-                                Picker("Vehicle", selection: $selectedVehicleId) {
-                                    Text("Choose a vehicle...").tag(UUID?.none)
-                                    ForEach(vehicles) { vehicle in
-                                        Text("\(vehicle.make) \(vehicle.model) (\(vehicle.registrationNumber))")
-                                            .tag(UUID?.some(vehicle.id))
+                                // Vehicle Selector
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Select Vehicle")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                    
+                                    Picker("Vehicle", selection: $selectedVehicleId) {
+                                        Text("Choose a vehicle...").tag(UUID?.none)
+                                        ForEach(vehicles) { vehicle in
+                                            Text("\(vehicle.make) \(vehicle.model) (\(vehicle.registrationNumber))")
+                                                .tag(UUID?.some(vehicle.id))
+                                        }
                                     }
-                                }
-                                .pickerStyle(.menu)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.black.opacity(0.04))
-                                .cornerRadius(8)
-                            }
-
-                            // Mechanic Selector
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Assign Mechanic")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.secondary)
-                                
-                                Picker("Mechanic", selection: $selectedMechanicId) {
-                                    Text("Select technician...").tag(UUID?.none)
-                                    ForEach(mechanics) { mechanic in
-                                        Text(mechanic.fullName).tag(UUID?.some(mechanic.id))
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.black.opacity(0.04))
-                                .cornerRadius(8)
-                            }
-                        }
-                        
-                        Divider()
-                        
-                        // Section 2: Issue details
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Work Details")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Brand.primary)
-                                .textCase(.uppercase)
-
-                            // Title
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Work Order Title")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.secondary)
-                                TextField("e.g. Engine Overheating, Brake Squeal", text: $title)
-                                    .font(.system(size: 14))
-                                    .padding(12)
+                                    .pickerStyle(.menu)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
                                     .background(Color.black.opacity(0.04))
                                     .cornerRadius(8)
-                            }
-
-                            // Issue Type
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Service/Issue Category")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.secondary)
-                                TextField("e.g. Brakes, Transmission, Engine", text: $issueType)
-                                    .font(.system(size: 14))
-                                    .padding(12)
+                                }
+                                
+                                // Mechanic Selector
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Assign Mechanic")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                    
+                                    Picker("Mechanic", selection: $selectedMechanicId) {
+                                        Text("Select technician...").tag(UUID?.none)
+                                        ForEach(mechanics) { mechanic in
+                                            Text(mechanic.fullName).tag(UUID?.some(mechanic.id))
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
                                     .background(Color.black.opacity(0.04))
                                     .cornerRadius(8)
+                                }
                             }
                             
-                            // Priority
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Priority Level")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.secondary)
+                            Divider()
+                            
+                            // Section 2: Issue details
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Work Details")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppTheme.Brand.primary)
+                                    .textCase(.uppercase)
                                 
-                                Picker("Priority", selection: $selectedPriority) {
-                                    Text("Low").tag(WorkOrderPriority.low)
-                                    Text("Medium").tag(WorkOrderPriority.medium)
-                                    Text("High").tag(WorkOrderPriority.high)
-                                    Text("Urgent").tag(WorkOrderPriority.urgent)
+                                // Title
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Work Order Title")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                    TextField("e.g. Engine Overheating, Brake Squeal", text: $title)
+                                        .font(.system(size: 14))
+                                        .padding(12)
+                                        .background(Color.black.opacity(0.04))
+                                        .cornerRadius(8)
                                 }
-                                .pickerStyle(.segmented)
+                                
+                                // Issue Type
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Service/Issue Category")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                    TextField("e.g. Brakes, Transmission, Engine", text: $issueType)
+                                        .font(.system(size: 14))
+                                        .padding(12)
+                                        .background(Color.black.opacity(0.04))
+                                        .cornerRadius(8)
+                                }
+                                
+                                // Priority
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Priority Level")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                    
+                                    Picker("Priority", selection: $selectedPriority) {
+                                        Text("Low").tag(WorkOrderPriority.low)
+                                        Text("Medium").tag(WorkOrderPriority.medium)
+                                        Text("High").tag(WorkOrderPriority.high)
+                                        Text("Urgent").tag(WorkOrderPriority.urgent)
+                                    }
+                                    .pickerStyle(.segmented)
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            // Section 3: Cost & Notes
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Estimation & Remarks")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppTheme.Brand.primary)
+                                    .textCase(.uppercase)
+                                
+                                // Est. Cost
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Estimated Cost (INR)")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                    TextField("e.g. 5000", text: $estimatedCost)
+                                        .keyboardType(.decimalPad)
+                                        .font(.system(size: 14))
+                                        .padding(12)
+                                        .background(Color.black.opacity(0.04))
+                                        .cornerRadius(8)
+                                }
+                                
+                                // Notes
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Detailed Repair Notes")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                    TextEditor(text: $notes)
+                                        .frame(minHeight: 100)
+                                        .padding(6)
+                                        .background(Color.black.opacity(0.04))
+                                        .cornerRadius(8)
+                                }
                             }
                         }
+                        .padding(20)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(AppTheme.Radius.card)
+                        .shadow(color: AppTheme.Shadow.card, radius: 10, y: 5)
+                        .padding(.horizontal)
+                        .padding(.top, 12)
                         
-                        Divider()
-                        
-                        // Section 3: Cost & Notes
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Estimation & Remarks")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Brand.primary)
-                                .textCase(.uppercase)
-
-                            // Est. Cost
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Estimated Cost (INR)")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.secondary)
-                                TextField("e.g. 5000", text: $estimatedCost)
-                                    .keyboardType(.decimalPad)
-                                    .font(.system(size: 14))
-                                    .padding(12)
-                                    .background(Color.black.opacity(0.04))
-                                    .cornerRadius(8)
+                        // Submit Button
+                        Button(action: saveWorkOrder) {
+                            HStack {
+                                Image(systemName: "wrench.and.screwdriver.fill")
+                                Text("Create Work Order")
+                                    .fontWeight(.bold)
                             }
-
-                            // Notes
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Detailed Repair Notes")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.secondary)
-                                TextEditor(text: $notes)
-                                    .frame(minHeight: 100)
-                                    .padding(6)
-                                    .background(Color.black.opacity(0.04))
-                                    .cornerRadius(8)
-                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                isFormValid ? AppTheme.Brand.primary : Color.gray.opacity(0.5)
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: isFormValid ? AppTheme.Brand.primary.opacity(0.3) : Color.clear, radius: 8, y: 3)
                         }
+                        .disabled(!isFormValid)
+                        .padding(.horizontal)
+                        .padding(.bottom, 32)
                     }
-                    .padding(20)
-                    .background(AppTheme.Background.card)
-                    .cornerRadius(AppTheme.Radius.card)
-                    .shadow(color: AppTheme.Shadow.card, radius: 10, y: 5)
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                    
-                    // Submit Button
-                    Button(action: saveWorkOrder) {
-                        HStack {
-                            Image(systemName: "wrench.and.screwdriver.fill")
-                            Text("Create Work Order")
-                                .fontWeight(.bold)
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            isFormValid ? AppTheme.Brand.primary : Color.gray.opacity(0.5)
-                        )
-                        .cornerRadius(12)
-                        .shadow(color: isFormValid ? AppTheme.Brand.primary.opacity(0.3) : Color.clear, radius: 8, y: 3)
-                    }
-                    .disabled(!isFormValid)
-                    .padding(.horizontal)
-                    .padding(.bottom, 32)
                 }
-            }
+            } // end VStack
             
             // Success Overlay
             if showSuccessOverlay {
@@ -243,16 +247,15 @@ struct CreateWorkOrderView: View {
                 }
                 .transition(.opacity)
             }
-        }
-        .navigationTitle("New Work Order")
-        .navigationBarTitleDisplayMode(.inline)
-    }
+        } // end ZStack
+        .navigationBarHidden(true)
+    } // end body
 
     // Validation
     private var isFormValid: Bool {
         selectedVehicleId != nil && !title.isEmpty && !issueType.isEmpty && selectedMechanicId != nil
     }
-
+    
     // Save
     private func saveWorkOrder() {
         guard isFormValid else { return }

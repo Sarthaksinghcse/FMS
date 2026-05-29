@@ -782,6 +782,14 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
+    func updateSOSAlert(_ alert: DBSOSAlert) async throws {
+        try await client
+            .from("sos_alerts")
+            .update(alert)
+            .eq("id", value: alert.id.uuidString)
+            .execute()
+    }
+    
     // Inventory
     func fetchInventory() async throws -> [DBInventoryItem] {
         return try await client
@@ -828,6 +836,32 @@ final class SupabaseManager: ObservableObject {
             .from("maintenance_records")
             .insert(record)
             .execute()
+    }
+    
+    func updateMaintenanceRecord(_ record: DBMaintenanceRecord) async throws {
+        try await client
+            .from("maintenance_records")
+            .update(record)
+            .eq("id", value: record.id.uuidString)
+            .execute()
+    }
+    
+    func uploadRepairImage(recordId: UUID, imageData: Data, index: Int) async throws -> String {
+        let path = "\(recordId.uuidString)_\(index).jpg"
+        
+        _ = try await client.storage
+            .from("maintenance-images")
+            .upload(
+                path,
+                data: imageData,
+                options: FileOptions(contentType: "image/jpeg", upsert: true)
+            )
+        
+        let url = try client.storage
+            .from("maintenance-images")
+            .getPublicURL(path: path)
+        
+        return url.absoluteString
     }
     
     // Storage Avatar Upload
@@ -944,6 +978,7 @@ final class SupabaseManager: ObservableObject {
                 let localTrips = (try? context.fetch(descriptor)) ?? []
                 for rt in remoteTrips {
                     if let local = localTrips.first(where: { $0.id == rt.id }) {
+                        local.tripCode = "TRP-\(rt.id.uuidString.prefix(4).uppercased())"
                         local.vehicleId = rt.vehicleId
                         local.driverId = rt.driverId
                         local.startLocation = rt.source
@@ -1125,6 +1160,7 @@ final class SupabaseManager: ObservableObject {
                         local.serviceDate = rr.serviceDate
                         local.cost = rr.cost
                         local.notes = rr.notes
+                        local.repairImages = rr.repairImages
                         local.performedBy = rr.performedBy
                     } else {
                         context.insert(rr.asLocalRecord)

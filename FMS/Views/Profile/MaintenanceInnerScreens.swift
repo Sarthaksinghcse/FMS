@@ -12,6 +12,7 @@
 
 
 import SwiftUI
+import PhotosUI
 
 
 
@@ -26,6 +27,11 @@ struct MaintenanceEditProfileView: View {
     @State private var specialization = ""
     @State private var isSaving = false
     @State private var showSaved = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+    
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isUploadingPhoto = false
 
     private var user: DBUser? { supabase.currentUser }
 
@@ -47,26 +53,65 @@ struct MaintenanceEditProfileView: View {
                         
                         VStack(spacing: 14) {
                             ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [AppTheme.Brand.amber, Color(red: 0.95, green: 0.50, blue: 0.15)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 80, height: 80)
-                                    .shadow(color: AppTheme.Brand.amber.opacity(0.30), radius: 12, y: 4)
+                                if isUploadingPhoto {
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(width: 80, height: 80)
+                                    ProgressView()
+                                } else {
+                                    if let profileImage = user?.profileImage, let url = URL(string: profileImage) {
+                                        AsyncImage(url: url) { phase in
+                                            if let image = phase.image {
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 80, height: 80)
+                                                    .clipShape(Circle())
+                                            } else if phase.error != nil {
+                                                Circle()
+                                                    .fill(
+                                                        LinearGradient(
+                                                            colors: [AppTheme.Brand.amber, Color(red: 0.95, green: 0.50, blue: 0.15)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                                    .frame(width: 80, height: 80)
+                                                    .shadow(color: AppTheme.Brand.amber.opacity(0.30), radius: 12, y: 4)
 
-                                Text(initials.isEmpty ? "MP" : initials)
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                                                Text(initials.isEmpty ? "MP" : initials)
+                                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                                    .foregroundColor(.white)
+                                            } else {
+                                                ProgressView()
+                                            }
+                                        }
+                                    } else {
+                                        Circle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [AppTheme.Brand.amber, Color(red: 0.95, green: 0.50, blue: 0.15)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .frame(width: 80, height: 80)
+                                            .shadow(color: AppTheme.Brand.amber.opacity(0.30), radius: 12, y: 4)
+
+                                        Text(initials.isEmpty ? "MP" : initials)
+                                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                                            .foregroundColor(.white)
+                                    }
+                                }
                             }
 
-                            Button { } label: {
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                                 Text("Change Photo")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(AppTheme.Brand.amber)
+                            }
+                            .onChange(of: selectedPhotoItem) { _, newItem in
+                                uploadProfilePhoto(item: newItem)
                             }
                         }
                         .padding(.top, 8)
@@ -132,11 +177,7 @@ struct MaintenanceEditProfileView: View {
 
                         
                         Button {
-                            isSaving = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                                isSaving = false
-                                showSaved = true
-                            }
+                            saveProfileChanges()
                         } label: {
                             HStack(spacing: 8) {
                                 if isSaving { ProgressView().tint(.white) }
@@ -179,6 +220,72 @@ struct MaintenanceEditProfileView: View {
                 Button("OK") { dismiss() }
             } message: {
                 Text("Your profile has been saved successfully.")
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+    
+    private func saveProfileChanges() {
+        guard var currentUser = user else { return }
+        isSaving = true
+        
+        currentUser.name = fullName
+        currentUser.phoneNumber = phoneNumber.isEmpty ? nil : phoneNumber
+        
+        Task {
+            do {
+                try await supabase.updateDriver(currentUser)
+                await MainActor.run {
+                    isSaving = false
+                    showSaved = true
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
+        }
+    }
+    
+    private func uploadProfilePhoto(item: PhotosPickerItem?) {
+        guard let item = item, let userId = user?.id else { return }
+        
+        isUploadingPhoto = true
+        
+        Task {
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                do {
+                    let url = try await supabase.uploadAvatar(userId: userId, imageData: data)
+                    
+                    if var currentUser = user {
+                        let timestamp = Int(Date().timeIntervalSince1970)
+                        currentUser.profileImage = "\(url)?t=\(timestamp)"
+                        try await supabase.updateDriver(currentUser)
+                    }
+                    
+                    await MainActor.run {
+                        isUploadingPhoto = false
+                        selectedPhotoItem = nil
+                    }
+                } catch {
+                    await MainActor.run {
+                        isUploadingPhoto = false
+                        selectedPhotoItem = nil
+                        errorMessage = "Failed to upload photo: \(error.localizedDescription)"
+                        showError = true
+                    }
+                }
+            } else {
+                await MainActor.run {
+                    isUploadingPhoto = false
+                    selectedPhotoItem = nil
+                }
             }
         }
     }

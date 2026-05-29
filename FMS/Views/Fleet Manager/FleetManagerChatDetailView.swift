@@ -1,7 +1,3 @@
-//
-//  FleetManagerChatDetailView.swift
-//  FMS
-//
 
 import SwiftUI
 import Supabase

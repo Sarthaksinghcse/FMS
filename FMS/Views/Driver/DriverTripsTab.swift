@@ -1,12 +1,4 @@
 
-
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
 import MapKit
@@ -100,18 +92,26 @@ struct DriverTripsTab: View {
                                             .tint(AppTheme.Status.danger)
                                         }
                                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                            Button { vm.showPreTrip = true } label: {
-                                                Label("Inspect", systemImage: "checklist")
+                                            Button {
+                                                vm.queryTrip = trip
+                                                vm.showRaiseQuery = true
+                                            } label: {
+                                                Label("Raise Query", systemImage: "questionmark.bubble.fill")
                                             }
-                                            .tint(Color.fmsIndigo)
+                                            .tint(Color.orange)
                                         }
                                         .contextMenu {
                                             Button {
+                                                vm.showRaiseQuery = false
+                                                vm.queryTrip = nil
                                                 vm.mapActiveTrip = trip
                                             } label: {
                                                 Label("Start Trip", systemImage: "play.fill")
                                             }
-                                            Button { vm.showPreTrip  = true } label: { Label("Pre-Trip Inspection",  systemImage: "checklist") }
+                                            Button {
+                                                vm.queryTrip = trip
+                                                vm.showRaiseQuery = true
+                                            } label: { Label("Raise Query", systemImage: "questionmark.bubble.fill") }
                                             Button { vm.showPostTrip = true } label: { Label("Post-Trip Inspection", systemImage: "checkmark.seal.fill") }
                                             Divider()
                                             Button { vm.showIssue    = true } label: { Label("Report Issue", systemImage: "exclamationmark.bubble.fill") }
@@ -155,6 +155,12 @@ struct DriverTripsTab: View {
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trips")
             .navigationBarTitleDisplayMode(.large)
+            .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
+                vm.showRaiseQuery = false
+                vm.queryTrip = nil
+            }) {
+                RaiseQuerySheet(trip: vm.queryTrip, vm: vm)
+            }
         }
     }
 }
@@ -198,8 +204,17 @@ private struct CompletedTripCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-
+            HStack {
+                Text(record.trip.tripCode)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
             
+            Divider().padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+
             HStack(spacing: 12) {
                 
                 ZStack {
@@ -214,11 +229,13 @@ private struct CompletedTripCard: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(record.trip.destination)
                         .font(.system(size: 15, weight: .semibold))
-                        .lineLimit(1)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("from  \(record.trip.source)")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
@@ -247,7 +264,7 @@ private struct CompletedTripCard: View {
                          color: Color.fmsIndigo)
                 Divider().frame(height: 36)
                 StatPill(icon: "arrow.left.arrow.right",
-                         value: String(format: "%.0f km", record.distanceKm),
+                         value: String(format: "%.1f km", record.distanceKm),
                          label: "Distance",
                          color: AppTheme.Brand.accent)
                 Divider().frame(height: 36)
@@ -319,10 +336,23 @@ private struct StatPill: View {
 struct TripDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     let record: CompletedTripRecord
+    @State private var showingFullAddressSheet = false
 
     private var dateLabel: String {
         let f = DateFormatter()
         f.dateStyle = .full; f.timeStyle = .short
+        return f.string(from: record.completedAt)
+    }
+
+    private var departureTimeLabel: String {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, h:mm a"
+        return f.string(from: record.trip.startTime ?? record.trip.createdAt)
+    }
+
+    private var arrivalTimeLabel: String {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, h:mm a"
         return f.string(from: record.completedAt)
     }
 
@@ -358,6 +388,9 @@ struct TripDetailSheet: View {
                         }
 
                         VStack(spacing: 4) {
+                            Text(record.trip.tripCode)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.secondary)
                             Text("Trip Completed")
                                 .font(.system(size: 20, weight: .bold))
                             Text(dateLabel)
@@ -365,18 +398,45 @@ struct TripDetailSheet: View {
                                 .foregroundStyle(.secondary)
                         }
 
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(alignment: .top, spacing: 10) {
+                                Circle()
+                                    .fill(Color(UIColor.systemGray3))
+                                    .frame(width: 8, height: 8)
+                                    .padding(.top, 4)
+                                Text(record.trip.source)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer()
+                            }
+                            
+                            HStack(alignment: .top, spacing: 10) {
+                                Circle()
+                                    .fill(Color.fmsIndigo)
+                                    .frame(width: 8, height: 8)
+                                    .padding(.top, 4)
+                                Text(record.trip.destination)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer()
+                            }
+                        }
+                        .padding(.horizontal, 8)
                         
-                        HStack(spacing: 8) {
-                            Label(record.trip.source, systemImage: "circle.fill")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.tertiary)
-                            Label(record.trip.destination, systemImage: "mappin.circle.fill")
-                                .font(.system(size: 12))
+                        Divider()
+                        
+                        Button {
+                            showingFullAddressSheet = true
+                        } label: {
+                            Label("View Full Address", systemImage: "map.fill")
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(Color.fmsIndigo)
                         }
+                        .buttonStyle(.plain)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(24)
@@ -399,13 +459,13 @@ struct TripDetailSheet: View {
                                            color: Color.fmsIndigo)
                             DetailStatCard(icon: "arrow.left.arrow.right",
                                            label: "Distance",
-                                           value: String(format: "%.0f km", record.distanceKm),
+                                           value: String(format: "%.1f km", record.distanceKm),
                                            sub: String(format: "%.1f miles", record.distanceKm * 0.621),
                                            color: AppTheme.Brand.accent)
                             DetailStatCard(icon: "fuelpump.fill",
                                            label: "Avg Speed",
                                            value: record.elapsedSeconds > 0
-                                               ? String(format: "%.0f km/h",
+                                               ? String(format: "%.1f km/h",
                                                         record.distanceKm / (Double(record.elapsedSeconds) / 3600))
                                                : "—",
                                            sub: "estimated",
@@ -419,6 +479,16 @@ struct TripDetailSheet: View {
                                            color: record.inspectionPassed
                                                ? AppTheme.Status.success
                                                : AppTheme.Status.danger)
+                            DetailStatCard(icon: "arrow.up.circle.fill",
+                                           label: "Departure Time",
+                                           value: departureTimeLabel,
+                                           sub: "journey start",
+                                           color: AppTheme.Brand.royalBlue)
+                            DetailStatCard(icon: "arrow.down.circle.fill",
+                                           label: "Arrival Time",
+                                           value: arrivalTimeLabel,
+                                           sub: "journey end",
+                                           color: Color.orange)
                         }
                     }
 
@@ -495,6 +565,10 @@ struct TripDetailSheet: View {
                 }
                 .padding(16)
                 .padding(.bottom, 30)
+            }
+            .refreshable { }
+            .sheet(isPresented: $showingFullAddressSheet) {
+                FullAddressSheet(source: record.trip.source, destination: record.trip.destination, tripCode: record.trip.tripCode)
             }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trip Details")
@@ -681,7 +755,7 @@ private struct TripRow: View {
             
             HStack(spacing: 8) {
                 TripChip(icon: "arrow.left.arrow.right",
-                         label: String(format: "%.0f km", trip.distance))
+                         label: String(format: "%.1f km", trip.distance))
                 if let s = trip.startTime {
                     TripChip(icon: "clock",
                              label: s.formatted(.dateTime.hour().minute()))
@@ -695,26 +769,33 @@ private struct TripRow: View {
 
             
             HStack(spacing: 10) {
-                
-                Button { vm.showPreTrip = true } label: {
-                    Label("Inspect", systemImage: "checklist")
+                // Raise Query
+                Button {
+                    vm.queryTrip = trip
+                    vm.showRaiseQuery = true
+                } label: {
+                    Label("Raise Query", systemImage: "questionmark.bubble.fill")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.fmsIndigo)
+                        .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
-                        .glassEffect(
-                            .regular.tint(Color.fmsIndigo.opacity(0.08)),
-                            in: RoundedRectangle(cornerRadius: 10)
+                        .background(Color.orange.opacity(0.09))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.orange.opacity(0.25), lineWidth: 1)
                         )
                 }
 
-                
+                // Confirm / Navigate
                 Button {
+                    vm.showRaiseQuery = false
+                    vm.queryTrip = nil
                     vm.mapActiveTrip = trip
                 } label: {
                     Label(
-                        (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "Navigate" : "Start",
-                        systemImage: (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "location.fill" : "play.fill"
+                        (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "Navigate" : "Confirm",
+                        systemImage: (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "location.fill" : "checkmark.circle.fill"
                     )
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
@@ -1096,12 +1177,10 @@ struct TripNavigationView: View {
                 .padding(.horizontal, 20).padding(.top, 10)
             }
 
-            // START NOW  ──────────────────────────────────────────────────────
+            // START NOW
             Button {
                 guard preTripPassed else { showPreTripNav = true; return }
-                // 1. Notify ViewModel (updates trip status in Supabase)
                 vm.beginTrip(trip: trip)
-                // 2. Start 3D navigation
                 withAnimation(.spring(response: 0.5)) {
                     nav.beginNavigation()
                 }
