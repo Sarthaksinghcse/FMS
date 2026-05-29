@@ -207,6 +207,60 @@ enum NotificationType: String, Codable {
 }
 
 
+enum ComplianceAlertType: String, Codable, CaseIterable {
+    case insurance
+    case permit
+    case servicing
+
+    var displayName: String {
+        switch self {
+        case .insurance: return "Insurance"
+        case .permit:    return "Permit"
+        case .servicing: return "Servicing"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .insurance: return "shield.checkered"
+        case .permit:    return "doc.text.fill"
+        case .servicing: return "wrench.and.screwdriver.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .insurance: return Color(red: 0.15, green: 0.38, blue: 0.90)
+        case .permit:    return Color(red: 0.58, green: 0.39, blue: 0.87)
+        case .servicing: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        }
+    }
+}
+
+
+enum ComplianceAlertStatus: String, Codable {
+    case upcoming
+    case overdue
+    case resolved
+
+    var displayName: String {
+        switch self {
+        case .upcoming: return "Upcoming"
+        case .overdue:  return "Overdue"
+        case .resolved: return "Resolved"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .upcoming: return Color(red: 0.90, green: 0.65, blue: 0.15)
+        case .overdue:  return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .resolved: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        }
+    }
+}
+
+
 
 
 
@@ -636,6 +690,72 @@ struct DBTrip: Codable, Identifiable {
         case status
         case notes
         case createdAt   = "created_at"
+    }
+
+    /// Provide a default tripCode when the backend column is absent
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedId = try c.decode(UUID.self, forKey: .id)
+        id          = decodedId
+        tripCode    = (try? c.decodeIfPresent(String.self, forKey: .tripCode))
+                      ?? "TRP-\(decodedId.uuidString.prefix(4).uppercased())"
+        vehicleId   = try c.decode(UUID.self,   forKey: .vehicleId)
+        driverId    = try c.decode(UUID.self,   forKey: .driverId)
+        source      = try c.decode(String.self, forKey: .source)
+        destination = try c.decode(String.self, forKey: .destination)
+        startTime   = try c.decodeIfPresent(Date.self, forKey: .startTime)
+        endTime     = try c.decodeIfPresent(Date.self, forKey: .endTime)
+        distance    = try c.decode(Double.self, forKey: .distance)
+        status      = try c.decode(DBTripStatus.self, forKey: .status)
+        notes       = try c.decodeIfPresent(String.self, forKey: .notes)
+        createdAt   = try c.decode(Date.self,   forKey: .createdAt)
+    }
+
+    /// Custom encoder — excludes tripCode so Supabase won't reject
+    /// the payload when the trips table lacks a trip_code column.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id,          forKey: .id)
+        // tripCode is intentionally omitted — column may not exist in Supabase
+        try c.encode(vehicleId,   forKey: .vehicleId)
+        try c.encode(driverId,    forKey: .driverId)
+        try c.encode(source,      forKey: .source)
+        try c.encode(destination, forKey: .destination)
+        try c.encodeIfPresent(startTime,  forKey: .startTime)
+        try c.encodeIfPresent(endTime,    forKey: .endTime)
+        try c.encode(distance,    forKey: .distance)
+        try c.encode(status,      forKey: .status)
+        try c.encodeIfPresent(notes,      forKey: .notes)
+        try c.encode(createdAt,   forKey: .createdAt)
+    }
+
+    /// Memberwise init used throughout the app
+    nonisolated init(
+        id: UUID = UUID(),
+        tripCode: String = "",
+        vehicleId: UUID,
+        driverId: UUID,
+        source: String,
+        destination: String,
+        startTime: Date? = nil,
+        endTime: Date? = nil,
+        distance: Double,
+        status: DBTripStatus,
+        notes: String? = nil,
+        createdAt: Date
+    ) {
+        self.id          = id
+        self.tripCode    = tripCode.isEmpty ? "TRP-\(id.uuidString.prefix(4).uppercased())" : tripCode
+        self.vehicleId   = vehicleId
+        self.driverId    = driverId
+        self.source      = source
+        self.destination = destination
+        self.startTime   = startTime
+        self.endTime     = endTime
+        self.distance    = distance
+        self.status      = status
+        self.notes       = notes
+        self.createdAt   = createdAt
     }
 }
 
@@ -1243,6 +1363,7 @@ final class Vehicle {
     var lastServiceDate: Date?
     var nextServiceDate: Date?
     var insuranceExpiryDate: Date?
+    var permitExpiryDate: Date?
     var createdAt: Date
     var updatedAt: Date
 
@@ -1261,6 +1382,7 @@ final class Vehicle {
         lastServiceDate: Date? = nil,
         nextServiceDate: Date? = nil,
         insuranceExpiryDate: Date? = nil,
+        permitExpiryDate: Date? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now
     ) {
@@ -1278,6 +1400,7 @@ final class Vehicle {
         self.lastServiceDate = lastServiceDate
         self.nextServiceDate = nextServiceDate
         self.insuranceExpiryDate = insuranceExpiryDate
+        self.permitExpiryDate = permitExpiryDate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

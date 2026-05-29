@@ -241,7 +241,7 @@ private struct StatsStrip: View {
     var body: some View {
         HStack(spacing: 10) {
             StatPill(value: "\(totalTrips)", label: "Trips",  icon: "map.fill",          color: AppTheme.Brand.primaryDeep)
-            StatPill(value: String(format: "%.0f km", totalKm), label: "Driven", icon: "arrow.left.arrow.right", color: AppTheme.Brand.teal)
+            StatPill(value: String(format: "%.1f km", totalKm), label: "Driven", icon: "arrow.left.arrow.right", color: AppTheme.Brand.teal)
         }
     }
 }
