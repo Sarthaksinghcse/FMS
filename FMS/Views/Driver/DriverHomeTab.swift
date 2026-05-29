@@ -65,6 +65,19 @@ struct DriverHomeTab: View {
                     .padding(.top, 14)
 
                     
+                    // ── FUEL SECTION ──────────────────────────────────────────
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("FUEL")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.6)
+
+                        FuelSectionCard(vm: vm)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+
+                    // ── DRIVER PERFORMANCE ─────────────────────────────────────
                     VStack(alignment: .leading, spacing: 12) {
                         Text("DRIVER PERFORMANCE")
                             .font(.system(size: 11, weight: .bold))

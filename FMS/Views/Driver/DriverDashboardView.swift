@@ -12,6 +12,7 @@ import SwiftData
 import MapKit
 import Combine
 import Supabase
+import PhotosUI
 
 
 
@@ -145,6 +146,9 @@ struct DriverDashboardView: View {
         }
         .sheet(isPresented: $vm.showNotifications) {
             DriverNotificationsSheet(vm: vm)
+        }
+        .sheet(isPresented: $vm.showFuelLog) {
+            FuelLogSheet(vm: vm)
         }
         .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
@@ -925,7 +929,6 @@ struct InspectionFormSheet: View {
         let label: String
         let icon: String
         var passed = false
-        var photo: UIImage? = nil   // damage photo if failed
 
         static let all: [CheckItem] = [
             .init(label: "Brakes & Brake Lights",   icon: "hand.raised.fill"),
@@ -951,9 +954,9 @@ struct InspectionFormSheet: View {
     // ── Brake hack tracker ────────────────────────────────────────────────────
     @State private var brakeToggleCount = 0
     @State private var showHackFlash    = false
-    // ── Photo picker state ────────────────────────────────────────────────────
-    @State private var pickerTargetIndex: Int? = nil   // which item's photo we're picking
-    @State private var showPhotoPicker  = false
+    // ── Defect photos (remarks section) ───────────────────────────────────────
+    @State private var defectPhotos: [UIImage] = []
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
@@ -999,58 +1002,23 @@ struct InspectionFormSheet: View {
                                 HStack(spacing: 14) {
                                     Image(systemName: item.icon)
                                         .font(.system(size: 16))
-                                        .foregroundStyle(item.passed ? AppTheme.Status.success : AppTheme.Status.danger)
+                                        .foregroundStyle(item.passed ? AppTheme.Status.success : .secondary)
                                         .frame(width: 26)
                                     Text(item.label)
                                         .font(.system(size: 14))
-                                        .foregroundStyle(item.passed ? .primary : AppTheme.Status.danger)
+                                        .foregroundStyle(item.passed ? .primary : .secondary)
                                     Spacer()
-
-                                    // Camera button — only when item failed
-                                    if !item.passed {
-                                        Button {
-                                            pickerTargetIndex = idx
-                                            showPhotoPicker = true
-                                        } label: {
-                                            ZStack {
-                                                if let photo = item.photo {
-                                                    Image(uiImage: photo)
-                                                        .resizable()
-                                                        .scaledToFill()
-                                                        .frame(width: 36, height: 36)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                        .overlay(
-                                                            RoundedRectangle(cornerRadius: 8)
-                                                                .stroke(AppTheme.Status.danger.opacity(0.5), lineWidth: 1)
-                                                        )
-                                                } else {
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .fill(AppTheme.Status.danger.opacity(0.10))
-                                                        .frame(width: 36, height: 36)
-                                                        .overlay(
-                                                            Image(systemName: "camera.fill")
-                                                                .font(.system(size: 14))
-                                                                .foregroundStyle(AppTheme.Status.danger)
-                                                        )
-                                                }
-                                            }
-                                        }
-                                        .buttonStyle(.plain)
-                                        .transition(.scale.combined(with: .opacity))
-                                    }
 
                                     Toggle("", isOn: $item.passed)
                                         .labelsHidden()
                                         .tint(Color.fmsIndigo)
-                                        .onChange(of: item.passed) { _, newVal in
-                                            // Clear photo when item is marked passed
-                                            if newVal { items[idx].photo = nil }
+                                        .onChange(of: item.passed) { _, _ in
                                             // Brake hack: track Brakes & Brake Lights toggles
                                             if item.label == "Brakes & Brake Lights" {
                                                 brakeToggleCount += 1
                                                 if brakeToggleCount >= 4 {
                                                     withAnimation(.spring(response: 0.4)) {
-                                                        for i in items.indices { items[i].passed = true; items[i].photo = nil }
+                                                        for i in items.indices { items[i].passed = true }
                                                         showHackFlash = true
                                                     }
                                                     let gen = UINotificationFeedbackGenerator()
@@ -1100,11 +1068,109 @@ struct InspectionFormSheet: View {
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
 
                     
-                    TextField("Remarks or additional notes…", text: $remarks, axis: .vertical)
-                        .font(.system(size: 14))
-                        .lineLimit(3...6)
-                        .padding(14)
-                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
+                    // ── Remarks + Photo upload ────────────────────────────────
+                    VStack(alignment: .leading, spacing: 12) {
+                        TextField("Remarks or additional notes…", text: $remarks, axis: .vertical)
+                            .font(.system(size: 14))
+                            .lineLimit(3...6)
+                            .padding(14)
+
+                        Divider().padding(.horizontal, 14)
+
+                        // Native PhotosPicker — required when defect present
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 0) {
+                                PhotosPicker(
+                                    selection: $selectedPhotoItems,
+                                    maxSelectionCount: 10,
+                                    matching: .images,
+                                    photoLibrary: .shared()
+                                ) {
+                                    Label("Add Photos", systemImage: "photo.badge.plus")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(
+                                            !allPass && defectPhotos.isEmpty
+                                                ? AppTheme.Status.danger
+                                                : Color.fmsIndigo
+                                        )
+                                        .padding(.leading, 14)
+                                        .padding(.bottom, defectPhotos.isEmpty ? 14 : 4)
+                                }
+                                .buttonStyle(.plain)
+                                .onChange(of: selectedPhotoItems) {
+                                    Task {
+                                        var loaded: [UIImage] = []
+                                        for item in selectedPhotoItems {
+                                            if let data = try? await item.loadTransferable(type: Data.self),
+                                               let img  = UIImage(data: data) {
+                                                loaded.append(img)
+                                            }
+                                        }
+                                        defectPhotos = loaded
+                                    }
+                                }
+
+                                Spacer()
+
+                                // Required badge — shown only when defect & no photo
+                                if !allPass && defectPhotos.isEmpty {
+                                    Text("Required")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(AppTheme.Status.danger)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(AppTheme.Status.danger.opacity(0.12), in: Capsule())
+                                        .padding(.trailing, 14)
+                                        .padding(.bottom, defectPhotos.isEmpty ? 14 : 4)
+                                }
+                            }
+
+                            if !defectPhotos.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        ForEach(defectPhotos.indices, id: \.self) { i in
+                                            ZStack(alignment: .topTrailing) {
+                                                Image(uiImage: defectPhotos[i])
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 72, height: 72)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                Button {
+                                                    defectPhotos.remove(at: i)
+                                                    if i < selectedPhotoItems.count {
+                                                        selectedPhotoItems.remove(at: i)
+                                                    }
+                                                } label: {
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .font(.system(size: 18))
+                                                        .symbolRenderingMode(.palette)
+                                                        .foregroundStyle(.white, Color.black.opacity(0.5))
+                                                }
+                                                .offset(x: 5, y: -5)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 14)
+                                    .padding(.bottom, 14)
+                                }
+                            }
+                        }
+                    }
+                    // Highlight the whole remarks card in danger tint when photo is required but missing
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(AppTheme.Status.danger.opacity(!allPass && defectPhotos.isEmpty ? 0.5 : 0), lineWidth: 1.5)
+                    )
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
+
+                    // Warning label below the card
+                    if !allPass && defectPhotos.isEmpty {
+                        Label("Attach at least one photo of the defect to submit.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(AppTheme.Status.danger)
+                            .padding(.horizontal, 4)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
 
                     Button {
                         Task { await doSubmit() }
@@ -1132,18 +1198,11 @@ struct InspectionFormSheet: View {
                             : (issuesFound > 0 ? AppTheme.Brand.accent : AppTheme.Status.success).gradient
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .opacity(!allPass && defectPhotos.isEmpty ? 0.45 : 1)
                     }
+                    .disabled(!allPass && defectPhotos.isEmpty)
                 }
                 .padding(20)
-            }
-            .sheet(isPresented: $showPhotoPicker) {
-                DefectPhotoPicker { image in
-                    if let idx = pickerTargetIndex, let image {
-                        items[idx].photo = image
-                    }
-                    showPhotoPicker = false
-                    pickerTargetIndex = nil
-                }
             }
             .onChange(of: items.map(\.passed)) {
                 let hasUnchecked = items.contains(where: { !$0.passed })
@@ -1864,36 +1923,3 @@ struct RecordingRing: View {
 }
 
 
-// MARK: - Defect Photo Picker
-import PhotosUI
-
-struct DefectPhotoPicker: UIViewControllerRepresentable {
-    let onPick: (UIImage?) -> Void
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration(photoLibrary: .shared())
-        config.selectionLimit = 1
-        config.filter = .images
-        let picker = PHPickerViewController(configuration: config)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
-
-    class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let onPick: (UIImage?) -> Void
-        init(onPick: @escaping (UIImage?) -> Void) { self.onPick = onPick }
-
-        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            guard let result = results.first else { onPick(nil); return }
-            result.itemProvider.loadObject(ofClass: UIImage.self) { obj, _ in
-                DispatchQueue.main.async {
-                    self.onPick(obj as? UIImage)
-                }
-            }
-        }
-    }
-}

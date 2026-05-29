@@ -620,6 +620,10 @@ struct DBTrip: Codable, Identifiable {
     var notes: String?
     var createdAt: Date
 
+    var tripCode: String {
+        "TRP-\(id.uuidString.prefix(4).uppercased())"
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case vehicleId   = "vehicle_id"
@@ -1612,5 +1616,50 @@ final class InventoryItem {
         self.supplierName = supplierName
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+}
+
+
+// MARK: - Fuel Log
+
+/// Local SwiftData model – persisted on device
+@Model
+final class FuelLog {
+    @Attribute(.unique) var id: UUID
+    var driverId: UUID
+    var vehicleId: UUID?
+    var tripId: UUID?
+    var fuelType: String          // "petrol" | "diesel" | "electric" | "hybrid"
+    var litres: Double            // quantity filled
+    var amountPaid: Double        // cost in local currency
+    var odometer: Double?
+    var receiptImageData: Data?   // local receipt photo cache
+    var notes: String?
+    var loggedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        driverId: UUID,
+        vehicleId: UUID? = nil,
+        tripId: UUID? = nil,
+        fuelType: String = "petrol",
+        litres: Double,
+        amountPaid: Double,
+        odometer: Double? = nil,
+        receiptImageData: Data? = nil,
+        notes: String? = nil,
+        loggedAt: Date = .now
+    ) {
+        self.id = id
+        self.driverId = driverId
+        self.vehicleId = vehicleId
+        self.tripId = tripId
+        self.fuelType = fuelType
+        self.litres = litres
+        self.amountPaid = amountPaid
+        self.odometer = odometer
+        self.receiptImageData = receiptImageData
+        self.notes = notes
+        self.loggedAt = loggedAt
     }
 }
