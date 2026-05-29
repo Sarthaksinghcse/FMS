@@ -109,7 +109,7 @@ struct DriverProfileSheet: View {
                         .buttonStyle(.plain)
                         Divider().padding(.leading, 56)
                         NavigationLink {
-                            PrivacyPlaceholderView()
+                            DriverSecuritySettingsView()
                         } label: {
                             ProfileRow(icon: "lock.fill",
                                        iconBg: AppTheme.Brand.amber,
@@ -119,7 +119,7 @@ struct DriverProfileSheet: View {
                         .buttonStyle(.plain)
                         Divider().padding(.leading, 56)
                         NavigationLink {
-                            HelpSupportPlaceholderView()
+                            DriverHelpSupportView()
                         } label: {
                             ProfileRow(icon: "questionmark.circle.fill",
                                        iconBg: Color(UIColor.systemGray),
@@ -358,46 +358,4 @@ private struct ProfileRow: View {
         .environment(SupabaseManager.shared)
 }
 
-// MARK: - Placeholder Views for Settings Navigation
 
-@available(iOS 26.0, *)
-struct PrivacyPlaceholderView: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(AppTheme.Brand.amber)
-            Text("Privacy & Security")
-                .font(.system(size: 22, weight: .bold))
-            Text("This section is coming soon.\nYour data is always stored securely.")
-                .font(.system(size: 15))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Privacy & Security")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-@available(iOS 26.0, *)
-struct HelpSupportPlaceholderView: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "questionmark.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Color(UIColor.systemGray))
-            Text("Help & Support")
-                .font(.system(size: 22, weight: .bold))
-            Text("Contact your fleet manager for assistance.\nIn-app support is coming soon.")
-                .font(.system(size: 15))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Help & Support")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
