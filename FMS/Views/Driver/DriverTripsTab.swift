@@ -110,6 +110,8 @@ struct DriverTripsTab: View {
                                         }
                                         .contextMenu {
                                             Button {
+                                                vm.showRaiseQuery = false
+                                                vm.queryTrip = nil
                                                 vm.mapActiveTrip = trip
                                             } label: {
                                                 Label("Start Trip", systemImage: "play.fill")
@@ -721,6 +723,8 @@ private struct TripRow: View {
 
                 // Confirm / Navigate
                 Button {
+                    vm.showRaiseQuery = false
+                    vm.queryTrip = nil
                     vm.mapActiveTrip = trip
                 } label: {
                     Label(

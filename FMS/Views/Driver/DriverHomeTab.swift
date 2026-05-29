@@ -651,6 +651,8 @@ private struct AssignedTripCard: View {
 
             // ── 7. Confirm CTA ─────────────────────────────────────────────
             Button {
+                vm.showRaiseQuery = false
+                vm.queryTrip = nil
                 vm.mapActiveTrip = trip
             } label: {
                 HStack(spacing: 8) {
