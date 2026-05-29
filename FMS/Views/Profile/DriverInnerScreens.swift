@@ -20,7 +20,7 @@ import PhotosUI
 struct DriverEditProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
 
     @State private var fullName = ""
     @State private var phoneNumber = ""
@@ -836,7 +836,10 @@ private struct DriverPerformanceStatsRing: View {
 
 
 @available(iOS 26.0, *)
-#Preview("Edit Profile") { DriverEditProfileView() }
+#Preview("Edit Profile") { 
+    DriverEditProfileView()
+        .environment(SupabaseManager.shared)
+}
 
 @available(iOS 26.0, *)
 #Preview("License") { DriverLicenseDetailView() }

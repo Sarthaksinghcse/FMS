@@ -20,7 +20,7 @@ import PhotosUI
 struct MaintenanceEditProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
 
     @State private var fullName = ""
     @State private var phoneNumber = ""
@@ -813,7 +813,10 @@ struct MaintenanceHelpSupportView: View {
 
 
 @available(iOS 26.0, *)
-#Preview("Edit Profile") { MaintenanceEditProfileView() }
+#Preview("Edit Profile") { 
+    MaintenanceEditProfileView()
+        .environment(SupabaseManager.shared)
+}
 
 @available(iOS 26.0, *)
 struct MaintenanceSpecializationsView: View {

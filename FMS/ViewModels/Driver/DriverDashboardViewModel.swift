@@ -9,6 +9,7 @@ import SwiftUI
 import MapKit
 import Combine
 import SwiftData
+import Observation
 
 
 
@@ -225,19 +226,19 @@ final class DriverDashboardViewModel: ObservableObject {
     }
 
     private func setupAuthListener() {
-        SupabaseManager.shared.$currentUser
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
+        withObservationTracking {
+            _ = SupabaseManager.shared.currentUser
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
                 guard let self = self else { return }
-                Task {
-                    if let context = self.modelContext {
-                        await self.load(context: context)
-                    } else {
-                        await self.load()
-                    }
+                if let context = self.modelContext {
+                    await self.load(context: context)
+                } else {
+                    await self.load()
                 }
+                self.setupAuthListener()
             }
-            .store(in: &cancellables)
+        }
     }
 
     private func startAutoRefresh() {

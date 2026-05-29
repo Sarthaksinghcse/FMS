@@ -10,7 +10,7 @@ enum FocusField: Hashable {
 
 
 struct AuthView: View {
-    @StateObject private var supabaseManager = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabaseManager
 
     
     @State private var email = ""
@@ -377,4 +377,5 @@ struct ScaleButtonStyle: ButtonStyle {
 
 #Preview {
     AuthView()
+        .environment(SupabaseManager.shared)
 }
