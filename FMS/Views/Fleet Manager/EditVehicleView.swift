@@ -276,8 +276,8 @@ struct EditVehicleView: View {
                 .foregroundColor(AppTheme.Text.secondary)
             
             Picker("Vehicle Status", selection: $viewModel.status) {
-                Text("Active").tag(VehicleStatus.active)
-                Text("Inactive").tag(VehicleStatus.inactive)
+                Text("Available").tag(VehicleStatus.active)
+                Text("On Trip").tag(VehicleStatus.inactive)
                 Text("In Maintenance").tag(VehicleStatus.inMaintenance)
             }
             .pickerStyle(.menu)

@@ -217,7 +217,7 @@ private struct LiveTripCard: View {
             if let trip = vm.activeTrip {
                 
                 HStack {
-                    Text("TRIP-\(trip.id.uuidString.prefix(5).uppercased())")
+                    Text(trip.tripCode)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.primary)
                     Spacer()
@@ -277,7 +277,7 @@ private struct LiveTripCard: View {
                         Text("DISTANCE")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.secondary)
-                        Text(String(format: "%.0f km", trip.distance))
+                        Text(String(format: "%.1f km", trip.distance))
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(.primary)
                     }
@@ -385,7 +385,7 @@ private struct AssignedTripCard: View {
     // ── Computed helpers ─────────────────────────────────────────────────────
 
     private var tripCode: String {
-        "TRIP-\(trip.id.uuidString.prefix(8).uppercased())"
+        trip.tripCode
     }
 
     /// Exact ETA: distance (km) ÷ 60 km/h
@@ -396,11 +396,11 @@ private struct AssignedTripCard: View {
         return h > 0 ? "\(h)h \(m)m" : "\(m) min"
     }
 
-    /// Computed arrival = startTime + travel duration
+    /// Computed arrival = startTime + travel duration (with date)
     private var arrivalTimeString: String {
         let dep = trip.startTime ?? trip.createdAt
         let arrival = dep.addingTimeInterval((trip.distance / 60.0) * 3600)
-        let f = DateFormatter(); f.dateFormat = "hh:mm a"
+        let f = DateFormatter(); f.dateFormat = "MMM d, hh:mm a"
         return f.string(from: arrival)
     }
 
@@ -412,6 +412,19 @@ private struct AssignedTripCard: View {
     private var pickupTimeString: String {
         let f = DateFormatter(); f.dateFormat = "hh:mm a"
         return f.string(from: trip.startTime ?? trip.createdAt)
+    }
+
+    // ── State for collapsible vehicle details ─────────────────────────────────
+    @State private var showVehicleDetails = false
+
+    /// The actual vehicle assigned to this specific trip
+    private var tripVehicle: DBVehicle? {
+        vm.vehicleForTrip(trip)
+    }
+
+    /// Full local Vehicle model with vehicleType, fuelType, insuranceExpiryDate
+    private var localVehicle: Vehicle? {
+        vm.localVehicleForTrip(trip)
     }
 
     // ── View ─────────────────────────────────────────────────────────────────
@@ -520,7 +533,7 @@ private struct AssignedTripCard: View {
                 TripMetricChip(
                     icon: "road.lanes",
                     label: "DISTANCE",
-                    value: String(format: "%.0f km", trip.distance)
+                    value: String(format: "%.1f km", trip.distance)
                 )
                 TripChipDivider()
                 TripMetricChip(
@@ -538,41 +551,59 @@ private struct AssignedTripCard: View {
 
             Divider()
 
-            // ── 4. Vehicle + Cargo ────────────────────────────────────────
-            HStack(spacing: 0) {
-                // Vehicle cell
-                VStack(alignment: .leading, spacing: 5) {
-                    Label("VEHICLE", systemImage: "car.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color(UIColor.secondaryLabel))
-                    Text(vm.assignedVehicle?.licensePlate ?? "Not Assigned")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color(UIColor.label))
-                    Text(vm.assignedVehicle?.model ?? "—")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color(UIColor.secondaryLabel))
+            // ── 4. Vehicle (collapsible) ──────────────────────────────────────
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showVehicleDetails.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 0) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("VEHICLE")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color(UIColor.secondaryLabel))
+                            Text(localVehicle?.registrationNumber ?? tripVehicle?.licensePlate ?? "Not Assigned")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(Color(UIColor.label))
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color(UIColor.tertiaryLabel))
+                            .rotationEffect(.degrees(showVehicleDetails ? -180 : 0))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                    .contentShape(Rectangle())
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Divider().frame(height: 50)
-
-                // Cargo cell
-                VStack(alignment: .leading, spacing: 5) {
-                    Label("CARGO", systemImage: "shippingbox.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color(UIColor.secondaryLabel))
-                    Text("General Cargo")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color(UIColor.label))
-                    Text(String(format: "%.0f km haul", trip.distance))
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color(UIColor.secondaryLabel))
+                .buttonStyle(.plain)
+                
+                if showVehicleDetails {
+                    Divider().padding(.horizontal, 20)
+                    
+                    VStack(spacing: 0) {
+                        vehicleDetailRow(label: "Vehicle Type", value: localVehicle?.vehicleType.displayName ?? "—")
+                        Divider().padding(.leading, 50)
+                        vehicleDetailRow(label: "Fuel Type", value: localVehicle?.fuelType.displayName ?? "—")
+                        Divider().padding(.leading, 50)
+                        vehicleDetailRow(label: "Make & Model", value: localVehicle.map { "\($0.make) \($0.model)" } ?? tripVehicle.map { "\($0.manufacturer) \($0.model)" } ?? "—")
+                        Divider().padding(.leading, 50)
+                        vehicleDetailRow(label: "Year", value: localVehicle.map { String($0.year) } ?? tripVehicle.map { String($0.year) } ?? "—")
+                        Divider().padding(.leading, 50)
+                        vehicleDetailRow(label: "License Plate", value: localVehicle?.registrationNumber ?? tripVehicle?.licensePlate ?? "—")
+                        Divider().padding(.leading, 50)
+                        vehicleDetailRow(label: "VIN", value: localVehicle?.vinNumber ?? tripVehicle?.vin ?? "—")
+                        Divider().padding(.leading, 50)
+                        vehicleDetailRow(label: "Insurance Expiry", value: localVehicle?.insuranceExpiryDate?.formatted(date: .abbreviated, time: .omitted) ?? "—")
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 14)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                .padding(.leading, 18)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
 
             // ── 5. Fleet Manager Instructions (if present) ────────────────
             if let notes = trip.notes, !notes.isEmpty {
@@ -609,22 +640,23 @@ private struct AssignedTripCard: View {
 
             Divider()
 
-            // ── 6. Secondary buttons: View Route  |  Message ──────────────
+            // ── 6. Secondary buttons: Raise a Query  |  Message ──────────────
             HStack(spacing: 10) {
-                // View Route — no pre-inspection
+                // Raise a Query
                 Button {
-                    vm.viewRouteTrip = trip
+                    vm.queryTrip = trip
+                    vm.showRaiseQuery = true
                 } label: {
-                    Label("View Route", systemImage: "map.fill")
+                    Label("Raise Query", systemImage: "questionmark.bubble.fill")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.fmsIndigo)
+                        .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
-                        .background(Color.fmsIndigo.opacity(0.07))
+                        .background(Color.orange.opacity(0.09))
                         .clipShape(RoundedRectangle(cornerRadius: 11))
                         .overlay(
                             RoundedRectangle(cornerRadius: 11)
-                                .stroke(Color.fmsIndigo.opacity(0.22), lineWidth: 1)
+                                .stroke(Color.orange.opacity(0.25), lineWidth: 1)
                         )
                 }
 
@@ -648,14 +680,16 @@ private struct AssignedTripCard: View {
             .padding(.horizontal, 20)
             .padding(.top, 14)
 
-            // ── 7. Start Active Trip CTA ──────────────────────────────────
+            // ── 7. Confirm CTA ─────────────────────────────────────────────
             Button {
+                vm.showRaiseQuery = false
+                vm.queryTrip = nil
                 vm.mapActiveTrip = trip
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Start Active Trip")
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .bold))
+                    Text("Confirm")
                         .font(.system(size: 16, weight: .bold))
                 }
                 .foregroundStyle(.white)
@@ -681,6 +715,20 @@ private struct AssignedTripCard: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color(UIColor.separator).opacity(0.5), lineWidth: 0.5)
         )
+    }
+
+    /// Helper row for the collapsible vehicle details section
+    private func vehicleDetailRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color(UIColor.secondaryLabel))
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color(UIColor.label))
+        }
+        .padding(.vertical, 8)
     }
 }
 

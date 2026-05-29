@@ -100,18 +100,26 @@ struct DriverTripsTab: View {
                                             .tint(AppTheme.Status.danger)
                                         }
                                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                            Button { vm.showPreTrip = true } label: {
-                                                Label("Inspect", systemImage: "checklist")
+                                            Button {
+                                                vm.queryTrip = trip
+                                                vm.showRaiseQuery = true
+                                            } label: {
+                                                Label("Raise Query", systemImage: "questionmark.bubble.fill")
                                             }
-                                            .tint(Color.fmsIndigo)
+                                            .tint(Color.orange)
                                         }
                                         .contextMenu {
                                             Button {
+                                                vm.showRaiseQuery = false
+                                                vm.queryTrip = nil
                                                 vm.mapActiveTrip = trip
                                             } label: {
                                                 Label("Start Trip", systemImage: "play.fill")
                                             }
-                                            Button { vm.showPreTrip  = true } label: { Label("Pre-Trip Inspection",  systemImage: "checklist") }
+                                            Button {
+                                                vm.queryTrip = trip
+                                                vm.showRaiseQuery = true
+                                            } label: { Label("Raise Query", systemImage: "questionmark.bubble.fill") }
                                             Button { vm.showPostTrip = true } label: { Label("Post-Trip Inspection", systemImage: "checkmark.seal.fill") }
                                             Divider()
                                             Button { vm.showIssue    = true } label: { Label("Report Issue", systemImage: "exclamationmark.bubble.fill") }
@@ -681,7 +689,7 @@ private struct TripRow: View {
             
             HStack(spacing: 8) {
                 TripChip(icon: "arrow.left.arrow.right",
-                         label: String(format: "%.0f km", trip.distance))
+                         label: String(format: "%.1f km", trip.distance))
                 if let s = trip.startTime {
                     TripChip(icon: "clock",
                              label: s.formatted(.dateTime.hour().minute()))
@@ -695,26 +703,33 @@ private struct TripRow: View {
 
             
             HStack(spacing: 10) {
-                
-                Button { vm.showPreTrip = true } label: {
-                    Label("Inspect", systemImage: "checklist")
+                // Raise Query
+                Button {
+                    vm.queryTrip = trip
+                    vm.showRaiseQuery = true
+                } label: {
+                    Label("Raise Query", systemImage: "questionmark.bubble.fill")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.fmsIndigo)
+                        .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
-                        .glassEffect(
-                            .regular.tint(Color.fmsIndigo.opacity(0.08)),
-                            in: RoundedRectangle(cornerRadius: 10)
+                        .background(Color.orange.opacity(0.09))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.orange.opacity(0.25), lineWidth: 1)
                         )
                 }
 
-                
+                // Confirm / Navigate
                 Button {
+                    vm.showRaiseQuery = false
+                    vm.queryTrip = nil
                     vm.mapActiveTrip = trip
                 } label: {
                     Label(
-                        (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "Navigate" : "Start",
-                        systemImage: (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "location.fill" : "play.fill"
+                        (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "Navigate" : "Confirm",
+                        systemImage: (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "location.fill" : "checkmark.circle.fill"
                     )
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
@@ -1096,12 +1111,10 @@ struct TripNavigationView: View {
                 .padding(.horizontal, 20).padding(.top, 10)
             }
 
-            // START NOW  ──────────────────────────────────────────────────────
+            // START NOW
             Button {
                 guard preTripPassed else { showPreTripNav = true; return }
-                // 1. Notify ViewModel (updates trip status in Supabase)
                 vm.beginTrip(trip: trip)
-                // 2. Start 3D navigation
                 withAnimation(.spring(response: 0.5)) {
                     nav.beginNavigation()
                 }

@@ -400,7 +400,7 @@ struct ReportsView: View {
                             Spacer()
                             
                             VStack(alignment: .trailing, spacing: 2) {
-                                Text(vehicle.status == .inMaintenance ? "In Shop" : "Overdue")
+                                Text(vehicle.status == .inMaintenance ? "Maintenance" : "Overdue")
                                     .font(.system(size: 11, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 8)

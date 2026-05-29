@@ -88,8 +88,8 @@ enum VehicleStatus: String, Codable {
 
     var displayName: String {
         switch self {
-        case .active:        return "Active"
-        case .inactive:      return "Inactive"
+        case .active:        return "Available"
+        case .inactive:      return "On Trip"
         case .inMaintenance: return "Maintenance"
         }
     }
@@ -213,8 +213,8 @@ enum NotificationType: String, Codable {
 
 enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     case all          = "All"
-    case active       = "Active"
-    case inactive     = "Inactive"
+    case active       = "Available"
+    case inactive     = "On Trip"
     case inMaintenance = "In Maintenance"
 
     var id: String { rawValue }
@@ -451,9 +451,11 @@ struct DBVehicle: Codable, Identifiable {
     var year: Int
     var vin: String
     var licensePlate: String
+    var type: String?
     var status: DBVehicleStatus
     var assignedDriverId: UUID?
     var lastServiceDate: Date?
+    var insuranceExpiryDate: Date?
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -464,9 +466,11 @@ struct DBVehicle: Codable, Identifiable {
         case year
         case vin
         case licensePlate     = "license_plate"
+        case type             = "vehicle_type"
         case status
         case assignedDriverId = "assigned_driver_id"
         case lastServiceDate  = "last_service_date"
+        case insuranceExpiryDate = "insurance_expiry_date"
         case createdAt        = "created_at"
     }
 }
@@ -535,6 +539,7 @@ extension Trip {
     var asDBTrip: DBTrip {
         DBTrip(
             id: id,
+            tripCode: tripCode,
             vehicleId: vehicleId,
             driverId: driverId,
             source: startLocation,
@@ -576,7 +581,7 @@ extension DBTrip {
     var asLocalTrip: Trip {
         Trip(
             id: id,
-            tripCode: "TRP-\(id.uuidString.prefix(4).uppercased())",
+            tripCode: tripCode,
             vehicleId: vehicleId,
             driverId: driverId,
             startLocation: source,
@@ -609,6 +614,7 @@ enum DBTripStatus: String, Codable {
 
 struct DBTrip: Codable, Identifiable {
     let id: UUID
+    var tripCode: String
     var vehicleId: UUID
     var driverId: UUID
     var source: String
@@ -622,6 +628,7 @@ struct DBTrip: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id
+        case tripCode    = "trip_code"
         case vehicleId   = "vehicle_id"
         case driverId    = "driver_id"
         case source
@@ -632,6 +639,72 @@ struct DBTrip: Codable, Identifiable {
         case status
         case notes
         case createdAt   = "created_at"
+    }
+
+    /// Provide a default tripCode when the backend column is absent
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedId = try c.decode(UUID.self, forKey: .id)
+        id          = decodedId
+        tripCode    = (try? c.decodeIfPresent(String.self, forKey: .tripCode))
+                      ?? "TRP-\(decodedId.uuidString.prefix(4).uppercased())"
+        vehicleId   = try c.decode(UUID.self,   forKey: .vehicleId)
+        driverId    = try c.decode(UUID.self,   forKey: .driverId)
+        source      = try c.decode(String.self, forKey: .source)
+        destination = try c.decode(String.self, forKey: .destination)
+        startTime   = try c.decodeIfPresent(Date.self, forKey: .startTime)
+        endTime     = try c.decodeIfPresent(Date.self, forKey: .endTime)
+        distance    = try c.decode(Double.self, forKey: .distance)
+        status      = try c.decode(DBTripStatus.self, forKey: .status)
+        notes       = try c.decodeIfPresent(String.self, forKey: .notes)
+        createdAt   = try c.decode(Date.self,   forKey: .createdAt)
+    }
+
+    /// Custom encoder — excludes tripCode so Supabase won't reject
+    /// the payload when the trips table lacks a trip_code column.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id,          forKey: .id)
+        // tripCode is intentionally omitted — column may not exist in Supabase
+        try c.encode(vehicleId,   forKey: .vehicleId)
+        try c.encode(driverId,    forKey: .driverId)
+        try c.encode(source,      forKey: .source)
+        try c.encode(destination, forKey: .destination)
+        try c.encodeIfPresent(startTime,  forKey: .startTime)
+        try c.encodeIfPresent(endTime,    forKey: .endTime)
+        try c.encode(distance,    forKey: .distance)
+        try c.encode(status,      forKey: .status)
+        try c.encodeIfPresent(notes,      forKey: .notes)
+        try c.encode(createdAt,   forKey: .createdAt)
+    }
+
+    /// Memberwise init used throughout the app
+    init(
+        id: UUID = UUID(),
+        tripCode: String = "",
+        vehicleId: UUID,
+        driverId: UUID,
+        source: String,
+        destination: String,
+        startTime: Date? = nil,
+        endTime: Date? = nil,
+        distance: Double,
+        status: DBTripStatus,
+        notes: String? = nil,
+        createdAt: Date
+    ) {
+        self.id          = id
+        self.tripCode    = tripCode.isEmpty ? "TRP-\(id.uuidString.prefix(4).uppercased())" : tripCode
+        self.vehicleId   = vehicleId
+        self.driverId    = driverId
+        self.source      = source
+        self.destination = destination
+        self.startTime   = startTime
+        self.endTime     = endTime
+        self.distance    = distance
+        self.status      = status
+        self.notes       = notes
+        self.createdAt   = createdAt
     }
 }
 
@@ -1131,6 +1204,7 @@ struct DBMaintenanceRecord: Codable, Identifiable {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+    var repairImages: [String]? = nil
     var performedBy: UUID
     var createdAt: Date
 
@@ -1142,6 +1216,7 @@ struct DBMaintenanceRecord: Codable, Identifiable {
         case serviceDate = "service_date"
         case cost
         case notes
+        case repairImages = "repair_images"
         case performedBy = "performed_by"
         case createdAt = "created_at"
     }
@@ -1157,6 +1232,7 @@ extension DBMaintenanceRecord {
             serviceDate: serviceDate,
             cost: cost,
             notes: notes,
+            repairImages: repairImages,
             performedBy: performedBy,
             createdAt: createdAt
         )
@@ -1173,6 +1249,7 @@ extension MaintenanceRecord {
             serviceDate: serviceDate,
             cost: cost,
             notes: notes,
+            repairImages: repairImages,
             performedBy: performedBy,
             createdAt: createdAt
         )
@@ -1478,6 +1555,7 @@ final class MaintenanceRecord {
     var cost: Double
     var notes: String?
     var replacedParts: [String]
+    var repairImages: [String]?
     var performedBy: UUID
     var createdAt: Date
 
@@ -1490,6 +1568,7 @@ final class MaintenanceRecord {
         cost: Double,
         notes: String? = nil,
         replacedParts: [String] = [],
+        repairImages: [String]? = nil,
         performedBy: UUID,
         createdAt: Date = .now
     ) {
@@ -1501,6 +1580,7 @@ final class MaintenanceRecord {
         self.cost = cost
         self.notes = notes
         self.replacedParts = replacedParts
+        self.repairImages = repairImages
         self.performedBy = performedBy
         self.createdAt = createdAt
     }

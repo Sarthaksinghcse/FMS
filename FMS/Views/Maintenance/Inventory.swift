@@ -61,18 +61,15 @@ struct InventoryTabView: View {
         NavigationView {
             ZStack(alignment: .bottomTrailing) {
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        // Premium Custom Header
-                        MaintenanceHeaderView(
-                            title: "Inventory",
-                            subtitle: "Manage spare parts and monitor stock levels.",
-                            initials: initials,
-                            avatarColor: AppTheme.Brand.violet,
-                            notificationCount: unreadNotificationsCount,
-                            showActions: false
-                        )
-                        .background(AppTheme.Background.card)
-                        .shadow(color: AppTheme.Shadow.card, radius: 4, y: 2)
+                    VStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Manage spare parts and monitor stock levels.")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundColor(AppTheme.Text.secondary)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         // Stats Dashboard Bar
                         HStack(spacing: 12) {
@@ -89,7 +86,6 @@ struct InventoryTabView: View {
                             .padding(12)
                             .background(AppTheme.Background.card)
                             .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.Glass.border, lineWidth: 1))
                             
                             // Low Stock Alert
                             VStack(alignment: .leading, spacing: 4) {
@@ -111,7 +107,6 @@ struct InventoryTabView: View {
                             .padding(12)
                             .background(AppTheme.Background.card)
                             .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.Glass.border, lineWidth: 1))
                             
                             // Total Quantity
                             VStack(alignment: .leading, spacing: 4) {
@@ -126,7 +121,6 @@ struct InventoryTabView: View {
                             .padding(12)
                             .background(AppTheme.Background.card)
                             .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.Glass.border, lineWidth: 1))
                         }
                         .padding(.horizontal)
                         .padding(.top, 16)
@@ -151,39 +145,15 @@ struct InventoryTabView: View {
                             .padding(10)
                             .background(AppTheme.Background.card)
                             .cornerRadius(10)
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.Glass.border, lineWidth: 1))
                             .padding(.horizontal)
 
-                            // Custom Segmented Picker
-                            HStack(spacing: 0) {
-                                ForEach(["All", "Low Stock", "Healthy Stock"], id: \.self) { tabName in
-                                    let index = tabName == "All" ? 0 : (tabName == "Low Stock" ? 1 : 2)
-                                    let isSelected = selectedFilter == index
-                                    
-                                    Button(action: {
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                            selectedFilter = index
-                                        }
-                                    }) {
-                                        Text(tabName)
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundColor(isSelected ? AppTheme.Text.onDark : AppTheme.Text.secondary)
-                                            .padding(.vertical, 8)
-                                            .frame(maxWidth: .infinity)
-                                            .background(
-                                                isSelected ?
-                                                LinearGradient(gradient: Gradient(colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep]), startPoint: .topLeading, endPoint: .bottomTrailing) :
-                                                LinearGradient(gradient: Gradient(colors: [Color.clear]), startPoint: .top, endPoint: .bottom)
-                                            )
-                                            .cornerRadius(8)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
+                            // Native Segmented Picker (HIG Compliant)
+                            Picker("Inventory Filter", selection: $selectedFilter) {
+                                Text("All").tag(0)
+                                Text("Low Stock").tag(1)
+                                Text("Healthy Stock").tag(2)
                             }
-                            .padding(4)
-                            .background(AppTheme.Background.card)
-                            .cornerRadius(10)
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.Glass.border, lineWidth: 1))
+                            .pickerStyle(.segmented)
                             .padding(.horizontal)
                         }
                         .padding(.bottom, 12)
@@ -244,7 +214,7 @@ struct InventoryTabView: View {
                 .padding(.bottom, 20)
             }
             .background(AppTheme.Background.page)
-            .navigationBarHidden(true) // Hide default navigation bar
+            .navigationTitle("Inventory")
             .sheet(isPresented: $showingAddInventory) {
                 AddInventoryView()
             }
@@ -367,9 +337,5 @@ struct InventoryRow: View {
         .background(AppTheme.Background.card)
         .cornerRadius(AppTheme.Radius.card)
         .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                .stroke(AppTheme.Glass.border, lineWidth: 1)
-        )
     }
 }

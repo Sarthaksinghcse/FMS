@@ -31,19 +31,11 @@ struct MessagesPreviewSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                HStack(spacing: 8) {
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(AppTheme.Brand.primary)
-                    
-                    Text("Messages")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.primary)
-                }
+                SectionHeader(title: "Messages")
                 
                 Spacer()
                 
-                NavigationLink(destination: CommunicationView()) {
+                Button(action: {}) {
                     Text("See All")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(AppTheme.Brand.primary)
@@ -53,7 +45,7 @@ struct MessagesPreviewSection: View {
             
             VStack(spacing: 10) {
                 ForEach(sampleMessages) { msg in
-                    NavigationLink(destination: CommunicationView()) {
+                    Button(action: {}) {
                         MessagePreviewCard(message: msg)
                     }
                     .buttonStyle(TactileScaleButtonStyle())

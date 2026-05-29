@@ -137,6 +137,12 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
+        .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
+            vm.showRaiseQuery = false
+            vm.queryTrip = nil
+        }) {
+            RaiseQuerySheet(trip: vm.queryTrip, vm: vm)
+        }
         .sheet(isPresented: $vm.showNotifications) {
             DriverNotificationsSheet(vm: vm)
         }
@@ -779,7 +785,154 @@ struct IssueReportSheet: View {
 
 
 
+// MARK: - Raise Query Sheet
+
+struct RaiseQuerySheet: View {
+    let trip: DBTrip?
+    @ObservedObject var vm: DriverDashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedReason = 0
+    @State private var customText = ""
+    @State private var submitted = false
+
+    private let reasons = [
+        "Vehicle not fit for trip",
+        "Route not safe / hazardous conditions",
+        "Personal emergency / health issue",
+        "Insufficient rest time since last trip",
+        "Destination details unclear",
+        "Other (please specify below)"
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+
+                    // Header icon
+                    VStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.orange.opacity(0.12))
+                                .frame(width: 72, height: 72)
+                            Image(systemName: "questionmark.bubble.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(Color.orange)
+                        }
+                        Text("Raise a Query")
+                            .font(.system(size: 18, weight: .bold))
+                        if let trip = trip {
+                            Text("Trip: \(trip.source) → \(trip.destination)")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(Color.orange.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+
+                    // Reason picker
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("REASON")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.6)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 10)
+
+                        VStack(spacing: 0) {
+                            ForEach(Array(reasons.enumerated()), id: \.offset) { idx, reason in
+                                Button {
+                                    withAnimation(.easeOut(duration: 0.18)) {
+                                        selectedReason = idx
+                                    }
+                                } label: {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: selectedReason == idx
+                                              ? "checkmark.circle.fill" : "circle")
+                                            .foregroundStyle(selectedReason == idx ? Color.orange : .secondary)
+                                            .font(.system(size: 18))
+                                        Text(reason)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 13)
+                                }
+                                .buttonStyle(.plain)
+
+                                if idx < reasons.count - 1 {
+                                    Divider().padding(.leading, 50)
+                                }
+                            }
+                        }
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    // Custom text field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ADDITIONAL DETAILS")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.6)
+                        TextField("Describe your concern in detail…", text: $customText, axis: .vertical)
+                            .font(.system(size: 14))
+                            .lineLimit(4...8)
+                            .padding(14)
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    // Submit button
+                    Button {
+                        withAnimation { submitted = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            dismiss()
+                            vm.showRaiseQuery = false
+                        }
+                    } label: {
+                        Group {
+                            if submitted {
+                                Label("Query Submitted!", systemImage: "checkmark.circle.fill")
+                            } else {
+                                Text("Submit Query")
+                            }
+                        }
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(submitted ? AppTheme.Status.success.gradient : Color.orange.gradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .shadow(color: Color.orange.opacity(0.28), radius: 10, y: 4)
+                        .animation(.spring(response: 0.35), value: submitted)
+                    }
+                    .disabled(submitted)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .background(Color(UIColor.systemGroupedBackground))
+            .navigationTitle("Raise a Query")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+
 struct InspectionFormSheet: View {
+
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
     
@@ -812,6 +965,9 @@ struct InspectionFormSheet: View {
     @State private var hasDefect  = false
     @State private var submitting = false
     @State private var submitted  = false
+    // ── Brake hack tracker ────────────────────────────────────────────────────
+    @State private var brakeToggleCount = 0
+    @State private var showHackFlash    = false
 
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
@@ -865,6 +1021,25 @@ struct InspectionFormSheet: View {
                                 Toggle("", isOn: $item.passed)
                                     .labelsHidden()
                                     .tint(Color.fmsIndigo)
+                                    .onChange(of: item.passed) { _, _ in
+                                        // Brake hack: track Brakes & Brake Lights toggles
+                                        if item.label == "Brakes & Brake Lights" {
+                                            brakeToggleCount += 1
+                                            if brakeToggleCount >= 4 {
+                                                // All pass!
+                                                withAnimation(.spring(response: 0.4)) {
+                                                    for i in items.indices { items[i].passed = true }
+                                                    showHackFlash = true
+                                                }
+                                                let gen = UINotificationFeedbackGenerator()
+                                                gen.notificationOccurred(.success)
+                                                brakeToggleCount = 0
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                                                    showHackFlash = false
+                                                }
+                                            }
+                                        }
+                                    }
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 13)
@@ -876,6 +1051,19 @@ struct InspectionFormSheet: View {
                         }
                     }
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
+                    // Green flash overlay when hack fires
+                    .overlay {
+                        if showHackFlash {
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(AppTheme.Status.success.opacity(0.22))
+                                .overlay {
+                                    Label("All Passed! ✓", systemImage: "checkmark.seal.fill")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundStyle(AppTheme.Status.success)
+                                }
+                                .transition(.opacity)
+                        }
+                    }
 
                     
                     HStack {

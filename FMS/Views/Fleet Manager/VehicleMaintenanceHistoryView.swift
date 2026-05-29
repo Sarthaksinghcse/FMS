@@ -15,6 +15,7 @@ struct VehicleMaintenanceHistoryView: View {
     
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \MaintenanceRecord.serviceDate, order: .reverse) private var allRecords: [MaintenanceRecord]
+    @Query(sort: \WorkOrder.createdAt, order: .reverse) private var allWorkOrders: [WorkOrder]
     
     @State private var animateIn = false
     @State private var selectedSort: SortOption = .newest
@@ -25,6 +26,26 @@ struct VehicleMaintenanceHistoryView: View {
     
     let months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     let years = Array(2020...2035)
+    
+    // Filter and sort active/ongoing work orders specific to this vehicle
+    private var activeWorkOrdersForVehicle: [WorkOrder] {
+        let filtered = allWorkOrders.filter { $0.vehicleId == vehicle.id && ($0.status == .open || $0.status == .inProgress) }
+        switch selectedSort {
+        case .newest:
+            return filtered.sorted { $0.createdAt > $1.createdAt }
+        case .oldest:
+            return filtered.sorted { $0.createdAt < $1.createdAt }
+        case .custom:
+            let calendar = Calendar.current
+            return filtered
+                .filter { wo in
+                    let m = calendar.component(.month, from: wo.createdAt)
+                    let y = calendar.component(.year, from: wo.createdAt)
+                    return m == selectedMonth && y == selectedYear
+                }
+                .sorted { $0.createdAt > $1.createdAt }
+        }
+    }
     
     // Filter and sort records specific to this vehicle
     private var vehicleRecords: [MaintenanceRecord] {
@@ -77,7 +98,7 @@ struct VehicleMaintenanceHistoryView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 
-                if vehicleRecords.isEmpty {
+                if vehicleRecords.isEmpty && activeWorkOrdersForVehicle.isEmpty {
                     VStack(spacing: 16) {
                         Spacer()
                         Image(systemName: selectedSort == .custom ? "calendar.badge.exclamationmark" : "wrench.and.screwdriver")
@@ -114,6 +135,10 @@ struct VehicleMaintenanceHistoryView: View {
                     // Maintenance Activities List
                     ScrollView(.vertical, showsIndicators: false) {
                         LazyVStack(spacing: 16) {
+                            ForEach(activeWorkOrdersForVehicle) { order in
+                                OngoingMaintenanceActivityCard(order: order)
+                            }
+                            
                             ForEach(vehicleRecords) { record in
                                 MaintenanceActivityCard(record: record)
                             }
@@ -315,5 +340,132 @@ struct MaintenanceActivityCard: View {
                 .stroke(AppTheme.Glass.border, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+    }
+}
+
+
+@available(iOS 26.0, *)
+struct OngoingMaintenanceActivityCard: View {
+    let order: WorkOrder
+    
+    @State private var isPulseActive = false
+    
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: order.createdAt)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header: Service Type & Status Badge
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text("Active Work Order")
+                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .foregroundColor(AppTheme.Brand.amber)
+                            .tracking(0.5)
+                        
+                        // Small pulsing dot
+                        Circle()
+                            .fill(AppTheme.Brand.amber)
+                            .frame(width: 6, height: 6)
+                            .opacity(isPulseActive ? 0.3 : 1.0)
+                            .scaleEffect(isPulseActive ? 1.5 : 1.0)
+                    }
+                    
+                    Text(order.title)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                }
+                
+                Spacer()
+                
+                // Status Badge: Maintenance
+                HStack(spacing: 4) {
+                    Image(systemName: "wrench.and.screwdriver.fill")
+                        .font(.system(size: 9))
+                    Text("Maintenance")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.3)
+                }
+                .foregroundColor(AppTheme.Brand.amber)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(AppTheme.Brand.amber.opacity(0.12))
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(AppTheme.Brand.amber.opacity(0.25), lineWidth: 1)
+                )
+            }
+            
+            Divider()
+                .background(Color.black.opacity(0.06))
+            
+            // Body: Repair Details & Est. Cost / Date
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Details")
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .foregroundColor(.gray)
+                        .tracking(0.5)
+                    
+                    Text(order.workDescription.isEmpty ? "No details provided" : order.workDescription)
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundColor(.black.opacity(0.8))
+                        .lineLimit(3)
+                        .lineSpacing(2)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 12) {
+                    if let estCost = order.estimatedCost {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Est. Cost")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundColor(.gray)
+                            Text(String(format: "₹%.2f", estCost))
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(.black)
+                        }
+                    }
+                    
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Scheduled")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(.gray)
+                        Text(formattedDate)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            ZStack {
+                Color.white
+                LinearGradient(
+                    colors: [AppTheme.Brand.amber.opacity(0.08), AppTheme.Brand.amber.opacity(0.01)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(AppTheme.Brand.amber.opacity(0.3), lineWidth: 1.5)
+        )
+        .shadow(color: AppTheme.Brand.amber.opacity(0.05), radius: 8, x: 0, y: 4)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                isPulseActive = true
+            }
+        }
     }
 }

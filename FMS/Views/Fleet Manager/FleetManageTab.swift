@@ -59,9 +59,9 @@ struct ManagementHubView: View {
                 metrics: [
                     CardMetric(label: "Total",   value: "\(vehicles.count)",
                                systemIcon: "car.fill",                       iconColor: AppTheme.Brand.royalBlue),
-                    CardMetric(label: "Active",   value: "\(vehicles.filter { $0.status == .active }.count)",
+                    CardMetric(label: "Available", value: "\(vehicles.filter { $0.status == .active }.count)",
                                systemIcon: "checkmark.circle.fill",          iconColor: .green),
-                    CardMetric(label: "In Shop",  value: "\(vehicles.filter { $0.status == .inMaintenance }.count)",
+                    CardMetric(label: "Maintenance",  value: "\(vehicles.filter { $0.status == .inMaintenance }.count)",
                                systemIcon: "exclamationmark.triangle.fill",  iconColor: AppTheme.Brand.accent)
                 ],
                 destination: .vehicleList
@@ -74,10 +74,10 @@ struct ManagementHubView: View {
                 metrics: [
                     CardMetric(label: "Total",   value: "\(driverCount)",
                                systemIcon: "person.2.fill",  iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)),
-                    CardMetric(label: "Online",  value: "\(users.filter { $0.role == .driver && $0.isActive }.count)",
-                               systemIcon: "circle.fill",    iconColor: .green),
-                    CardMetric(label: "Offline", value: "\(users.filter { $0.role == .driver && !$0.isActive }.count)",
-                               systemIcon: "circle.fill",    iconColor: .gray)
+                    CardMetric(label: "Active",  value: "\(users.filter { $0.role == .driver && $0.isActive }.count)",
+                               systemIcon: "checkmark.circle.fill",    iconColor: .green),
+                    CardMetric(label: "Inactive", value: "\(users.filter { $0.role == .driver && !$0.isActive }.count)",
+                               systemIcon: "xmark.circle.fill",    iconColor: .gray)
                 ],
                 destination: .driverList
             ),
@@ -124,6 +124,9 @@ struct ManagementHubView: View {
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1 + 0.2)) {
                         cardAnimations[index] = true
                     }
+                }
+                Task {
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
             }
         }
@@ -272,6 +275,11 @@ struct VehicleListView: View {
     @State private var editingVehicle: Vehicle?
     @State private var appearAnimation = false
     @State private var cardsAppeared: Set<UUID> = []
+    @State private var isLoading = false
+
+    init(initialFilter: VehicleStatusFilter = .all) {
+        _selectedFilter = State(initialValue: initialFilter)
+    }
 
     private var filteredVehicles: [Vehicle] {
         vehicles.filter { v in
@@ -290,7 +298,14 @@ struct VehicleListView: View {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChipsSection
-                if filteredVehicles.isEmpty {
+                if vehicles.isEmpty && isLoading {
+                    Spacer()
+                    ProgressView("Syncing vehicles...")
+                        .tint(AppTheme.Brand.royalBlue)
+                        .foregroundStyle(AppTheme.Text.secondary)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                    Spacer()
+                } else if filteredVehicles.isEmpty {
                     if searchText.isEmpty && selectedFilter == .all {
                         ContentUnavailableView {
                             Label("No Vehicles Yet", systemImage: "car.fill")
@@ -400,6 +415,8 @@ struct VehicleListView: View {
     }
 
     private func syncVehicles() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let dbVehicles = try await SupabaseManager.shared.fetchVehicles()
             await MainActor.run {
@@ -564,27 +581,62 @@ struct VehicleCardView: View {
 
 
 @available(iOS 26.0, *)
+enum DriverStatusFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case online = "Online"
+    case offline = "Offline"
+    
+    var id: String { rawValue }
+    
+    var chipColor: Color {
+        switch self {
+        case .all: return AppTheme.Brand.royalBlue
+        case .online: return .green
+        case .offline: return .gray
+        }
+    }
+}
+
+@available(iOS 26.0, *)
 struct DriverListView: View {
 
     @Query(sort: \User.fullName) private var allUsers: [User]
     @Query private var vehicles: [Vehicle]
+    @Query private var trips: [Trip]
     @Environment(\.modelContext) private var modelContext
 
     @State private var searchText = ""
+    @State private var selectedFilter: DriverStatusFilter = .all
     @State private var showAddDriver = false
     @State private var selectedDriverForEdit: User?
     @State private var cardAnimations: [UUID: Bool] = [:]
+    @State private var isLoading = false
+
+    init(initialFilter: DriverStatusFilter = .all) {
+        _selectedFilter = State(initialValue: initialFilter)
+    }
 
     private var drivers: [User] { allUsers.filter { $0.role == UserRole.driver } }
 
     private var filteredDrivers: [User] {
-        guard !searchText.isEmpty else { return drivers }
+        let baseDrivers = drivers.filter { d in
+            switch selectedFilter {
+            case .all: return true
+            case .online: return d.isActive
+            case .offline: return !d.isActive
+            }
+        }
+        guard !searchText.isEmpty else { return baseDrivers }
         let q = searchText.lowercased()
-        return drivers.filter { $0.fullName.lowercased().contains(q) || $0.email.lowercased().contains(q) }
+        return baseDrivers.filter { $0.fullName.lowercased().contains(q) || $0.email.lowercased().contains(q) }
     }
 
     private func vehicleForDriver(_ d: User) -> Vehicle? {
         vehicles.first { $0.assignedDriverId == d.id }
+    }
+
+    private func activeTripForDriver(_ d: User) -> Trip? {
+        trips.first { $0.driverId == d.id && ($0.tripStatus == .assigned || $0.tripStatus == .started || $0.tripStatus == .inProgress) }
     }
 
     private func initials(for name: String) -> String {
@@ -597,7 +649,15 @@ struct DriverListView: View {
         ZStack {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
-                if filteredDrivers.isEmpty {
+                filterChipsSection
+                if drivers.isEmpty && isLoading {
+                    Spacer()
+                    ProgressView("Syncing drivers...")
+                        .tint(AppTheme.Brand.royalBlue)
+                        .foregroundStyle(AppTheme.Text.secondary)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                    Spacer()
+                } else if filteredDrivers.isEmpty {
                     if searchText.isEmpty {
                         ContentUnavailableView {
                             Label("No Drivers Yet", systemImage: "person.2.fill")
@@ -641,6 +701,36 @@ struct DriverListView: View {
         .onChange(of: filteredDrivers.count) { triggerCardAnimations() }
     }
 
+    private var filterChipsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(DriverStatusFilter.allCases) { filter in
+                    FilterChipView(
+                        title: filter.rawValue,
+                        isSelected: selectedFilter == filter,
+                        color: filter.chipColor,
+                        count: countForFilter(filter)
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                            selectedFilter = filter
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        }
+    }
+
+    private func countForFilter(_ filter: DriverStatusFilter) -> Int {
+        switch filter {
+        case .all: return drivers.count
+        case .online: return drivers.filter { $0.isActive }.count
+        case .offline: return drivers.filter { !$0.isActive }.count
+        }
+    }
+
     private var driverList: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: 16) {
@@ -655,91 +745,192 @@ struct DriverListView: View {
     }
 
     private func driverCard(_ driver: User) -> some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [AppTheme.Brand.royalBlue.opacity(0.8), AppTheme.Brand.royalBlue],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 56, height: 56)
-                    .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 8, x: 0, y: 4)
-                Text(initials(for: driver.fullName))
-                    .font(.system(size: 20, weight: .bold, design: .rounded)).foregroundColor(.white)
+        let hasActiveTrip = activeTripForDriver(driver) != nil
+        
+        return VStack(alignment: .leading, spacing: 14) {
+            // Top Row: Avatar + Details + Edit Button
+            HStack(alignment: .top, spacing: 14) {
+                ZStack(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [AppTheme.Brand.royalBlue.opacity(0.8), AppTheme.Brand.royalBlue],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ))
+                    Text(initials(for: driver.fullName))
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                    
+                    // Realtime presence indicator
+                    Circle()
+                        .fill(driver.isActive ? Color.green : Color.gray)
+                        .frame(width: 14, height: 14)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white, lineWidth: 2)
+                        )
+                        .shadow(color: Color.black.opacity(0.15), radius: 4)
+                        .offset(x: 2, y: 2)
+                }
+                .frame(width: 56, height: 56)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(driver.fullName)
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray.opacity(0.6))
+                        Text(driver.email)
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundColor(.gray)
+                            .lineLimit(1)
+                    }
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "phone.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray.opacity(0.6))
+                        Text(driver.phoneNumber)
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundColor(.gray)
+                            .lineLimit(1)
+                    }
+                    
+                    if let v = vehicleForDriver(driver) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "car.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(AppTheme.Brand.royalBlue.opacity(0.7))
+                            Text(v.registrationNumber)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(AppTheme.Brand.royalBlue)
+                                .lineLimit(1)
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            Image(systemName: "car.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(.gray.opacity(0.4))
+                            Text("Unassigned")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(.gray.opacity(0.5))
+                                .italic()
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    selectedDriverForEdit = driver
+                } label: {
+                    ZStack {
+                        Circle().fill(Color.gray.opacity(0.08))
+                        Image(systemName: "pencil")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(AppTheme.Brand.royalBlue)
+                    }
+                    .frame(width: 40, height: 40)
+                }
+                .buttonStyle(ScaleButtonStyle())
             }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(driver.fullName)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded)).foregroundColor(.black).lineLimit(1)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "envelope.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.6))
-                    Text(driver.email).font(.system(size: 13, design: .rounded)).foregroundColor(.gray).lineLimit(1)
-                }
-                HStack(spacing: 6) {
-                    Image(systemName: "phone.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.6))
-                    Text(driver.phoneNumber).font(.system(size: 13, design: .rounded)).foregroundColor(.gray)
-                }
-
-                if let v = vehicleForDriver(driver) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "car.fill").font(.system(size: 11)).foregroundColor(AppTheme.Brand.royalBlue.opacity(0.7))
-                        Text(v.registrationNumber).font(.system(size: 12, weight: .medium, design: .rounded)).foregroundColor(AppTheme.Brand.royalBlue)
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Image(systemName: "car.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.4))
-                        Text("Unassigned").font(.system(size: 12, weight: .medium, design: .rounded)).foregroundColor(.gray.opacity(0.5)).italic()
-                    }
-                }
-
+            
+            // Middle: Trip Assignment State
+            if let activeTrip = activeTripForDriver(driver) {
                 HStack(spacing: 8) {
-                    driverStatusBadge(isActive: driver.isActive)
-                    driverRoleBadge
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.1))
+                            .frame(width: 24, height: 24)
+                        Image(systemName: activeTrip.tripStatus == .assigned ? "calendar.badge.clock" : "road.lanes")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.royalBlue)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text(activeTrip.tripStatus == .assigned ? "Assigned Trip" : "Active Trip")
+                                .font(.system(size: 9, weight: .black, design: .rounded))
+                                .foregroundColor(AppTheme.Brand.royalBlue)
+                                .tracking(0.5)
+                            Spacer()
+                            Text(activeTrip.tripCode)
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundColor(.gray)
+                        }
+                        
+                        Text("\(activeTrip.startLocation) → \(activeTrip.endLocation)")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(.black.opacity(0.8))
+                            .lineLimit(1)
+                    }
                 }
-                .padding(.top, 2)
-            }
-
-            Spacer()
-
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                selectedDriverForEdit = driver
-            } label: {
-                ZStack {
-                    Circle().fill(Color.gray.opacity(0.08)).frame(width: 40, height: 40)
-                    Image(systemName: "pencil").font(.system(size: 16, weight: .semibold)).foregroundColor(AppTheme.Brand.royalBlue)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.Brand.royalBlue.opacity(0.04))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(AppTheme.Brand.royalBlue.opacity(0.12), lineWidth: 1)
+                )
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "road.lanes.curve.right")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray.opacity(0.4))
+                    Text("No Active Trip Assigned")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundColor(.gray.opacity(0.5))
+                        .italic()
+                        .lineLimit(1)
                 }
+                .padding(.horizontal, 4)
             }
-            .buttonStyle(ScaleButtonStyle())
+            
+            Divider()
+                .background(Color.black.opacity(0.06))
+            
+            // Bottom: Badges (Full width, won't wrap!)
+            HStack(spacing: 8) {
+                activeStatusBadge(isActive: driver.isActive)
+                Spacer()
+            }
         }
-        .padding(20)
+        .padding(18)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(AppTheme.Glass.border, lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(AppTheme.Glass.border, lineWidth: 1)
+        )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
     }
 
-    private func driverStatusBadge(isActive: Bool) -> some View {
-        HStack(spacing: 5) {
-            Circle().fill(isActive ? Color.green : Color.red).frame(width: 7, height: 7)
-            Text(isActive ? "Active" : "Inactive").font(.system(size: 11, weight: .bold, design: .rounded)).tracking(0.3)
+    private func activeStatusBadge(isActive: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(isActive ? Color.green : Color.gray)
+            Text(isActive ? "Active" : "Inactive")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(0.3)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
-        .foregroundColor(isActive ? .green : .red)
-        .padding(.horizontal, 10).padding(.vertical, 5)
-        .background(Capsule().fill(isActive ? Color.green.opacity(0.10) : Color.red.opacity(0.10)))
-        .overlay(Capsule().stroke(isActive ? Color.green.opacity(0.25) : Color.red.opacity(0.25), lineWidth: 1))
-    }
-
-    private var driverRoleBadge: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "person.fill").font(.system(size: 9))
-            Text("Driver").font(.system(size: 11, weight: .bold, design: .rounded)).tracking(0.3)
-        }
-        .foregroundColor(AppTheme.Brand.royalBlue)
-        .padding(.horizontal, 10).padding(.vertical, 5)
-        .background(Capsule().fill(AppTheme.Brand.royalBlue.opacity(0.10)))
-        .overlay(Capsule().stroke(AppTheme.Brand.royalBlue.opacity(0.25), lineWidth: 1))
+        .foregroundColor(isActive ? .green : .gray)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(isActive ? Color.green.opacity(0.08) : Color.gray.opacity(0.08))
+        .cornerRadius(6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(isActive ? Color.green.opacity(0.2) : Color.gray.opacity(0.2), lineWidth: 1)
+        )
     }
 
     private func triggerCardAnimations() {
@@ -751,6 +942,8 @@ struct DriverListView: View {
     }
 
     private func syncDrivers() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let dbDrivers = try await SupabaseManager.shared.fetchDrivers()
             await MainActor.run {
@@ -1226,6 +1419,11 @@ struct TripListView: View {
     @State private var editingTrip: Trip? = nil
     @State private var appearAnimation = false
     @State private var cardAnimations: Set<UUID> = []
+    @State private var isLoading = false
+
+    init(initialFilter: TripCategoryFilter = .all) {
+        _selectedFilter = State(initialValue: initialFilter)
+    }
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Trip.scheduledStartTime, order: .reverse) private var allTrips: [Trip]
@@ -1278,7 +1476,14 @@ struct TripListView: View {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChips.padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 8)
-                if filteredTrips.isEmpty {
+                if allTrips.isEmpty && isLoading {
+                    Spacer()
+                    ProgressView("Syncing trips...")
+                        .tint(AppTheme.Brand.royalBlue)
+                        .foregroundStyle(AppTheme.Text.secondary)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                    Spacer()
+                } else if filteredTrips.isEmpty {
                     if searchText.isEmpty && selectedFilter == .all {
                         ContentUnavailableView {
                             Label("No Trips Yet", systemImage: "map.fill")
@@ -1394,6 +1599,8 @@ struct TripListView: View {
     }
 
     private func syncTrips() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let dbTrips = try await SupabaseManager.shared.fetchTrips()
             await MainActor.run {
