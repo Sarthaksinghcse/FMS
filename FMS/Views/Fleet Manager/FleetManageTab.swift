@@ -745,8 +745,6 @@ struct DriverListView: View {
     }
 
     private func driverCard(_ driver: User) -> some View {
-        let hasActiveTrip = activeTripForDriver(driver) != nil
-        
         return VStack(alignment: .leading, spacing: 14) {
             // Top Row: Avatar + Details + Edit Button
             HStack(alignment: .top, spacing: 14) {
