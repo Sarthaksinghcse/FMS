@@ -107,7 +107,7 @@ struct MaintenanceDashboardTab: View {
                         // Premium header
                         MaintenanceHeaderView(
                             title: personnelFirstName,
-                            subtitle: "Maintenance Personnel",
+                            subtitle: "",
                             greeting: getGreetingTime() + ",",
                             initials: initials,
                             avatarColor: AppTheme.Brand.primaryDeep,
@@ -123,11 +123,11 @@ struct MaintenanceDashboardTab: View {
                         quickActionsSection
                         aiInsightsSection
                         recentWorkOrdersSection
-                        MessagesPreviewSection()
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(width: UIScreen.main.bounds.width, alignment: .leading)
                     .padding(.bottom, 32)
                 }
+                .safeAreaPadding(.top)
                 .scrollBounceBehavior(.basedOnSize, axes: .vertical)
             }
             .navigationBarHidden(true)
