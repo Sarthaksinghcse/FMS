@@ -837,8 +837,8 @@ final class SupabaseManager: ObservableObject {
         _ = try await client.storage
             .from("avatars")
             .upload(
-                path: path,
-                file: imageData,
+                path,
+                data: imageData,
                 options: FileOptions(contentType: "image/jpeg", upsert: true)
             )
         

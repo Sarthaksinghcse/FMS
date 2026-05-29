@@ -50,7 +50,9 @@ struct SparePartsSelectorView: View {
 }
 
 struct MaintenanceEditSheet: View {
-    var order: WorkOrder
+    @Bindable var order: WorkOrder
+    var currentUser: User
+    var allVehicles: [Vehicle]
     var onSave: () -> Void
     
     @Environment(\.dismiss) private var dismiss
@@ -68,8 +70,10 @@ struct MaintenanceEditSheet: View {
     @State private var currentPart: String = ""
     @State private var partsList: [String] = []
 
-    init(order: WorkOrder, onSave: @escaping () -> Void) {
+    init(order: WorkOrder, currentUser: User, allVehicles: [Vehicle], onSave: @escaping () -> Void) {
         self.order = order
+        self.currentUser = currentUser
+        self.allVehicles = allVehicles
         self.onSave = onSave
         
         // Populate initial values
@@ -80,7 +84,6 @@ struct MaintenanceEditSheet: View {
     }
 
     var body: some View {
-        @Bindable var order = order
         NavigationView {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
@@ -258,6 +261,26 @@ struct MaintenanceEditSheet: View {
 
         if order.status == .completed {
             order.completedAt = Date()
+            
+            // Create MaintenanceRecord
+            let record = MaintenanceRecord(
+                vehicleId: order.vehicleId,
+                workOrderId: order.id,
+                serviceType: order.title,
+                serviceDate: Date(),
+                cost: Double(costInput) ?? 0.0,
+                notes: order.workDescription,
+                replacedParts: partsList,
+                performedBy: currentUser.id
+            )
+            modelContext.insert(record)
+            
+            // Update associated vehicle
+            if let vehicle = allVehicles.first(where: { $0.id == order.vehicleId }) {
+                vehicle.status = .active
+                vehicle.lastServiceDate = Date()
+                vehicle.nextServiceDate = Calendar.current.date(byAdding: .month, value: 3, to: Date())
+            }
         }
         
         onSave()

@@ -124,13 +124,13 @@ final class NavigationManager: NSObject, ObservableObject {
         let srcReq = MKLocalSearch.Request()
         srcReq.naturalLanguageQuery = fromAddress
         let srcItem = try? await MKLocalSearch(request: srcReq).start()
-        let srcCoord = srcItem?.mapItems.first?.placemark.coordinate
+        let srcCoord = srcItem?.mapItems.first?.location.coordinate
         
         // Geocode destination
         let destReq = MKLocalSearch.Request()
         destReq.naturalLanguageQuery = toAddress
         let destItem = try? await MKLocalSearch(request: destReq).start()
-        guard let destCoord = destItem?.mapItems.first?.placemark.coordinate else {
+        guard let destCoord = destItem?.mapItems.first?.location.coordinate else {
             routingError = "Could not find \"\(toAddress)\""
             isRouting = false
             return
@@ -152,8 +152,8 @@ final class NavigationManager: NSObject, ObservableObject {
         routingError          = nil
 
         let request               = MKDirections.Request()
-        request.source            = MKMapItem(placemark: MKPlacemark(coordinate: origin))
-        request.destination       = MKMapItem(placemark: MKPlacemark(coordinate: destination))
+        request.source            = MKMapItem(location: CLLocation(latitude: origin.latitude, longitude: origin.longitude), address: nil)
+        request.destination       = MKMapItem(location: CLLocation(latitude: destination.latitude, longitude: destination.longitude), address: nil)
         request.transportType     = .automobile
         request.requestsAlternateRoutes = true
 
