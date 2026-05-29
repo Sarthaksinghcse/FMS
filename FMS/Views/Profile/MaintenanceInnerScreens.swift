@@ -73,11 +73,11 @@ struct MaintenanceEditProfileView: View {
 
                         
                         VStack(spacing: 0) {
-                            ProfileFormField(icon: "person.fill", label: "Full Name", text: $fullName, placeholder: "Enter your name")
+                            ProfileFormField(icon: "person.fill", label: "Full Name", text: $fullName, placeholder: "Enter your name", iconColor: AppTheme.Brand.amber)
                             Divider().padding(.leading, 56)
-                            ProfileFormField(icon: "phone.fill", label: "Phone Number", text: $phoneNumber, placeholder: "+91 XXXXX XXXXX", keyboardType: .phonePad)
+                            ProfileFormField(icon: "phone.fill", label: "Phone Number", text: $phoneNumber, placeholder: "+91 XXXXX XXXXX", keyboardType: .phonePad, iconColor: AppTheme.Brand.amber)
                             Divider().padding(.leading, 56)
-                            ProfileFormField(icon: "wrench.and.screwdriver.fill", label: "Specialization", text: $specialization, placeholder: "e.g. Engine Repair, Brake Systems")
+                            ProfileFormField(icon: "wrench.and.screwdriver.fill", label: "Specialization", text: $specialization, placeholder: "e.g. Engine Repair, Brake Systems", iconColor: AppTheme.Brand.amber)
                             Divider().padding(.leading, 56)
 
                             
@@ -168,7 +168,7 @@ struct MaintenanceEditProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Brand.amber)
                 }
             }
             .onAppear {
@@ -210,7 +210,7 @@ struct MaintenanceWorkHistoryView: View {
                                 HStack {
                                     Text(order.id)
                                         .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                        .foregroundColor(AppTheme.Brand.primary)
+                                        .foregroundColor(AppTheme.Brand.amber)
 
                                     Spacer()
 
@@ -266,7 +266,7 @@ struct MaintenanceWorkHistoryView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Brand.amber)
                 }
             }
         }
@@ -276,7 +276,7 @@ struct MaintenanceWorkHistoryView: View {
         switch priority {
         case "Urgent": return AppTheme.Status.danger
         case "High": return AppTheme.Status.warning
-        case "Medium": return AppTheme.Brand.primary
+        case "Medium": return AppTheme.Brand.amber
         default: return AppTheme.Text.tertiary
         }
     }
@@ -378,11 +378,11 @@ struct MaintenanceCertificationsView: View {
                                     HStack(spacing: 12) {
                                         ZStack {
                                             RoundedRectangle(cornerRadius: 9)
-                                                .fill(AppTheme.IconBg.blue)
+                                                .fill(AppTheme.IconBg.amber)
                                                 .frame(width: 40, height: 40)
                                             Image(systemName: "book.fill")
                                                 .font(.system(size: 16))
-                                                .foregroundColor(AppTheme.Brand.primary)
+                                                .foregroundColor(AppTheme.Brand.amber)
                                         }
 
                                         VStack(alignment: .leading, spacing: 3) {
@@ -398,7 +398,7 @@ struct MaintenanceCertificationsView: View {
 
                                         Text(tr.hours)
                                             .font(.system(size: 12, weight: .semibold))
-                                            .foregroundColor(AppTheme.Brand.primary)
+                                            .foregroundColor(AppTheme.Brand.amber)
                                     }
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
@@ -422,7 +422,7 @@ struct MaintenanceCertificationsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Brand.amber)
                 }
             }
         }
@@ -464,11 +464,11 @@ struct MaintenanceNotificationSettingsView: View {
                                 .padding(.bottom, 8)
 
                             VStack(spacing: 0) {
-                                ProfileToggleRow(icon: "doc.text.fill", iconColor: AppTheme.Brand.primary, title: "New Work Orders", subtitle: "When a work order is assigned", isOn: $workOrderAlerts)
+                                ProfileToggleRow(icon: "doc.text.fill", iconColor: AppTheme.Brand.amber, title: "New Work Orders", subtitle: "When a work order is assigned", isOn: $workOrderAlerts, tintColor: AppTheme.Brand.amber)
                                 Divider().padding(.leading, 66)
-                                ProfileToggleRow(icon: "exclamationmark.octagon.fill", iconColor: AppTheme.Status.danger, title: "Urgent Orders", subtitle: "High priority / urgent assignments", isOn: $urgentWorkOrders)
+                                ProfileToggleRow(icon: "exclamationmark.octagon.fill", iconColor: AppTheme.Status.danger, title: "Urgent Orders", subtitle: "High priority / urgent assignments", isOn: $urgentWorkOrders, tintColor: AppTheme.Brand.amber)
                                 Divider().padding(.leading, 66)
-                                ProfileToggleRow(icon: "calendar.badge.clock", iconColor: AppTheme.Brand.amber, title: "Schedule Reminders", subtitle: "Upcoming maintenance due dates", isOn: $scheduleReminders)
+                                ProfileToggleRow(icon: "calendar.badge.clock", iconColor: AppTheme.Brand.amber, title: "Schedule Reminders", subtitle: "Upcoming maintenance due dates", isOn: $scheduleReminders, tintColor: AppTheme.Brand.amber)
                             }
                             .background(AppTheme.Background.card)
                             .cornerRadius(AppTheme.Radius.card)
@@ -484,9 +484,9 @@ struct MaintenanceNotificationSettingsView: View {
                                 .padding(.bottom, 8)
 
                             VStack(spacing: 0) {
-                                ProfileToggleRow(icon: "shippingbox.fill", iconColor: AppTheme.Status.purple, title: "Low Stock Alerts", subtitle: "Parts below reorder threshold", isOn: $inventoryAlerts)
+                                ProfileToggleRow(icon: "shippingbox.fill", iconColor: AppTheme.Status.purple, title: "Low Stock Alerts", subtitle: "Parts below reorder threshold", isOn: $inventoryAlerts, tintColor: AppTheme.Brand.amber)
                                 Divider().padding(.leading, 66)
-                                ProfileToggleRow(icon: "speaker.wave.2.fill", iconColor: AppTheme.Text.tertiary, title: "Sounds", subtitle: "Play notification sounds", isOn: $soundEnabled)
+                                ProfileToggleRow(icon: "speaker.wave.2.fill", iconColor: AppTheme.Text.tertiary, title: "Sounds", subtitle: "Play notification sounds", isOn: $soundEnabled, tintColor: AppTheme.Brand.amber)
                             }
                             .background(AppTheme.Background.card)
                             .cornerRadius(AppTheme.Radius.card)
@@ -502,7 +502,7 @@ struct MaintenanceNotificationSettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Brand.amber)
                 }
             }
         }
@@ -531,7 +531,7 @@ struct MaintenanceSecuritySettingsView: View {
                     VStack(spacing: 24) {
                         ProfileInnerScreenHeader(
                             icon: "lock.shield.fill",
-                            iconColor: AppTheme.Brand.primaryDeep,
+                            iconColor: AppTheme.Brand.amber,
                             title: "Security",
                             subtitle: "Password & authentication"
                         )
@@ -557,7 +557,7 @@ struct MaintenanceSecuritySettingsView: View {
                         }
 
                         VStack(spacing: 0) {
-                            ProfileToggleRow(icon: "faceid", iconColor: AppTheme.Brand.primary, title: "Face ID / Touch ID", subtitle: "Use biometrics to unlock", isOn: $biometricEnabled)
+                            ProfileToggleRow(icon: "faceid", iconColor: AppTheme.Brand.amber, title: "Face ID / Touch ID", subtitle: "Use biometrics to unlock", isOn: $biometricEnabled, tintColor: AppTheme.Brand.amber)
                         }
                         .background(AppTheme.Background.card)
                         .cornerRadius(AppTheme.Radius.card)
@@ -575,7 +575,7 @@ struct MaintenanceSecuritySettingsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(AppTheme.Brand.primary)
+                            .background(AppTheme.Brand.amber)
                             .cornerRadius(AppTheme.Radius.medium)
                         }
                         .disabled(isSaving || newPassword.isEmpty)
@@ -591,7 +591,7 @@ struct MaintenanceSecuritySettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Brand.amber)
                 }
             }
             .alert("Password Updated", isPresented: $showSaved) {
@@ -665,7 +665,7 @@ struct MaintenanceHelpSupportView: View {
                                 }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 10)
-                                .tint(AppTheme.Brand.primary)
+                                .tint(AppTheme.Brand.amber)
 
                                 if i < faqs.count - 1 {
                                     Divider().padding(.leading, 16)
@@ -677,9 +677,9 @@ struct MaintenanceHelpSupportView: View {
                         .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
 
                         VStack(spacing: 0) {
-                            ProfileInfoRow(label: "Email", value: "support@fms.app", valueColor: AppTheme.Brand.primary)
+                            ProfileInfoRow(label: "Email", value: "support@fms.app", valueColor: AppTheme.Brand.amber)
                             Divider().padding(.leading, 16)
-                            ProfileInfoRow(label: "Phone", value: "+91 1800-FMS-HELP", valueColor: AppTheme.Brand.primary)
+                            ProfileInfoRow(label: "Phone", value: "+91 1800-FMS-HELP", valueColor: AppTheme.Brand.amber)
                             Divider().padding(.leading, 16)
                             ProfileInfoRow(label: "Hours", value: "Mon-Fri 9 AM – 6 PM")
                         }
@@ -696,7 +696,7 @@ struct MaintenanceHelpSupportView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Brand.amber)
                 }
             }
         }
@@ -707,6 +707,169 @@ struct MaintenanceHelpSupportView: View {
 
 @available(iOS 26.0, *)
 #Preview("Edit Profile") { MaintenanceEditProfileView() }
+
+@available(iOS 26.0, *)
+struct MaintenanceSpecializationsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var showCertifications = false
+
+    private let specializations = ["Engine Repair", "Brake Systems", "Electrical", "Oil & Fluids"]
+
+    private func iconForSpecialization(_ spec: String) -> String {
+        switch spec {
+        case "Engine Repair": return "wrench.and.screwdriver.fill"
+        case "Brake Systems": return "slowmo"
+        case "Electrical": return "bolt.fill"
+        case "Oil & Fluids": return "drop.fill"
+        default: return "gearshape.fill"
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Background.page.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        ProfileInnerScreenHeader(
+                            icon: "wrench.and.screwdriver.fill",
+                            iconColor: AppTheme.Brand.amber,
+                            title: "Specializations",
+                            subtitle: "Your technical specialties and certifications"
+                        )
+
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Technical Specialties")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(AppTheme.Text.primary)
+                                .padding(.leading, 4)
+
+                            FlowLayout(spacing: 8) {
+                                ForEach(specializations, id: \.self) { spec in
+                                    HStack(spacing: 5) {
+                                        Image(systemName: iconForSpecialization(spec))
+                                            .font(.system(size: 10))
+                                        Text(spec)
+                                            .font(.system(size: 12, weight: .medium))
+                                    }
+                                    .foregroundColor(AppTheme.Brand.amber)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .background(AppTheme.Brand.amber.opacity(0.08))
+                                    .clipShape(Capsule())
+                                }
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                        }
+
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Certifications")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(AppTheme.Text.primary)
+                                .padding(.leading, 4)
+
+                            Button {
+                                showCertifications = true
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "rosette")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(AppTheme.Brand.amber)
+                                        .frame(width: 36, height: 36)
+                                        .background(AppTheme.IconBg.amber)
+                                        .clipShape(RoundedRectangle(cornerRadius: 9))
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Certifications & Training")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(AppTheme.Text.primary)
+                                        Text("View certificates and training records")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.7))
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationTitle("Specializations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(AppTheme.Brand.amber)
+                }
+            }
+            .sheet(isPresented: $showCertifications) {
+                MaintenanceCertificationsView()
+            }
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+private struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth && currentX > 0 {
+                currentY += lineHeight + spacing
+                currentX = 0
+                lineHeight = 0
+            }
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+        }
+
+        return CGSize(width: maxWidth, height: currentY + lineHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var currentX: CGFloat = bounds.minX
+        var currentY: CGFloat = bounds.minY
+        var lineHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > bounds.maxX && currentX > bounds.minX {
+                currentY += lineHeight + spacing
+                currentX = bounds.minX
+                lineHeight = 0
+            }
+            subview.place(at: CGPoint(x: currentX, y: currentY), proposal: .unspecified)
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+        }
+    }
+}
 
 @available(iOS 26.0, *)
 #Preview("Work History") { MaintenanceWorkHistoryView() }
@@ -722,3 +885,6 @@ struct MaintenanceHelpSupportView: View {
 
 @available(iOS 26.0, *)
 #Preview("Help") { MaintenanceHelpSupportView() }
+
+@available(iOS 26.0, *)
+#Preview("Specializations") { MaintenanceSpecializationsView() }

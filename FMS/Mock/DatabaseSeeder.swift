@@ -11,6 +11,8 @@ import SwiftData
 @MainActor
 struct DatabaseSeeder {
     static func seedIfEmpty(context: ModelContext) {
+        // Seed inventory items first if needed
+        seedInventory(context: context)
         
         do {
             let vehicleDescriptor = FetchDescriptor<Vehicle>()
@@ -274,6 +276,7 @@ struct DatabaseSeeder {
             serviceDate: Date().addingTimeInterval(-86400 * 5),
             cost: 3200.0,
             notes: "Replaced oil with Shell Helix 5W-40. Replaced air and oil filters.",
+            replacedParts: ["Engine Oil (Shell Helix 5W-40)", "Oil Filter", "Air Filter"],
             performedBy: tech2.id
         )
         
@@ -284,6 +287,7 @@ struct DatabaseSeeder {
             serviceDate: Date().addingTimeInterval(-86400 * 12),
             cost: 1800.0,
             notes: "Rotated all 4 tires and calibrated laser wheel alignment.",
+            replacedParts: ["Wheel Weights"],
             performedBy: tech1.id
         )
         
@@ -294,6 +298,64 @@ struct DatabaseSeeder {
             print(" Database successfully seeded with 6 vehicles, 5 users, 2 trips, 2 defects, 1 SOS, 1 work order, and 2 records.")
         } catch {
             print("Failed to save seeded context: \(error.localizedDescription)")
+        }
+    }
+    
+    private static func seedInventory(context: ModelContext) {
+        do {
+            let descriptor = FetchDescriptor<InventoryItem>()
+            let existing = try context.fetch(descriptor)
+            guard existing.isEmpty else { return }
+            
+            print(" Seeding SwiftData database with premium inventory data...")
+            let items = [
+                InventoryItem(
+                    partName: "Front Brake Pads",
+                    partNumber: "BP-F4102-T12",
+                    quantityInStock: 3,
+                    reorderThreshold: 5,
+                    unitCost: 1200.0,
+                    supplierName: "Bosch Automotive"
+                ),
+                InventoryItem(
+                    partName: "Premium Oil Filter",
+                    partNumber: "OF-P589-S1",
+                    quantityInStock: 25,
+                    reorderThreshold: 10,
+                    unitCost: 450.0,
+                    supplierName: "Mann+Hummel"
+                ),
+                InventoryItem(
+                    partName: "H4 LED Headlight Bulb",
+                    partNumber: "LB-H4LED-12V",
+                    quantityInStock: 2,
+                    reorderThreshold: 4,
+                    unitCost: 850.0,
+                    supplierName: "Philips Lighting"
+                ),
+                InventoryItem(
+                    partName: "Engine Air Filter",
+                    partNumber: "AF-E7881",
+                    quantityInStock: 14,
+                    reorderThreshold: 8,
+                    unitCost: 650.0,
+                    supplierName: "Mann+Hummel"
+                ),
+                InventoryItem(
+                    partName: "All-Weather Wiper Blades",
+                    partNumber: "WB-AW22-18",
+                    quantityInStock: 12,
+                    reorderThreshold: 6,
+                    unitCost: 350.0,
+                    supplierName: "Michelin Parts"
+                )
+            ]
+            
+            items.forEach { context.insert($0) }
+            try context.save()
+            print(" Seeding inventory completed successfully.")
+        } catch {
+            print("Failed to seed inventory items: \(error.localizedDescription)")
         }
     }
 }

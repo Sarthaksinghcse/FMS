@@ -1,18 +1,5 @@
-
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
-
-
-
-
-
 @available(iOS 26.0, *)
 struct AddVehicleFormView: View {
 
@@ -322,8 +309,10 @@ struct EditVehicleFormView: View {
                             DatePickerRow(label: "Insurance Expiry", date: $insuranceExpiryDate)
                         }
 
+
                         
                         saveButton
+
 
                         
                         deleteButton
@@ -688,8 +677,8 @@ struct StatusPickerRow: View {
     @Binding var selection: VehicleStatus
 
     private let options: [(VehicleStatus, String, Color)] = [
-        (.active,        "Active",      Color(red: 0.30, green: 0.70, blue: 0.46)),
-        (.inactive,      "Inactive",    Color.orange),
+        (.active,        "Available",   Color(red: 0.30, green: 0.70, blue: 0.46)),
+        (.inactive,      "On Trip",     Color.orange),
         (.inMaintenance, "Maintenance", Color(red: 0.85, green: 0.25, blue: 0.25))
     ]
 

@@ -124,6 +124,7 @@ final class SupabaseManager: ObservableObject {
                 role: role,
                 phoneNumber: nil,
                 profileImage: nil,
+                isActive: true,
                 createdAt: Date()
             )
             
@@ -170,6 +171,7 @@ final class SupabaseManager: ObservableObject {
                 role: role,
                 phoneNumber: nil,
                 profileImage: nil,
+                isActive: true,
                 createdAt: Date()
             )
             
@@ -246,6 +248,7 @@ final class SupabaseManager: ObservableObject {
                     role: expectedRole,
                     phoneNumber: nil,
                     profileImage: nil,
+                    isActive: true,
                     createdAt: Date()
                 )
             }
@@ -270,7 +273,7 @@ final class SupabaseManager: ObservableObject {
                         .eq("id", value: userId.uuidString)
                         .execute()
                 } catch {
-                    print("⚠️ Failed to sync database role: \(error.localizedDescription)")
+                    print("Failed to sync database role: \(error.localizedDescription)")
                 }
             }
             
@@ -345,6 +348,7 @@ final class SupabaseManager: ObservableObject {
                 role: resolvedRole,
                 phoneNumber: nil,
                 profileImage: nil,
+                isActive: true,
                 createdAt: Date()
             )
         }
@@ -441,6 +445,7 @@ final class SupabaseManager: ObservableObject {
             role: .driver,
             phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
             profileImage: nil,
+            isActive: isActive,
             createdAt: Date()
         )
         
@@ -457,6 +462,52 @@ final class SupabaseManager: ObservableObject {
         return dbUser
     }
     
+    func createMaintenanceStaff(email: String, passwordString: String, fullName: String, phoneNumber: String, isActive: Bool) async throws -> DBUser {
+        let tempClient = SupabaseClient(
+            supabaseURL: Self.supabaseURL,
+            supabaseKey: Self.supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    storage: InMemoryLocalStorage(),
+                    emitLocalSessionAsInitialSession: false
+                )
+            )
+        )
+        
+        let authResponse = try await tempClient.auth.signUp(
+            email: email,
+            password: passwordString,
+            data: [
+                "name": .string(fullName),
+                "role": .string(DBUserRole.maintenance.rawValue)
+            ]
+        )
+        
+        let authUserId = authResponse.user.id
+        
+        let dbUser = DBUser(
+            id: authUserId,
+            name: fullName,
+            email: email,
+            role: .maintenance,
+            phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
+            profileImage: nil,
+            isActive: isActive,
+            createdAt: Date()
+        )
+        
+        do {
+            try await client
+                .from("users")
+                .upsert(dbUser)
+                .execute()
+        } catch {
+            print("⚠️ Profile upsert failed (possibly auto-inserted by database trigger): \(error.localizedDescription)")
+        }
+            
+        return dbUser
+    }
+    
     
     func updateDriver(_ driver: DBUser) async throws {
         try await client
@@ -464,6 +515,12 @@ final class SupabaseManager: ObservableObject {
             .update(driver)
             .eq("id", value: driver.id.uuidString)
             .execute()
+        
+        await MainActor.run {
+            if self.currentUser?.id == driver.id {
+                self.currentUser = driver
+            }
+        }
     }
     
     
@@ -629,6 +686,68 @@ final class SupabaseManager: ObservableObject {
     }
     
     
+    func fetchDefectReports() async throws -> [DBDefectReport] {
+        return try await client
+            .from("defect_reports")
+            .select()
+            .execute()
+            .value
+    }
+    
+    func createDefectReport(_ defect: DBDefectReport) async throws {
+        try await client
+            .from("defect_reports")
+            .insert(defect)
+            .execute()
+    }
+    
+    func updateDefectReport(_ defect: DBDefectReport) async throws {
+        try await client
+            .from("defect_reports")
+            .update(defect)
+            .eq("id", value: defect.id.uuidString)
+            .execute()
+    }
+    
+    func fetchFleetManagers() async throws -> [DBUser] {
+        return try await client
+            .from("users")
+            .select()
+            .eq("role", value: DBUserRole.fleetManager.rawValue)
+            .execute()
+            .value
+    }
+    
+    func fetchMaintenancePersonnel() async throws -> [DBUser] {
+        return try await client
+            .from("users")
+            .select()
+            .eq("role", value: DBUserRole.maintenance.rawValue)
+            .execute()
+            .value
+    }
+    
+    func notifyFleetManagers(title: String, message: String, type: DBNotificationType) async {
+        do {
+            let managers = try await fetchFleetManagers()
+            for manager in managers {
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: manager.id,
+                    title: title,
+                    message: message,
+                    type: type,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await createNotification(notif)
+            }
+        } catch {
+            print("Failed to notify fleet managers: \(error.localizedDescription)")
+        }
+    }
+    
+    
     
     
     func insertVehicleLocation(_ location: DBVehicleLocation) async throws {
@@ -645,6 +764,89 @@ final class SupabaseManager: ObservableObject {
             .select()
             .execute()
             .value
+    }
+    
+    // SOS Alerts
+    func fetchSOSAlerts() async throws -> [DBSOSAlert] {
+        return try await client
+            .from("sos_alerts")
+            .select()
+            .execute()
+            .value
+    }
+    
+    func createSOSAlert(_ alert: DBSOSAlert) async throws {
+        try await client
+            .from("sos_alerts")
+            .insert(alert)
+            .execute()
+    }
+    
+    // Inventory
+    func fetchInventory() async throws -> [DBInventoryItem] {
+        return try await client
+            .from("inventory")
+            .select()
+            .execute()
+            .value
+    }
+    
+    func createInventoryItem(_ item: DBInventoryItem) async throws {
+        try await client
+            .from("inventory")
+            .insert(item)
+            .execute()
+    }
+    
+    func updateInventoryItem(_ item: DBInventoryItem) async throws {
+        try await client
+            .from("inventory")
+            .update(item)
+            .eq("id", value: item.id.uuidString)
+            .execute()
+    }
+    
+    func deleteInventoryItem(id: UUID) async throws {
+        try await client
+            .from("inventory")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+    
+    // Maintenance Records
+    func fetchMaintenanceRecords() async throws -> [DBMaintenanceRecord] {
+        return try await client
+            .from("maintenance_records")
+            .select()
+            .execute()
+            .value
+    }
+    
+    func createMaintenanceRecord(_ record: DBMaintenanceRecord) async throws {
+        try await client
+            .from("maintenance_records")
+            .insert(record)
+            .execute()
+    }
+    
+    // Storage Avatar Upload
+    func uploadAvatar(userId: UUID, imageData: Data) async throws -> String {
+        let path = "\(userId.uuidString).jpg"
+        
+        _ = try await client.storage
+            .from("avatars")
+            .upload(
+                path,
+                data: imageData,
+                options: FileOptions(contentType: "image/jpeg", upsert: true)
+            )
+        
+        let url = try client.storage
+            .from("avatars")
+            .getPublicURL(path: path)
+        
+        return url.absoluteString
     }
     
     
@@ -693,6 +895,7 @@ final class SupabaseManager: ObservableObject {
                         local.email = rd.email
                         local.phoneNumber = rd.phoneNumber ?? ""
                         local.role = rd.role.asLocalRole
+                        local.isActive = rd.isActive
                     } else {
                         context.insert(rd.asLocalUser)
                     }
@@ -704,6 +907,32 @@ final class SupabaseManager: ObservableObject {
                     for localDriver in localDrivers {
                         if !remoteIds.contains(localDriver.id) {
                             context.delete(localDriver)
+                        }
+                    }
+                }
+            }
+            
+            if let remoteMaintenance = try? await fetchMaintenancePersonnel() {
+                let descriptor = FetchDescriptor<User>()
+                let localUsers = (try? context.fetch(descriptor)) ?? []
+                for rm in remoteMaintenance {
+                    if let local = localUsers.first(where: { $0.id == rm.id }) {
+                        local.fullName = rm.name
+                        local.email = rm.email
+                        local.phoneNumber = rm.phoneNumber ?? ""
+                        local.role = rm.role.asLocalRole
+                        local.isActive = rm.isActive
+                    } else {
+                        context.insert(rm.asLocalUser)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteMaintenance.map { $0.id })
+                    let localMaintenance = localUsers.filter { $0.role == .maintenance }
+                    for localStaff in localMaintenance {
+                        if !remoteIds.contains(localStaff.id) {
+                            context.delete(localStaff)
                         }
                     }
                 }
@@ -800,10 +1029,122 @@ final class SupabaseManager: ObservableObject {
                 }
             }
             
+            // Sync Defect Reports
+            if let remoteDefects = try? await fetchDefectReports() {
+                let descriptor = FetchDescriptor<DefectReport>()
+                let localDefects = (try? context.fetch(descriptor)) ?? []
+                for rd in remoteDefects {
+                    if let local = localDefects.first(where: { $0.id == rd.id }) {
+                        local.vehicleId = rd.vehicleId
+                        local.reportedBy = rd.reportedBy
+                        local.inspectionId = rd.inspectionId
+                        local.title = rd.title
+                        local.defectDescription = rd.defectDescription
+                        local.severity = rd.severity
+                        local.status = rd.status
+                    } else {
+                        context.insert(rd.asLocalDefectReport)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteDefects.map { $0.id })
+                    for localDefect in localDefects {
+                        if !remoteIds.contains(localDefect.id) {
+                            context.delete(localDefect)
+                        }
+                    }
+                }
+            }
+            
+            // Sync SOS Alerts
+            if let remoteSOS = try? await fetchSOSAlerts() {
+                let descriptor = FetchDescriptor<SOSAlert>()
+                let localSOS = (try? context.fetch(descriptor)) ?? []
+                for rs in remoteSOS {
+                    if let local = localSOS.first(where: { $0.id == rs.id }) {
+                        local.driverId = rs.driverId
+                        local.vehicleId = rs.vehicleId ?? UUID()
+                        local.tripId = rs.tripId
+                        local.latitude = rs.latitude
+                        local.longitude = rs.longitude
+                        local.message = rs.message
+                        local.status = rs.status.toLocalStatus
+                    } else {
+                        context.insert(rs.asLocalSOS)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteSOS.map { $0.id })
+                    for localAlert in localSOS {
+                        if !remoteIds.contains(localAlert.id) {
+                            context.delete(localAlert)
+                        }
+                    }
+                }
+            }
+            
+            // Sync Inventory
+            if let remoteInventory = try? await fetchInventory() {
+                let descriptor = FetchDescriptor<InventoryItem>()
+                let localInventory = (try? context.fetch(descriptor)) ?? []
+                for ri in remoteInventory {
+                    if let local = localInventory.first(where: { $0.id == ri.id }) {
+                        local.partName = ri.partName
+                        local.partNumber = ri.partNumber
+                        local.quantityInStock = ri.quantityInStock
+                        local.reorderThreshold = ri.reorderThreshold
+                        local.unitCost = ri.unitCost
+                        local.supplierName = ri.supplierName
+                        local.updatedAt = ri.updatedAt
+                    } else {
+                        context.insert(ri.asLocalItem)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager || currentUser?.role == .maintenance {
+                    let remoteIds = Set(remoteInventory.map { $0.id })
+                    for localItem in localInventory {
+                        if !remoteIds.contains(localItem.id) {
+                            context.delete(localItem)
+                        }
+                    }
+                }
+            }
+            
+            // Sync Maintenance Records
+            if let remoteRecords = try? await fetchMaintenanceRecords() {
+                let descriptor = FetchDescriptor<MaintenanceRecord>()
+                let localRecords = (try? context.fetch(descriptor)) ?? []
+                for rr in remoteRecords {
+                    if let local = localRecords.first(where: { $0.id == rr.id }) {
+                        local.vehicleId = rr.vehicleId
+                        local.workOrderId = rr.workOrderId
+                        local.serviceType = rr.serviceType
+                        local.serviceDate = rr.serviceDate
+                        local.cost = rr.cost
+                        local.notes = rr.notes
+                        local.performedBy = rr.performedBy
+                    } else {
+                        context.insert(rr.asLocalRecord)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager || currentUser?.role == .maintenance {
+                    let remoteIds = Set(remoteRecords.map { $0.id })
+                    for localRecord in localRecords {
+                        if !remoteIds.contains(localRecord.id) {
+                            context.delete(localRecord)
+                        }
+                    }
+                }
+            }
+            
             try context.save()
             print("Successfully synchronized and deduplicated all data from Supabase to SwiftData")
         } catch {
-            print("⚠️ Reconciled data synchronization error: \(error.localizedDescription)")
+            print("Reconciled data synchronization error: \(error.localizedDescription)")
         }
     }
 }

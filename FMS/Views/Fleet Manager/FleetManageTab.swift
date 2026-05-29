@@ -1,25 +1,8 @@
-
-
-
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
 
-
-
-
-
-
-
-
 struct CardMetric: Identifiable {
-    let id = UUID()
+    var id: String { label }
     let label: String
     let value: String
     let systemIcon: String
@@ -27,7 +10,7 @@ struct CardMetric: Identifiable {
 }
 
 struct ManagementCard: Identifiable {
-    let id = UUID()
+    var id: ManagementDestination { destination }
     let title: String
     let subtitle: String
     let icon: String
@@ -76,7 +59,7 @@ struct ManagementHubView: View {
                 metrics: [
                     CardMetric(label: "Total",   value: "\(vehicles.count)",
                                systemIcon: "car.fill",                       iconColor: AppTheme.Brand.royalBlue),
-                    CardMetric(label: "Active",   value: "\(vehicles.filter { $0.status == .active }.count)",
+                    CardMetric(label: "Available", value: "\(vehicles.filter { $0.status == .active }.count)",
                                systemIcon: "checkmark.circle.fill",          iconColor: .green),
                     CardMetric(label: "In Shop",  value: "\(vehicles.filter { $0.status == .inMaintenance }.count)",
                                systemIcon: "exclamationmark.triangle.fill",  iconColor: AppTheme.Brand.accent)
@@ -281,6 +264,7 @@ struct VehicleListView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
+    @Query private var allRecords: [MaintenanceRecord]
 
     @State private var searchText = ""
     @State private var selectedFilter: VehicleStatusFilter = .all
@@ -288,6 +272,11 @@ struct VehicleListView: View {
     @State private var editingVehicle: Vehicle?
     @State private var appearAnimation = false
     @State private var cardsAppeared: Set<UUID> = []
+    @State private var isLoading = false
+
+    init(initialFilter: VehicleStatusFilter = .all) {
+        _selectedFilter = State(initialValue: initialFilter)
+    }
 
     private var filteredVehicles: [Vehicle] {
         vehicles.filter { v in
@@ -306,7 +295,14 @@ struct VehicleListView: View {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChipsSection
-                if filteredVehicles.isEmpty {
+                if vehicles.isEmpty && isLoading {
+                    Spacer()
+                    ProgressView("Syncing vehicles...")
+                        .tint(AppTheme.Brand.royalBlue)
+                        .foregroundStyle(AppTheme.Text.secondary)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                    Spacer()
+                } else if filteredVehicles.isEmpty {
                     if searchText.isEmpty && selectedFilter == .all {
                         ContentUnavailableView {
                             Label("No Vehicles Yet", systemImage: "car.fill")
@@ -386,10 +382,15 @@ struct VehicleListView: View {
             LazyVStack(spacing: 14) {
                 ForEach(filteredVehicles) { vehicle in
                     let idx = filteredVehicles.firstIndex(where: { $0.id == vehicle.id }) ?? 0
-                    VehicleCardView(vehicle: vehicle) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        editingVehicle = vehicle
+                    NavigationLink {
+                        VehicleMaintenanceHistoryView(vehicle: vehicle)
+                    } label: {
+                        VehicleCardView(vehicle: vehicle) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            editingVehicle = vehicle
+                        }
                     }
+                    .buttonStyle(PlainButtonStyle())
                     .opacity(cardsAppeared.contains(vehicle.id) ? 1 : 0)
                     .offset(y: cardsAppeared.contains(vehicle.id) ? 0 : 30)
                     .onAppear {
@@ -411,6 +412,8 @@ struct VehicleListView: View {
     }
 
     private func syncVehicles() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let dbVehicles = try await SupabaseManager.shared.fetchVehicles()
             await MainActor.run {
@@ -575,6 +578,23 @@ struct VehicleCardView: View {
 
 
 @available(iOS 26.0, *)
+enum DriverStatusFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case online = "Online"
+    case offline = "Offline"
+    
+    var id: String { rawValue }
+    
+    var chipColor: Color {
+        switch self {
+        case .all: return AppTheme.Brand.royalBlue
+        case .online: return .green
+        case .offline: return .gray
+        }
+    }
+}
+
+@available(iOS 26.0, *)
 struct DriverListView: View {
 
     @Query(sort: \User.fullName) private var allUsers: [User]
@@ -582,16 +602,29 @@ struct DriverListView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var searchText = ""
+    @State private var selectedFilter: DriverStatusFilter = .all
     @State private var showAddDriver = false
     @State private var selectedDriverForEdit: User?
     @State private var cardAnimations: [UUID: Bool] = [:]
+    @State private var isLoading = false
+
+    init(initialFilter: DriverStatusFilter = .all) {
+        _selectedFilter = State(initialValue: initialFilter)
+    }
 
     private var drivers: [User] { allUsers.filter { $0.role == UserRole.driver } }
 
     private var filteredDrivers: [User] {
-        guard !searchText.isEmpty else { return drivers }
+        let baseDrivers = drivers.filter { d in
+            switch selectedFilter {
+            case .all: return true
+            case .online: return d.isActive
+            case .offline: return !d.isActive
+            }
+        }
+        guard !searchText.isEmpty else { return baseDrivers }
         let q = searchText.lowercased()
-        return drivers.filter { $0.fullName.lowercased().contains(q) || $0.email.lowercased().contains(q) }
+        return baseDrivers.filter { $0.fullName.lowercased().contains(q) || $0.email.lowercased().contains(q) }
     }
 
     private func vehicleForDriver(_ d: User) -> Vehicle? {
@@ -608,7 +641,15 @@ struct DriverListView: View {
         ZStack {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
-                if filteredDrivers.isEmpty {
+                filterChipsSection
+                if drivers.isEmpty && isLoading {
+                    Spacer()
+                    ProgressView("Syncing drivers...")
+                        .tint(AppTheme.Brand.royalBlue)
+                        .foregroundStyle(AppTheme.Text.secondary)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                    Spacer()
+                } else if filteredDrivers.isEmpty {
                     if searchText.isEmpty {
                         ContentUnavailableView {
                             Label("No Drivers Yet", systemImage: "person.2.fill")
@@ -642,13 +683,44 @@ struct DriverListView: View {
         }
         .sheet(isPresented: $showAddDriver) { AddDriverFormView() }
         .sheet(item: $selectedDriverForEdit) { d in EditDriverFormView(driver: d) }
-        .onAppear {
+        .task {
             triggerCardAnimations()
-            Task {
+            while !Task.isCancelled {
                 await syncDrivers()
+                try? await Task.sleep(for: .seconds(5))
             }
         }
         .onChange(of: filteredDrivers.count) { triggerCardAnimations() }
+    }
+
+    private var filterChipsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(DriverStatusFilter.allCases) { filter in
+                    FilterChipView(
+                        title: filter.rawValue,
+                        isSelected: selectedFilter == filter,
+                        color: filter.chipColor,
+                        count: countForFilter(filter)
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                            selectedFilter = filter
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        }
+    }
+
+    private func countForFilter(_ filter: DriverStatusFilter) -> Int {
+        switch filter {
+        case .all: return drivers.count
+        case .online: return drivers.filter { $0.isActive }.count
+        case .offline: return drivers.filter { !$0.isActive }.count
+        }
     }
 
     private var driverList: some View {
@@ -761,6 +833,8 @@ struct DriverListView: View {
     }
 
     private func syncDrivers() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let dbDrivers = try await SupabaseManager.shared.fetchDrivers()
             await MainActor.run {
@@ -770,6 +844,7 @@ struct DriverListView: View {
                         localDriver.email = dbd.email
                         localDriver.phoneNumber = dbd.phoneNumber ?? ""
                         localDriver.role = dbd.role.asLocalRole
+                        localDriver.isActive = dbd.isActive
                     } else {
                         let newDriver = dbd.asLocalUser
                         modelContext.insert(newDriver)
@@ -954,6 +1029,9 @@ struct MaintenanceStaffListView: View {
                 }
             }
         }
+        .refreshable {
+            await syncMaintenanceStaff()
+        }
         .navigationTitle("Maintenance Team")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "Search technicians…")
@@ -967,7 +1045,12 @@ struct MaintenanceStaffListView: View {
         }
         .sheet(isPresented: $showAddStaffSheet) { AddMaintenanceFormView() }
         .sheet(item: $selectedStaffForEdit) { s in EditMaintenanceFormView(staff: s) }
-        .onAppear { triggerCardAnimations() }
+        .onAppear {
+            triggerCardAnimations()
+            Task {
+                await syncMaintenanceStaff()
+            }
+        }
         .onChange(of: filteredStaff.count) { triggerCardAnimations() }
     }
 
@@ -1081,6 +1164,40 @@ struct MaintenanceStaffListView: View {
             }
         }
     }
+
+    private func syncMaintenanceStaff() async {
+        do {
+            let dbStaff = try await SupabaseManager.shared.fetchMaintenancePersonnel()
+            await MainActor.run {
+                for dbs in dbStaff {
+                    if let localStaff = allUsers.first(where: { $0.id == dbs.id }) {
+                        localStaff.fullName = dbs.name
+                        localStaff.email = dbs.email
+                        localStaff.phoneNumber = dbs.phoneNumber ?? ""
+                        localStaff.role = dbs.role.asLocalRole
+                        localStaff.isActive = dbs.isActive
+                    } else {
+                        let newStaff = dbs.asLocalUser
+                        modelContext.insert(newStaff)
+                    }
+                }
+                
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbStaff.map { $0.id })
+                    let localStaff = allUsers.filter { $0.role == .maintenance }
+                    for s in localStaff {
+                        if !remoteIds.contains(s.id) {
+                            modelContext.delete(s)
+                        }
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("Failed to sync maintenance staff: \(error)")
+        }
+    }
 }
 
 
@@ -1177,7 +1294,7 @@ enum TripCategoryFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case active = "Active"
     case upcoming = "Upcoming"
-    case past = "Past"
+    case completed = "Completed"
 
     var id: String { rawValue }
 }
@@ -1193,6 +1310,11 @@ struct TripListView: View {
     @State private var editingTrip: Trip? = nil
     @State private var appearAnimation = false
     @State private var cardAnimations: Set<UUID> = []
+    @State private var isLoading = false
+
+    init(initialFilter: TripCategoryFilter = .all) {
+        _selectedFilter = State(initialValue: initialFilter)
+    }
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Trip.scheduledStartTime, order: .reverse) private var allTrips: [Trip]
@@ -1207,7 +1329,7 @@ struct TripListView: View {
             trips = trips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }
         case .upcoming:
             trips = trips.filter { $0.tripStatus == .assigned }
-        case .past:
+        case .completed:
             trips = trips.filter { $0.tripStatus == .completed || $0.tripStatus == .cancelled }
         }
         
@@ -1230,7 +1352,7 @@ struct TripListView: View {
             return allTrips.filter { $0.tripStatus == .started || $0.tripStatus == .inProgress }.count
         case .upcoming:
             return allTrips.filter { $0.tripStatus == .assigned }.count
-        case .past:
+        case .completed:
             return allTrips.filter { $0.tripStatus == .completed || $0.tripStatus == .cancelled }.count
         }
     }
@@ -1245,7 +1367,14 @@ struct TripListView: View {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChips.padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 8)
-                if filteredTrips.isEmpty {
+                if allTrips.isEmpty && isLoading {
+                    Spacer()
+                    ProgressView("Syncing trips...")
+                        .tint(AppTheme.Brand.royalBlue)
+                        .foregroundStyle(AppTheme.Text.secondary)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                    Spacer()
+                } else if filteredTrips.isEmpty {
                     if searchText.isEmpty && selectedFilter == .all {
                         ContentUnavailableView {
                             Label("No Trips Yet", systemImage: "map.fill")
@@ -1298,7 +1427,7 @@ struct TripListView: View {
                         case .all:      return AppTheme.Brand.accent 
                         case .active:   return Color(red: 0.30, green: 0.70, blue: 0.46) 
                         case .upcoming: return Color(red: 0.15, green: 0.38, blue: 0.90) 
-                        case .past:     return Color(red: 0.55, green: 0.58, blue: 0.62) 
+                        case .completed: return Color(red: 0.55, green: 0.58, blue: 0.62) 
                         }
                     }()
                     
@@ -1361,6 +1490,8 @@ struct TripListView: View {
     }
 
     private func syncTrips() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let dbTrips = try await SupabaseManager.shared.fetchTrips()
             await MainActor.run {

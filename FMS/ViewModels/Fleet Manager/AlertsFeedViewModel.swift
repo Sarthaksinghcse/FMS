@@ -66,6 +66,13 @@ final class AlertsFeedViewModel: ObservableObject {
         
         do {
             try context.save()
+            
+            // Sync status update to Supabase
+            let dbDefect = defect.asDBDefectReport
+            Task {
+                try? await SupabaseManager.shared.updateDefectReport(dbDefect)
+            }
+            
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
             return true
@@ -77,3 +84,4 @@ final class AlertsFeedViewModel: ObservableObject {
         }
     }
 }
+

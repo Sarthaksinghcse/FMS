@@ -100,7 +100,7 @@ final class MaintenanceManagementViewModel: ObservableObject {
                 do {
                     try await SupabaseManager.shared.createWorkOrder(dbWorkOrder)
                     
-                    var dbVehicle = DBVehicle(
+                    let dbVehicle = DBVehicle(
                         id: selectedVehicle.id,
                         vehicleNumber: selectedVehicle.registrationNumber,
                         model: selectedVehicle.model,
@@ -218,6 +218,7 @@ final class MaintenanceManagementViewModel: ObservableObject {
                         createdAt: Date()
                     )
                     try await SupabaseManager.shared.createMaintenanceTask(dbTask)
+                    try await SupabaseManager.shared.createMaintenanceRecord(maintenanceRecord.asDBRecord)
                 } catch {
                     print("⚠️ Failed to sync work order completion to Supabase: \(error.localizedDescription)")
                 }

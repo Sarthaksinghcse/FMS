@@ -30,6 +30,7 @@ struct AddMaintenanceFormView: View {
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
+    @State private var isSaving             = false
 
     
     @FocusState private var focusedField: UserFocusField?
@@ -78,6 +79,7 @@ struct AddMaintenanceFormView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                         .foregroundColor(.red)
+                        .disabled(isSaving)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -101,9 +103,14 @@ struct AddMaintenanceFormView: View {
             saveStaff()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Save Staff Member")
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Saving..." : "Save Staff Member")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
@@ -118,6 +125,7 @@ struct AddMaintenanceFormView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: AppTheme.Brand.accent.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving)
     }
 
     
@@ -127,14 +135,20 @@ struct AddMaintenanceFormView: View {
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Full name is required."; showValidationAlert = true; return
         }
-        guard !email.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmedEmail.isEmpty else {
             validationMessage = "Email is required."; showValidationAlert = true; return
         }
-        guard email.contains("@") else {
+        guard trimmedEmail.isValidEmail else {
             validationMessage = "Please enter a valid email address."; showValidationAlert = true; return
         }
-        guard !phoneNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
+        
+        let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
+        guard !trimmedPhone.isEmpty else {
             validationMessage = "Phone number is required."; showValidationAlert = true; return
+        }
+        guard trimmedPhone.isValidPhoneNumber else {
+            validationMessage = "Please enter a valid 10-digit phone number."; showValidationAlert = true; return
         }
         guard !password.isEmpty else {
             validationMessage = "Password is required."; showValidationAlert = true; return
@@ -142,21 +156,75 @@ struct AddMaintenanceFormView: View {
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        
-        let passwordHash = Data(password.utf8).base64EncodedString()
+        isSaving = true
 
-        let staff = User(
-            fullName:     fullName.trimmingCharacters(in: .whitespaces),
-            email:        email.trimmingCharacters(in: .whitespaces).lowercased(),
-            phoneNumber:  phoneNumber.trimmingCharacters(in: .whitespaces),
-            passwordHash: passwordHash,
-            role:         .maintenance,
-            isActive:     isActive
-        )
-
-        modelContext.insert(staff)
-        try? modelContext.save()
-        saveSuccess = true
+        Task {
+            let emailToSend = email.trimmingCharacters(in: .whitespaces).lowercased()
+            let nameToSend = fullName.trimmingCharacters(in: .whitespaces)
+            let phoneToSend = phoneNumber.trimmingCharacters(in: .whitespaces)
+            let rawPassword = password
+            
+            do {
+                let dbUser = try await SupabaseManager.shared.createMaintenanceStaff(
+                    email: emailToSend,
+                    passwordString: rawPassword,
+                    fullName: nameToSend,
+                    phoneNumber: phoneToSend,
+                    isActive: isActive
+                )
+                
+                let passwordHash = Data(rawPassword.utf8).base64EncodedString()
+                let staff = User(
+                    id: dbUser.id,
+                    fullName: nameToSend,
+                    email: emailToSend,
+                    phoneNumber: phoneToSend,
+                    passwordHash: passwordHash,
+                    role: .maintenance,
+                    isActive: isActive
+                )
+                
+                do {
+                    try await EmailManager.shared.sendWelcomeEmail(to: emailToSend, name: nameToSend, passwordString: rawPassword)
+                } catch {
+                    print("⚠️ Welcome email send failed: \(error.localizedDescription)")
+                }
+                
+                await MainActor.run {
+                    modelContext.insert(staff)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to save maintenance staff to Supabase: \(error)")
+                
+                let fallbackId = UUID()
+                let passwordHash = Data(rawPassword.utf8).base64EncodedString()
+                let staff = User(
+                    id: fallbackId,
+                    fullName: nameToSend,
+                    email: emailToSend,
+                    phoneNumber: phoneToSend,
+                    passwordHash: passwordHash,
+                    role: .maintenance,
+                    isActive: isActive
+                )
+                
+                do {
+                    try await EmailManager.shared.sendWelcomeEmail(to: emailToSend, name: nameToSend, passwordString: rawPassword)
+                } catch {
+                    print("⚠️ Welcome email send failed in offline fallback: \(error.localizedDescription)")
+                }
+                
+                await MainActor.run {
+                    modelContext.insert(staff)
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 }
 
@@ -182,6 +250,8 @@ struct EditMaintenanceFormView: View {
     @State private var validationMessage   = ""
     @State private var showDeleteConfirm   = false
     @State private var saveSuccess         = false
+    @State private var isSaving            = false
+    @State private var isDeleting          = false
     @FocusState private var focusedField: UserFocusField?
 
     init(staff: User) {
@@ -243,6 +313,7 @@ struct EditMaintenanceFormView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                         .foregroundColor(.red)
+                        .disabled(isSaving || isDeleting)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -302,8 +373,13 @@ struct EditMaintenanceFormView: View {
     private var saveButton: some View {
         Button { saveChanges() } label: {
             HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
-                Text("Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                if isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                }
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
@@ -314,6 +390,7 @@ struct EditMaintenanceFormView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: AppTheme.Brand.accent.opacity(0.35), radius: 12, x: 0, y: 6)
         }
+        .disabled(isSaving || isDeleting)
     }
 
     
@@ -321,8 +398,13 @@ struct EditMaintenanceFormView: View {
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
             HStack(spacing: 8) {
-                Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
-                Text("Delete Staff Member").font(.system(size: 15, weight: .semibold, design: .rounded))
+                if isDeleting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                } else {
+                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                }
+                Text(isDeleting ? "Deleting..." : "Delete Staff Member").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
             .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -331,6 +413,7 @@ struct EditMaintenanceFormView: View {
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
         }
+        .disabled(isSaving || isDeleting)
     }
 
     
@@ -339,32 +422,93 @@ struct EditMaintenanceFormView: View {
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {
             validationMessage = "Full name is required."; showValidationAlert = true; return
         }
-        guard !email.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmedEmail.isEmpty else {
             validationMessage = "Email is required."; showValidationAlert = true; return
         }
-        guard email.contains("@") else {
+        guard trimmedEmail.isValidEmail else {
             validationMessage = "Please enter a valid email address."; showValidationAlert = true; return
         }
-        guard !phoneNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
+        
+        let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
+        guard !trimmedPhone.isEmpty else {
             validationMessage = "Phone number is required."; showValidationAlert = true; return
+        }
+        guard trimmedPhone.isValidPhoneNumber else {
+            validationMessage = "Please enter a valid 10-digit phone number."; showValidationAlert = true; return
         }
 
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
-        staff.fullName    = fullName.trimmingCharacters(in: .whitespaces)
-        staff.email       = email.trimmingCharacters(in: .whitespaces).lowercased()
-        staff.phoneNumber = phoneNumber.trimmingCharacters(in: .whitespaces)
-        staff.isActive    = isActive
-        staff.updatedAt   = .now
+        let updatedDBUser = DBUser(
+            id: staff.id,
+            name: fullName.trimmingCharacters(in: .whitespaces),
+            email: email.trimmingCharacters(in: .whitespaces).lowercased(),
+            role: staff.role.toDBUserRole,
+            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespaces).isEmpty ? nil : phoneNumber.trimmingCharacters(in: .whitespaces),
+            profileImage: staff.profileImageURL,
+            isActive: isActive,
+            createdAt: staff.createdAt
+        )
 
-        try? modelContext.save()
-        saveSuccess = true
+        isSaving = true
+
+        Task {
+            do {
+                try await SupabaseManager.shared.updateDriver(updatedDBUser)
+                
+                await MainActor.run {
+                    staff.fullName    = fullName.trimmingCharacters(in: .whitespaces)
+                    staff.email       = email.trimmingCharacters(in: .whitespaces).lowercased()
+                    staff.phoneNumber = phoneNumber.trimmingCharacters(in: .whitespaces)
+                    staff.isActive    = isActive
+                    staff.updatedAt   = .now
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            } catch {
+                print("Failed to update staff on Supabase: \(error)")
+                await MainActor.run {
+                    staff.fullName    = fullName.trimmingCharacters(in: .whitespaces)
+                    staff.email       = email.trimmingCharacters(in: .whitespaces).lowercased()
+                    staff.phoneNumber = phoneNumber.trimmingCharacters(in: .whitespaces)
+                    staff.isActive    = isActive
+                    staff.updatedAt   = .now
+
+                    try? modelContext.save()
+                    isSaving = false
+                    saveSuccess = true
+                }
+            }
+        }
     }
 
     private func deleteStaff() {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        modelContext.delete(staff)
-        try? modelContext.save()
-        dismiss()
+        
+        isDeleting = true
+        
+        Task {
+            do {
+                try await SupabaseManager.shared.deleteDriver(id: staff.id)
+                
+                await MainActor.run {
+                    modelContext.delete(staff)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            } catch {
+                print("Failed to delete staff from Supabase: \(error)")
+                await MainActor.run {
+                    modelContext.delete(staff)
+                    try? modelContext.save()
+                    isDeleting = false
+                    dismiss()
+                }
+            }
+        }
     }
 }

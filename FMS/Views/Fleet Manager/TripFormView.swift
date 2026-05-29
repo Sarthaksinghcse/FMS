@@ -1,99 +1,102 @@
-
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
-import CoreLocation
-
-
-
+import MapKit
 
 
 @available(iOS 26.0, *)
 struct AddTripFormView: View {
-
+    
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
-
+    
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
-
+    @Query private var allTrips: [Trip]
+    
     
     @State private var tripCode         = ""
     @State private var selectedVehicle: Vehicle?
     @State private var selectedDriver: User?
     @State private var startLocation    = ""
     @State private var endLocation      = ""
-    @State private var startLatText     = ""
-    @State private var startLongText    = ""
-    @State private var endLatText       = ""
-    @State private var endLongText      = ""
-    @State private var scheduledStartTime = Date()
-    @State private var scheduledEndTime   = Date().addingTimeInterval(3600)
+    @State private var startCoordinate: CLLocationCoordinate2D?
+    @State private var endCoordinate: CLLocationCoordinate2D?
+    @State private var showingStartPicker = false
+    @State private var showingEndPicker = false
+    @State private var scheduledStartTime = Date().addingTimeInterval(2 * 3600)
+    @State private var scheduledEndTime   = Date().addingTimeInterval(4 * 3600)
+    @State private var additionalHours: Double = 0.0
     @State private var distanceText     = ""
     @State private var notes            = ""
-
+    @State private var timeCheckTask: Task<Void, Never>? = nil
+    
     
     @State private var showValidationAlert  = false
     @State private var validationMessage    = ""
     @State private var saveSuccess          = false
     @State private var isSaving             = false
-
+    
     
     @FocusState private var focusedField: TripFocusField?
-
+    
     private var drivers: [User] { allUsers.filter { $0.role == .driver } }
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
-
+                
                 ScrollView {
                     VStack(spacing: 24) {
-
+                        
                         
                         formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
-                                         text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
+                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                         }
-
-                        formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
-                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle)
-                            FormDivider()
-                            DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver)
-                        }
-
+                        
                         formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
-                            TripFormField(label: "Start Location", placeholder: "e.g. Mumbai",
-                                         text: $startLocation, keyboardType: .default, focus: $focusedField, tag: .startLocation)
+                            LocationSelectionRow(label: "Start Location", placeholder: "Select on map", locationText: startLocation) {
+                                showingStartPicker = true
+                            }
                             FormDivider()
-                            TripFormField(label: "End Location", placeholder: "e.g. Delhi",
-                                         text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
+                            LocationSelectionRow(label: "End Location", placeholder: "Select on map", locationText: endLocation) {
+                                showingEndPicker = true
+                            }
                         }
-
+                        
                         formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
+                            if scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
+                                Text("⚠️ Start time must be at least 2 hours from now.")
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundColor(.red)
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 8)
+                            }
                             FormDivider()
                             DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
+                            FormDivider()
+                            AdditionalTimeStepperRow(label: "Additional Time", additionalHours: $additionalHours)
                         }
-
+                        
+                        formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
+                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: nil)
+                            FormDivider()
+                            DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: nil)
+                        }
+                        
                         formSection(title: "Distance & Notes", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
                             TripFormField(label: "Distance (km)", placeholder: "e.g. 1450",
-                                         text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
+                                          text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
                             FormDivider()
                             TripNotesField(label: "Notes", placeholder: "Optional notes",
-                                          text: $notes, focus: $focusedField, tag: .notes)
+                                           text: $notes, focus: $focusedField, tag: .notes)
                         }
-
+                        
                         
                         saveButton
-
+                        
                         Spacer().frame(height: 40)
                     }
                     .padding(.horizontal, 20)
@@ -118,11 +121,69 @@ struct AddTripFormView: View {
             } message: {
                 Text("\(tripCode) has been created successfully.")
             }
+            .sheet(isPresented: $showingStartPicker) {
+                LocationPickerSheet(
+                    title: "Select Start Location",
+                    initialLocation: startLocation,
+                    initialCoordinate: startCoordinate
+                ) { address, coord in
+                    startLocation = address
+                    startCoordinate = coord
+                    calculateDistanceIfPossible()
+                }
+                .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showingEndPicker) {
+                LocationPickerSheet(
+                    title: "Select End Location",
+                    initialLocation: endLocation,
+                    initialCoordinate: endCoordinate
+                ) { address, coord in
+                    endLocation = address
+                    endCoordinate = coord
+                    calculateDistanceIfPossible()
+                }
+                .presentationDetents([.medium, .large])
+            }
+            .onChange(of: scheduledStartTime) { oldValue, newValue in
+                let duration = scheduledEndTime.timeIntervalSince(oldValue)
+                scheduledEndTime = newValue.addingTimeInterval(duration)
+                
+                timeCheckTask?.cancel()
+                timeCheckTask = Task {
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    guard !Task.isCancelled else { return }
+                    if scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
+                        await MainActor.run {
+                            withAnimation(.spring()) {
+                                scheduledStartTime = Date().addingTimeInterval(2 * 3600)
+                            }
+                        }
+                    }
+                }
+            }
+            .onChange(of: additionalHours) { oldValue, newValue in
+                let diff = (newValue - oldValue) * 3600
+                scheduledEndTime = scheduledEndTime.addingTimeInterval(diff)
+            }
+            .onAppear {
+                if tripCode.isEmpty {
+                    let currentMax = allTrips.compactMap { trip -> Int? in
+                        let components = trip.tripCode.components(separatedBy: "-")
+                        if components.count == 2, let number = Int(components[1]) {
+                            return number
+                        }
+                        return nil
+                    }.max() ?? 0
+                    
+                    tripCode = String(format: "TRP-%03d", currentMax + 1)
+                }
+            }
         }
     }
-
     
-
+    
+    
     private var saveButton: some View {
         Button {
             saveTrip()
@@ -152,9 +213,9 @@ struct AddTripFormView: View {
         }
         .disabled(isSaving)
     }
-
     
-
+    
+    
     private func saveTrip() {
         
         guard !tripCode.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -177,45 +238,54 @@ struct AddTripFormView: View {
         guard scheduledStartTime < scheduledEndTime else {
             validationMessage = "Scheduled end time must be after start time."; showValidationAlert = true; return
         }
+        guard scheduledStartTime >= Date().addingTimeInterval(2 * 3600 - 60) else {
+            validationMessage = "Trip start time must be at least 2 hours from now."
+            showValidationAlert = true
+            scheduledStartTime = Date().addingTimeInterval(2 * 3600)
+            return
+        }
         
         
-        let distance = Double(distanceText)
-
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
+        
         isSaving = true
-
+        
         Task {
-            let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
-            let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
-
+            guard let startCoordObj = startCoordinate, let endCoordObj = endCoordinate else {
+                await MainActor.run {
+                    validationMessage = "Please select valid map locations."
+                    showValidationAlert = true
+                    isSaving = false
+                }
+                return
+            }
             
             let distance: Double
             if let userDistance = Double(distanceText), userDistance > 0 {
                 distance = userDistance
             } else {
-                let startLoc = CLLocation(latitude: startCoord.latitude, longitude: startCoord.longitude)
-                let endLoc = CLLocation(latitude: endCoord.latitude, longitude: endCoord.longitude)
+                let startLoc = CLLocation(latitude: startCoordObj.latitude, longitude: startCoordObj.longitude)
+                let endLoc = CLLocation(latitude: endCoordObj.latitude, longitude: endCoordObj.longitude)
                 distance = Double(String(format: "%.1f", startLoc.distance(from: endLoc) / 1000.0)) ?? 0.0
             }
-
+            
             let trip = Trip(
                 tripCode:            tripCode.trimmingCharacters(in: .whitespaces).uppercased(),
                 vehicleId:           vehicle.id,
                 driverId:            driver.id,
                 startLocation:       startLocation.trimmingCharacters(in: .whitespaces),
                 endLocation:         endLocation.trimmingCharacters(in: .whitespaces),
-                startLatitude:       startCoord.latitude,
-                startLongitude:      startCoord.longitude,
-                endLatitude:         endCoord.latitude,
-                endLongitude:        endCoord.longitude,
+                startLatitude:       startCoordObj.latitude,
+                startLongitude:      startCoordObj.longitude,
+                endLatitude:         endCoordObj.latitude,
+                endLongitude:        endCoordObj.longitude,
                 scheduledStartTime:  scheduledStartTime,
                 scheduledEndTime:    scheduledEndTime,
                 distanceKm:          distance,
                 tripStatus:          .assigned,
                 notes:               notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
             )
-
+            
             do {
                 try await SupabaseManager.shared.createTrip(trip.asDBTrip)
                 
@@ -251,6 +321,35 @@ struct AddTripFormView: View {
             }
         }
     }
+    
+    private func calculateDistanceIfPossible() {
+        guard let start = startCoordinate, let end = endCoordinate else { return }
+        let startLoc = CLLocation(latitude: start.latitude, longitude: start.longitude)
+        let endLoc = CLLocation(latitude: end.latitude, longitude: end.longitude)
+        let dist = startLoc.distance(from: endLoc) / 1000.0
+        distanceText = String(format: "%.1f", dist)
+        
+        Task {
+            let request = MKDirections.Request()
+            request.source = MKMapItem(location: CLLocation(latitude: start.latitude, longitude: start.longitude), address: nil)
+            request.destination = MKMapItem(location: CLLocation(latitude: end.latitude, longitude: end.longitude), address: nil)
+            request.transportType = .automobile
+            
+            do {
+                let directions = MKDirections(request: request)
+                let response = try await directions.calculate()
+                if let route = response.routes.first {
+                    await MainActor.run {
+                        let drivingDist = route.distance / 1000.0
+                        distanceText = String(format: "%.1f", drivingDist)
+                        scheduledEndTime = scheduledStartTime.addingTimeInterval(route.expectedTravelTime + (additionalHours * 3600))
+                    }
+                }
+            } catch {
+                print("Failed to calculate directions: \(error)")
+            }
+        }
+    }
 }
 
 
@@ -259,31 +358,33 @@ struct AddTripFormView: View {
 
 @available(iOS 26.0, *)
 struct EditTripFormView: View {
-
+    
     let trip: Trip
-
+    
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss)      private var dismiss
-
+    
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
-
+    @Query private var allTrips: [Trip]
     
     @State private var tripCode: String
     @State private var selectedVehicle: Vehicle?
     @State private var selectedDriver: User?
     @State private var startLocation: String
     @State private var endLocation: String
-    @State private var startLatText: String
-    @State private var startLongText: String
-    @State private var endLatText: String
-    @State private var endLongText: String
+    @State private var startCoordinate: CLLocationCoordinate2D?
+    @State private var endCoordinate: CLLocationCoordinate2D?
+    @State private var showingStartPicker = false
+    @State private var showingEndPicker = false
     @State private var scheduledStartTime: Date
     @State private var scheduledEndTime: Date
+    @State private var additionalHours: Double = 0.0
     @State private var distanceText: String
     @State private var notes: String
+    @State private var timeCheckTask: Task<Void, Never>? = nil
     @State private var tripStatus: TripStatus
-
+    
     @State private var showValidationAlert = false
     @State private var validationMessage   = ""
     @State private var showDeleteConfirm   = false
@@ -291,78 +392,87 @@ struct EditTripFormView: View {
     @State private var isSaving             = false
     @State private var isDeleting           = false
     @FocusState private var focusedField: TripFocusField?
-
+    
     private var drivers: [User] { allUsers.filter { $0.role == .driver } }
-
+    
     init(trip: Trip) {
         self.trip = trip
         _tripCode            = State(initialValue: trip.tripCode)
         _startLocation       = State(initialValue: trip.startLocation)
         _endLocation         = State(initialValue: trip.endLocation)
-        _startLatText        = State(initialValue: String(trip.startLatitude))
-        _startLongText       = State(initialValue: String(trip.startLongitude))
-        _endLatText          = State(initialValue: String(trip.endLatitude))
-        _endLongText         = State(initialValue: String(trip.endLongitude))
+        _startCoordinate     = State(initialValue: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
+        _endCoordinate       = State(initialValue: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
         _scheduledStartTime  = State(initialValue: trip.scheduledStartTime)
         _scheduledEndTime    = State(initialValue: trip.scheduledEndTime)
         _distanceText        = State(initialValue: String(format: "%.1f", trip.distanceKm))
         _notes               = State(initialValue: trip.notes ?? "")
         _tripStatus          = State(initialValue: trip.tripStatus)
     }
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
-
+                
                 ScrollView {
                     VStack(spacing: 24) {
-
+                        
                         
                         tripBadge
-
+                        
                         
                         formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
-                                         text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
+                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
                             FormDivider()
                             TripStatusPickerRow(selection: $tripStatus)
                         }
-
-                        formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
-                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle)
-                            FormDivider()
-                            DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver)
-                        }
-
+                        
                         formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
-                            TripFormField(label: "Start Location", placeholder: "e.g. Mumbai",
-                                         text: $startLocation, keyboardType: .default, focus: $focusedField, tag: .startLocation)
+                            LocationSelectionRow(label: "Start Location", placeholder: "Select on map", locationText: startLocation) {
+                                showingStartPicker = true
+                            }
                             FormDivider()
-                            TripFormField(label: "End Location", placeholder: "e.g. Delhi",
-                                         text: $endLocation, keyboardType: .default, focus: $focusedField, tag: .endLocation)
+                            LocationSelectionRow(label: "End Location", placeholder: "Select on map", locationText: endLocation) {
+                                showingEndPicker = true
+                            }
                         }
-
+                        
                         formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
+                            if scheduledStartTime != trip.scheduledStartTime && scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
+                                Text("⚠️ New start time must be at least 2 hours from now.")
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundColor(.red)
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 8)
+                            }
                             FormDivider()
                             DatePickerRow(label: "End Time", date: $scheduledEndTime, showsTime: true)
+                            FormDivider()
+                            AdditionalTimeStepperRow(label: "Additional Time", additionalHours: $additionalHours)
                         }
-
+                        
+                        formSection(title: "Assignment", icon: "person.2.fill", iconColor: AppTheme.Brand.royalBlue) {
+                            VehiclePickerRow(label: "Vehicle", vehicles: vehicles, selection: $selectedVehicle, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: trip.id)
+                            FormDivider()
+                            DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: trip.id)
+                        }
+                        
                         formSection(title: "Distance & Notes", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
                             TripFormField(label: "Distance (km)", placeholder: "e.g. 1450",
-                                         text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
+                                          text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
                             FormDivider()
                             TripNotesField(label: "Notes", placeholder: "Optional notes",
-                                          text: $notes, focus: $focusedField, tag: .notes)
+                                           text: $notes, focus: $focusedField, tag: .notes)
                         }
-
+                        
                         
                         saveButton
-
+                        
                         
                         deleteButton
-
+                        
                         Spacer().frame(height: 40)
                     }
                     .padding(.horizontal, 20)
@@ -380,19 +490,64 @@ struct EditTripFormView: View {
             .alert("Missing Information", isPresented: $showValidationAlert) {
                 Button("OK", role: .cancel) {}
             } message: { Text(validationMessage) }
-            .alert("Changes Saved", isPresented: $saveSuccess) {
-                Button("Done") { dismiss() }
-            } message: { Text("\(tripCode) has been updated.") }
-            .confirmationDialog(
-                "Delete \(trip.tripCode)?",
-                isPresented: $showDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Delete Trip", role: .destructive) { deleteTrip() }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will permanently remove the trip. This action cannot be undone.")
+                .alert("Changes Saved", isPresented: $saveSuccess) {
+                    Button("Done") { dismiss() }
+                } message: { Text("\(tripCode) has been updated.") }
+                .confirmationDialog(
+                    "Delete \(trip.tripCode)?",
+                    isPresented: $showDeleteConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Delete Trip", role: .destructive) { deleteTrip() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will permanently remove the trip. This action cannot be undone.")
+                }
+        }
+        .sheet(isPresented: $showingStartPicker) {
+            LocationPickerSheet(
+                title: "Select Start Location",
+                initialLocation: startLocation,
+                initialCoordinate: startCoordinate
+            ) { address, coord in
+                startLocation = address
+                startCoordinate = coord
+                calculateDistanceIfPossible()
             }
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showingEndPicker) {
+            LocationPickerSheet(
+                title: "Select End Location",
+                initialLocation: endLocation,
+                initialCoordinate: endCoordinate
+            ) { address, coord in
+                endLocation = address
+                endCoordinate = coord
+                calculateDistanceIfPossible()
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .onChange(of: scheduledStartTime) { oldValue, newValue in
+            let duration = scheduledEndTime.timeIntervalSince(oldValue)
+            scheduledEndTime = newValue.addingTimeInterval(duration)
+            
+            timeCheckTask?.cancel()
+            timeCheckTask = Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled else { return }
+                if scheduledStartTime != trip.scheduledStartTime && scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
+                    await MainActor.run {
+                        withAnimation(.spring()) {
+                            scheduledStartTime = trip.scheduledStartTime
+                        }
+                    }
+                }
+            }
+        }
+        .onChange(of: additionalHours) { oldValue, newValue in
+            let diff = (newValue - oldValue) * 3600
+            scheduledEndTime = scheduledEndTime.addingTimeInterval(diff)
         }
         .onAppear {
             
@@ -400,9 +555,9 @@ struct EditTripFormView: View {
             selectedDriver = drivers.first { $0.id == trip.driverId }
         }
     }
-
     
-
+    
+    
     private var tripBadge: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -433,9 +588,9 @@ struct EditTripFormView: View {
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(AppTheme.Glass.border, lineWidth: 1))
         .padding(.top, 8)
     }
-
     
-
+    
+    
     private var saveButton: some View {
         Button { saveChanges() } label: {
             HStack(spacing: 10) {
@@ -458,9 +613,9 @@ struct EditTripFormView: View {
         }
         .disabled(isSaving || isDeleting)
     }
-
     
-
+    
+    
     private var deleteButton: some View {
         Button { showDeleteConfirm = true } label: {
             HStack(spacing: 8) {
@@ -481,9 +636,9 @@ struct EditTripFormView: View {
         }
         .disabled(isSaving || isDeleting)
     }
-
     
-
+    
+    
     private func saveChanges() {
         
         guard !tripCode.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -506,18 +661,33 @@ struct EditTripFormView: View {
             validationMessage = "Scheduled end time must be after start time."; showValidationAlert = true; return
         }
         
+        if scheduledStartTime != trip.scheduledStartTime {
+            guard scheduledStartTime >= Date().addingTimeInterval(2 * 3600 - 60) else {
+                validationMessage = "New trip start time must be at least 2 hours from now."
+                showValidationAlert = true
+                scheduledStartTime = trip.scheduledStartTime
+                return
+            }
+        }
+        
         guard let distance = Double(distanceText), distance > 0 else {
             validationMessage = "Please enter a valid distance."; showValidationAlert = true; return
         }
         
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
+        
         isSaving = true
-
+        
         Task {
-            let startCoord = await geocodeAddress(startLocation) ?? fallbackCoordinate(for: startLocation)
-            let endCoord = await geocodeAddress(endLocation) ?? fallbackCoordinate(for: endLocation)
-
+            guard let startCoordObj = startCoordinate, let endCoordObj = endCoordinate else {
+                await MainActor.run {
+                    validationMessage = "Please select valid map locations."
+                    showValidationAlert = true
+                    isSaving = false
+                }
+                return
+            }
+            
             let updatedDBTrip = DBTrip(
                 id: trip.id,
                 vehicleId: vehicle.id,
@@ -531,7 +701,7 @@ struct EditTripFormView: View {
                 notes: notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces),
                 createdAt: trip.createdAt
             )
-
+            
             do {
                 try await SupabaseManager.shared.updateTrip(updatedDBTrip)
                 await MainActor.run {
@@ -540,16 +710,16 @@ struct EditTripFormView: View {
                     trip.driverId           = driver.id
                     trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
                     trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
-                    trip.startLatitude      = startCoord.latitude
-                    trip.startLongitude     = startCoord.longitude
-                    trip.endLatitude        = endCoord.latitude
-                    trip.endLongitude       = endCoord.longitude
+                    trip.startLatitude      = startCoordObj.latitude
+                    trip.startLongitude     = startCoordObj.longitude
+                    trip.endLatitude        = endCoordObj.latitude
+                    trip.endLongitude       = endCoordObj.longitude
                     trip.scheduledStartTime = scheduledStartTime
                     trip.scheduledEndTime   = scheduledEndTime
                     trip.distanceKm         = distance
                     trip.tripStatus         = tripStatus
                     trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
-
+                    
                     try? modelContext.save()
                     isSaving = false
                     saveSuccess = true
@@ -562,16 +732,16 @@ struct EditTripFormView: View {
                     trip.driverId           = driver.id
                     trip.startLocation      = startLocation.trimmingCharacters(in: .whitespaces)
                     trip.endLocation        = endLocation.trimmingCharacters(in: .whitespaces)
-                    trip.startLatitude      = startCoord.latitude
-                    trip.startLongitude     = startCoord.longitude
-                    trip.endLatitude        = endCoord.latitude
-                    trip.endLongitude       = endCoord.longitude
+                    trip.startLatitude      = startCoordObj.latitude
+                    trip.startLongitude     = startCoordObj.longitude
+                    trip.endLatitude        = endCoordObj.latitude
+                    trip.endLongitude       = endCoordObj.longitude
                     trip.scheduledStartTime = scheduledStartTime
                     trip.scheduledEndTime   = scheduledEndTime
                     trip.distanceKm         = distance
                     trip.tripStatus         = tripStatus
                     trip.notes              = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
-
+                    
                     try? modelContext.save()
                     isSaving = false
                     saveSuccess = true
@@ -579,7 +749,7 @@ struct EditTripFormView: View {
             }
         }
     }
-
+    
     private func deleteTrip() {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         
@@ -608,6 +778,35 @@ struct EditTripFormView: View {
             }
         }
     }
+    
+    private func calculateDistanceIfPossible() {
+        guard let start = startCoordinate, let end = endCoordinate else { return }
+        let startLoc = CLLocation(latitude: start.latitude, longitude: start.longitude)
+        let endLoc = CLLocation(latitude: end.latitude, longitude: end.longitude)
+        let dist = startLoc.distance(from: endLoc) / 1000.0
+        distanceText = String(format: "%.1f", dist)
+        
+        Task {
+            let request = MKDirections.Request()
+            request.source = MKMapItem(location: CLLocation(latitude: start.latitude, longitude: start.longitude), address: nil)
+            request.destination = MKMapItem(location: CLLocation(latitude: end.latitude, longitude: end.longitude), address: nil)
+            request.transportType = .automobile
+            
+            do {
+                let directions = MKDirections(request: request)
+                let response = try await directions.calculate()
+                if let route = response.routes.first {
+                    await MainActor.run {
+                        let drivingDist = route.distance / 1000.0
+                        distanceText = String(format: "%.1f", drivingDist)
+                        scheduledEndTime = scheduledStartTime.addingTimeInterval(route.expectedTravelTime + (additionalHours * 3600))
+                    }
+                }
+            } catch {
+                print("Failed to calculate directions: \(error)")
+            }
+        }
+    }
 }
 
 
@@ -615,12 +814,90 @@ struct EditTripFormView: View {
 
 
 
+
+struct AdditionalTimeStepperRow: View {
+    let label: String
+    @Binding var additionalHours: Double
+    
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(.black)
+                .frame(width: 120, alignment: .leading)
+            
+            Spacer()
+            
+            HStack(spacing: 16) {
+                Button {
+                    if additionalHours > 0 {
+                        additionalHours -= 0.5
+                    }
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(additionalHours > 0 ? AppTheme.Brand.royalBlue : .gray)
+                }
+                .disabled(additionalHours <= 0)
+                
+                Text(String(format: "%.1f hrs", additionalHours))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(AppTheme.Brand.royalBlue)
+                    .frame(minWidth: 55, alignment: .center)
+                
+                Button {
+                    additionalHours += 0.5
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(AppTheme.Brand.royalBlue)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+}
 
 enum TripFocusField: Hashable {
     case tripCode, startLocation, endLocation, startLat, startLong, endLat, endLong, distance, notes
 }
 
 
+
+struct LocationSelectionRow: View {
+    let label: String
+    let placeholder: String
+    let locationText: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Text(label)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(.black)
+                    .frame(width: 120, alignment: .leading)
+                
+                Spacer()
+                
+                Text(locationText.isEmpty ? placeholder : locationText)
+                    .font(.system(size: 14, design: .rounded))
+                    .foregroundColor(locationText.isEmpty ? .gray : AppTheme.Brand.royalBlue)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(1)
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color(.systemGray3))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
 
 struct TripFormField: View {
     let label: String
@@ -629,14 +906,14 @@ struct TripFormField: View {
     let keyboardType: UIKeyboardType
     var focus: FocusState<TripFocusField?>.Binding
     let tag: TripFocusField
-
+    
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .frame(width: 120, alignment: .leading)
-
+            
             TextField(placeholder, text: $text)
                 .font(.system(size: 14, design: .rounded))
                 .foregroundColor(AppTheme.Brand.royalBlue)
@@ -657,7 +934,7 @@ struct TripNotesField: View {
     @Binding var text: String
     var focus: FocusState<TripFocusField?>.Binding
     let tag: TripFocusField
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
@@ -665,7 +942,7 @@ struct TripNotesField: View {
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
-
+            
             TextField(placeholder, text: $text, axis: .vertical)
                 .font(.system(size: 14, design: .rounded))
                 .foregroundColor(AppTheme.Brand.royalBlue)
@@ -683,30 +960,92 @@ struct VehiclePickerRow: View {
     let label: String
     let vehicles: [Vehicle]
     @Binding var selection: Vehicle?
-
+    var allTrips: [Trip] = []
+    var startTime: Date = Date()
+    var endTime: Date = Date()
+    var currentTripId: UUID? = nil
+    
+    private var availableVehicles: [Vehicle] {
+        vehicles.filter { vehicle in
+            vehicle.status == .active && !hasOverlap(for: vehicle.id)
+        }
+    }
+    
+    private var unavailableVehicles: [Vehicle] {
+        vehicles.filter { vehicle in
+            vehicle.status != .active || hasOverlap(for: vehicle.id)
+        }
+    }
+    
+    private func hasOverlap(for entityId: UUID) -> Bool {
+        allTrips.contains { trip in
+            guard trip.id != currentTripId else { return false }
+            guard trip.vehicleId == entityId else { return false }
+            guard trip.tripStatus != .completed && trip.tripStatus != .cancelled else { return false }
+            return trip.scheduledStartTime < endTime && trip.scheduledEndTime > startTime
+        }
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
-
+            
             Spacer()
-
+            
             if vehicles.isEmpty {
                 Text("No vehicles available")
                     .font(.system(size: 13, design: .rounded))
                     .foregroundColor(.gray)
                     .italic()
             } else {
-                Picker("", selection: $selection) {
-                    Text("Select Vehicle").tag(nil as Vehicle?)
-                    ForEach(vehicles) { vehicle in
-                        Text("\(vehicle.registrationNumber) - \(vehicle.make) \(vehicle.model)")
-                            .tag(vehicle as Vehicle?)
+                Menu {
+                    Button("Select Vehicle") {
+                        selection = nil
                     }
+
+                    if !availableVehicles.isEmpty {
+                        Section("Available Vehicles") {
+                            ForEach(availableVehicles) { vehicle in
+                                Button {
+                                    selection = vehicle
+                                } label: {
+                                    Text("\(vehicle.registrationNumber) - \(vehicle.make) \(vehicle.model)")
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                    
+                    if !unavailableVehicles.isEmpty {
+                        Section("Unavailable Vehicles") {
+                            ForEach(unavailableVehicles) { vehicle in
+                                Button {
+                                    selection = vehicle
+                                } label: {
+                                    Text("\(vehicle.registrationNumber) - \(vehicle.make) \(vehicle.model)")
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(
+                            selection.map {
+                                "\($0.registrationNumber) - \($0.make) \($0.model)"
+                            } ?? "Select Vehicle"
+                        )
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: 170, alignment: .trailing)
+
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
-                .pickerStyle(.menu)
-                .tint(AppTheme.Brand.royalBlue)
             }
         }
         .padding(.horizontal, 16)
@@ -720,29 +1059,86 @@ struct DriverPickerRow: View {
     let label: String
     let drivers: [User]
     @Binding var selection: User?
-
+    var allTrips: [Trip] = []
+    var startTime: Date = Date()
+    var endTime: Date = Date()
+    var currentTripId: UUID? = nil
+    
+    private var availableDrivers: [User] {
+        drivers.filter { driver in
+            driver.isActive && !hasOverlap(for: driver.id)
+        }
+    }
+    
+    private var unavailableDrivers: [User] {
+        drivers.filter { driver in
+            driver.isActive && hasOverlap(for: driver.id)
+        }
+    }
+    
+    private func hasOverlap(for entityId: UUID) -> Bool {
+        allTrips.contains { trip in
+            guard trip.id != currentTripId else { return false }
+            guard trip.driverId == entityId else { return false }
+            guard trip.tripStatus != .completed && trip.tripStatus != .cancelled else { return false }
+            return trip.scheduledStartTime < endTime && trip.scheduledEndTime > startTime
+        }
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.black)
-
+            
             Spacer()
-
+            
             if drivers.isEmpty {
                 Text("No drivers available")
                     .font(.system(size: 13, design: .rounded))
                     .foregroundColor(.gray)
                     .italic()
             } else {
-                Picker("", selection: $selection) {
-                    Text("Select Driver").tag(nil as User?)
-                    ForEach(drivers) { driver in
-                        Text(driver.fullName).tag(driver as User?)
+                Menu {
+                    if !availableDrivers.isEmpty {
+                        Section("Available Drivers") {
+                            ForEach(availableDrivers) { driver in
+                                Button {
+                                    selection = driver
+                                } label: {
+                                    Text(driver.fullName)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
                     }
+                    
+                    if !unavailableDrivers.isEmpty {
+                        Section("Unavailable Drivers") {
+                            ForEach(unavailableDrivers) { driver in
+                                Button {
+                                    selection = driver
+                                } label: {
+                                    Text(driver.fullName)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    
+                    HStack(spacing: 4) {
+                        
+                        Text(selection?.fullName ?? "Select Driver")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: 170, alignment: .trailing)
+                        
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.royalBlue)
                 }
-                .pickerStyle(.menu)
-                .tint(AppTheme.Brand.royalBlue)
             }
         }
         .padding(.horizontal, 16)
@@ -754,15 +1150,15 @@ struct DriverPickerRow: View {
 
 struct TripStatusPickerRow: View {
     @Binding var selection: TripStatus
-
+    
     private let options: [(TripStatus, String, Color)] = [
-        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)), 
-        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)), 
-        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)), 
-        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)), 
-        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))  
+        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)),
+        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)),
+        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)),
+        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)),
+        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))
     ]
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Status")
@@ -770,7 +1166,7 @@ struct TripStatusPickerRow: View {
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
-
+            
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(options, id: \.0) { status, label, color in
@@ -798,15 +1194,14 @@ struct TripStatusPickerRow: View {
 
 @MainActor
 func geocodeAddress(_ address: String) async -> CLLocationCoordinate2D? {
-    let geocoder = CLGeocoder()
-    return await withCheckedContinuation { continuation in
-        geocoder.geocodeAddressString(address) { placemarks, error in
-            if let coordinate = placemarks?.first?.location?.coordinate {
-                continuation.resume(returning: coordinate)
-            } else {
-                continuation.resume(returning: nil)
-            }
-        }
+    let request = MKLocalSearch.Request()
+    request.naturalLanguageQuery = address
+    let search = MKLocalSearch(request: request)
+    do {
+        let response = try await search.start()
+        return response.mapItems.first?.location.coordinate
+    } catch {
+        return nil
     }
 }
 

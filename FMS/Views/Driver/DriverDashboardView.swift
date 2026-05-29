@@ -36,6 +36,7 @@ struct DriverDashboardView: View {
     @StateObject private var vm = DriverDashboardViewModel()
     @State private var selectedTab = 0
     @State private var realtimeChannel: RealtimeChannelV2?
+    @State private var realtimeMessagesChannel: RealtimeChannelV2?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -70,20 +71,23 @@ struct DriverDashboardView: View {
                     )
                     Task {
                         try? await SupabaseManager.shared.createNotification(notif)
+                        
+                        let localSOS = SOSAlert(
+                            id: notif.id,
+                            driverId: driverId,
+                            vehicleId: vm.assignedVehicle?.id ?? UUID(),
+                            tripId: vm.activeTrip?.id ?? UUID(),
+                            latitude: 28.5450,
+                            longitude: 77.2600,
+                            message: notif.message,
+                            status: .active,
+                            createdAt: notif.createdAt
+                        )
+                        
+                        try? await SupabaseManager.shared.createSOSAlert(localSOS.asDBSOSAlert)
+                        
                         await MainActor.run {
                             modelContext.insert(notif.asLocalNotification)
-                            
-                            let localSOS = SOSAlert(
-                                id: notif.id,
-                                driverId: driverId,
-                                vehicleId: vm.assignedVehicle?.id ?? UUID(),
-                                tripId: vm.activeTrip?.id ?? UUID(),
-                                latitude: 28.5450,
-                                longitude: 77.2600,
-                                message: notif.message,
-                                status: .active,
-                                createdAt: notif.createdAt
-                            )
                             modelContext.insert(localSOS)
                             try? modelContext.save()
                         }
@@ -96,12 +100,22 @@ struct DriverDashboardView: View {
         .task {
             await vm.load(context: modelContext)
             startRealtimeTripsListener()
+            startRealtimeMessagesListener()
         }
         .onDisappear {
             if let activeChannel = realtimeChannel {
+                let client = SupabaseManager.shared.client
                 Task {
-                    await activeChannel.unsubscribe()
+                    await client.removeChannel(activeChannel)
                 }
+                realtimeChannel = nil
+            }
+            if let activeMsgChannel = realtimeMessagesChannel {
+                let client = SupabaseManager.shared.client
+                Task {
+                    await client.removeChannel(activeMsgChannel)
+                }
+                realtimeMessagesChannel = nil
             }
         }
         
@@ -121,13 +135,16 @@ struct DriverDashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
-        .sheet(isPresented: $vm.showMessaging) { ChatSheet(messages: vm.messages) }
+        .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
         .sheet(isPresented: $vm.showNotifications) {
             DriverNotificationsSheet(vm: vm)
         }
         .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
+        }
+        .fullScreenCover(item: $vm.viewRouteTrip) { trip in
+            TripNavigationView(trip: trip, vm: vm, viewRouteOnly: true)
         }
         
         .confirmationDialog("End Trip", isPresented: $vm.confirmEnd, titleVisibility: .visible) {
@@ -148,17 +165,18 @@ struct DriverDashboardView: View {
     }
 
     private func startRealtimeTripsListener() {
+        guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
         let channel = client.channel("driver_trips_realtime")
         
         Task {
-            let changes = await channel.postgresChange(
+            let changes = channel.postgresChange(
                 AnyAction.self,
                 schema: "public",
                 table: "trips"
             )
             
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             self.realtimeChannel = channel
             
             for await change in changes {
@@ -182,7 +200,6 @@ struct DriverDashboardView: View {
                         let localTrips = (try? modelContext.fetch(descriptor)) ?? []
                         if let local = localTrips.first(where: { $0.id == id }) {
                             if dbTrip.driverId == vm.driverId {
-                                
                                 local.vehicleId = dbTrip.vehicleId
                                 local.driverId = dbTrip.driverId
                                 local.startLocation = dbTrip.source
@@ -195,12 +212,10 @@ struct DriverDashboardView: View {
                                 local.tripStatus = dbTrip.status.toLocalStatus
                                 local.notes = dbTrip.notes
                             } else {
-                                
                                 modelContext.delete(local)
                             }
                             try? modelContext.save()
                         } else if dbTrip.driverId == vm.driverId {
-                            
                             modelContext.insert(dbTrip.asLocalTrip)
                             try? modelContext.save()
                         }
@@ -222,8 +237,39 @@ struct DriverDashboardView: View {
                             await vm.load(context: modelContext)
                         }
                     }
-                default:
-                    break
+                }
+            }
+        }
+    }
+
+    private func startRealtimeMessagesListener() {
+        guard realtimeMessagesChannel == nil else { return }
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("driver_messages_realtime")
+        
+        Task {
+            let changes = channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "messages"
+            )
+            
+            try? await channel.subscribeWithError()
+            self.realtimeMessagesChannel = channel
+            
+            struct MessageHeader: Codable {
+                let sender_id: UUID
+                let receiver_id: UUID
+            }
+            
+            for await change in changes {
+                guard let header = try? change.record.decode(as: MessageHeader.self) else { continue }
+                if header.sender_id == vm.driverId || header.receiver_id == vm.driverId {
+                    _ = await MainActor.run {
+                        Task {
+                            await vm.loadMessages()
+                        }
+                    }
                 }
             }
         }
@@ -759,6 +805,8 @@ struct InspectionFormSheet: View {
         ]
     }
 
+    @Environment(\.modelContext) private var modelContext
+
     @State private var items      = CheckItem.all
     @State private var remarks    = ""
     @State private var hasDefect  = false
@@ -877,6 +925,14 @@ struct InspectionFormSheet: View {
                 }
                 .padding(20)
             }
+            .onChange(of: items.map(\.passed)) {
+                let hasUnchecked = items.contains(where: { !$0.passed })
+                if hasUnchecked {
+                    hasDefect = true
+                } else {
+                    hasDefect = false
+                }
+            }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -916,10 +972,12 @@ struct InspectionFormSheet: View {
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
         var vehicleId = UUID()
         
-        
-        if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
-           let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-            vehicleId = assignedVehicle.id
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                vehicleId = assignedVehicle.id
+            } else if let firstVehicle = vehicles.first {
+                vehicleId = firstVehicle.id
+            }
         }
         
         let checklistStrings = items.map { "\($0.label): \($0.passed ? "passed" : "failed")" }
@@ -938,7 +996,6 @@ struct InspectionFormSheet: View {
         do {
             try await SupabaseManager.shared.submitInspection(dbInspection)
             
-            
             if !allPass || hasDefect {
                 let notif = DBNotification(
                     id: UUID(),
@@ -950,6 +1007,41 @@ struct InspectionFormSheet: View {
                     createdAt: Date()
                 )
                 try await SupabaseManager.shared.createNotification(notif)
+                
+                // Create defect report
+                let defectId = UUID()
+                let severity: DefectSeverity = (status == .failed) ? .high : .medium
+                let defectTitle = "\(isPreTrip ? "Pre-Trip" : "Post-Trip") Defect"
+                let failedChecks = items.filter { !$0.passed }.map { $0.label }
+                let defectDesc = remarks.isEmpty ? "Inspection flagged issues: \(failedChecks.joined(separator: ", "))" : remarks
+                
+                let dbDefect = DBDefectReport(
+                    id: defectId,
+                    vehicleId: vehicleId,
+                    reportedBy: driverId,
+                    inspectionId: dbInspection.id,
+                    title: defectTitle,
+                    defectDescription: defectDesc,
+                    severity: severity,
+                    status: .open,
+                    createdAt: Date()
+                )
+                
+                // Submit to Supabase
+                try? await SupabaseManager.shared.createDefectReport(dbDefect)
+                
+                // Notify Fleet Managers
+                let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
+                let fleetMsg = "Driver \(driverName) flagged a defect on Vehicle \(vehicleId.uuidString.prefix(4)) during \(isPreTrip ? "pre-trip" : "post-trip") inspection: \(defectDesc)"
+                await SupabaseManager.shared.notifyFleetManagers(
+                    title: "⚠️ Defect Flagged (\(isPreTrip ? "Pre" : "Post")-Trip)",
+                    message: fleetMsg,
+                    type: .warning
+                )
+                
+                // Insert locally in SwiftData
+                modelContext.insert(dbDefect.asLocalDefectReport)
+                try? modelContext.save()
             }
         } catch {
             print("Failed to save inspection: \(error.localizedDescription)")
@@ -980,6 +1072,8 @@ struct DefectReportSheet: View {
         }
     }
     enum SevPick: String, CaseIterable { case low = "Low", medium = "Medium", high = "High" }
+
+    @Environment(\.modelContext) private var modelContext
 
     @State private var part       = Part.engine
     @State private var titleStr   = ""
@@ -1094,65 +1188,188 @@ struct DefectReportSheet: View {
     @MainActor
     private func doSubmit() async {
         submitting = true
-        try? await Task.sleep(nanoseconds: 1_200_000_000)
-        submitting = false; submitted = true
+        
+        let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+        var vehicleId = UUID()
+        
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                vehicleId = assignedVehicle.id
+            } else if let firstVehicle = vehicles.first {
+                vehicleId = firstVehicle.id
+            }
+        }
+        
+        let severity: DefectSeverity
+        switch sev {
+        case .low: severity = .low
+        case .medium: severity = .medium
+        case .high: severity = .high
+        }
+        
+        let dbDefect = DBDefectReport(
+            id: UUID(),
+            vehicleId: vehicleId,
+            reportedBy: driverId,
+            inspectionId: nil,
+            title: "\(part.rawValue): \(titleStr)",
+            defectDescription: desc,
+            severity: severity,
+            status: .open,
+            createdAt: Date()
+        )
+        
+        do {
+            // Save to Supabase
+            try await SupabaseManager.shared.createDefectReport(dbDefect)
+            
+            // Notify Fleet Managers
+            let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
+            let msg = "Driver \(driverName) reported a defect on Vehicle \(vehicleId.uuidString.prefix(4)): \(desc)"
+            await SupabaseManager.shared.notifyFleetManagers(
+                title: "⚠️ Mid-Trip Defect: \(titleStr)",
+                message: msg,
+                type: .warning
+            )
+            
+            // Insert locally
+            modelContext.insert(dbDefect.asLocalDefectReport)
+            try? modelContext.save()
+            
+        } catch {
+            print("Failed to submit defect report: \(error.localizedDescription)")
+        }
+        
+        submitting = false
+        submitted = true
     }
 }
 
 
 
 struct ChatSheet: View {
+    @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
-    let messages: [DriverChatMessage]
-    @State private var compose     = ""
-    @State private var showCompose = false
+    @State private var messageText = ""
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    if showCompose {
-                        HStack(spacing: 12) {
-                            TextField("Message fleet manager…", text: $compose)
-                                .font(.system(size: 14))
-                            Button {
-                                withAnimation { compose = ""; showCompose = false }
-                            } label: {
-                                Image(systemName: "paperplane.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(Color.fmsIndigo)
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            if vm.messages.isEmpty {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "bubble.left.and.bubble.right")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(.gray.opacity(0.4))
+                                        .padding(.top, 40)
+                                    Text("No messages yet")
+                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.gray)
+                                    Text("Type below to send a message to the Fleet Manager.")
+                                        .font(.system(size: 12, design: .rounded))
+                                        .foregroundColor(.gray)
+                                        .multilineTextAlignment(.center)
+                                }
+                                .frame(maxWidth: .infinity)
+                            } else {
+                                ForEach(vm.messages) { message in
+                                    HStack {
+                                        if message.isMe {
+                                            Spacer()
+                                            VStack(alignment: .trailing, spacing: 4) {
+                                                Text(message.preview)
+                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                                    .foregroundColor(.white)
+                                                    .padding(.horizontal, 14)
+                                                    .padding(.vertical, 10)
+                                                    .background(AppTheme.Brand.primary)
+                                                    .cornerRadius(16)
+                                                Text(message.time)
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.gray)
+                                                    .padding(.trailing, 4)
+                                            }
+                                        } else {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(message.preview)
+                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                                    .foregroundColor(.black)
+                                                    .padding(.horizontal, 14)
+                                                    .padding(.vertical, 10)
+                                                    .background(Color(.systemGray6))
+                                                    .cornerRadius(16)
+                                                Text(message.time)
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.gray)
+                                                    .padding(.leading, 4)
+                                            }
+                                            Spacer()
+                                        }
+                                    }
+                                    .id(message.id)
+                                }
                             }
-                            .disabled(compose.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
-                        .padding(14)
-                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
-                        .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 8)
+                        .padding()
                     }
-
-                    VStack(spacing: 0) {
-                        ForEach(Array(messages.enumerated()), id: \.offset) { i, m in
-                            FMSMsgRow(msg: m).padding(.horizontal, 16).padding(.vertical, 12)
-                            if i < messages.count - 1 { Divider().padding(.leading, 64) }
+                    .background(Color(red: 0.98, green: 0.98, blue: 0.99))
+                    .onAppear {
+                        if let lastMsg = vm.messages.last {
+                            proxy.scrollTo(lastMsg.id, anchor: .bottom)
                         }
                     }
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
-                    .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 32)
+                    .onChange(of: vm.messages.count) {
+                        if let lastMsg = vm.messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMsg.id, anchor: .bottom)
+                            }
+                        }
+                    }
                 }
+                
+                // Bottom Input Bar
+                HStack(spacing: 12) {
+                    TextField("Type a message...", text: $messageText)
+                        .font(.system(size: 15))
+                        .padding(10)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(20)
+                    
+                    Button(action: {
+                        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !text.isEmpty {
+                            Task {
+                                await vm.sendMessage(text: text)
+                                await MainActor.run {
+                                    messageText = ""
+                                }
+                            }
+                        }
+                    }) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(Color.white)
+                            .padding(10)
+                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : AppTheme.Brand.primary)
+                            .clipShape(Circle())
+                    }
+                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding()
+                .background(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
             }
-            .background(Color.fmsBackground.ignoresSafeArea())
-            .navigationTitle("Messages")
+            .navigationTitle("Chat with Manager")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }.foregroundStyle(Color.fmsIndigo)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        withAnimation { showCompose.toggle() }
-                    } label: {
-                        Image(systemName: showCompose ? "xmark" : "square.and.pencil")
-                            .foregroundStyle(Color.fmsIndigo)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close") {
+                        dismiss()
                     }
+                    .foregroundColor(AppTheme.Brand.primary)
+                    .bold()
                 }
             }
         }
@@ -1166,79 +1383,244 @@ struct ChatSheet: View {
     DriverDashboardView()
 }
 
+// MARK: - Chat Hub Sheet
+
+@available(iOS 26.0, *)
+struct ChatHubSheet: View {
+    @ObservedObject var vm: DriverDashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showFleetManagerChat = false
+
+    private struct ContactEntry: Identifiable {
+        let id = UUID()
+        let name: String
+        let role: String
+        let icon: String
+        let iconColor: Color
+        let isEnabled: Bool
+    }
+
+    private let contacts: [ContactEntry] = [
+        ContactEntry(name: "Fleet Manager",       role: "Direct supervisor for your routes",
+                     icon: "person.badge.shield.checkmark.fill", iconColor: AppTheme.Brand.primaryDeep,  isEnabled: true),
+        ContactEntry(name: "Maintenance Worker",  role: "Vehicle maintenance & repairs",
+                     icon: "wrench.and.screwdriver.fill",          iconColor: AppTheme.Brand.accent,       isEnabled: false),
+        ContactEntry(name: "Maintenance Office",  role: "Schedule service & inspections",
+                     icon: "building.2.fill",                      iconColor: AppTheme.Brand.teal,         isEnabled: false),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(contacts) { contact in
+                        Button {
+                            if contact.isEnabled { showFleetManagerChat = true }
+                        } label: {
+                            HStack(spacing: 14) {
+                                // Icon bubble
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(contact.iconColor.opacity(contact.isEnabled ? 1 : 0.35))
+                                    .frame(width: 42, height: 42)
+                                    .overlay(
+                                        Image(systemName: contact.icon)
+                                            .font(.system(size: 17, weight: .medium))
+                                            .foregroundStyle(.white)
+                                    )
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(contact.name)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(contact.isEnabled ? .primary : .tertiary)
+                                    Text(contact.role)
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                if contact.isEnabled {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(.tertiary)
+                                } else {
+                                    Text("Soon")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 8).padding(.vertical, 3)
+                                        .background(Color(UIColor.systemGray3))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!contact.isEnabled)
+                    }
+                } header: {
+                    Text("Contacts")
+                }
+            }
+            .listStyle(.insetGrouped)
+            .background(Color.fmsBackground.ignoresSafeArea())
+            .navigationTitle("Messages")
+            .navigationBarTitleDisplayMode(.large)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.fmsIndigo)
+                    }
+                }
+            }
+            .sheet(isPresented: $showFleetManagerChat) {
+                ChatSheet(vm: vm)
+            }
+        }
+    }
+}
+
+
+
+
+struct DriverNotificationRow: View {
+    let notification: DBNotification
+    let timeAgo: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(notification.title)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.black)
+                Spacer()
+                if !notification.isRead {
+                    Circle()
+                        .fill(AppTheme.Status.danger)
+                        .frame(width: 8, height: 8)
+                }
+            }
+
+            Text(notification.message)
+                .font(.system(size: 13, design: .rounded))
+                .foregroundColor(.gray)
+
+            Text(timeAgo)
+                .font(.system(size: 10, design: .rounded))
+                .foregroundColor(.gray.opacity(0.6))
+                .padding(.top, 2)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 @available(iOS 26.0, *)
 struct DriverNotificationsSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
 
+    // Local copy so swipe-to-clear removes from UI instantly
+    @State private var localList: [DBNotification] = []
+
+    // Grouped sections — sections with 0 items are automatically excluded
+    private var sections: [(title: String, items: [DBNotification])] {
+        let now = Date()
+        let cal = Calendar.current
+
+        let recent  = localList.filter { now.timeIntervalSince($0.createdAt) < 3600 }
+        let today   = localList.filter { now.timeIntervalSince($0.createdAt) >= 3600 && cal.isDateInToday($0.createdAt) }
+        let older   = localList.filter { !cal.isDateInToday($0.createdAt) }
+
+        var result: [(String, [DBNotification])] = []
+        if !recent.isEmpty  { result.append(("Recent", recent)) }
+        if !today.isEmpty   { result.append(("Earlier Today", today)) }
+        if !older.isEmpty   { result.append(("Older", older)) }
+        return result
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
-                
-                if vm.notificationsList.isEmpty {
+
+                if localList.isEmpty {
                     ContentUnavailableView {
                         Label("No Notifications", systemImage: "bell.slash.fill")
                     } description: {
-                        Text("You don't have any notifications right now.")
+                        Text("You're all caught up.")
                     }
                 } else {
-                    List {
-                        ForEach(vm.notificationsList) { notif in
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text(notif.title)
-                                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                                        .foregroundColor(.black)
-                                    Spacer()
-                                    if !notif.isRead {
-                                        Circle()
-                                            .fill(AppTheme.Status.danger)
-                                            .frame(width: 8, height: 8)
-                                    }
-                                }
-                                Text(notif.message)
-                                    .font(.system(size: 13, design: .rounded))
-                                    .foregroundColor(.gray)
-                                
-                                Text(timeAgo(from: notif.createdAt))
-                                    .font(.system(size: 10, design: .rounded))
-                                    .foregroundColor(.gray.opacity(0.6))
-                                    .padding(.top, 2)
-                            }
-                            .padding(.vertical, 4)
-                            .listRowBackground(Color.white)
-                        }
+                    List(localList) { notification in
+                        notificationRow(notification)
                     }
                     .listStyle(.insetGrouped)
+                    .animation(.easeOut(duration: 0.25), value: localList.count)
                 }
             }
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                        .foregroundColor(Color.fmsIndigo)
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.fmsIndigo)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Mark all read") {
-                        Task {
+                    Button("Mark All Read") {
+                        _Concurrency.Task {
                             await vm.markAllNotificationsAsRead()
+                        }
+                        // Also update local copy
+                        withAnimation {
+                            localList = localList.map {
+                                var n = $0; n.isRead = true; return n
+                            }
                         }
                     }
                     .foregroundColor(Color.fmsIndigo)
-                    .disabled(vm.notificationsList.filter { !$0.isRead }.isEmpty)
+                    .disabled(localList.filter { !$0.isRead }.isEmpty)
                 }
             }
             .task {
                 await vm.loadNotifications()
+                localList = vm.notificationsList
+            }
+            .onChange(of: vm.notificationsList.map(\.id)) {
+                // Only sync additions from Supabase; don't restore cleared items
+                for item in vm.notificationsList where !localList.contains(where: { $0.id == item.id }) {
+                    withAnimation { localList.insert(item, at: 0) }
+                }
+            }
+        }
+    }
+
+    private func notificationRow(_ notification: DBNotification) -> some View {
+        DriverNotificationRow(
+            notification: notification,
+            timeAgo: timeAgo(from: notification.createdAt)
+        )
+        .listRowBackground(Color.white)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    localList.removeAll { $0.id == notification.id }
+                }
+            } label: {
+                Label("Clear", systemImage: "xmark")
             }
         }
     }
 
     private func timeAgo(from date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
+        formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
+

@@ -1,15 +1,7 @@
 
-
-
-
-
-
-
 import Foundation
 import SwiftData
 import SwiftUI
-
-
 
 enum UserRole: String, Codable, CaseIterable {
     case fleetManager
@@ -96,8 +88,8 @@ enum VehicleStatus: String, Codable {
 
     var displayName: String {
         switch self {
-        case .active:        return "Active"
-        case .inactive:      return "Inactive"
+        case .active:        return "Available"
+        case .inactive:      return "On Trip"
         case .inMaintenance: return "Maintenance"
         }
     }
@@ -188,6 +180,15 @@ enum WorkOrderStatus: String, Codable {
     case inProgress
     case completed
     case cancelled
+
+    var displayName: String {
+        switch self {
+        case .open:       return "Open"
+        case .inProgress: return "In Progress"
+        case .completed:  return "Completed"
+        case .cancelled:  return "Cancelled"
+        }
+    }
 }
 
 
@@ -212,8 +213,8 @@ enum NotificationType: String, Codable {
 
 enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     case all          = "All"
-    case active       = "Active"
-    case inactive     = "Inactive"
+    case active       = "Available"
+    case inactive     = "On Trip"
     case inMaintenance = "In Maintenance"
 
     var id: String { rawValue }
@@ -291,6 +292,30 @@ struct DashboardActivity: Identifiable {
     let icon: String
     let iconColor: Color
     let iconBgColor: Color
+    /// Who triggered this event: "Fleet Manager", "Driver", or "System"
+    let source: String
+    /// Actual date for sorting
+    let date: Date
+
+    init(
+        title: String,
+        subtitle: String,
+        time: String,
+        icon: String,
+        iconColor: Color,
+        iconBgColor: Color,
+        source: String = "System",
+        date: Date = Date()
+    ) {
+        self.title      = title
+        self.subtitle   = subtitle
+        self.time       = time
+        self.icon       = icon
+        self.iconColor  = iconColor
+        self.iconBgColor = iconBgColor
+        self.source     = source
+        self.date       = date
+    }
 }
 
 
@@ -355,6 +380,7 @@ struct DBUser: Codable, Identifiable {
     var role: DBUserRole
     var phoneNumber: String?
     var profileImage: String?
+    var isActive: Bool
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -364,6 +390,7 @@ struct DBUser: Codable, Identifiable {
         case role
         case phoneNumber  = "phone_number"
         case profileImage = "profile_image"
+        case isActive     = "is_active"
         case createdAt    = "created_at"
     }
 
@@ -375,7 +402,8 @@ struct DBUser: Codable, Identifiable {
             email: email,
             phoneNumber: phoneNumber ?? "",
             passwordHash: "",
-            role: role.asLocalRole
+            role: role.asLocalRole,
+            isActive: isActive
         )
     }
 }
@@ -400,6 +428,7 @@ extension User {
             role: role.toDBUserRole,
             phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
             profileImage: profileImageURL,
+            isActive: isActive,
             createdAt: createdAt
         )
     }
@@ -751,6 +780,31 @@ struct DBNotification: Codable, Identifiable {
 }
 
 
+struct DBDefectReport: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var reportedBy: UUID
+    var inspectionId: UUID?
+    var title: String
+    var defectDescription: String
+    var severity: DefectSeverity
+    var status: DefectStatus
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId         = "vehicle_id"
+        case reportedBy        = "reported_by"
+        case inspectionId      = "inspection_id"
+        case title
+        case defectDescription = "defect_description"
+        case severity
+        case status
+        case createdAt         = "created_at"
+    }
+}
+
+
 struct DBVehicleLocation: Codable, Identifiable {
     let id: UUID
     var vehicleId: UUID
@@ -900,8 +954,230 @@ extension AppNotification {
 }
 
 
+extension DBDefectReport {
+    var asLocalDefectReport: DefectReport {
+        DefectReport(
+            id: id,
+            vehicleId: vehicleId,
+            reportedBy: reportedBy,
+            inspectionId: inspectionId,
+            title: title,
+            defectDescription: defectDescription,
+            severity: severity,
+            status: status,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension DefectReport {
+    @MainActor
+    var asDBDefectReport: DBDefectReport {
+        DBDefectReport(
+            id: id,
+            vehicleId: vehicleId,
+            reportedBy: reportedBy,
+            inspectionId: inspectionId,
+            title: title,
+            defectDescription: defectDescription,
+            severity: severity,
+            status: status,
+            createdAt: createdAt
+        )
+    }
+}
 
 
+enum DBSOSStatus: String, Codable {
+    case active
+    case resolved
+}
+
+struct DBSOSAlert: Codable, Identifiable {
+    let id: UUID
+    var driverId: UUID
+    var vehicleId: UUID?
+    var tripId: UUID?
+    var latitude: Double
+    var longitude: Double
+    var message: String?
+    var status: DBSOSStatus
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case driverId = "driver_id"
+        case vehicleId = "vehicle_id"
+        case tripId = "trip_id"
+        case latitude
+        case longitude
+        case message
+        case status
+        case createdAt = "created_at"
+    }
+}
+
+extension SOSStatus {
+    var toDBStatus: DBSOSStatus {
+        switch self {
+        case .active: return .active
+        case .resolved: return .resolved
+        }
+    }
+}
+
+extension DBSOSStatus {
+    var toLocalStatus: SOSStatus {
+        switch self {
+        case .active: return .active
+        case .resolved: return .resolved
+        }
+    }
+}
+
+extension DBSOSAlert {
+    var asLocalSOS: SOSAlert {
+        SOSAlert(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId ?? UUID(),
+            tripId: tripId,
+            latitude: latitude,
+            longitude: longitude,
+            message: message,
+            status: status.toLocalStatus,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension SOSAlert {
+    var asDBSOSAlert: DBSOSAlert {
+        DBSOSAlert(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId,
+            tripId: tripId,
+            latitude: latitude,
+            longitude: longitude,
+            message: message,
+            status: status.toDBStatus,
+            createdAt: createdAt
+        )
+    }
+}
+
+struct DBInventoryItem: Codable, Identifiable {
+    let id: UUID
+    var partName: String
+    var partNumber: String
+    var quantityInStock: Int
+    var reorderThreshold: Int
+    var unitCost: Double
+    var supplierName: String?
+    var createdAt: Date
+    var updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case partName = "part_name"
+        case partNumber = "part_number"
+        case quantityInStock = "quantity_in_stock"
+        case reorderThreshold = "reorder_threshold"
+        case unitCost = "unit_cost"
+        case supplierName = "supplier_name"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+extension DBInventoryItem {
+    var asLocalItem: InventoryItem {
+        InventoryItem(
+            id: id,
+            partName: partName,
+            partNumber: partNumber,
+            quantityInStock: quantityInStock,
+            reorderThreshold: reorderThreshold,
+            unitCost: unitCost,
+            supplierName: supplierName,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}
+
+extension InventoryItem {
+    var asDBItem: DBInventoryItem {
+        DBInventoryItem(
+            id: id,
+            partName: partName,
+            partNumber: partNumber,
+            quantityInStock: quantityInStock,
+            reorderThreshold: reorderThreshold,
+            unitCost: unitCost,
+            supplierName: supplierName,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}
+
+struct DBMaintenanceRecord: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var workOrderId: UUID?
+    var serviceType: String
+    var serviceDate: Date
+    var cost: Double
+    var notes: String?
+    var performedBy: UUID
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case workOrderId = "work_order_id"
+        case serviceType = "service_type"
+        case serviceDate = "service_date"
+        case cost
+        case notes
+        case performedBy = "performed_by"
+        case createdAt = "created_at"
+    }
+}
+
+extension DBMaintenanceRecord {
+    var asLocalRecord: MaintenanceRecord {
+        MaintenanceRecord(
+            id: id,
+            vehicleId: vehicleId,
+            workOrderId: workOrderId,
+            serviceType: serviceType,
+            serviceDate: serviceDate,
+            cost: cost,
+            notes: notes,
+            performedBy: performedBy,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension MaintenanceRecord {
+    var asDBRecord: DBMaintenanceRecord {
+        DBMaintenanceRecord(
+            id: id,
+            vehicleId: vehicleId,
+            workOrderId: workOrderId,
+            serviceType: serviceType,
+            serviceDate: serviceDate,
+            cost: cost,
+            notes: notes,
+            performedBy: performedBy,
+            createdAt: createdAt
+        )
+    }
+}
 
 
 @Model
@@ -1119,7 +1395,7 @@ final class DefectReport {
     @Attribute(.unique) var id: UUID
     var vehicleId: UUID
     var reportedBy: UUID
-    var inspectionId: UUID
+    var inspectionId: UUID?
     var title: String
     var defectDescription: String
     var severity: DefectSeverity
@@ -1130,7 +1406,7 @@ final class DefectReport {
         id: UUID = UUID(),
         vehicleId: UUID,
         reportedBy: UUID,
-        inspectionId: UUID,
+        inspectionId: UUID? = nil,
         title: String,
         defectDescription: String,
         severity: DefectSeverity,
@@ -1201,6 +1477,7 @@ final class MaintenanceRecord {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+    var replacedParts: [String]
     var performedBy: UUID
     var createdAt: Date
 
@@ -1212,6 +1489,7 @@ final class MaintenanceRecord {
         serviceDate: Date,
         cost: Double,
         notes: String? = nil,
+        replacedParts: [String] = [],
         performedBy: UUID,
         createdAt: Date = .now
     ) {
@@ -1222,6 +1500,7 @@ final class MaintenanceRecord {
         self.serviceDate = serviceDate
         self.cost = cost
         self.notes = notes
+        self.replacedParts = replacedParts
         self.performedBy = performedBy
         self.createdAt = createdAt
     }

@@ -12,6 +12,7 @@
 
 
 import SwiftUI
+import PhotosUI
 
 
 
@@ -26,6 +27,11 @@ struct DriverEditProfileView: View {
     @State private var emergencyContact = ""
     @State private var isSaving = false
     @State private var showSaved = false
+    @State private var showErrorAlert = false
+    @State private var errorAlertMessage = ""
+
+    @State private var selectedItem: PhotosPickerItem? = nil
+    @State private var selectedImageData: Data? = nil
 
     private var user: DBUser? { supabase.currentUser }
 
@@ -50,34 +56,57 @@ struct DriverEditProfileView: View {
                                 Circle()
                                     .fill(
                                         LinearGradient(
-                                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
+                                            colors: [AppTheme.Status.success, AppTheme.Brand.teal],
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         )
                                     )
                                     .frame(width: 80, height: 80)
-                                    .shadow(color: AppTheme.Brand.primary.opacity(0.30), radius: 12, y: 4)
+                                    .shadow(color: AppTheme.Status.success.opacity(0.30), radius: 12, y: 4)
 
-                                Text(initials.isEmpty ? "DR" : initials)
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                                if let data = selectedImageData, let uiImage = UIImage(data: data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(Circle())
+                                } else if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
+                                    AsyncImage(url: imageURL) { phase in
+                                        switch phase {
+                                        case .success(let image):
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        default:
+                                            Text(initials.isEmpty ? "DR" : initials)
+                                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                                } else {
+                                    Text(initials.isEmpty ? "DR" : initials)
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
                             }
 
-                            Button { } label: {
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
                                 Text("Change Photo")
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(AppTheme.Brand.primary)
+                                    .foregroundColor(AppTheme.Status.success)
                             }
                         }
                         .padding(.top, 8)
 
                         
                         VStack(spacing: 0) {
-                            ProfileFormField(icon: "person.fill", label: "Full Name", text: $fullName, placeholder: "Enter your name")
+                            ProfileFormField(icon: "person.fill", label: "Full Name", text: $fullName, placeholder: "Enter your name", iconColor: AppTheme.Status.success)
                             Divider().padding(.leading, 56)
-                            ProfileFormField(icon: "phone.fill", label: "Phone Number", text: $phoneNumber, placeholder: "+91 XXXXX XXXXX", keyboardType: .phonePad)
+                            ProfileFormField(icon: "phone.fill", label: "Phone Number", text: $phoneNumber, placeholder: "+91 XXXXX XXXXX", keyboardType: .phonePad, iconColor: AppTheme.Status.success)
                             Divider().padding(.leading, 56)
-                            ProfileFormField(icon: "phone.arrow.up.right.fill", label: "Emergency Contact", text: $emergencyContact, placeholder: "+91 XXXXX XXXXX", keyboardType: .phonePad)
+                            ProfileFormField(icon: "phone.arrow.up.right.fill", label: "Emergency Contact", text: $emergencyContact, placeholder: "+91 XXXXX XXXXX", keyboardType: .phonePad, iconColor: AppTheme.Status.success)
                             Divider().padding(.leading, 56)
 
                             
@@ -108,10 +137,50 @@ struct DriverEditProfileView: View {
 
                         
                         Button {
+                            let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
+                            guard trimmedPhone.isValidPhoneNumber else {
+                                errorAlertMessage = "Please enter a valid 10-digit phone number."
+                                showErrorAlert = true
+                                return
+                            }
+                            
+                            let trimmedEmergency = emergencyContact.trimmingCharacters(in: .whitespaces)
+                            if !trimmedEmergency.isEmpty && !trimmedEmergency.isValidPhoneNumber {
+                                errorAlertMessage = "Please enter a valid 10-digit emergency contact number."
+                                showErrorAlert = true
+                                return
+                            }
+                            
                             isSaving = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                                isSaving = false
-                                showSaved = true
+                            
+                            Task {
+                                guard var updatedUser = user else {
+                                    await MainActor.run { isSaving = false }
+                                    return
+                                }
+                                
+                                updatedUser.name = fullName
+                                updatedUser.phoneNumber = phoneNumber.isEmpty ? nil : phoneNumber
+                                
+                                do {
+                                    if let imgData = selectedImageData {
+                                        let urlString = try await supabase.uploadAvatar(userId: updatedUser.id, imageData: imgData)
+                                        updatedUser.profileImage = urlString
+                                    }
+                                    
+                                    try await supabase.updateDriver(updatedUser)
+                                    
+                                    await MainActor.run {
+                                        isSaving = false
+                                        showSaved = true
+                                    }
+                                } catch {
+                                    await MainActor.run {
+                                        isSaving = false
+                                        errorAlertMessage = error.localizedDescription
+                                        showErrorAlert = true
+                                    }
+                                }
                             }
                         } label: {
                             HStack(spacing: 8) {
@@ -124,13 +193,13 @@ struct DriverEditProfileView: View {
                             .frame(height: 52)
                             .background(
                                 LinearGradient(
-                                    colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
+                                    colors: [AppTheme.Status.success, AppTheme.Brand.teal],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                             .cornerRadius(AppTheme.Radius.medium)
-                            .shadow(color: AppTheme.Shadow.primaryGlow(), radius: 12, y: 4)
+                            .shadow(color: AppTheme.Status.success.opacity(0.30), radius: 12, y: 4)
                         }
                         .disabled(isSaving)
                         .buttonStyle(PlainButtonStyle())
@@ -144,17 +213,31 @@ struct DriverEditProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Status.success)
                 }
             }
             .onAppear {
                 fullName = user?.name ?? ""
                 phoneNumber = user?.phoneNumber ?? ""
             }
+            .onChange(of: selectedItem) { _, newValue in
+                Task {
+                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            self.selectedImageData = data
+                        }
+                    }
+                }
+            }
             .alert("Profile Updated", isPresented: $showSaved) {
                 Button("OK") { dismiss() }
             } message: {
                 Text("Your profile has been saved successfully.")
+            }
+            .alert("Validation Error", isPresented: $showErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorAlertMessage)
             }
         }
     }
@@ -246,7 +329,7 @@ struct DriverLicenseDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Status.success)
                 }
             }
         }
@@ -354,7 +437,7 @@ struct DriverTripHistoryView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.primary)
+                        .foregroundColor(AppTheme.Status.success)
                 }
             }
         }
@@ -389,17 +472,17 @@ struct DriverNotificationSettingsView: View {
                         )
 
                         VStack(spacing: 0) {
-                            ProfileToggleRow(icon: "arrow.triangle.swap", iconColor: AppTheme.Brand.teal, title: "Trip Assigned", subtitle: "New trip assignments", isOn: $tripAssigned)
+                            ProfileToggleRow(icon: "arrow.triangle.swap", iconColor: AppTheme.Brand.teal, title: "Trip Assigned", subtitle: "New trip assignments", isOn: $tripAssigned, tintColor: AppTheme.Status.success)
                             Divider().padding(.leading, 66)
-                            ProfileToggleRow(icon: "clock.badge.exclamationmark", iconColor: AppTheme.Brand.amber, title: "Trip Reminders", subtitle: "Departure time reminders", isOn: $tripReminders)
+                            ProfileToggleRow(icon: "clock.badge.exclamationmark", iconColor: AppTheme.Brand.amber, title: "Trip Reminders", subtitle: "Departure time reminders", isOn: $tripReminders, tintColor: AppTheme.Status.success)
                             Divider().padding(.leading, 66)
-                            ProfileToggleRow(icon: "checklist", iconColor: AppTheme.Brand.primary, title: "Inspection Due", subtitle: "Pre/post trip inspection alerts", isOn: $inspectionDue)
+                            ProfileToggleRow(icon: "checklist", iconColor: AppTheme.Brand.primary, title: "Inspection Due", subtitle: "Pre/post trip inspection alerts", isOn: $inspectionDue, tintColor: AppTheme.Status.success)
                             Divider().padding(.leading, 66)
-                            ProfileToggleRow(icon: "exclamationmark.octagon.fill", iconColor: AppTheme.Status.danger, title: "SOS Confirmation", subtitle: "SOS alert acknowledgements", isOn: $sosConfirm)
+                            ProfileToggleRow(icon: "exclamationmark.octagon.fill", iconColor: AppTheme.Status.danger, title: "SOS Confirmation", subtitle: "SOS alert acknowledgements", isOn: $sosConfirm, tintColor: AppTheme.Status.success)
                             Divider().padding(.leading, 66)
-                            ProfileToggleRow(icon: "message.fill", iconColor: AppTheme.Brand.violet, title: "Messages", subtitle: "Chat from fleet manager", isOn: $messageAlerts)
+                            ProfileToggleRow(icon: "message.fill", iconColor: AppTheme.Brand.violet, title: "Messages", subtitle: "Chat from fleet manager", isOn: $messageAlerts, tintColor: AppTheme.Status.success)
                             Divider().padding(.leading, 66)
-                            ProfileToggleRow(icon: "speaker.wave.2.fill", iconColor: AppTheme.Text.secondary, title: "Sounds", subtitle: "Play notification sounds", isOn: $soundEnabled)
+                            ProfileToggleRow(icon: "speaker.wave.2.fill", iconColor: AppTheme.Text.secondary, title: "Sounds", subtitle: "Play notification sounds", isOn: $soundEnabled, tintColor: AppTheme.Status.success)
                         }
                         .background(AppTheme.Background.card)
                         .cornerRadius(AppTheme.Radius.card)
@@ -413,7 +496,7 @@ struct DriverNotificationSettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }.foregroundColor(AppTheme.Brand.primary)
+                    Button("Done") { dismiss() }.foregroundColor(AppTheme.Status.success)
                 }
             }
         }
@@ -442,7 +525,7 @@ struct DriverSecuritySettingsView: View {
                     VStack(spacing: 24) {
                         ProfileInnerScreenHeader(
                             icon: "lock.shield.fill",
-                            iconColor: AppTheme.Brand.primary,
+                            iconColor: AppTheme.Status.success,
                             title: "Security",
                             subtitle: "Password & authentication"
                         )
@@ -459,7 +542,7 @@ struct DriverSecuritySettingsView: View {
                         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
 
                         VStack(spacing: 0) {
-                            ProfileToggleRow(icon: "faceid", iconColor: AppTheme.Brand.primary, title: "Face ID / Touch ID", subtitle: "Use biometrics to unlock", isOn: $biometricEnabled)
+                            ProfileToggleRow(icon: "faceid", iconColor: AppTheme.Status.success, title: "Face ID / Touch ID", subtitle: "Use biometrics to unlock", isOn: $biometricEnabled, tintColor: AppTheme.Status.success)
                         }
                         .background(AppTheme.Background.card)
                         .cornerRadius(AppTheme.Radius.card)
@@ -476,7 +559,7 @@ struct DriverSecuritySettingsView: View {
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity).frame(height: 52)
-                            .background(AppTheme.Brand.primary)
+                            .background(AppTheme.Status.success)
                             .cornerRadius(AppTheme.Radius.medium)
                         }
                         .disabled(isSaving || newPassword.isEmpty)
@@ -491,7 +574,7 @@ struct DriverSecuritySettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }.foregroundColor(AppTheme.Brand.primary)
+                    Button("Done") { dismiss() }.foregroundColor(AppTheme.Status.success)
                 }
             }
             .alert("Password Updated", isPresented: $showSaved) {
@@ -563,7 +646,7 @@ struct DriverHelpSupportView: View {
                                         .multilineTextAlignment(.leading)
                                 }
                                 .padding(.horizontal, 16).padding(.vertical, 10)
-                                .tint(AppTheme.Brand.primary)
+                                .tint(AppTheme.Status.success)
                                 if i < faqs.count - 1 {
                                     Divider().padding(.leading, 16)
                                 }
@@ -574,9 +657,9 @@ struct DriverHelpSupportView: View {
                         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
 
                         VStack(spacing: 0) {
-                            ProfileInfoRow(label: "Email", value: "support@fms.app", valueColor: AppTheme.Brand.primary)
+                            ProfileInfoRow(label: "Email", value: "support@fms.app", valueColor: AppTheme.Status.success)
                             Divider().padding(.leading, 16)
-                            ProfileInfoRow(label: "Phone", value: "+91 1800-FMS-HELP", valueColor: AppTheme.Brand.primary)
+                            ProfileInfoRow(label: "Phone", value: "+91 1800-FMS-HELP", valueColor: AppTheme.Status.success)
                         }
                         .background(AppTheme.Background.card)
                         .cornerRadius(AppTheme.Radius.card)
@@ -590,13 +673,164 @@ struct DriverHelpSupportView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }.foregroundColor(AppTheme.Brand.primary)
+                    Button("Done") { dismiss() }.foregroundColor(AppTheme.Status.success)
                 }
             }
         }
     }
 }
 
+@available(iOS 26.0, *)
+struct DriverPerformanceStatsView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let safetyScore: Int
+    let onTimeDelivery: Int
+    let avgFuelEfficiency: Double
+    let tripsCompleted: Int
+    let totalKmDriven: Double
+    let hoursOnRoad: Int
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Background.page.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        ProfileInnerScreenHeader(
+                            icon: "chart.bar.xaxis",
+                            iconColor: AppTheme.Status.success,
+                            title: "Performance & Stats",
+                            subtitle: "Your safety scores and driving statistics"
+                        )
+
+                        // Performance Rings
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Performance")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(AppTheme.Text.primary)
+                                .padding(.leading, 4)
+
+                            HStack(spacing: 12) {
+                                DriverPerformanceStatsRing(
+                                    value: Double(safetyScore),
+                                    maxValue: 100,
+                                    label: "Safety",
+                                    color: AppTheme.Status.success
+                                )
+                                DriverPerformanceStatsRing(
+                                    value: Double(onTimeDelivery),
+                                    maxValue: 100,
+                                    label: "On-Time",
+                                    color: AppTheme.Brand.primary
+                                )
+                                DriverPerformanceStatsRing(
+                                    value: avgFuelEfficiency,
+                                    maxValue: 20,
+                                    label: "km/L",
+                                    color: AppTheme.Brand.teal
+                                )
+                            }
+                            .padding(18)
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
+                        }
+
+                        // Driving Stats Grid
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Driving Stats")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(AppTheme.Text.primary)
+                                .padding(.leading, 4)
+
+                            LazyVGrid(
+                                columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                                spacing: 12
+                            ) {
+                                ProfileStatCard(
+                                    icon: "checkmark.circle.fill",
+                                    iconColor: AppTheme.Status.success,
+                                    iconBg: AppTheme.IconBg.green,
+                                    title: "Trips Completed",
+                                    value: "\(tripsCompleted)",
+                                    subtitle: "Total history"
+                                )
+                                ProfileStatCard(
+                                    icon: "road.lanes",
+                                    iconColor: AppTheme.Brand.primary,
+                                    iconBg: AppTheme.IconBg.blue,
+                                    title: "Distance Driven",
+                                    value: String(format: "%.0f km", totalKmDriven),
+                                    subtitle: "Accumulated"
+                                )
+                                ProfileStatCard(
+                                    icon: "clock.fill",
+                                    iconColor: AppTheme.Brand.amber,
+                                    iconBg: AppTheme.IconBg.amber,
+                                    title: "Hours on Road",
+                                    value: "\(hoursOnRoad) hrs",
+                                    subtitle: "Time active"
+                                )
+                                ProfileStatCard(
+                                    icon: "fuelpump.fill",
+                                    iconColor: AppTheme.Brand.teal,
+                                    iconBg: AppTheme.IconBg.teal,
+                                    title: "Avg Fuel Efficiency",
+                                    value: String(format: "%.1f km/L", avgFuelEfficiency),
+                                    subtitle: "Average consumption"
+                                )
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationTitle("Performance & Stats")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(AppTheme.Status.success)
+                }
+            }
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+private struct DriverPerformanceStatsRing: View {
+    let value: Double
+    let maxValue: Double
+    let label: String
+    let color: Color
+
+    private var progress: Double { min(value / maxValue, 1.0) }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .stroke(AppTheme.Glass.ringTrack, lineWidth: 5)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text(maxValue == 100 ? "\(Int(value))%" : String(format: "%.1f", value))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
+            }
+            .frame(width: 60, height: 60)
+
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(AppTheme.Text.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
 
 
 @available(iOS 26.0, *)
@@ -616,3 +850,8 @@ struct DriverHelpSupportView: View {
 
 @available(iOS 26.0, *)
 #Preview("Help") { DriverHelpSupportView() }
+
+@available(iOS 26.0, *)
+#Preview("Performance & Stats") {
+    DriverPerformanceStatsView(safetyScore: 94, onTimeDelivery: 97, avgFuelEfficiency: 12.4, tripsCompleted: 12, totalKmDriven: 350.0, hoursOnRoad: 18)
+}

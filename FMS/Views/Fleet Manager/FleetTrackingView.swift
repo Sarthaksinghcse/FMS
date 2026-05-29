@@ -1,8 +1,3 @@
-
-
-
-
-
 import SwiftUI
 import MapKit
 
@@ -10,12 +5,7 @@ struct FleetTrackingView: View {
     @State private var viewModel = FleetTrackingViewModel()
     @State private var selectedVehicle: MappedVehicle?
     
-    @State private var cameraPosition: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020),
-            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-        )
-    )
+    @State private var cameraPosition: MapCameraPosition = .automatic
     
     var body: some View {
         NavigationStack {
@@ -76,8 +66,11 @@ struct FleetTrackingView: View {
                     }
                 }
             }
-            .task {
-                await viewModel.loadVehicles()
+            .onAppear {
+                viewModel.startLiveTracking()
+            }
+            .onDisappear {
+                viewModel.stopLiveTracking()
             }
             .animation(.easeInOut, value: selectedVehicle?.id)
         }

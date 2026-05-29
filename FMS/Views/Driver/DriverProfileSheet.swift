@@ -1,27 +1,23 @@
-
-
-
-
-
-
-
-
-
 import SwiftUI
-
-
+import SwiftData
 
 @available(iOS 26.0, *)
 struct DriverProfileSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @StateObject private var supabase = SupabaseManager.shared
     @State private var showSignOutConfirm = false
+    @State private var showNotificationsFromProfile = false
 
     
-    private let totalTrips    = 142
-    private let totalKmDriven = 4_820.0
+    private var totalTrips: Int {
+        vm.completedTrips.count
+    }
+    private var totalKmDriven: Double {
+        vm.completedTrips.reduce(0.0) { $0 + $1.distanceKm }
+    }
     private let joinDate      = "March 2023"
     private let employeeId    = "DRV-00412"
     private let licenseNo     = "TN-24-2019-0041823"
@@ -30,26 +26,57 @@ struct DriverProfileSheet: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-
-                    
+                    // ── Hero: Avatar + Name + ID ───────────────────────────
                     HeroHeader(vm: vm, employeeId: employeeId)
                         .padding(.top, 8)
                         .padding(.bottom, 28)
-
                     
+                    // ── Stats strip (2 key numbers) ────────────────────────
                     StatsStrip(
                         totalTrips: totalTrips,
                         totalKm:    totalKmDriven
                     )
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
+                    // ── Status row ─────────────────────────────────────────
+                    ProfileSection(header: "Status") {
+                        HStack(spacing: 14) {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(vm.driverStatus.dot)
+                                .frame(width: 32, height: 32)
+                                .overlay(
+                                    Image(systemName: "dot.radiowaves.left.and.right")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(.white)
+                                )
+                            
+                            Toggle("Status", isOn: Binding(
+                                get: { vm.driverStatus != .offline },
+                                set: { newValue in
+                                    withAnimation {
+                                        vm.driverStatus = newValue ? .idle : .offline
+                                    }
+                                    Task {
+                                        await vm.updateDriverActiveStatus(isActive: newValue)
+                                    }
+                                }
+                            ))
+                            .font(.system(size: 16))
+                            .foregroundStyle(.primary)
+                            .tint(AppTheme.Status.success)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 13)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
 
-                    
+                    // ── Account info rows ──────────────────────────────────
                     ProfileSection(header: "Account") {
                         ProfileRow(icon: "person.fill",
                                    iconBg: AppTheme.Brand.primaryDeep,
-                                   label: "Full Name",
-                                   value: vm.driverFirstName + " Yadav")
+                                   label: "Name",
+                                   value: vm.driverFirstName)
                         Divider().padding(.leading, 56)
                         ProfileRow(icon: "creditcard.fill",
                                    iconBg: AppTheme.Brand.primaryDeep,
@@ -69,57 +96,41 @@ struct DriverProfileSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
 
-                    
-                    ProfileSection(header: "Assigned Vehicle") {
-                        ProfileRow(icon: "car.side.fill",
-                                   iconBg: AppTheme.Brand.violet,
-                                   label: "Model",
-                                   value: "\(vm.vehicleModel)  (\(vm.vehicleYear))")
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "building.2.fill",
-                                   iconBg: AppTheme.Brand.violet,
-                                   label: "Manufacturer",
-                                   value: vm.vehicleManufacturer)
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "car.fill",
-                                   iconBg: AppTheme.Brand.violet,
-                                   label: "Plate",
-                                   value: vm.assignedReg)
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "fuelpump.fill",
-                                   iconBg: vm.fuelLevel < 0.25
-                                        ? AppTheme.Status.danger
-                                        : AppTheme.Status.success,
-                                   label: "Fuel Level",
-                                   value: String(format: "%.0f%%", vm.fuelLevel * 100),
-                                   valueColor: vm.fuelLevel < 0.25
-                                        ? AppTheme.Status.danger
-                                        : AppTheme.Status.success)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-
-                    
+                    // ── Navigation Links (Settings) ───────────────────────────
                     ProfileSection(header: "Settings") {
-                        ProfileRow(icon: "bell.fill",
-                                   iconBg: AppTheme.Brand.accent,
-                                   label: "Notifications",
-                                   showChevron: true)
+                        NavigationLink {
+                            DriverNotificationsSheet(vm: vm)
+                        } label: {
+                            ProfileRow(icon: "bell.fill",
+                                       iconBg: AppTheme.Brand.accent,
+                                       label: "Notifications",
+                                       showChevron: false)  // NavigationLink adds its own
+                        }
+                        .buttonStyle(.plain)
                         Divider().padding(.leading, 56)
-                        ProfileRow(icon: "lock.fill",
-                                   iconBg: AppTheme.Brand.amber,
-                                   label: "Privacy & Security",
-                                   showChevron: true)
+                        NavigationLink {
+                            PrivacyPlaceholderView()
+                        } label: {
+                            ProfileRow(icon: "lock.fill",
+                                       iconBg: AppTheme.Brand.amber,
+                                       label: "Privacy & Security",
+                                       showChevron: false)
+                        }
+                        .buttonStyle(.plain)
                         Divider().padding(.leading, 56)
-                        ProfileRow(icon: "questionmark.circle.fill",
-                                   iconBg: Color(UIColor.systemGray),
-                                   label: "Help & Support",
-                                   showChevron: true)
+                        NavigationLink {
+                            HelpSupportPlaceholderView()
+                        } label: {
+                            ProfileRow(icon: "questionmark.circle.fill",
+                                       iconBg: Color(UIColor.systemGray),
+                                       label: "Help & Support",
+                                       showChevron: false)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 28)
-
-                    
+                    // ── Sign out ───────────────────────────────────────────
                     Button {
                         Task {
                             try? await SupabaseManager.shared.signOut()
@@ -142,16 +153,15 @@ struct DriverProfileSheet: View {
             .navigationTitle("Driver Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundStyle(Color(UIColor.systemGray3))
-                            .symbolRenderingMode(.hierarchical)
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
                     }
+                    .buttonStyle(.plain)
                 }
+            }
+            .toolbarColorScheme(.dark, for: .navigationBar)
             }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
@@ -161,9 +171,12 @@ struct DriverProfileSheet: View {
             } message: {
                 Text("Are you sure you want to sign out of your Driver account?")
             }
+            .task {
+                await vm.load(context: modelContext)
+            }
         }
     }
-}
+
 
 
 
@@ -201,10 +214,10 @@ private struct HeroHeader: View {
 
             
             VStack(spacing: 4) {
-                Text(vm.driverFirstName + " Yadav")
+                Text(vm.driverName)
                     .font(.system(size: 24, weight: .bold))
                 HStack(spacing: 6) {
-                    Text(vm.driverStatus.rawValue)
+                    Text(vm.driverStatus.displayLabel)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(vm.driverStatus.dot)
                     Text("·")
@@ -341,4 +354,48 @@ private struct ProfileRow: View {
 @available(iOS 26.0, *)
 #Preview("Driver Profile") {
     DriverProfileSheet(vm: DriverDashboardViewModel())
+}
+
+// MARK: - Placeholder Views for Settings Navigation
+
+@available(iOS 26.0, *)
+struct PrivacyPlaceholderView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(AppTheme.Brand.amber)
+            Text("Privacy & Security")
+                .font(.system(size: 22, weight: .bold))
+            Text("This section is coming soon.\nYour data is always stored securely.")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("Privacy & Security")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+@available(iOS 26.0, *)
+struct HelpSupportPlaceholderView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "questionmark.circle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color(UIColor.systemGray))
+            Text("Help & Support")
+                .font(.system(size: 22, weight: .bold))
+            Text("Contact your fleet manager for assistance.\nIn-app support is coming soon.")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("Help & Support")
+        .navigationBarTitleDisplayMode(.inline)
+    }
 }
