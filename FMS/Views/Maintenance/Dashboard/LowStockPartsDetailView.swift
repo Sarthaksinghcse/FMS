@@ -24,31 +24,8 @@ struct LowStockPartsDetailView: View {
             AppTheme.Background.page.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Back Button
-                HStack {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(AppTheme.Text.primary)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top, 16)
-                .padding(.bottom, 8)
-                .background(AppTheme.Background.card)
-                
                 // Premium Custom Header
-                MaintenanceHeaderView(
-                    title: "Low Stock Parts",
-                    subtitle: "Manage parts that require immediate restocking.",
-                    initials: "",
-                    avatarColor: AppTheme.Status.danger,
-                    notificationCount: 0,
-                    showActions: false
-                )
-                .background(AppTheme.Background.card)
-                .shadow(color: AppTheme.Shadow.card, radius: 4, y: 2)
+                CustomCenteredHeaderView(title: "Low Stock Parts")
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
@@ -88,6 +65,7 @@ struct LowStockPartsDetailView: View {
             }
         }
         .navigationBarHidden(true)
+        .navigationBarBackButtonHidden(true)
     }
 }
 

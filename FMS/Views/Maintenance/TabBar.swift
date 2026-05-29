@@ -33,14 +33,7 @@ struct MaintenanceDashboardView: View {
                     Label("Inventory", systemImage: "shippingbox")
                 }
                 .tag(1)
-                
-            NavigationStack {
-                CommunicationView()
-            }
-            .tabItem {
-                Label("Messages", systemImage: "message.fill")
-            }
-            .tag(2)
+
         }
         .accentColor(AppTheme.Brand.primary)
     }

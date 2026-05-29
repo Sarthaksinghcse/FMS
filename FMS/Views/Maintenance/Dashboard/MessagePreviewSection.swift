@@ -35,7 +35,7 @@ struct MessagesPreviewSection: View {
                 
                 Spacer()
                 
-                NavigationLink(destination: CommunicationView()) {
+                Button(action: {}) {
                     Text("See All")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(AppTheme.Brand.primary)
@@ -45,7 +45,7 @@ struct MessagesPreviewSection: View {
             
             VStack(spacing: 10) {
                 ForEach(sampleMessages) { msg in
-                    NavigationLink(destination: CommunicationView()) {
+                    Button(action: {}) {
                         MessagePreviewCard(message: msg)
                     }
                     .buttonStyle(TactileScaleButtonStyle())

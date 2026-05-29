@@ -42,6 +42,10 @@ struct TappableOverviewCard<Destination: View>: View {
                             .foregroundColor(iconColor)
                     }
                     Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                        .padding(.top, 4)
                 }
 
                 Text(title)
@@ -72,7 +76,7 @@ struct TappableOverviewCard<Destination: View>: View {
                 }
             )
             .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
+            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
         }
         .buttonStyle(ScaleButtonStyle())
     }

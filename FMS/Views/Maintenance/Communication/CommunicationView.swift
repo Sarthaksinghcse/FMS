@@ -141,17 +141,7 @@ struct CommunicationView: View {
             AppTheme.Background.page.ignoresSafeArea()
 
             VStack(spacing: 20) {
-                // Premium Custom Header
-                MaintenanceHeaderView(
-                    title: "Messages",
-                    subtitle: "Stay connected with your team.",
-                    initials: "",
-                    avatarColor: AppTheme.Brand.primary,
-                    notificationCount: 0,
-                    showActions: false
-                )
-                .background(AppTheme.Background.card)
-                .shadow(color: AppTheme.Shadow.card, radius: 4, y: 2)
+                CustomCenteredHeaderView(title: "Communication")
                 
                 // Search Bar
                 TaskSearchBar(text: $searchText, placeholder: "Search messages...")
@@ -208,7 +198,7 @@ struct CommunicationView: View {
             }
             .padding(20)
         }
-        .navigationBarHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             await loadMessages()
             startRealtimeListener()
@@ -262,20 +252,20 @@ private struct CommunicationRow: View {
     let channel: CommunicationChannel
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             // Circular avatar
             ZStack {
                 Circle()
                     .fill(channel.avatarColor.opacity(0.12))
-                    .frame(width: 48, height: 48)
+                    .frame(width: 36, height: 36)
                 
                 Text(channel.initials)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(channel.avatarColor)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline) {
                     Text(channel.senderName)
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
@@ -289,7 +279,7 @@ private struct CommunicationRow: View {
                 
                 HStack {
                     Text(channel.textPreview)
-                        .font(.system(size: 13))
+                        .font(.system(size: 12))
                         .foregroundColor(AppTheme.Text.secondary)
                         .lineLimit(1)
                     
@@ -297,18 +287,18 @@ private struct CommunicationRow: View {
                     
                     if channel.unreadCount > 0 {
                         Text("\(channel.unreadCount)")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
                             .background(Color.red.opacity(0.85))
                             .clipShape(Circle())
                     }
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .contentShape(Rectangle())
     }
 }

@@ -62,17 +62,14 @@ struct InventoryTabView: View {
             ZStack(alignment: .bottomTrailing) {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
-                        // Premium Custom Header
-                        MaintenanceHeaderView(
-                            title: "Inventory",
-                            subtitle: "Manage spare parts and monitor stock levels.",
-                            initials: initials,
-                            avatarColor: AppTheme.Brand.violet,
-                            notificationCount: unreadNotificationsCount,
-                            showActions: false
-                        )
-                        .background(AppTheme.Background.card)
-                        .shadow(color: AppTheme.Shadow.card, radius: 4, y: 2)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Manage spare parts and monitor stock levels.")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundColor(AppTheme.Text.secondary)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         // Stats Dashboard Bar
                         HStack(spacing: 12) {
@@ -217,7 +214,7 @@ struct InventoryTabView: View {
                 .padding(.bottom, 20)
             }
             .background(AppTheme.Background.page)
-            .navigationBarHidden(true) // Hide default navigation bar
+            .navigationTitle("Inventory")
             .sheet(isPresented: $showingAddInventory) {
                 AddInventoryView()
             }
