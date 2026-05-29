@@ -944,6 +944,7 @@ final class SupabaseManager: ObservableObject {
                 let localTrips = (try? context.fetch(descriptor)) ?? []
                 for rt in remoteTrips {
                     if let local = localTrips.first(where: { $0.id == rt.id }) {
+                        local.tripCode = rt.tripCode
                         local.vehicleId = rt.vehicleId
                         local.driverId = rt.driverId
                         local.startLocation = rt.source
