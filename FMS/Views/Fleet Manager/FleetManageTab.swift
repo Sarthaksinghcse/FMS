@@ -786,11 +786,7 @@ struct DriverListView: View {
                             }
                         }
 
-                        HStack(spacing: 8) {
-                            driverStatusBadge(isActive: driver.isActive)
-                            driverRoleBadge
-                        }
-                        .padding(.top, 2)
+                    
                     }
                 }
                 .contentShape(Rectangle())

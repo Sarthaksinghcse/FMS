@@ -298,6 +298,22 @@ struct FleetDashboardView: View {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
             }
+            .navigationDestination(for: DashboardNavigationDestination.self) { destination in
+                switch destination {
+                case .totalVehicles:
+                    VehicleListView(initialFilter: .all)
+                        .environment(\.modelContext, modelContext)
+                case .activeNow:
+                    VehicleListView(initialFilter: .active)
+                        .environment(\.modelContext, modelContext)
+                case .driversOnline:
+                    DriverListView(initialFilter: .online)
+                        .environment(\.modelContext, modelContext)
+                case .liveTrips:
+                    TripListView(initialFilter: .active)
+                        .environment(\.modelContext, modelContext)
+                }
+            }
 
         }
     }
@@ -395,6 +411,24 @@ struct FleetDashboardView: View {
             return "\(upcoming) renewal\(upcoming == 1 ? "" : "s") due soon"
         }
     }
+
+    private func destinationFor(stat: DashboardStat) -> DashboardNavigationDestination {
+        switch stat.label {
+        case "Total Vehicles": return .totalVehicles
+        case "Available Now":  return .activeNow
+        case "Drivers Online": return .driversOnline
+        case "Live Trips":     return .liveTrips
+        default:               return .totalVehicles
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+enum DashboardNavigationDestination: Hashable {
+    case totalVehicles
+    case activeNow
+    case driversOnline
+    case liveTrips
 }
 
 

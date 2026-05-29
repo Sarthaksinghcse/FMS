@@ -23,6 +23,8 @@ struct MaintenanceHeaderView: View {
     var onProfileTap: () -> Void = {}
     var showActions: Bool = true
     var showBackButton: Bool = false
+    var showChat: Bool = false
+    var onChatTap: () -> Void = {}
     
     @Environment(\.dismiss) private var dismiss
 
