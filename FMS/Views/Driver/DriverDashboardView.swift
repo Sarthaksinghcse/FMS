@@ -508,39 +508,21 @@ struct VoiceLogSheet: View {
                     
                     ZStack {
                         ForEach(0..<3, id: \.self) { i in
-                            Circle()
-                                .stroke(
-                                    voiceLogger.isRecording ? Color.red.opacity(0.12) : Color.clear,
-                                    lineWidth: 1.5
-                                )
-                                .frame(
-                                    width: CGFloat(100 + i * 36),
-                                    height: CGFloat(100 + i * 36)
-                                )
-                                .scaleEffect(voiceLogger.isRecording ? 1.0 : 0.85)
-                                .animation(
-                                    voiceLogger.isRecording
-                                    ? .easeInOut(duration: 1.4).repeatForever().delay(Double(i) * 0.28)
-                                    : .default,
-                                    value: voiceLogger.isRecording
-                                )
+                            RecordingRing(index: i, isRecording: voiceLogger.isRecording)
                         }
                         Button(action: toggleRec) {
                             ZStack {
                                 Circle()
-                                    .fill(
-                                        voiceLogger.isRecording
-                                        ? AnyShapeStyle(Color.red.gradient)
-                                        : AnyShapeStyle(Color.fmsIndigo.gradient)
-                                    )
+                                    .fill(voiceLogger.isRecording ? Color.red.gradient : Color.fmsIndigo.gradient)
                                     .frame(width: 88, height: 88)
                                     .shadow(
-                                        color: (voiceLogger.isRecording ? Color.red : Color.fmsIndigo).opacity(0.35),
+                                        color: voiceLogger.isRecording ? Color.red.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
                                         radius: 20, y: 6
                                     )
                                 Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundStyle(.white)
+                                    .contentTransition(.symbolEffect(.replace))
                             }
                         }
                     }
@@ -1859,6 +1841,25 @@ struct DriverNotificationsSheet: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+// MARK: - Recording Ring Subview
+struct RecordingRing: View {
+    let index: Int
+    let isRecording: Bool
+    
+    var body: some View {
+        Circle()
+            .stroke(isRecording ? Color.red.opacity(0.12) : Color.clear, lineWidth: 1.5)
+            .frame(width: CGFloat(100 + index * 36), height: CGFloat(100 + index * 36))
+            .scaleEffect(isRecording ? 1.0 : 0.85)
+            .animation(
+                isRecording
+                ? Animation.easeInOut(duration: 1.4).repeatForever(autoreverses: false).delay(Double(index) * 0.28)
+                : .default,
+                value: isRecording
+            )
     }
 }
 
