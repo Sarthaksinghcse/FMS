@@ -10,7 +10,6 @@ struct ComplianceAlertsView: View {
 
     @State private var viewModel = ComplianceAlertsViewModel()
     @State private var selectedAlert: ComplianceAlertItem? = nil
-    @State private var showResolveConfirmation = false
     @State private var alertToResolve: ComplianceAlertItem? = nil
 
     private var allAlerts: [ComplianceAlertItem] {
@@ -54,19 +53,9 @@ struct ComplianceAlertsView: View {
                 resolveFromDetail(item: item)
             }
         }
-        .alert("Mark as Resolved?", isPresented: $showResolveConfirmation) {
-            Button("Resolve", role: .destructive) {
-                if let item = alertToResolve {
-                    viewModel.resolveAlert(item: item, context: modelContext)
-                    alertToResolve = nil
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                alertToResolve = nil
-            }
-        } message: {
-            if let item = alertToResolve {
-                Text("Mark the \(item.alertType.displayName.lowercased()) alert for \(item.vehicleRegistration) as resolved?")
+        .sheet(item: $alertToResolve) { item in
+            ResolveAlertSheet(item: item) { newDate in
+                performResolve(item: item, newDate: newDate)
             }
         }
     }
@@ -155,7 +144,6 @@ struct ComplianceAlertsView: View {
                     if item.status != .resolved {
                         Button {
                             alertToResolve = item
-                            showResolveConfirmation = true
                         } label: {
                             Label("Resolve", systemImage: "checkmark.circle.fill")
                         }
@@ -166,7 +154,6 @@ struct ComplianceAlertsView: View {
                     if item.status != .resolved {
                         Button {
                             alertToResolve = item
-                            showResolveConfirmation = true
                         } label: {
                             Label("Mark as Resolved", systemImage: "checkmark.circle.fill")
                         }
@@ -209,10 +196,41 @@ struct ComplianceAlertsView: View {
     }
 
     private func resolveFromDetail(item: ComplianceAlertItem) {
-        alertToResolve = item
         selectedAlert = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            showResolveConfirmation = true
+            alertToResolve = item
+        }
+    }
+
+    private func performResolve(item: ComplianceAlertItem, newDate: Date) {
+        if let vehicle = vehicles.first(where: { $0.id == item.vehicleId }) {
+            // Update vehicle model attributes based on alert type
+            switch item.alertType {
+            case .insurance:
+                vehicle.insuranceExpiryDate = newDate
+            case .permit:
+                vehicle.permitExpiryDate = newDate
+            case .servicing:
+                vehicle.nextServiceDate = newDate
+                vehicle.lastServiceDate = Date() // Mark last service as completed today
+            }
+            
+            // Mark the alert as resolved in SwiftData persisted store
+            viewModel.resolveAlert(item: item, context: modelContext)
+            
+            // Save local SwiftData context
+            try? modelContext.save()
+            
+            // Sync updated vehicle information back to the remote database
+            let dbVehicle = vehicle.asDBVehicle
+            Task {
+                do {
+                    try await SupabaseManager.shared.updateVehicle(dbVehicle)
+                    print("Synced resolved vehicle details to remote database.")
+                } catch {
+                    print("Failed to sync resolved vehicle details to database: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }
@@ -535,6 +553,123 @@ private struct DetailRow: View {
             Text(value)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(valueColor ?? AppTheme.Text.primary)
+        }
+    }
+}
+
+
+// MARK: - Resolve Alert Calendar Sheet
+
+struct ResolveAlertSheet: View {
+    let item: ComplianceAlertItem
+    let onSave: (Date) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedDate = Date()
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Background.page.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Header info card
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(item.alertType.color.opacity(0.1))
+                                    .frame(width: 48, height: 48)
+                                Image(systemName: item.alertType.icon)
+                                    .font(.system(size: 20))
+                                    .foregroundColor(item.alertType.color)
+                            }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.vehicleRegistration)
+                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppTheme.Text.primary)
+                                Text("Renewing \(item.alertType.displayName)")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(16)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(AppTheme.Radius.card)
+                        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+
+                        // Date picker card
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("New Expiration Date")
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+
+                            DatePicker(
+                                "Select Date",
+                                selection: $selectedDate,
+                                in: Date()...,
+                                displayedComponents: [.date]
+                            )
+                            .datePickerStyle(.graphical)
+                            .tint(item.alertType.color)
+                        }
+                        .padding(16)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(AppTheme.Radius.card)
+                        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+
+                        // Action button
+                        Button {
+                            onSave(selectedDate)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 18))
+                                Text("Update and Resolve")
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: [item.alertType.color, item.alertType.color.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(AppTheme.Radius.medium)
+                            .shadow(color: item.alertType.color.opacity(0.3), radius: 8, x: 0, y: 4)
+                        }
+                        .buttonStyle(.plain)
+
+                        Spacer().frame(height: 20)
+                    }
+                    .padding(16)
+                }
+            }
+            .navigationTitle("Resolve Alert")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.red)
+                }
+            }
+            .onAppear {
+                // Pre-populate with a reasonable future date
+                let calendar = Calendar.current
+                if item.alertType == .insurance {
+                    selectedDate = calendar.date(byAdding: .year, value: 1, to: Date()) ?? Date()
+                } else if item.alertType == .permit {
+                    selectedDate = calendar.date(byAdding: .year, value: 1, to: Date()) ?? Date()
+                } else { // servicing
+                    selectedDate = calendar.date(byAdding: .month, value: 6, to: Date()) ?? Date()
+                }
+            }
         }
     }
 }

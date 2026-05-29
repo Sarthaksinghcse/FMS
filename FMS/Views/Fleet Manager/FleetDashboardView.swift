@@ -67,17 +67,6 @@ struct FleetDashboardView: View {
                             Spacer()
 
                             HStack(spacing: 16) {
-                                Button {
-                                    showChat = true
-                                } label: {
-                                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundStyle(Color(UIColor.label))
-                                        .frame(width: 40, height: 40)
-                                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                                        .clipShape(Circle())
-                                }
-                                .buttonStyle(.plain)
 
                                 Button {
                                     viewModel.activeQuickAction = .alerts
@@ -114,6 +103,11 @@ struct FleetDashboardView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 16)
 
+                        Text("Overview")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 16)
+
                         // ── Stats grid ────────────────────────────
                         LazyVGrid(
                             columns: [GridItem(.flexible(), spacing: 12),
@@ -143,11 +137,10 @@ struct FleetDashboardView: View {
                                         DashboardQuickActionCard(action: action) {
                                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                             switch action.label {
-                                            case "Add Vehicle":    viewModel.activeQuickAction = .addVehicle
                                             case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
-                                            case "Reports":        viewModel.activeQuickAction = .reports
                                             case "Alerts":         viewModel.activeQuickAction = .alerts
                                             case "Maintenance":    viewModel.activeQuickAction = .maintenance
+                                            case "Chat":           showChat = true
                                             default: break
                                             }
                                         }
@@ -159,34 +152,7 @@ struct FleetDashboardView: View {
                             .padding(.vertical, 4)
                         }
 
-                        // ── Fleet Utilization ─────────────────────
-                        let totalVehiclesCount  = vehicles.count
-                        let activeVehiclesCount = vehicles.filter { $0.status == .active }.count
-                        let progress            = viewModel.getFleetUtilizationProgress(vehicles: vehicles)
 
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack(spacing: 16) {
-                                FleetCircularProgressView(progress: progress)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Fleet Utilization")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                    Text("\(Int(progress * 100))%")
-                                        .font(.system(size: 24, weight: .bold))
-                                        .foregroundColor(.black)
-                                    Text("\(activeVehiclesCount) of \(totalVehiclesCount) vehicles active today")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                            }
-                        }
-                        .padding(18)
-                        .background(AppTheme.Background.card)
-                        .cornerRadius(AppTheme.Radius.card)
-                        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
-                        .padding(.horizontal, 16)
 
                         // ── Compliance & Renewal Alerts ───────────
                         complianceAlertsSummary
@@ -348,24 +314,9 @@ struct FleetDashboardView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text("Compliance & Renewals")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Text.primary)
-
-                            if totalActive > 0 {
-                                Text("\(totalActive)")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(minWidth: 18, minHeight: 18)
-                                    .background(
-                                        overdueCount > 0
-                                            ? ComplianceAlertStatus.overdue.color
-                                            : ComplianceAlertStatus.upcoming.color
-                                    )
-                                    .clipShape(Circle())
-                            }
-                        }
+                        Text("Compliance & Renewals")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
 
                         Text(complianceSummaryText(overdue: overdueCount, upcoming: upcomingCount))
                             .font(.system(size: 12))
@@ -375,35 +326,22 @@ struct FleetDashboardView: View {
 
                     Spacer()
 
+                    if totalActive > 0 {
+                        Text("\(totalActive)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(minWidth: 18, minHeight: 18)
+                            .background(
+                                overdueCount > 0
+                                    ? ComplianceAlertStatus.overdue.color
+                                    : ComplianceAlertStatus.upcoming.color
+                            )
+                            .clipShape(Circle())
+                    }
+
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
-                }
-
-                // Mini summary pills
-                if totalActive > 0 {
-                    HStack(spacing: 8) {
-                        if overdueCount > 0 {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(ComplianceAlertStatus.overdue.color)
-                                    .frame(width: 6, height: 6)
-                                Text("\(overdueCount) overdue")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(ComplianceAlertStatus.overdue.color)
-                            }
-                        }
-                        if upcomingCount > 0 {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(ComplianceAlertStatus.upcoming.color)
-                                    .frame(width: 6, height: 6)
-                                Text("\(upcomingCount) upcoming")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(ComplianceAlertStatus.upcoming.color)
-                            }
-                        }
-                    }
                 }
             }
             .padding(14)
