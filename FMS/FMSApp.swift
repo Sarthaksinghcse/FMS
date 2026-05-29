@@ -32,7 +32,7 @@ struct FMSApp: App {
             SOSAlert.self,
             AppNotification.self,
             InventoryItem.self,
-            ComplianceAlert.self
+            FuelLog.self
         ])
     }
 }

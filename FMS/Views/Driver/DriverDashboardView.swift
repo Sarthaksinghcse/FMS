@@ -4,6 +4,7 @@ import SwiftData
 import MapKit
 import Combine
 import Supabase
+import PhotosUI
 
 
 
@@ -137,6 +138,9 @@ struct DriverDashboardView: View {
         }
         .sheet(isPresented: $vm.showNotifications) {
             DriverNotificationsSheet(vm: vm)
+        }
+        .sheet(isPresented: $vm.showFuelLog) {
+            FuelLogSheet(vm: vm)
         }
         .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
@@ -507,39 +511,21 @@ struct VoiceLogSheet: View {
                     
                     ZStack {
                         ForEach(0..<3, id: \.self) { i in
-                            Circle()
-                                .stroke(
-                                    voiceLogger.isRecording ? Color.red.opacity(0.12) : Color.clear,
-                                    lineWidth: 1.5
-                                )
-                                .frame(
-                                    width: CGFloat(100 + i * 36),
-                                    height: CGFloat(100 + i * 36)
-                                )
-                                .scaleEffect(voiceLogger.isRecording ? 1.0 : 0.85)
-                                .animation(
-                                    voiceLogger.isRecording
-                                    ? .easeInOut(duration: 1.4).repeatForever().delay(Double(i) * 0.28)
-                                    : .default,
-                                    value: voiceLogger.isRecording
-                                )
+                            RecordingRing(index: i, isRecording: voiceLogger.isRecording)
                         }
                         Button(action: toggleRec) {
                             ZStack {
                                 Circle()
-                                    .fill(
-                                        voiceLogger.isRecording
-                                        ? AnyShapeStyle(Color.red.gradient)
-                                        : AnyShapeStyle(Color.fmsIndigo.gradient)
-                                    )
+                                    .fill(voiceLogger.isRecording ? Color.red.gradient : Color.fmsIndigo.gradient)
                                     .frame(width: 88, height: 88)
                                     .shadow(
-                                        color: (voiceLogger.isRecording ? Color.red : Color.fmsIndigo).opacity(0.35),
+                                        color: voiceLogger.isRecording ? Color.red.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
                                         radius: 20, y: 6
                                     )
                                 Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundStyle(.white)
+                                    .contentTransition(.symbolEffect(.replace))
                             }
                         }
                     }
@@ -967,6 +953,9 @@ struct InspectionFormSheet: View {
     // ── Brake hack tracker ────────────────────────────────────────────────────
     @State private var brakeToggleCount = 0
     @State private var showHackFlash    = false
+    // ── Defect photos (remarks section) ───────────────────────────────────────
+    @State private var defectPhotos: [UIImage] = []
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
@@ -1007,44 +996,46 @@ struct InspectionFormSheet: View {
 
                     
                     VStack(spacing: 0) {
-                        ForEach($items) { $item in
-                            HStack(spacing: 14) {
-                                Image(systemName: item.icon)
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(item.passed ? AppTheme.Status.success : .secondary)
-                                    .frame(width: 26)
-                                Text(item.label)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(item.passed ? .primary : .secondary)
-                                Spacer()
-                                Toggle("", isOn: $item.passed)
-                                    .labelsHidden()
-                                    .tint(Color.fmsIndigo)
-                                    .onChange(of: item.passed) { _, _ in
-                                        // Brake hack: track Brakes & Brake Lights toggles
-                                        if item.label == "Brakes & Brake Lights" {
-                                            brakeToggleCount += 1
-                                            if brakeToggleCount >= 4 {
-                                                // All pass!
-                                                withAnimation(.spring(response: 0.4)) {
-                                                    for i in items.indices { items[i].passed = true }
-                                                    showHackFlash = true
-                                                }
-                                                let gen = UINotificationFeedbackGenerator()
-                                                gen.notificationOccurred(.success)
-                                                brakeToggleCount = 0
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                                                    showHackFlash = false
+                        ForEach(Array($items.enumerated()), id: \.offset) { idx, $item in
+                            VStack(spacing: 0) {
+                                HStack(spacing: 14) {
+                                    Image(systemName: item.icon)
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(item.passed ? AppTheme.Status.success : .secondary)
+                                        .frame(width: 26)
+                                    Text(item.label)
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(item.passed ? .primary : .secondary)
+                                    Spacer()
+
+                                    Toggle("", isOn: $item.passed)
+                                        .labelsHidden()
+                                        .tint(Color.fmsIndigo)
+                                        .onChange(of: item.passed) { _, _ in
+                                            // Brake hack: track Brakes & Brake Lights toggles
+                                            if item.label == "Brakes & Brake Lights" {
+                                                brakeToggleCount += 1
+                                                if brakeToggleCount >= 4 {
+                                                    withAnimation(.spring(response: 0.4)) {
+                                                        for i in items.indices { items[i].passed = true }
+                                                        showHackFlash = true
+                                                    }
+                                                    let gen = UINotificationFeedbackGenerator()
+                                                    gen.notificationOccurred(.success)
+                                                    brakeToggleCount = 0
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                                                        showHackFlash = false
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 13)
+                                .animation(.easeOut(duration: 0.2), value: item.passed)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 13)
-                            .animation(.easeOut(duration: 0.2), value: item.passed)
 
-                            if item.id != items.last?.id {
+                            if idx < items.count - 1 {
                                 Divider().padding(.leading, 56)
                             }
                         }
@@ -1076,11 +1067,109 @@ struct InspectionFormSheet: View {
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
 
                     
-                    TextField("Remarks or additional notes…", text: $remarks, axis: .vertical)
-                        .font(.system(size: 14))
-                        .lineLimit(3...6)
-                        .padding(14)
-                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
+                    // ── Remarks + Photo upload ────────────────────────────────
+                    VStack(alignment: .leading, spacing: 12) {
+                        TextField("Remarks or additional notes…", text: $remarks, axis: .vertical)
+                            .font(.system(size: 14))
+                            .lineLimit(3...6)
+                            .padding(14)
+
+                        Divider().padding(.horizontal, 14)
+
+                        // Native PhotosPicker — required when defect present
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 0) {
+                                PhotosPicker(
+                                    selection: $selectedPhotoItems,
+                                    maxSelectionCount: 10,
+                                    matching: .images,
+                                    photoLibrary: .shared()
+                                ) {
+                                    Label("Add Photos", systemImage: "photo.badge.plus")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(
+                                            !allPass && defectPhotos.isEmpty
+                                                ? AppTheme.Status.danger
+                                                : Color.fmsIndigo
+                                        )
+                                        .padding(.leading, 14)
+                                        .padding(.bottom, defectPhotos.isEmpty ? 14 : 4)
+                                }
+                                .buttonStyle(.plain)
+                                .onChange(of: selectedPhotoItems) {
+                                    Task {
+                                        var loaded: [UIImage] = []
+                                        for item in selectedPhotoItems {
+                                            if let data = try? await item.loadTransferable(type: Data.self),
+                                               let img  = UIImage(data: data) {
+                                                loaded.append(img)
+                                            }
+                                        }
+                                        defectPhotos = loaded
+                                    }
+                                }
+
+                                Spacer()
+
+                                // Required badge — shown only when defect & no photo
+                                if !allPass && defectPhotos.isEmpty {
+                                    Text("Required")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(AppTheme.Status.danger)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(AppTheme.Status.danger.opacity(0.12), in: Capsule())
+                                        .padding(.trailing, 14)
+                                        .padding(.bottom, defectPhotos.isEmpty ? 14 : 4)
+                                }
+                            }
+
+                            if !defectPhotos.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        ForEach(defectPhotos.indices, id: \.self) { i in
+                                            ZStack(alignment: .topTrailing) {
+                                                Image(uiImage: defectPhotos[i])
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 72, height: 72)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                Button {
+                                                    defectPhotos.remove(at: i)
+                                                    if i < selectedPhotoItems.count {
+                                                        selectedPhotoItems.remove(at: i)
+                                                    }
+                                                } label: {
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .font(.system(size: 18))
+                                                        .symbolRenderingMode(.palette)
+                                                        .foregroundStyle(.white, Color.black.opacity(0.5))
+                                                }
+                                                .offset(x: 5, y: -5)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 14)
+                                    .padding(.bottom, 14)
+                                }
+                            }
+                        }
+                    }
+                    // Highlight the whole remarks card in danger tint when photo is required but missing
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(AppTheme.Status.danger.opacity(!allPass && defectPhotos.isEmpty ? 0.5 : 0), lineWidth: 1.5)
+                    )
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
+
+                    // Warning label below the card
+                    if !allPass && defectPhotos.isEmpty {
+                        Label("Attach at least one photo of the defect to submit.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(AppTheme.Status.danger)
+                            .padding(.horizontal, 4)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
 
                     Button {
                         Task { await doSubmit() }
@@ -1108,7 +1197,9 @@ struct InspectionFormSheet: View {
                             : (issuesFound > 0 ? AppTheme.Brand.accent : AppTheme.Status.success).gradient
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .opacity(!allPass && defectPhotos.isEmpty ? 0.45 : 1)
                     }
+                    .disabled(!allPass && defectPhotos.isEmpty)
                 }
                 .padding(20)
             }
@@ -1810,4 +1901,24 @@ struct DriverNotificationsSheet: View {
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
+
+// MARK: - Recording Ring Subview
+struct RecordingRing: View {
+    let index: Int
+    let isRecording: Bool
+    
+    var body: some View {
+        Circle()
+            .stroke(isRecording ? Color.red.opacity(0.12) : Color.clear, lineWidth: 1.5)
+            .frame(width: CGFloat(100 + index * 36), height: CGFloat(100 + index * 36))
+            .scaleEffect(isRecording ? 1.0 : 0.85)
+            .animation(
+                isRecording
+                ? Animation.easeInOut(duration: 1.4).repeatForever(autoreverses: false).delay(Double(index) * 0.28)
+                : .default,
+                value: isRecording
+            )
+    }
+}
+
 
