@@ -1,8 +1,6 @@
 import SwiftUI
 import SwiftData
 
-/// Full-screen activity feed sheet shown when "See All" is tapped.
-/// Shows all real-time activities filterable by source (All / Driver / Fleet Manager).
 struct AllActivitiesView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext

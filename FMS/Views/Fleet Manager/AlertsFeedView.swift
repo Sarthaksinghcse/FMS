@@ -1,18 +1,7 @@
 
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
 import Combine
-
-
-
-
-
 
 struct AlertsFeedView: View {
     @Environment(\.modelContext) private var modelContext
@@ -359,112 +348,160 @@ struct AlertFeedCard: View {
     let sosAlerts: [SOSAlert]
     let defectReports: [DefectReport]
     
+    @State private var isPulsing = false
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             
+            // Header Row
             HStack {
                 HStack(spacing: 8) {
-                    Image(systemName: alert.type == .sos ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill")
-                        .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Brand.amber)
-                        .font(.system(size: 16))
+                    ZStack {
+                        if alert.type == .sos && alert.statusText == "Active" {
+                            Circle()
+                                .fill(AppTheme.Status.danger.opacity(isPulsing ? 0.35 : 0.15))
+                                .frame(width: 32, height: 32)
+                                .scaleEffect(isPulsing ? 1.25 : 0.95)
+                        }
+                        
+                        Image(systemName: alert.type == .sos ? "exclamationmark.shield.fill" : "exclamationmark.triangle.fill")
+                            .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Brand.amber)
+                            .font(.system(size: alert.type == .sos ? 16 : 14, weight: .bold))
+                    }
+                    .frame(width: 32, height: 32)
                     
-                    Text(alert.type == .sos ? "SOS EMERGENCY" : "DEFECT REPORT")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(alert.type == .sos ? "SOS EMERGENCY ALERT" : "DEFECT REPORT")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Text.secondary)
+                            .tracking(0.5)
+                        
+                        Text(alert.statusText.uppercased())
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(alert.statusColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(alert.statusColor.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
                 }
                 
                 Spacer()
                 
-                
+                // Severity Badge
                 Text(alert.severityText)
                     .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .foregroundColor(alert.severityColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(alert.severityBgColor)
-                    .cornerRadius(6)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        alert.type == .sos && alert.statusText == "Active"
+                            ? LinearGradient(colors: [AppTheme.Status.danger, AppTheme.Status.danger.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(colors: [alert.severityBgColor, alert.severityBgColor.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .clipShape(Capsule())
+                    .shadow(color: alert.type == .sos && alert.statusText == "Active" ? AppTheme.Status.danger.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
             }
             
-            
-            VStack(alignment: .leading, spacing: 4) {
+            // Content
+            VStack(alignment: .leading, spacing: 6) {
                 Text(alert.title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(.black)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
                 
                 Text(alert.description)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             
             Divider().background(Color.black.opacity(0.06))
             
-            
+            // Details Grid
             HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 4) {
+                // Driver Detail Pill
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.black.opacity(0.04))
+                            .frame(width: 28, height: 28)
                         Image(systemName: "person.fill")
-                            .font(.system(size: 10))
-                        Text("Driver")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
                     }
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.tertiary)
-                    
-                    Text(alert.driverName)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(.black)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("DRIVER")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text(alert.driverName)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
+                    }
                 }
+                .padding(.trailing, 4)
                 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 4) {
+                // Vehicle Detail Pill
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.black.opacity(0.04))
+                            .frame(width: 28, height: 28)
                         Image(systemName: "truck.box.fill")
-                            .font(.system(size: 10))
-                        Text("Vehicle")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
                     }
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.tertiary)
-                    
-                    Text(alert.vehicleName)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(.black)
-                        .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("VEHICLE")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text(alert.vehicleName)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
+                            .lineLimit(1)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 3) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 10))
-                        Text("Reported")
-                    }
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.tertiary)
-                    
+                // Time Detail Pill
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("REPORTED")
+                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.tertiary)
                     Text(alert.date.formatted(date: .omitted, time: .shortened))
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(.black)
+                        .foregroundColor(AppTheme.Text.primary)
                 }
             }
+            .padding(.vertical, 2)
             
-            
+            // Buttons block
             if alert.type == .sos {
                 if let sosAlert = alert.rawObject as? SOSAlert, sosAlert.status == .active {
                     Button {
+                        let impact = UIImpactFeedbackGenerator(style: .medium)
+                        impact.impactOccurred()
                         _ = viewModel.resolveSOSAlert(alertId: sosAlert.id, context: context, alerts: sosAlerts)
                     } label: {
-                        HStack {
+                        HStack(spacing: 6) {
                             Spacer()
                             Image(systemName: "checkmark.shield.fill")
+                                .font(.system(size: 14, weight: .bold))
                             Text("Resolve SOS Alert")
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                             Spacer()
                         }
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 12)
                         .foregroundColor(.white)
-                        .background(AppTheme.Status.success)
+                        .background(
+                            LinearGradient(
+                                colors: [AppTheme.Status.success, AppTheme.Status.success.opacity(0.85)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         .cornerRadius(AppTheme.Radius.small)
-                        .shadow(color: AppTheme.Status.success.opacity(0.2), radius: 4, x: 0, y: 2)
+                        .shadow(color: AppTheme.Status.success.opacity(0.35), radius: 8, x: 0, y: 4)
                     }
                     .buttonStyle(PlainButtonStyle())
                     .padding(.top, 4)
@@ -474,22 +511,23 @@ struct AlertFeedCard: View {
             } else if alert.type == .defect {
                 if let defect = alert.rawObject as? DefectReport {
                     if defect.status != .resolved {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 10) {
                             if defect.status == .open {
                                 Button {
                                     _ = viewModel.updateDefectStatus(defectId: defect.id, newStatus: .inProgress, context: context, defects: defectReports)
                                 } label: {
-                                    HStack {
+                                    HStack(spacing: 4) {
                                         Spacer()
                                         Image(systemName: "play.fill")
+                                            .font(.caption)
                                         Text("Start Work")
                                             .font(.system(size: 12, weight: .bold, design: .rounded))
                                         Spacer()
                                     }
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 10)
                                     .foregroundColor(AppTheme.Brand.primary)
                                     .background(AppTheme.IconBg.blue)
-                                    .cornerRadius(8)
+                                    .cornerRadius(AppTheme.Radius.small - 2)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
@@ -497,17 +535,18 @@ struct AlertFeedCard: View {
                             Button {
                                 _ = viewModel.updateDefectStatus(defectId: defect.id, newStatus: .resolved, context: context, defects: defectReports)
                             } label: {
-                                HStack {
+                                HStack(spacing: 4) {
                                     Spacer()
                                     Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption)
                                     Text("Mark Resolved")
                                         .font(.system(size: 12, weight: .bold, design: .rounded))
                                     Spacer()
                                 }
-                                .padding(.vertical, 8)
+                                .padding(.vertical, 10)
                                 .foregroundColor(.white)
                                 .background(AppTheme.Status.success)
-                                .cornerRadius(8)
+                                .cornerRadius(AppTheme.Radius.small - 2)
                                 .shadow(color: AppTheme.Status.success.opacity(0.15), radius: 3, x: 0, y: 1.5)
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -520,13 +559,42 @@ struct AlertFeedCard: View {
             }
         }
         .padding(18)
-        .background(AppTheme.Background.card)
+        .background(
+            alert.type == .sos && alert.statusText == "Active"
+                ? LinearGradient(
+                    colors: [AppTheme.Status.danger.opacity(0.08), Color.red.opacity(0.02)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                  )
+                : LinearGradient(
+                    colors: [AppTheme.Background.card, AppTheme.Background.card],
+                    startPoint: .top,
+                    endPoint: .bottom
+                  )
+        )
         .cornerRadius(AppTheme.Radius.card)
-        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
+        .shadow(
+            color: alert.type == .sos && alert.statusText == "Active"
+                ? AppTheme.Status.danger.opacity(0.08)
+                : AppTheme.Shadow.card,
+            radius: 12, x: 0, y: 6
+        )
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                .stroke(alert.type == .sos && alert.statusText == "Active" ? AppTheme.Status.danger.opacity(0.3) : AppTheme.Glass.border.opacity(0.3), lineWidth: 1.5)
+                .stroke(
+                    alert.type == .sos && alert.statusText == "Active"
+                        ? AppTheme.Status.danger.opacity(isPulsing ? 0.70 : 0.35)
+                        : AppTheme.Glass.border.opacity(0.2),
+                    lineWidth: alert.type == .sos && alert.statusText == "Active" ? 1.5 : 1.0
+                )
         )
+        .onAppear {
+            if alert.type == .sos && alert.statusText == "Active" {
+                withAnimation(Animation.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    isPulsing = true
+                }
+            }
+        }
     }
     
     private var resolvedBanner: some View {

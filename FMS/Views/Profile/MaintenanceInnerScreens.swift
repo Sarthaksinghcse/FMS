@@ -20,7 +20,7 @@ import PhotosUI
 struct MaintenanceEditProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
 
     @State private var fullName = ""
     @State private var phoneNumber = ""
@@ -264,16 +264,19 @@ struct MaintenanceEditProfileView: View {
                     let url = try await supabase.uploadAvatar(userId: userId, imageData: data)
                     
                     if var currentUser = user {
-                        currentUser.profileImage = url
+                        let timestamp = Int(Date().timeIntervalSince1970)
+                        currentUser.profileImage = "\(url)?t=\(timestamp)"
                         try await supabase.updateDriver(currentUser)
                     }
                     
                     await MainActor.run {
                         isUploadingPhoto = false
+                        selectedPhotoItem = nil
                     }
                 } catch {
                     await MainActor.run {
                         isUploadingPhoto = false
+                        selectedPhotoItem = nil
                         errorMessage = "Failed to upload photo: \(error.localizedDescription)"
                         showError = true
                     }
@@ -281,6 +284,7 @@ struct MaintenanceEditProfileView: View {
             } else {
                 await MainActor.run {
                     isUploadingPhoto = false
+                    selectedPhotoItem = nil
                 }
             }
         }
@@ -634,11 +638,12 @@ struct MaintenanceSecuritySettingsView: View {
                     VStack(spacing: 24) {
                         ProfileInnerScreenHeader(
                             icon: "lock.shield.fill",
-                            iconColor: AppTheme.Brand.amber,
+                            iconColor: AppTheme.Brand.primaryDeep,
                             title: "Security",
-                            subtitle: "Password & authentication"
+                            subtitle: "Manage password & authentication"
                         )
 
+                        // CHANGE PASSWORD section
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CHANGE PASSWORD")
                                 .font(.system(size: 11, weight: .semibold))
@@ -652,20 +657,37 @@ struct MaintenanceSecuritySettingsView: View {
                                 Divider().padding(.leading, 16)
                                 MaintSecureField(label: "New Password", text: $newPassword)
                                 Divider().padding(.leading, 16)
-                                MaintSecureField(label: "Confirm Password", text: $confirmPassword)
+                                MaintSecureField(label: "Confirm New Password", text: $confirmPassword)
                             }
                             .background(AppTheme.Background.card)
                             .cornerRadius(AppTheme.Radius.card)
                             .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                         }
 
-                        VStack(spacing: 0) {
-                            ProfileToggleRow(icon: "faceid", iconColor: AppTheme.Brand.amber, title: "Face ID / Touch ID", subtitle: "Use biometrics to unlock", isOn: $biometricEnabled, tintColor: AppTheme.Brand.amber)
-                        }
-                        .background(AppTheme.Background.card)
-                        .cornerRadius(AppTheme.Radius.card)
-                        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                        // AUTHENTICATION section
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("AUTHENTICATION")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                                .tracking(0.6)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
 
+                            VStack(spacing: 0) {
+                                ProfileToggleRow(
+                                    icon: "faceid",
+                                    iconColor: AppTheme.Brand.primary,
+                                    title: "Face ID / Touch ID",
+                                    subtitle: "Use biometrics to unlock",
+                                    isOn: $biometricEnabled
+                                )
+                            }
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                        }
+
+                        // Update Password button
                         Button {
                             isSaving = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { isSaving = false; showSaved = true }
@@ -678,7 +700,7 @@ struct MaintenanceSecuritySettingsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(AppTheme.Brand.amber)
+                            .background(AppTheme.Brand.primary)
                             .cornerRadius(AppTheme.Radius.medium)
                         }
                         .disabled(isSaving || newPassword.isEmpty)
@@ -694,7 +716,7 @@ struct MaintenanceSecuritySettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.Brand.amber)
+                        .foregroundColor(AppTheme.Brand.primary)
                 }
             }
             .alert("Password Updated", isPresented: $showSaved) {
@@ -809,7 +831,10 @@ struct MaintenanceHelpSupportView: View {
 
 
 @available(iOS 26.0, *)
-#Preview("Edit Profile") { MaintenanceEditProfileView() }
+#Preview("Edit Profile") { 
+    MaintenanceEditProfileView()
+        .environment(SupabaseManager.shared)
+}
 
 @available(iOS 26.0, *)
 struct MaintenanceSpecializationsView: View {

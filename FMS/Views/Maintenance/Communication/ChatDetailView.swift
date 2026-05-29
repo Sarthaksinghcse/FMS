@@ -23,7 +23,7 @@ struct MessageThreadItem: Identifiable, Hashable {
 struct ChatDetailView: View {
     let channel: CommunicationChannel
     
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
     
     @State private var textMessage: String = ""
     @State private var messages: [MessageThreadItem] = []
