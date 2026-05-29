@@ -1204,7 +1204,11 @@ struct DBMaintenanceRecord: Codable, Identifiable {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+<<<<<<< HEAD
     var repairImages: [String]?
+=======
+    var repairImages: [String]? = nil
+>>>>>>> Development
     var performedBy: UUID
     var createdAt: Date
 
