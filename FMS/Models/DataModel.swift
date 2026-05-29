@@ -88,8 +88,8 @@ enum VehicleStatus: String, Codable {
 
     var displayName: String {
         switch self {
-        case .active:        return "Active"
-        case .inactive:      return "Inactive"
+        case .active:        return "Available"
+        case .inactive:      return "On Trip"
         case .inMaintenance: return "Maintenance"
         }
     }
@@ -213,8 +213,8 @@ enum NotificationType: String, Codable {
 
 enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     case all          = "All"
-    case active       = "Active"
-    case inactive     = "Inactive"
+    case active       = "Available"
+    case inactive     = "On Trip"
     case inMaintenance = "In Maintenance"
 
     var id: String { rawValue }

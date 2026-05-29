@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import MapKit
 
+@available(iOS 26.0, *)
 struct FleetDashboardView: View {
     @Environment(\.modelContext) private var modelContext
 
@@ -102,9 +103,26 @@ struct FleetDashboardView: View {
                                 Button {
                                     showProfile = true
                                 } label: {
-                                    Image(systemName: "person.crop.circle.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(AppTheme.Brand.primary)
+                                    ZStack {
+                                        if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                                           let imageURL = URL(string: imageURLString) {
+                                            CachedAsyncImage(url: imageURL) { image in
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                            } placeholder: {
+                                                Image(systemName: "person.crop.circle.fill")
+                                                    .font(.system(size: 32))
+                                                    .foregroundColor(AppTheme.Brand.primary)
+                                            }
+                                            .frame(width: 32, height: 32)
+                                            .clipShape(Circle())
+                                        } else {
+                                            Image(systemName: "person.crop.circle.fill")
+                                                .font(.system(size: 32))
+                                                .foregroundColor(AppTheme.Brand.primary)
+                                        }
+                                    }
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -123,7 +141,10 @@ struct FleetDashboardView: View {
                                 allUsers: allUsers,
                                 trips: trips
                             )) { stat in
-                                DashboardStatCard(stat: stat)
+                                NavigationLink(value: destinationFor(stat: stat)) {
+                                    DashboardStatCard(stat: stat)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -173,7 +194,7 @@ struct FleetDashboardView: View {
                                     Text("\(Int(progress * 100))%")
                                         .font(.system(size: 24, weight: .bold))
                                         .foregroundColor(.black)
-                                    Text("\(activeVehiclesCount) of \(totalVehiclesCount) vehicles active today")
+                                    Text("\(activeVehiclesCount) of \(totalVehiclesCount) vehicles available today")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
                                 }
@@ -263,9 +284,12 @@ struct FleetDashboardView: View {
 
                         Spacer().frame(height: 40)
                     }
-                    .padding(.top, 8)
                 }
                 .scrollIndicators(.hidden)
+                .refreshable {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
+                }
             }
             .navigationBarHidden(true)
             // Quick action sheets
@@ -303,16 +327,43 @@ struct FleetDashboardView: View {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
             }
+            .navigationDestination(for: DashboardNavigationDestination.self) { destination in
+                switch destination {
+                case .totalVehicles:
+                    VehicleListView(initialFilter: .all)
+                        .environment(\.modelContext, modelContext)
+                case .activeNow:
+                    VehicleListView(initialFilter: .active)
+                        .environment(\.modelContext, modelContext)
+                case .driversOnline:
+                    DriverListView(initialFilter: .online)
+                        .environment(\.modelContext, modelContext)
+                case .liveTrips:
+                    TripListView(initialFilter: .active)
+                        .environment(\.modelContext, modelContext)
+                }
+            }
 
         }
     }
-//    private var initials: String {
-//        let parts = vm.driverName.components(separatedBy: " ")
-//        if parts.count >= 2 {
-//            return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
-//        }
-//        return String(vm.driverName.prefix(2)).uppercased()
-//    }
+
+    private func destinationFor(stat: DashboardStat) -> DashboardNavigationDestination {
+        switch stat.label {
+        case "Total Vehicles": return .totalVehicles
+        case "Available Now":  return .activeNow
+        case "Drivers Online": return .driversOnline
+        case "Live Trips":     return .liveTrips
+        default:               return .totalVehicles
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+enum DashboardNavigationDestination: Hashable {
+    case totalVehicles
+    case activeNow
+    case driversOnline
+    case liveTrips
 }
 
 
