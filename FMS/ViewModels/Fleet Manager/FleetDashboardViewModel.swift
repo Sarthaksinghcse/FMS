@@ -6,6 +6,33 @@ final class FleetDashboardViewModel {
     var activeQuickAction: ActiveQuickAction? = nil
     var showAllActivities: Bool = false
 
+    let quickActions: [DashboardQuickAction] = [
+        DashboardQuickAction(
+            icon: "bubble.left.and.bubble.right.fill",
+            iconColor: AppTheme.Brand.primary,
+            bgColor: AppTheme.IconBg.blue,
+            label: "Chat"
+        ),
+        DashboardQuickAction(
+            icon: "person.badge.plus",
+            iconColor: AppTheme.Brand.violet,
+            bgColor: AppTheme.IconBg.violet,
+            label: "Assign Driver"
+        ),
+        DashboardQuickAction(
+            icon: "exclamationmark.octagon.fill",
+            iconColor: AppTheme.Status.danger,
+            bgColor: AppTheme.IconBg.red,
+            label: "Alerts"
+        ),
+        DashboardQuickAction(
+            icon: "wrench.and.screwdriver.fill",
+            iconColor: AppTheme.Brand.amber,
+            bgColor: AppTheme.IconBg.amber,
+            label: "Maintenance"
+        )
+    ]
+
     enum ActiveQuickAction: Identifiable {
         case addVehicle
         case assignDriver
@@ -48,7 +75,7 @@ final class FleetDashboardViewModel {
                           label: "Total Vehicles",    trend: "", isTrendPositive: true,  graphData: []),
             DashboardStat(icon: "location.fill",      iconColor: AppTheme.Status.success,
                           iconBgColor: AppTheme.IconBg.green,  value: "\(activeVehicles)",
-                          label: "Active Now",        trend: "", isTrendPositive: true,  graphData: []),
+                          label: "Available Now",     trend: "", isTrendPositive: true,  graphData: []),
             DashboardStat(icon: "person.2.fill",      iconColor: AppTheme.Brand.violet,
                           iconBgColor: AppTheme.IconBg.violet, value: "\(driversOnline)",
                           label: "Drivers Online",   trend: "", isTrendPositive: true,  graphData: []),

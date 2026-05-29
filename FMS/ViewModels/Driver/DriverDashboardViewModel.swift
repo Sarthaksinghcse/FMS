@@ -23,6 +23,14 @@ enum DriverOnlineStatus: String, CaseIterable {
         case .offline:     return Color(UIColor.systemGray3)
         }
     }
+
+    /// Human-readable label — shows "Driving" when on an active trip.
+    var displayLabel: String {
+        switch self {
+        case .active: return "Driving"
+        default:      return rawValue
+        }
+    }
 }
 
 
@@ -168,6 +176,8 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var tripElapsed   = 0
     @Published var fuelLevel: Double = 0.72
     @Published var isLoading     = false
+    @Published var allVehicles: [DBVehicle] = []
+    @Published var allLocalVehicles: [Vehicle] = []
 
     
     @Published var showVoiceLog  = false
@@ -176,6 +186,8 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showPostTrip  = false
     @Published var showDefect    = false
     @Published var showMessaging = false
+    @Published var showRaiseQuery = false
+    @Published var queryTrip: DBTrip?
     @Published var showProfile   = false
     @Published var showSOSConfirm = false
     @Published var showSOSCountdown = false
@@ -189,6 +201,7 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showMaps      = false
     @Published var activeTrip: DBTrip?
     @Published var mapActiveTrip: DBTrip?
+    @Published var viewRouteTrip: DBTrip?   // opens map in route-view mode (no pre-inspection)
     @Published var completedTrips: [CompletedTripRecord] = []
 
     
@@ -203,7 +216,9 @@ final class DriverDashboardViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init() { 
-        seedMock()
+        if SupabaseManager.shared.currentUser == nil {
+            seedMock()
+        }
         setupAuthListener()
         startAutoRefresh()
     }
@@ -270,6 +285,7 @@ final class DriverDashboardViewModel: ObservableObject {
             let vehicleDescriptor = FetchDescriptor<Vehicle>()
             let localVehicles = (try? context.fetch(vehicleDescriptor)) ?? []
             let vehicles = localVehicles.map { $0.asDBVehicle }
+            allLocalVehicles = localVehicles
             
             let mine = trips.filter { $0.driverId == uid }
             currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
@@ -286,6 +302,7 @@ final class DriverDashboardViewModel: ObservableObject {
             updateLocalDriverStatusState()
             let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
             assignedVehicle = vehicles.first(where: { $0.id == vid })
+            allVehicles = vehicles
             
             
             let completed = mine.filter { $0.status == .completed }
@@ -322,6 +339,7 @@ final class DriverDashboardViewModel: ObservableObject {
                 updateLocalDriverStatusState()
                 let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                 assignedVehicle = vehicles.first(where: { $0.id == vid })
+                allVehicles = vehicles
                 
                 
                 let completed = mine.filter { $0.status == .completed }
@@ -358,6 +376,7 @@ final class DriverDashboardViewModel: ObservableObject {
                     updateLocalDriverStatusState()
                     let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                     assignedVehicle = vehicles.first(where: { $0.id == vid })
+                    allVehicles = vehicles
                     
                     
                     let completed = mine.filter { $0.status == .completed }
@@ -526,6 +545,16 @@ final class DriverDashboardViewModel: ObservableObject {
     var vehicleModel: String        { assignedVehicle?.model       ?? "Swift Dzire" }
     var vehicleYear: String         { assignedVehicle.map { String($0.year) } ?? "2023" }
 
+    /// Look up the vehicle assigned to a specific trip
+    func vehicleForTrip(_ trip: DBTrip) -> DBVehicle? {
+        allVehicles.first(where: { $0.id == trip.vehicleId }) ?? assignedVehicle
+    }
+
+    /// Look up the full local Vehicle (with vehicleType, fuelType, insuranceExpiryDate)
+    func localVehicleForTrip(_ trip: DBTrip) -> Vehicle? {
+        allLocalVehicles.first(where: { $0.id == trip.vehicleId })
+    }
+
     func fire(_ action: DashboardAction) {
         switch action {
         case .voiceLog:    showVoiceLog  = true
@@ -674,13 +703,17 @@ final class DriverDashboardViewModel: ObservableObject {
     }
     
     func markAllNotificationsAsRead() async {
-        let unread = notificationsList.filter { !$0.isRead }
-        for notif in unread {
+        // 1. Instantly update local state so UI reflects immediately (no reload needed)
+        notificationsList = notificationsList.map { notif in
             var updated = notif
             updated.isRead = true
-            try? await SupabaseManager.shared.updateNotification(updated)
+            return updated
         }
-        await loadNotifications()
+        // 2. Persist to Supabase in the background
+        let unread = notificationsList  // all now have isRead = true
+        for notif in unread {
+            try? await SupabaseManager.shared.updateNotification(notif)
+        }
     }
     
     

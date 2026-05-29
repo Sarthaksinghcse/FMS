@@ -88,8 +88,8 @@ enum VehicleStatus: String, Codable {
 
     var displayName: String {
         switch self {
-        case .active:        return "Active"
-        case .inactive:      return "Inactive"
+        case .active:        return "Available"
+        case .inactive:      return "On Trip"
         case .inMaintenance: return "Maintenance"
         }
     }
@@ -207,14 +207,68 @@ enum NotificationType: String, Codable {
 }
 
 
+enum ComplianceAlertType: String, Codable, CaseIterable {
+    case insurance
+    case permit
+    case servicing
+
+    var displayName: String {
+        switch self {
+        case .insurance: return "Insurance"
+        case .permit:    return "Permit"
+        case .servicing: return "Servicing"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .insurance: return "shield.checkered"
+        case .permit:    return "doc.text.fill"
+        case .servicing: return "wrench.and.screwdriver.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .insurance: return Color(red: 0.15, green: 0.38, blue: 0.90)
+        case .permit:    return Color(red: 0.58, green: 0.39, blue: 0.87)
+        case .servicing: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        }
+    }
+}
+
+
+enum ComplianceAlertStatus: String, Codable {
+    case upcoming
+    case overdue
+    case resolved
+
+    var displayName: String {
+        switch self {
+        case .upcoming: return "Upcoming"
+        case .overdue:  return "Overdue"
+        case .resolved: return "Resolved"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .upcoming: return Color(red: 0.90, green: 0.65, blue: 0.15)
+        case .overdue:  return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .resolved: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        }
+    }
+}
+
+
 
 
 
 
 enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     case all          = "All"
-    case active       = "Active"
-    case inactive     = "Inactive"
+    case active       = "Available"
+    case inactive     = "On Trip"
     case inMaintenance = "In Maintenance"
 
     var id: String { rawValue }
@@ -451,9 +505,11 @@ struct DBVehicle: Codable, Identifiable {
     var year: Int
     var vin: String
     var licensePlate: String
+    var type: String?
     var status: DBVehicleStatus
     var assignedDriverId: UUID?
     var lastServiceDate: Date?
+    var insuranceExpiryDate: Date?
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -464,9 +520,11 @@ struct DBVehicle: Codable, Identifiable {
         case year
         case vin
         case licensePlate     = "license_plate"
+        case type             = "vehicle_type"
         case status
         case assignedDriverId = "assigned_driver_id"
         case lastServiceDate  = "last_service_date"
+        case insuranceExpiryDate = "insurance_expiry_date"
         case createdAt        = "created_at"
     }
 }
@@ -535,6 +593,7 @@ extension Trip {
     var asDBTrip: DBTrip {
         DBTrip(
             id: id,
+            tripCode: tripCode,
             vehicleId: vehicleId,
             driverId: driverId,
             source: startLocation,
@@ -576,7 +635,7 @@ extension DBTrip {
     var asLocalTrip: Trip {
         Trip(
             id: id,
-            tripCode: "TRP-\(id.uuidString.prefix(4).uppercased())",
+            tripCode: tripCode,
             vehicleId: vehicleId,
             driverId: driverId,
             startLocation: source,
@@ -609,6 +668,7 @@ enum DBTripStatus: String, Codable {
 
 struct DBTrip: Codable, Identifiable {
     let id: UUID
+    var tripCode: String
     var vehicleId: UUID
     var driverId: UUID
     var source: String
@@ -622,6 +682,7 @@ struct DBTrip: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id
+        case tripCode    = "trip_code"
         case vehicleId   = "vehicle_id"
         case driverId    = "driver_id"
         case source
@@ -632,6 +693,72 @@ struct DBTrip: Codable, Identifiable {
         case status
         case notes
         case createdAt   = "created_at"
+    }
+
+    /// Provide a default tripCode when the backend column is absent
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedId = try c.decode(UUID.self, forKey: .id)
+        id          = decodedId
+        tripCode    = (try? c.decodeIfPresent(String.self, forKey: .tripCode))
+                      ?? "TRP-\(decodedId.uuidString.prefix(4).uppercased())"
+        vehicleId   = try c.decode(UUID.self,   forKey: .vehicleId)
+        driverId    = try c.decode(UUID.self,   forKey: .driverId)
+        source      = try c.decode(String.self, forKey: .source)
+        destination = try c.decode(String.self, forKey: .destination)
+        startTime   = try c.decodeIfPresent(Date.self, forKey: .startTime)
+        endTime     = try c.decodeIfPresent(Date.self, forKey: .endTime)
+        distance    = try c.decode(Double.self, forKey: .distance)
+        status      = try c.decode(DBTripStatus.self, forKey: .status)
+        notes       = try c.decodeIfPresent(String.self, forKey: .notes)
+        createdAt   = try c.decode(Date.self,   forKey: .createdAt)
+    }
+
+    /// Custom encoder — excludes tripCode so Supabase won't reject
+    /// the payload when the trips table lacks a trip_code column.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id,          forKey: .id)
+        // tripCode is intentionally omitted — column may not exist in Supabase
+        try c.encode(vehicleId,   forKey: .vehicleId)
+        try c.encode(driverId,    forKey: .driverId)
+        try c.encode(source,      forKey: .source)
+        try c.encode(destination, forKey: .destination)
+        try c.encodeIfPresent(startTime,  forKey: .startTime)
+        try c.encodeIfPresent(endTime,    forKey: .endTime)
+        try c.encode(distance,    forKey: .distance)
+        try c.encode(status,      forKey: .status)
+        try c.encodeIfPresent(notes,      forKey: .notes)
+        try c.encode(createdAt,   forKey: .createdAt)
+    }
+
+    /// Memberwise init used throughout the app
+    init(
+        id: UUID = UUID(),
+        tripCode: String = "",
+        vehicleId: UUID,
+        driverId: UUID,
+        source: String,
+        destination: String,
+        startTime: Date? = nil,
+        endTime: Date? = nil,
+        distance: Double,
+        status: DBTripStatus,
+        notes: String? = nil,
+        createdAt: Date
+    ) {
+        self.id          = id
+        self.tripCode    = tripCode.isEmpty ? "TRP-\(id.uuidString.prefix(4).uppercased())" : tripCode
+        self.vehicleId   = vehicleId
+        self.driverId    = driverId
+        self.source      = source
+        self.destination = destination
+        self.startTime   = startTime
+        self.endTime     = endTime
+        self.distance    = distance
+        self.status      = status
+        self.notes       = notes
+        self.createdAt   = createdAt
     }
 }
 
@@ -988,8 +1115,200 @@ extension DefectReport {
 }
 
 
+enum DBSOSStatus: String, Codable {
+    case active
+    case resolved
+}
 
+struct DBSOSAlert: Codable, Identifiable {
+    let id: UUID
+    var driverId: UUID
+    var vehicleId: UUID?
+    var tripId: UUID?
+    var latitude: Double
+    var longitude: Double
+    var message: String?
+    var status: DBSOSStatus
+    var createdAt: Date
 
+    enum CodingKeys: String, CodingKey {
+        case id
+        case driverId = "driver_id"
+        case vehicleId = "vehicle_id"
+        case tripId = "trip_id"
+        case latitude
+        case longitude
+        case message
+        case status
+        case createdAt = "created_at"
+    }
+}
+
+extension SOSStatus {
+    var toDBStatus: DBSOSStatus {
+        switch self {
+        case .active: return .active
+        case .resolved: return .resolved
+        }
+    }
+}
+
+extension DBSOSStatus {
+    var toLocalStatus: SOSStatus {
+        switch self {
+        case .active: return .active
+        case .resolved: return .resolved
+        }
+    }
+}
+
+extension DBSOSAlert {
+    var asLocalSOS: SOSAlert {
+        SOSAlert(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId ?? UUID(),
+            tripId: tripId,
+            latitude: latitude,
+            longitude: longitude,
+            message: message,
+            status: status.toLocalStatus,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension SOSAlert {
+    var asDBSOSAlert: DBSOSAlert {
+        DBSOSAlert(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId,
+            tripId: tripId,
+            latitude: latitude,
+            longitude: longitude,
+            message: message,
+            status: status.toDBStatus,
+            createdAt: createdAt
+        )
+    }
+}
+
+struct DBInventoryItem: Codable, Identifiable {
+    let id: UUID
+    var partName: String
+    var partNumber: String
+    var quantityInStock: Int
+    var reorderThreshold: Int
+    var unitCost: Double
+    var supplierName: String?
+    var createdAt: Date
+    var updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case partName = "part_name"
+        case partNumber = "part_number"
+        case quantityInStock = "quantity_in_stock"
+        case reorderThreshold = "reorder_threshold"
+        case unitCost = "unit_cost"
+        case supplierName = "supplier_name"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+extension DBInventoryItem {
+    var asLocalItem: InventoryItem {
+        InventoryItem(
+            id: id,
+            partName: partName,
+            partNumber: partNumber,
+            quantityInStock: quantityInStock,
+            reorderThreshold: reorderThreshold,
+            unitCost: unitCost,
+            supplierName: supplierName,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}
+
+extension InventoryItem {
+    var asDBItem: DBInventoryItem {
+        DBInventoryItem(
+            id: id,
+            partName: partName,
+            partNumber: partNumber,
+            quantityInStock: quantityInStock,
+            reorderThreshold: reorderThreshold,
+            unitCost: unitCost,
+            supplierName: supplierName,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}
+
+struct DBMaintenanceRecord: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var workOrderId: UUID?
+    var serviceType: String
+    var serviceDate: Date
+    var cost: Double
+    var notes: String?
+    var repairImages: [String]? = nil
+    var performedBy: UUID
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case workOrderId = "work_order_id"
+        case serviceType = "service_type"
+        case serviceDate = "service_date"
+        case cost
+        case notes
+        case repairImages = "repair_images"
+        case performedBy = "performed_by"
+        case createdAt = "created_at"
+    }
+}
+
+extension DBMaintenanceRecord {
+    var asLocalRecord: MaintenanceRecord {
+        MaintenanceRecord(
+            id: id,
+            vehicleId: vehicleId,
+            workOrderId: workOrderId,
+            serviceType: serviceType,
+            serviceDate: serviceDate,
+            cost: cost,
+            notes: notes,
+            repairImages: repairImages,
+            performedBy: performedBy,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension MaintenanceRecord {
+    var asDBRecord: DBMaintenanceRecord {
+        DBMaintenanceRecord(
+            id: id,
+            vehicleId: vehicleId,
+            workOrderId: workOrderId,
+            serviceType: serviceType,
+            serviceDate: serviceDate,
+            cost: cost,
+            notes: notes,
+            repairImages: repairImages,
+            performedBy: performedBy,
+            createdAt: createdAt
+        )
+    }
+}
 
 
 @Model
@@ -1047,6 +1366,7 @@ final class Vehicle {
     var lastServiceDate: Date?
     var nextServiceDate: Date?
     var insuranceExpiryDate: Date?
+    var permitExpiryDate: Date?
     var createdAt: Date
     var updatedAt: Date
 
@@ -1065,6 +1385,7 @@ final class Vehicle {
         lastServiceDate: Date? = nil,
         nextServiceDate: Date? = nil,
         insuranceExpiryDate: Date? = nil,
+        permitExpiryDate: Date? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now
     ) {
@@ -1082,6 +1403,7 @@ final class Vehicle {
         self.lastServiceDate = lastServiceDate
         self.nextServiceDate = nextServiceDate
         self.insuranceExpiryDate = insuranceExpiryDate
+        self.permitExpiryDate = permitExpiryDate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -1289,6 +1611,8 @@ final class MaintenanceRecord {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+    var replacedParts: [String]
+    var repairImages: [String]?
     var performedBy: UUID
     var createdAt: Date
 
@@ -1300,6 +1624,8 @@ final class MaintenanceRecord {
         serviceDate: Date,
         cost: Double,
         notes: String? = nil,
+        replacedParts: [String] = [],
+        repairImages: [String]? = nil,
         performedBy: UUID,
         createdAt: Date = .now
     ) {
@@ -1310,6 +1636,8 @@ final class MaintenanceRecord {
         self.serviceDate = serviceDate
         self.cost = cost
         self.notes = notes
+        self.replacedParts = replacedParts
+        self.repairImages = repairImages
         self.performedBy = performedBy
         self.createdAt = createdAt
     }
@@ -1414,5 +1742,38 @@ final class InventoryItem {
         self.supplierName = supplierName
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+}
+
+
+@Model
+final class ComplianceAlert {
+    @Attribute(.unique) var id: UUID
+    var vehicleId: UUID
+    var alertType: ComplianceAlertType
+    var status: ComplianceAlertStatus
+    var deadlineDate: Date
+    var resolvedAt: Date?
+    var notes: String?
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        vehicleId: UUID,
+        alertType: ComplianceAlertType,
+        status: ComplianceAlertStatus,
+        deadlineDate: Date,
+        resolvedAt: Date? = nil,
+        notes: String? = nil,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.vehicleId = vehicleId
+        self.alertType = alertType
+        self.status = status
+        self.deadlineDate = deadlineDate
+        self.resolvedAt = resolvedAt
+        self.notes = notes
+        self.createdAt = createdAt
     }
 }

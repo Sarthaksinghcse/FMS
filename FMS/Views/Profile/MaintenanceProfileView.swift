@@ -99,9 +99,27 @@ struct MaintenanceProfileView: View {
                     .frame(width: 90, height: 90)
                     .shadow(color: AppTheme.Brand.amber.opacity(0.35), radius: 16, y: 6)
 
-                Text(initials)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                if let profileImage = user?.profileImage, let url = URL(string: profileImage) {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 90, height: 90)
+                                .clipShape(Circle())
+                        } else if phase.error != nil {
+                            Text(initials)
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        } else {
+                            ProgressView()
+                        }
+                    }
+                } else {
+                    Text(initials)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
             }
 
             VStack(spacing: 6) {

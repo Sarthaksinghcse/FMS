@@ -92,9 +92,31 @@ struct FleetManagerProfileView: View {
                     .frame(width: 90, height: 90)
                     .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 16, y: 6)
 
-                Text(initials)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
+                    CachedAsyncImage(url: imageURL) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        Text(initials)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(
+                                LinearGradient(
+                                    colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .frame(width: 90, height: 90)
+                    .clipShape(Circle())
+                } else {
+                    Text(initials)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
             }
 
             VStack(spacing: 6) {

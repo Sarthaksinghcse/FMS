@@ -100,19 +100,28 @@ struct DriverTripsTab: View {
                                             .tint(AppTheme.Status.danger)
                                         }
                                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                            Button { vm.showPreTrip = true } label: {
-                                                Label("Inspect", systemImage: "checklist")
+                                            Button {
+                                                vm.queryTrip = trip
+                                                vm.showRaiseQuery = true
+                                            } label: {
+                                                Label("Raise Query", systemImage: "questionmark.bubble.fill")
                                             }
-                                            .tint(Color.fmsIndigo)
+                                            .tint(Color.orange)
                                         }
                                         .contextMenu {
-                                            Button { vm.mapActiveTrip = trip } label: {
+                                            Button {
+                                                vm.showRaiseQuery = false
+                                                vm.queryTrip = nil
+                                                vm.mapActiveTrip = trip
+                                            } label: {
                                                 Label("Start Trip", systemImage: "play.fill")
                                             }
-                                            Button { vm.showPreTrip  = true } label: { Label("Pre-Trip Inspection",  systemImage: "checklist") }
+                                            Button {
+                                                vm.queryTrip = trip
+                                                vm.showRaiseQuery = true
+                                            } label: { Label("Raise Query", systemImage: "questionmark.bubble.fill") }
                                             Button { vm.showPostTrip = true } label: { Label("Post-Trip Inspection", systemImage: "checkmark.seal.fill") }
                                             Divider()
-                                            Button { vm.showVoiceLog = true } label: { Label("Voice Log",    systemImage: "mic.fill") }
                                             Button { vm.showIssue    = true } label: { Label("Report Issue", systemImage: "exclamationmark.bubble.fill") }
                                             Button(role: .destructive) { vm.showDefect = true } label: {
                                                 Label("Report Defect", systemImage: "wrench.and.screwdriver.fill")
@@ -680,7 +689,7 @@ private struct TripRow: View {
             
             HStack(spacing: 8) {
                 TripChip(icon: "arrow.left.arrow.right",
-                         label: String(format: "%.0f km", trip.distance))
+                         label: String(format: "%.1f km", trip.distance))
                 if let s = trip.startTime {
                     TripChip(icon: "clock",
                              label: s.formatted(.dateTime.hour().minute()))
@@ -694,26 +703,33 @@ private struct TripRow: View {
 
             
             HStack(spacing: 10) {
-                
-                Button { vm.showPreTrip = true } label: {
-                    Label("Inspect", systemImage: "checklist")
+                // Raise Query
+                Button {
+                    vm.queryTrip = trip
+                    vm.showRaiseQuery = true
+                } label: {
+                    Label("Raise Query", systemImage: "questionmark.bubble.fill")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.fmsIndigo)
+                        .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
-                        .glassEffect(
-                            .regular.tint(Color.fmsIndigo.opacity(0.08)),
-                            in: RoundedRectangle(cornerRadius: 10)
+                        .background(Color.orange.opacity(0.09))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.orange.opacity(0.25), lineWidth: 1)
                         )
                 }
 
-                
+                // Confirm / Navigate
                 Button {
+                    vm.showRaiseQuery = false
+                    vm.queryTrip = nil
                     vm.mapActiveTrip = trip
                 } label: {
                     Label(
-                        (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "Navigate" : "Start",
-                        systemImage: (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "location.fill" : "play.fill"
+                        (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "Navigate" : "Confirm",
+                        systemImage: (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "location.fill" : "checkmark.circle.fill"
                     )
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
@@ -788,18 +804,13 @@ private struct TripActionButton: View {
 
     private var backgroundContent: some ShapeStyle {
         switch style {
-        case .primary:
-            return AnyShapeStyle(AppTheme.Brand.primaryDeep.gradient)
-        case .glass:
-            return AnyShapeStyle(AppTheme.Brand.primaryDeep.opacity(0.08))
-        case .warning:
-            return AnyShapeStyle(AppTheme.Brand.accent.opacity(0.10))
-        case .destructive:
-            return AnyShapeStyle(Color.red.gradient)
+        case .primary:     return AnyShapeStyle(Color.fmsIndigo.gradient)
+        case .glass:       return AnyShapeStyle(Color.fmsIndigo.opacity(0.08))
+        case .warning:     return AnyShapeStyle(AppTheme.Brand.accent.opacity(0.10))
+        case .destructive: return AnyShapeStyle(Color.red.gradient)
         }
     }
 }
-
 
 
 @available(iOS 26.0, *)
@@ -808,108 +819,89 @@ struct TripNavigationView: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
 
-    @State private var sourceItem: MKMapItem?
-    @State private var destItem: MKMapItem?
-    @State private var route: MKRoute?
-    @State private var alternateRoutes: [MKRoute] = []
-    @State private var geocoding = true
-    @State private var cameraPos = MapCameraPosition.automatic
+    /// When true: show map + route only, skip pre-trip inspection entirely.
+    var viewRouteOnly: Bool = false
 
-    
+    // ── NavigationManager owns CLLocationManager + MKDirections ─────────────
+    @StateObject private var nav = NavigationManager()
+
+    // ── Pre-trip inspection gate ─────────────────────────────────────────────
     @State private var showPreTripNav = false
     @State private var preTripPassed  = false
 
-    
+    // ── Reroute suggestion ───────────────────────────────────────────────────
     @State private var showRerouteBanner = false
-    @State private var bestAlternate: MKRoute?
-    @State private var timeSavedMin = 0
-    @State private var showTurnByTurn = false
-    @State private var rerouteDismissed = false
+    @State private var timeSavedMin      = 0
+    @State private var rerouteDismissed  = false
 
-    
+    // ── Computed ─────────────────────────────────────────────────────────────
     private var isActiveTrip: Bool { vm.isTripActive && vm.activeTrip?.id == trip.id }
 
+    // ─────────────────────────────────────────────────────────────────────────
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
 
-                
-                Map(position: $cameraPos) {
-                    UserAnnotation {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 32, height: 32)
-                                .shadow(radius: 4)
-                            Image(systemName: "location.north.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(Color.fmsIndigo)
+                // ── Live MapKit map ──────────────────────────────────────────
+                Map(position: $nav.cameraPosition) {
+
+                    // Blue pulsing user dot (follows real GPS or simulated location)
+                    if nav.isSimulating, let loc = nav.userLocation?.coordinate {
+                        Annotation("Driver", coordinate: loc) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.blue.opacity(0.3))
+                                    .frame(width: 44, height: 44)
+                                Circle()
+                                    .fill(.white)
+                                    .frame(width: 22, height: 22)
+                                    .shadow(radius: 3)
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 14, height: 14)
+                            }
                         }
+                    } else {
+                        UserAnnotation()
                     }
-                    
-                    if let s = sourceItem?.location.coordinate {
-                        Annotation("Origin", coordinate: s, anchor: .bottom) {
-                            mapPin(icon: "car.fill", color: Color.fmsIndigo)
-                        }
-                    }
-                    if let d = destItem?.location.coordinate {
-                        Annotation("Destination", coordinate: d, anchor: .bottom) {
-                            mapPin(icon: "flag.fill", color: AppTheme.Status.success)
-                        }
-                    }
-                    
-                    ForEach(alternateRoutes, id: \.name) { alt in
+
+                    // Alternate routes (grey dashed)
+                    ForEach(nav.alternateRoutes, id: \.name) { alt in
                         MapPolyline(alt.polyline)
                             .stroke(
                                 Color.gray.opacity(0.35),
-                                style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 6])
+                                style: StrokeStyle(lineWidth: 4, lineCap: .round,
+                                                   lineJoin: .round, dash: [8, 6])
                             )
                     }
-                    
-                    if let r = route {
+
+                    // Primary route (indigo solid)
+                    if let r = nav.route {
                         MapPolyline(r.polyline)
                             .stroke(
                                 Color.fmsIndigo,
-                                style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round)
+                                style: StrokeStyle(lineWidth: 6, lineCap: .round,
+                                                   lineJoin: .round)
                             )
                     }
+
+                    // Destination pin
+                    if let dest = destinationCoordinate {
+                        Annotation(trip.destination, coordinate: dest, anchor: .bottom) {
+                            mapPin(icon: "flag.fill", color: AppTheme.Status.success)
+                        }
+                    }
                 }
-                .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll, showsTraffic: true))
+                .mapStyle(.standard(elevation: .realistic,
+                                    pointsOfInterest: .excludingAll,
+                                    showsTraffic: true))
+                .mapControls {
+                    // Hide default controls — we own the camera entirely
+                }
                 .ignoresSafeArea(edges: .top)
-                .onChange(of: vm.isTripActive) { _, active in
-                    if active && vm.activeTrip?.id == trip.id {
-                        withAnimation {
-                            cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
-                        }
-                    }
-                }
 
-                if isActiveTrip {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button {
-                                withAnimation {
-                                    cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
-                                }
-                            } label: {
-                                Image(systemName: "location.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(Color.fmsIndigo)
-                                    .frame(width: 44, height: 44)
-                                    .background(Color(UIColor.systemBackground))
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
-                            }
-                            .padding(.trailing, 16)
-                            .padding(.top, 16)
-                        }
-                        Spacer()
-                    }
-                }
-
-                
-                if geocoding {
+                // ── Route loading indicator ──────────────────────────────────
+                if nav.isRouting {
                     HStack(spacing: 10) {
                         ProgressView().tint(Color.fmsIndigo)
                         Text("Calculating route…")
@@ -918,287 +910,96 @@ struct TripNavigationView: View {
                     }
                     .padding(.horizontal, 16).padding(.vertical, 12)
                     .glassEffect(.regular, in: Capsule())
-                    .padding(.bottom, 300)
+                    .padding(.bottom, 320)
                 }
 
-                
-                VStack(spacing: 0) {
-                    
-                    Capsule()
-                        .fill(Color(UIColor.systemGray4))
-                        .frame(width: 36, height: 5)
-                        .padding(.top, 10)
-                        .padding(.bottom, 14)
-
-                    
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            if let r = route {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                    Text(String(format: "%d min", Int(r.expectedTravelTime / 60)))
-                                        .font(.system(size: 34, weight: .bold))
-                                        .foregroundStyle(AppTheme.Status.success)
-                                    Text(String(format: "%.1f km", r.distance / 1000))
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            Text(isActiveTrip ? "Navigating to: \(trip.destination)" : "Planned: \(trip.destination)")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
+                // ── Reroute banner ───────────────────────────────────────────
+                if showRerouteBanner && !rerouteDismissed && !nav.isNavigating {
+                    VStack {
+                        rerouteBannerView
+                            .padding(.horizontal, 16)
+                            .padding(.top, 60)
                         Spacer()
-                        Button { openInAppleMaps() } label: {
-                            Label("Maps", systemImage: "map.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.fmsIndigo)
-                                .padding(.horizontal, 12).padding(.vertical, 8)
-                                .glassEffect(.regular.tint(Color.fmsIndigo.opacity(0.08)), in: Capsule())
-                        }
                     }
-                    .padding(.horizontal, 20)
-
-                    
-                    HStack(spacing: 0) {
-                        TripMetaCell(icon: "arrow.left.arrow.right",
-                                     value: String(format: "%.1f km", trip.distance), label: "Distance")
-                        TripMetaCell(icon: "clock",
-                                     value: vm.elapsedFormatted, label: "Elapsed")
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 8)
-
-                    
-                    if showRerouteBanner && !rerouteDismissed {
-                        HStack(spacing: 10) {
-                            Image(systemName: "arrow.triangle.swap")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 38, height: 38)
-                                .background(AppTheme.Status.success.gradient)
-                                .clipShape(Circle())
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Faster Route Available")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(AppTheme.Status.success)
-                                Text("Save ~\(timeSavedMin) min via alternate route")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            Button {
-                                withAnimation(.spring(response: 0.4)) {
-                                    if let alt = bestAlternate {
-                                        alternateRoutes.append(route!)
-                                        route = alt
-                                        bestAlternate = nil
-                                        showRerouteBanner = false
-                                    }
-                                }
-                            } label: {
-                                Text("Reroute")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 14).padding(.vertical, 8)
-                                    .background(AppTheme.Status.success.gradient)
-                                    .clipShape(Capsule())
-                            }
-
-                            Button {
-                                withAnimation { rerouteDismissed = true }
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(.secondary)
-                                    .padding(6)
-                                    .background(Color(UIColor.tertiarySystemFill))
-                                    .clipShape(Circle())
-                            }
-                        }
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(Color(UIColor.secondarySystemGroupedBackground))
-                                .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.top, 6)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-
-                    
-                    if let steps = route?.steps, steps.count > 1 {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Button {
-                                withAnimation(.spring(response: 0.35)) {
-                                    showTurnByTurn.toggle()
-                                }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "point.topleft.down.to.point.bottomright.curvepath.fill")
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(Color.fmsIndigo)
-                                    Text("Turn-by-Turn · \(steps.count - 1) steps")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(Color.fmsIndigo)
-                                    Spacer()
-                                    Image(systemName: showTurnByTurn ? "chevron.up" : "chevron.down")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.plain)
-
-                            if showTurnByTurn {
-                                Divider().padding(.leading, 16)
-                                ScrollView {
-                                    LazyVStack(alignment: .leading, spacing: 0) {
-                                        let stepsArr = Array(steps.dropFirst())
-                                        ForEach(Array(stepsArr.enumerated()), id: \.offset) { idx, step in
-                                            TurnStepRow(
-                                                index: idx,
-                                                instruction: step.instructions,
-                                                distance: step.distance,
-                                                isFirst: idx == 0,
-                                                isLast: idx == stepsArr.count - 1,
-                                                iconName: turnIcon(for: step.instructions)
-                                            )
-                                        }
-                                    }
-                                }
-                                .frame(maxHeight: 200)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
-                        }
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(Color(UIColor.secondarySystemGroupedBackground))
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.top, 4)
-                    }
-
-                    Divider().padding(.horizontal, 20).padding(.top, 4)
-
-                    
-                    if isActiveTrip {
-                        
-                        HStack(spacing: 10) {
-                            MapActionButton(label: "Voice Log",    icon: "mic.fill",                   style: .glass)     { vm.showVoiceLog = true }
-                            MapActionButton(label: "Defect",       icon: "wrench.and.screwdriver.fill", style: .warning)   { vm.showDefect   = true }
-                            MapActionButton(label: "SOS",          icon: "sos",                         style: .destructive) { vm.showSOSCountdown = true }
-                            MapActionButton(label: "End Trip",     icon: "stop.fill",                   style: .destructive) {
-                                dismiss()
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    vm.showPostTripOnEnd = true
-                                    vm.showPostTrip = true
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
-                        .padding(.bottom, 20)
-                    } else {
-                        
-                        VStack(spacing: 14) {
-
-                            
-                            HStack(spacing: 10) {
-                                
-                                MapActionButton(
-                                    label: preTripPassed ? "Passed ✓" : "Pre-Trip",
-                                    icon:  preTripPassed ? "checkmark.seal.fill" : "checklist",
-                                    style: preTripPassed ? .primary : .glass
-                                ) { showPreTripNav = true }
-
-                                MapActionButton(label: "Defect",    icon: "wrench.and.screwdriver.fill", style: .warning) { vm.showDefect   = true }
-                                MapActionButton(label: "Voice Log", icon: "mic.fill",                   style: .glass)   { vm.showVoiceLog = true }
-                                MapActionButton(label: "SOS",       icon: "sos",                        style: .destructive) { vm.showSOSCountdown = true }
-                            }
-
-                            
-                            if !preTripPassed {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(AppTheme.Brand.accent)
-                                    Text("Complete Pre-Trip Inspection before starting")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(AppTheme.Brand.accent)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 14).padding(.vertical, 10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(AppTheme.Brand.accent.opacity(0.10))
-                                )
-                            }
-
-                            
-                            Button {
-                                guard preTripPassed else { showPreTripNav = true; return }
-                                vm.beginTrip(trip: trip)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    if !preTripPassed {
-                                        Image(systemName: "lock.fill")
-                                            .font(.system(size: 15, weight: .bold))
-                                    }
-                                    Text(preTripPassed ? "Start Now" : "Complete Inspection to Start")
-                                        .font(.system(size: 17, weight: .bold))
-                                }
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 54)
-                                .background(
-                                    preTripPassed
-                                        ? AnyShapeStyle(Color.fmsIndigo.gradient)
-                                        : AnyShapeStyle(Color(UIColor.systemGray3).gradient)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
-                        .padding(.bottom, 20)
-                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(5)
                 }
-                .background(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 22,
-                        bottomLeadingRadius: 0,
-                        bottomTrailingRadius: 0,
-                        topTrailingRadius: 22
+
+                // ── ACTIVE NAVIGATION OVERLAY (Apple Maps mode) ──────────────
+                if nav.isNavigating {
+                    ActiveNavigationOverlay(
+                        nav: nav,
+                        onEndTrip: {
+                            nav.endNavigation()
+                            dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                vm.showPostTripOnEnd = true
+                                vm.showPostTrip = true
+                            }
+                        },
+                        onSOS: { vm.showSOSCountdown = true }
                     )
-                    .fill(.regularMaterial)
-                )
-                .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: -4)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.45), value: nav.isNavigating)
+                    .zIndex(10)
+                }
+
+                // ── PRE-TRIP BOTTOM DRAWER (not yet navigating) ──────────────
+                if !nav.isNavigating {
+                    preTripDrawer
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.spring(response: 0.45), value: nav.isNavigating)
+                }
             }
-            .navigationTitle("Navigation")
+            // ── NavBar ───────────────────────────────────────────────────────
+            .navigationTitle(nav.isNavigating ? "" : "Navigation")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Done") { dismiss() }
-                        .font(.system(size: 15, weight: .semibold))
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .glassEffect(.regular, in: Capsule())
+                    if !nav.isNavigating {
+                        Button {
+                            nav.endNavigation()
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .padding(8)
+                                .glassEffect(.regular, in: Circle())
+                        }
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if !nav.isNavigating {
+                        Button {
+                            guard let dest = destinationCoordinate else { return }
+                            let item = MKMapItem(location: CLLocation(latitude: dest.latitude, longitude: dest.longitude), address: nil)
+                            item.name = trip.destination
+                            item.openInMaps(launchOptions: [
+                                MKLaunchOptionsDirectionsModeKey:
+                                    MKLaunchOptionsDirectionsModeDriving
+                            ])
+                        } label: {
+                            Label("Maps", systemImage: "map.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.fmsIndigo)
+                                .padding(.horizontal, 12).padding(.vertical, 8)
+                                .glassEffect(.regular.tint(Color.fmsIndigo.opacity(0.08)),
+                                             in: Capsule())
+                        }
+                    }
                 }
             }
-            
+
+            // ── Sheets ───────────────────────────────────────────────────────
             .sheet(isPresented: $showPreTripNav) {
                 InspectionFormSheet(isPreTrip: true) { passed, _, _ in
                     preTripPassed = passed
                 }
             }
         }
-        
+
+        // ── SOS overlay (sits above NavigationStack) ─────────────────────────
         .overlay {
             if vm.showSOSCountdown {
                 SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
@@ -1213,19 +1014,223 @@ struct TripNavigationView: View {
         } message: {
             Text("Emergency alert has been sent to your fleet manager. Help is on the way.")
         }
-        .task { await geocodeAndRoute() }
+
+        // ── Lifecycle ────────────────────────────────────────────────────────
+        .task {
+            nav.requestPermissionAndStart()
+            await nav.calculateRoute(fromAddress: trip.source, toAddress: trip.destination)
+            checkForFasterAlternate()
+        }
         .onAppear {
-            
-            if !isActiveTrip {
+            if viewRouteOnly {
+                // View Route mode — skip inspection, just show the map
+                preTripPassed = true
+            } else if !isActiveTrip {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                     showPreTripNav = true
                 }
+            } else {
+                nav.beginNavigation()
             }
         }
     }
 
+    // MARK: - Pre-trip Drawer (shown before Start Now)
 
-    
+    private var preTripDrawer: some View {
+        VStack(spacing: 0) {
+            // Handle
+            Capsule()
+                .fill(Color(UIColor.systemGray4))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10).padding(.bottom, 14)
+
+            // Route summary row
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    if let r = nav.route {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(String(format: "%d min", Int(r.expectedTravelTime / 60)))
+                                .font(.system(size: 34, weight: .bold))
+                                .foregroundStyle(AppTheme.Status.success)
+                            Text(String(format: "%.1f km", r.distance / 1000))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Text("To: \(trip.destination)")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+
+            // Distance / elapsed chips
+            HStack(spacing: 0) {
+                ActiveTripMetaCell(icon: "arrow.left.arrow.right",
+                                   value: String(format: "%.1f km", trip.distance),
+                                   label: "Distance")
+                ActiveTripMetaCell(icon: "clock",
+                                   value: vm.elapsedFormatted, label: "Elapsed")
+            }
+            .padding(.horizontal, 8).padding(.top, 8)
+
+            Divider().padding(.horizontal, 20).padding(.top, 8)
+
+            // Quick action buttons
+            HStack(spacing: 10) {
+                MapActionButton(
+                    label: preTripPassed ? "Passed ✓" : "Pre-Trip",
+                    icon:  preTripPassed ? "checkmark.seal.fill" : "checklist",
+                    style: preTripPassed ? .primary : .glass
+                ) { showPreTripNav = true }
+
+                MapActionButton(label: "Defect", icon: "wrench.and.screwdriver.fill",
+                                style: .warning)  { vm.showDefect   = true }
+                MapActionButton(label: "SOS",    icon: "sos",
+                                style: .destructive) { vm.showSOSCountdown = true }
+            }
+            .padding(.horizontal, 20).padding(.top, 12)
+
+            // Warning banner if pre-trip not done
+            if !preTripPassed {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.Brand.accent)
+                    Text("Complete Pre-Trip Inspection before starting")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AppTheme.Brand.accent)
+                    Spacer()
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 10)
+                    .fill(AppTheme.Brand.accent.opacity(0.10)))
+                .padding(.horizontal, 20).padding(.top, 10)
+            }
+
+            // START NOW
+            Button {
+                guard preTripPassed else { showPreTripNav = true; return }
+                vm.beginTrip(trip: trip)
+                withAnimation(.spring(response: 0.5)) {
+                    nav.beginNavigation()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    if !preTripPassed {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    Text(preTripPassed ? "Start Now" : "Complete Inspection to Start")
+                        .font(.system(size: 17, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(
+                    preTripPassed
+                        ? AnyShapeStyle(Color.fmsIndigo.gradient)
+                        : AnyShapeStyle(Color(UIColor.systemGray3).gradient)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 28)
+        }
+        .background(
+            UnevenRoundedRectangle(
+                topLeadingRadius: 22, bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0, topTrailingRadius: 22
+            )
+            .fill(.regularMaterial)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: -4)
+    }
+
+    // MARK: - Reroute Banner
+
+    private var rerouteBannerView: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "arrow.triangle.swap")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 38, height: 38)
+                .background(AppTheme.Status.success.gradient)
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Faster Route Available")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(AppTheme.Status.success)
+                Text("Save ~\(timeSavedMin) min via alternate route")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button {
+                withAnimation(.spring(response: 0.4)) {
+                    if let alt = nav.alternateRoutes.first {
+                        // Swap to faster route via NavigationManager
+                        Task { 
+                            let origin = nav.userLocation?.coordinate ?? nav.route?.polyline.coordinate ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+                            await nav.calculateRoute(
+                                from: origin,
+                                to: destinationCoordinate!,
+                                name: trip.destination)
+                        }
+                        _ = alt
+                        showRerouteBanner = false
+                    }
+                }
+            } label: {
+                Text("Reroute")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(AppTheme.Status.success.gradient)
+                    .clipShape(Capsule())
+            }
+
+            Button { withAnimation { rerouteDismissed = true } } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .padding(6)
+                    .background(Color(UIColor.tertiarySystemFill))
+                    .clipShape(Circle())
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+                .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+        )
+    }
+
+    // MARK: - Helpers
+
+    /// Destination coordinate — read from NavigationManager after geocoding
+    private var destinationCoordinate: CLLocationCoordinate2D? { nav.destinationCoordinate }
+
+    private func checkForFasterAlternate() {
+        guard let primary = nav.route,
+              let fastest = nav.alternateRoutes.min(by: {
+                  $0.expectedTravelTime < $1.expectedTravelTime
+              }),
+              fastest.expectedTravelTime < primary.expectedTravelTime - 120
+        else { return }
+
+        timeSavedMin = Int((primary.expectedTravelTime - fastest.expectedTravelTime) / 60)
+        withAnimation(.spring(response: 0.5).delay(1.5)) {
+            showRerouteBanner = true
+        }
+    }
+
     private func mapPin(icon: String, color: Color) -> some View {
         ZStack {
             Circle()
@@ -1240,101 +1245,15 @@ struct TripNavigationView: View {
                 .foregroundStyle(.white)
         }
     }
-
-    
-    @MainActor
-    private func geocodeAndRoute() async {
-        let startItem: MKMapItem?
-        if isActiveTrip, let currentCoord = LocationService.shared.manager.location?.coordinate {
-            startItem = MKMapItem(placemark: MKPlacemark(coordinate: currentCoord))
-        } else {
-            startItem = await mapItem(for: trip.source)
-        }
-        
-        sourceItem = startItem
-        destItem = await mapItem(for: trip.destination)
-
-        if let sourceItem, let destItem {
-            let req = MKDirections.Request()
-            req.source = sourceItem
-            req.destination = destItem
-            req.transportType = .automobile
-            req.requestsAlternateRoutes = true  
-
-            if let result = try? await MKDirections(request: req).calculate() {
-                let allRoutes = result.routes
-                route = allRoutes.first
-
-                
-                if allRoutes.count > 1, let primary = route {
-                    let alts = Array(allRoutes.dropFirst())
-                    alternateRoutes = alts
-
-                    
-                    if let fastest = alts.min(by: { $0.expectedTravelTime < $1.expectedTravelTime }),
-                       fastest.expectedTravelTime < primary.expectedTravelTime - 120 {
-                        bestAlternate = fastest
-                        timeSavedMin = Int((primary.expectedTravelTime - fastest.expectedTravelTime) / 60)
-                        withAnimation(.spring(response: 0.5).delay(1.5)) {
-                            showRerouteBanner = true
-                        }
-                    }
-                }
-
-                if let r = route {
-                    if isActiveTrip {
-                        cameraPos = .userLocation(followsHeading: true, fallback: .automatic)
-                    } else {
-                        let rect = r.polyline.boundingMapRect
-                        cameraPos = .rect(rect.insetBy(dx: -rect.size.width * 0.18, dy: -rect.size.height * 0.18))
-                    }
-                }
-            }
-        } else {
-            cameraPos = .region(MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 28.61, longitude: 77.21),
-                span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
-            ))
-        }
-        geocoding = false
-    }
-
-    private func mapItem(for address: String) async -> MKMapItem? {
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = address
-        let search = MKLocalSearch(request: request)
-        let response = try? await search.start()
-        return response?.mapItems.first
-    }
-
-    private func openInAppleMaps() {
-        guard let item = destItem else { return }
-        item.name = trip.destination
-        item.openInMaps(launchOptions: [
-            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
-        ])
-    }
-
-    
-    private func turnIcon(for instruction: String) -> String {
-        let lower = instruction.lowercased()
-        if lower.contains("left")  { return "arrow.turn.up.left" }
-        if lower.contains("right") { return "arrow.turn.up.right" }
-        if lower.contains("u-turn") || lower.contains("u turn") { return "arrow.uturn.left" }
-        if lower.contains("merge") { return "arrow.merge" }
-        if lower.contains("ramp") || lower.contains("exit") { return "arrow.up.right" }
-        if lower.contains("roundabout") || lower.contains("circle") { return "arrow.triangle.capsulepath" }
-        if lower.contains("arrive") || lower.contains("destination") { return "mappin.circle.fill" }
-        if lower.contains("straight") || lower.contains("continue") { return "arrow.up" }
-        return "arrow.up"
-    }
 }
 
 
 
-private enum MapActionStyle { case primary, glass, warning, destructive }
 
-private struct MapActionButton: View {
+
+enum MapActionStyle { case primary, glass, warning, destructive }
+
+struct MapActionButton: View {
     let label: String
     let icon: String
     let style: MapActionStyle
@@ -1428,7 +1347,29 @@ private struct TurnStepRow: View {
     }
 }
 
+// MARK: - TripMetaCell
+private struct ActiveTripMetaCell: View {
+    let icon: String
+    let value: String
+    let label: String
 
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+    }
+}
 
 @available(iOS 26.0, *)
 #Preview("Trips Tab") {

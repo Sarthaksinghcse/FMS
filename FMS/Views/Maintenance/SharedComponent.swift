@@ -22,12 +22,23 @@ struct MaintenanceHeaderView: View {
     var onNotificationTap: () -> Void = {}
     var onProfileTap: () -> Void = {}
     var showActions: Bool = true
-    var showChat: Bool = false
-    var onChatTap: () -> Void = {}
+    var showBackButton: Bool = false
+    
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top) {
+            if showBackButton {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(AppTheme.Text.primary)
+                }
+                .padding(.top, 4)
+                .padding(.trailing, 8)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
                 if let greeting = greeting, !greeting.isEmpty {
                     Text(greeting)
                         .font(.system(size: 17, weight: .regular))
@@ -39,6 +50,16 @@ struct MaintenanceHeaderView: View {
                     Text(title)
                         .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(.primary)
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundColor(AppTheme.Text.secondary)
+                }
+                
+                Text(title)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
+                
+                if !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundColor(AppTheme.Text.secondary)
@@ -104,6 +125,40 @@ struct MaintenanceHeaderView: View {
         .padding(.horizontal, 16)
         .padding(.top, 16)
         .padding(.bottom, 8)
+    }
+}
+
+struct CustomCenteredHeaderView: View {
+    let title: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.black)
+                    .frame(width: 44, height: 44)
+                    .background(Color.white)
+                    .clipShape(Circle())
+                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+            }
+            
+            Spacer()
+            
+            Text(title)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.Text.primary)
+            
+            Spacer()
+            
+            // Dummy view to ensure exact centering
+            Color.clear.frame(width: 44, height: 44)
+        }
+        .padding(.horizontal)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
+        .background(AppTheme.Background.page)
     }
 }
 

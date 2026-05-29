@@ -196,6 +196,47 @@ CREATE TABLE IF NOT EXISTS public.defect_reports (
 );
 
 
+-- 2.11  sos_alerts   (SOSAlert.swift)
+CREATE TABLE IF NOT EXISTS public.sos_alerts (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    driver_id   UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    vehicle_id  UUID,
+    trip_id     UUID,
+    latitude    DOUBLE PRECISION NOT NULL,
+    longitude   DOUBLE PRECISION NOT NULL,
+    message     TEXT,
+    status      TEXT NOT NULL DEFAULT 'active',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2.12  inventory   (InventoryItem.swift)
+CREATE TABLE IF NOT EXISTS public.inventory (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    part_name          TEXT        NOT NULL,
+    part_number        TEXT        NOT NULL UNIQUE,
+    quantity_in_stock  INTEGER     NOT NULL DEFAULT 0,
+    reorder_threshold  INTEGER     NOT NULL DEFAULT 0,
+    unit_cost          NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    supplier_name      TEXT,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2.13  maintenance_records   (MaintenanceRecord.swift)
+CREATE TABLE IF NOT EXISTS public.maintenance_records (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vehicle_id    UUID        NOT NULL REFERENCES public.vehicles (id) ON DELETE CASCADE,
+    work_order_id UUID                 REFERENCES public.work_orders (id) ON DELETE SET NULL,
+    service_type  TEXT        NOT NULL,
+    service_date  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    cost          NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (cost >= 0),
+    notes         TEXT,
+    repair_images TEXT[],
+    performed_by  UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
 -- ============================================================
 -- 3. INDEXES
 -- ============================================================
@@ -235,6 +276,10 @@ CREATE INDEX IF NOT EXISTS idx_defect_reports_vehicle      ON public.defect_repo
 CREATE INDEX IF NOT EXISTS idx_defect_reports_reported_by  ON public.defect_reports (reported_by);
 CREATE INDEX IF NOT EXISTS idx_defect_reports_status       ON public.defect_reports (status);
 
+CREATE INDEX IF NOT EXISTS idx_sos_alerts_driver           ON public.sos_alerts (driver_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_records_vehicle ON public.maintenance_records (vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_records_date    ON public.maintenance_records (service_date DESC);
+
 
 -- ============================================================
 -- 4. ROW LEVEL SECURITY (RLS)
@@ -250,6 +295,10 @@ ALTER TABLE public.messages            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vehicle_locations   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.defect_reports       ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE public.sos_alerts          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.maintenance_records ENABLE ROW LEVEL SECURITY;
 
 -- Helper: get role of logged-in user
 CREATE OR REPLACE FUNCTION public.current_user_role()
@@ -337,6 +386,23 @@ CREATE POLICY "locations_insert_driver"  ON public.vehicle_locations FOR INSERT 
     EXISTS (SELECT 1 FROM public.vehicles WHERE id = vehicle_id AND assigned_driver_id = auth.uid())
 );
 
+-- ---- sos_alerts ----
+CREATE POLICY "sos_alerts_select_all" ON public.sos_alerts FOR SELECT USING (TRUE);
+CREATE POLICY "sos_alerts_insert_driver" ON public.sos_alerts FOR INSERT WITH CHECK (driver_id = auth.uid());
+CREATE POLICY "sos_alerts_update_all" ON public.sos_alerts FOR UPDATE USING (TRUE);
+
+-- ---- inventory ----
+CREATE POLICY "inventory_select_all" ON public.inventory FOR SELECT USING (TRUE);
+CREATE POLICY "inventory_modify_manager" ON public.inventory FOR ALL USING (public.current_user_role() = 'fleet_manager');
+CREATE POLICY "inventory_modify_maintenance" ON public.inventory FOR ALL USING (public.current_user_role() = 'maintenance');
+
+-- ---- maintenance_records ----
+CREATE POLICY "maintenance_records_select_all" ON public.maintenance_records FOR SELECT USING (TRUE);
+CREATE POLICY "maintenance_records_modify_all" ON public.maintenance_records FOR ALL USING (
+    public.current_user_role() = 'fleet_manager' OR 
+    public.current_user_role() = 'maintenance'
+);
+
 
 -- ============================================================
 -- 5. REALTIME SUBSCRIPTIONS
@@ -347,6 +413,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.vehicle_locations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.maintenance_tasks;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.sos_alerts;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.maintenance_records;
 
 
 -- ============================================================
@@ -543,3 +613,98 @@ ORDER BY mt.due_date ASC;
 --    OR (sender_id = 'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy'
 --        AND receiver_id = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
 -- ORDER BY timestamp ASC;
+
+-- ============================================================
+-- 8. SCHEMA UPDATES FOR NEW SYSTEM FEATURES
+-- ============================================================
+
+-- 1. Create sos_alerts table
+CREATE TABLE IF NOT EXISTS public.sos_alerts (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    driver_id   UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    vehicle_id  UUID,
+    trip_id     UUID,
+    latitude    DOUBLE PRECISION NOT NULL,
+    longitude   DOUBLE PRECISION NOT NULL,
+    message     TEXT,
+    status      TEXT NOT NULL DEFAULT 'active',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. Create inventory table
+CREATE TABLE IF NOT EXISTS public.inventory (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    part_name          TEXT        NOT NULL,
+    part_number        TEXT        NOT NULL UNIQUE,
+    quantity_in_stock  INTEGER     NOT NULL DEFAULT 0,
+    reorder_threshold  INTEGER     NOT NULL DEFAULT 0,
+    unit_cost          NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    supplier_name      TEXT,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 3. Create maintenance_records table
+CREATE TABLE IF NOT EXISTS public.maintenance_records (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vehicle_id    UUID        NOT NULL REFERENCES public.vehicles (id) ON DELETE CASCADE,
+    work_order_id UUID                 REFERENCES public.work_orders (id) ON DELETE SET NULL,
+    service_type  TEXT        NOT NULL,
+    service_date  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    cost          NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (cost >= 0),
+    notes         TEXT,
+    repair_images TEXT[],
+    performed_by  UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 4. Create Indexes
+CREATE INDEX IF NOT EXISTS idx_sos_alerts_driver ON public.sos_alerts (driver_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_records_vehicle ON public.maintenance_records (vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_records_date ON public.maintenance_records (service_date DESC);
+
+-- 5. Enable Row Level Security (RLS)
+ALTER TABLE public.sos_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.maintenance_records ENABLE ROW LEVEL SECURITY;
+
+-- 6. Add RLS Policies
+CREATE POLICY "sos_alerts_select_all" ON public.sos_alerts FOR SELECT USING (TRUE);
+CREATE POLICY "sos_alerts_insert_driver" ON public.sos_alerts FOR INSERT WITH CHECK (driver_id = auth.uid());
+CREATE POLICY "sos_alerts_update_all" ON public.sos_alerts FOR UPDATE USING (TRUE);
+
+CREATE POLICY "inventory_select_all" ON public.inventory FOR SELECT USING (TRUE);
+CREATE POLICY "inventory_modify_manager" ON public.inventory FOR ALL USING (public.current_user_role() = 'fleet_manager');
+CREATE POLICY "inventory_modify_maintenance" ON public.inventory FOR ALL USING (public.current_user_role() = 'maintenance');
+
+CREATE POLICY "maintenance_records_select_all" ON public.maintenance_records FOR SELECT USING (TRUE);
+CREATE POLICY "maintenance_records_modify_all" ON public.maintenance_records FOR ALL USING (
+    public.current_user_role() = 'fleet_manager' OR 
+    public.current_user_role() = 'maintenance'
+);
+
+-- 7. Add Tables to Realtime Publication
+ALTER PUBLICATION supabase_realtime ADD TABLE public.sos_alerts;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.maintenance_records;
+
+-- 8. Add Storage Bucket (Avatars) and Policies
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Avatar Access" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+CREATE POLICY "Insert own avatar" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
+CREATE POLICY "Update own avatar" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars');
+
+-- 9. Add Storage Bucket (Maintenance Images) and Policies
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('maintenance-images', 'maintenance-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Maintenance Image Access" ON storage.objects FOR SELECT USING (bucket_id = 'maintenance-images');
+CREATE POLICY "Insert maintenance image" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'maintenance-images');
+CREATE POLICY "Update maintenance image" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'maintenance-images');
+
+-- 10. Add repair_images column to maintenance_records if it doesn't exist
+ALTER TABLE public.maintenance_records ADD COLUMN IF NOT EXISTS repair_images TEXT[];

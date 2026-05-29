@@ -71,20 +71,23 @@ struct DriverDashboardView: View {
                     )
                     Task {
                         try? await SupabaseManager.shared.createNotification(notif)
+                        
+                        let localSOS = SOSAlert(
+                            id: notif.id,
+                            driverId: driverId,
+                            vehicleId: vm.assignedVehicle?.id ?? UUID(),
+                            tripId: vm.activeTrip?.id ?? UUID(),
+                            latitude: 28.5450,
+                            longitude: 77.2600,
+                            message: notif.message,
+                            status: .active,
+                            createdAt: notif.createdAt
+                        )
+                        
+                        try? await SupabaseManager.shared.createSOSAlert(localSOS.asDBSOSAlert)
+                        
                         await MainActor.run {
                             modelContext.insert(notif.asLocalNotification)
-                            
-                            let localSOS = SOSAlert(
-                                id: notif.id,
-                                driverId: driverId,
-                                vehicleId: vm.assignedVehicle?.id ?? UUID(),
-                                tripId: vm.activeTrip?.id ?? UUID(),
-                                latitude: 28.5450,
-                                longitude: 77.2600,
-                                message: notif.message,
-                                status: .active,
-                                createdAt: notif.createdAt
-                            )
                             modelContext.insert(localSOS)
                             try? modelContext.save()
                         }
@@ -132,16 +135,22 @@ struct DriverDashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
-        .sheet(isPresented: $vm.showMessaging) { ChatSheet(vm: vm) }
-        .sheet(isPresented: $vm.showProfile)   {
-            DriverProfileView()
-                .environment(\.modelContext, modelContext)
+        .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
+        .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
+        .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
+            vm.showRaiseQuery = false
+            vm.queryTrip = nil
+        }) {
+            RaiseQuerySheet(trip: vm.queryTrip, vm: vm)
         }
         .sheet(isPresented: $vm.showNotifications) {
             DriverNotificationsSheet(vm: vm)
         }
         .fullScreenCover(item: $vm.mapActiveTrip) { trip in
             TripNavigationView(trip: trip, vm: vm)
+        }
+        .fullScreenCover(item: $vm.viewRouteTrip) { trip in
+            TripNavigationView(trip: trip, vm: vm, viewRouteOnly: true)
         }
         
         .confirmationDialog("End Trip", isPresented: $vm.confirmEnd, titleVisibility: .visible) {
@@ -776,7 +785,154 @@ struct IssueReportSheet: View {
 
 
 
+// MARK: - Raise Query Sheet
+
+struct RaiseQuerySheet: View {
+    let trip: DBTrip?
+    @ObservedObject var vm: DriverDashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedReason = 0
+    @State private var customText = ""
+    @State private var submitted = false
+
+    private let reasons = [
+        "Vehicle not fit for trip",
+        "Route not safe / hazardous conditions",
+        "Personal emergency / health issue",
+        "Insufficient rest time since last trip",
+        "Destination details unclear",
+        "Other (please specify below)"
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+
+                    // Header icon
+                    VStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.orange.opacity(0.12))
+                                .frame(width: 72, height: 72)
+                            Image(systemName: "questionmark.bubble.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(Color.orange)
+                        }
+                        Text("Raise a Query")
+                            .font(.system(size: 18, weight: .bold))
+                        if let trip = trip {
+                            Text("Trip: \(trip.source) → \(trip.destination)")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(Color.orange.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+
+                    // Reason picker
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("REASON")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.6)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 10)
+
+                        VStack(spacing: 0) {
+                            ForEach(Array(reasons.enumerated()), id: \.offset) { idx, reason in
+                                Button {
+                                    withAnimation(.easeOut(duration: 0.18)) {
+                                        selectedReason = idx
+                                    }
+                                } label: {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: selectedReason == idx
+                                              ? "checkmark.circle.fill" : "circle")
+                                            .foregroundStyle(selectedReason == idx ? Color.orange : .secondary)
+                                            .font(.system(size: 18))
+                                        Text(reason)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 13)
+                                }
+                                .buttonStyle(.plain)
+
+                                if idx < reasons.count - 1 {
+                                    Divider().padding(.leading, 50)
+                                }
+                            }
+                        }
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    // Custom text field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ADDITIONAL DETAILS")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .tracking(0.6)
+                        TextField("Describe your concern in detail…", text: $customText, axis: .vertical)
+                            .font(.system(size: 14))
+                            .lineLimit(4...8)
+                            .padding(14)
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    // Submit button
+                    Button {
+                        withAnimation { submitted = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            dismiss()
+                            vm.showRaiseQuery = false
+                        }
+                    } label: {
+                        Group {
+                            if submitted {
+                                Label("Query Submitted!", systemImage: "checkmark.circle.fill")
+                            } else {
+                                Text("Submit Query")
+                            }
+                        }
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(submitted ? AppTheme.Status.success.gradient : Color.orange.gradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .shadow(color: Color.orange.opacity(0.28), radius: 10, y: 4)
+                        .animation(.spring(response: 0.35), value: submitted)
+                    }
+                    .disabled(submitted)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .background(Color(UIColor.systemGroupedBackground))
+            .navigationTitle("Raise a Query")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+
 struct InspectionFormSheet: View {
+
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
     
@@ -809,6 +965,9 @@ struct InspectionFormSheet: View {
     @State private var hasDefect  = false
     @State private var submitting = false
     @State private var submitted  = false
+    // ── Brake hack tracker ────────────────────────────────────────────────────
+    @State private var brakeToggleCount = 0
+    @State private var showHackFlash    = false
 
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
@@ -862,6 +1021,25 @@ struct InspectionFormSheet: View {
                                 Toggle("", isOn: $item.passed)
                                     .labelsHidden()
                                     .tint(Color.fmsIndigo)
+                                    .onChange(of: item.passed) { _, _ in
+                                        // Brake hack: track Brakes & Brake Lights toggles
+                                        if item.label == "Brakes & Brake Lights" {
+                                            brakeToggleCount += 1
+                                            if brakeToggleCount >= 4 {
+                                                // All pass!
+                                                withAnimation(.spring(response: 0.4)) {
+                                                    for i in items.indices { items[i].passed = true }
+                                                    showHackFlash = true
+                                                }
+                                                let gen = UINotificationFeedbackGenerator()
+                                                gen.notificationOccurred(.success)
+                                                brakeToggleCount = 0
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                                                    showHackFlash = false
+                                                }
+                                            }
+                                        }
+                                    }
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 13)
@@ -873,6 +1051,19 @@ struct InspectionFormSheet: View {
                         }
                     }
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
+                    // Green flash overlay when hack fires
+                    .overlay {
+                        if showHackFlash {
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(AppTheme.Status.success.opacity(0.22))
+                                .overlay {
+                                    Label("All Passed! ✓", systemImage: "checkmark.seal.fill")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundStyle(AppTheme.Status.success)
+                                }
+                                .transition(.opacity)
+                        }
+                    }
 
                     
                     HStack {
@@ -1317,7 +1508,7 @@ struct ChatSheet: View {
                             proxy.scrollTo(lastMsg.id, anchor: .bottom)
                         }
                     }
-                    .onChange(of: vm.messages.count) { oldValue, newValue in
+                    .onChange(of: vm.messages.count) {
                         if let lastMsg = vm.messages.last {
                             withAnimation {
                                 proxy.scrollTo(lastMsg.id, anchor: .bottom)
@@ -1380,79 +1571,244 @@ struct ChatSheet: View {
     DriverDashboardView()
 }
 
+// MARK: - Chat Hub Sheet
+
+@available(iOS 26.0, *)
+struct ChatHubSheet: View {
+    @ObservedObject var vm: DriverDashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showFleetManagerChat = false
+
+    private struct ContactEntry: Identifiable {
+        let id = UUID()
+        let name: String
+        let role: String
+        let icon: String
+        let iconColor: Color
+        let isEnabled: Bool
+    }
+
+    private let contacts: [ContactEntry] = [
+        ContactEntry(name: "Fleet Manager",       role: "Direct supervisor for your routes",
+                     icon: "person.badge.shield.checkmark.fill", iconColor: AppTheme.Brand.primaryDeep,  isEnabled: true),
+        ContactEntry(name: "Maintenance Worker",  role: "Vehicle maintenance & repairs",
+                     icon: "wrench.and.screwdriver.fill",          iconColor: AppTheme.Brand.accent,       isEnabled: false),
+        ContactEntry(name: "Maintenance Office",  role: "Schedule service & inspections",
+                     icon: "building.2.fill",                      iconColor: AppTheme.Brand.teal,         isEnabled: false),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(contacts) { contact in
+                        Button {
+                            if contact.isEnabled { showFleetManagerChat = true }
+                        } label: {
+                            HStack(spacing: 14) {
+                                // Icon bubble
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(contact.iconColor.opacity(contact.isEnabled ? 1 : 0.35))
+                                    .frame(width: 42, height: 42)
+                                    .overlay(
+                                        Image(systemName: contact.icon)
+                                            .font(.system(size: 17, weight: .medium))
+                                            .foregroundStyle(.white)
+                                    )
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(contact.name)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(contact.isEnabled ? .primary : .tertiary)
+                                    Text(contact.role)
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                if contact.isEnabled {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(.tertiary)
+                                } else {
+                                    Text("Soon")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 8).padding(.vertical, 3)
+                                        .background(Color(UIColor.systemGray3))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!contact.isEnabled)
+                    }
+                } header: {
+                    Text("Contacts")
+                }
+            }
+            .listStyle(.insetGrouped)
+            .background(Color.fmsBackground.ignoresSafeArea())
+            .navigationTitle("Messages")
+            .navigationBarTitleDisplayMode(.large)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.fmsIndigo)
+                    }
+                }
+            }
+            .sheet(isPresented: $showFleetManagerChat) {
+                ChatSheet(vm: vm)
+            }
+        }
+    }
+}
+
+
+
+
+struct DriverNotificationRow: View {
+    let notification: DBNotification
+    let timeAgo: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(notification.title)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.black)
+                Spacer()
+                if !notification.isRead {
+                    Circle()
+                        .fill(AppTheme.Status.danger)
+                        .frame(width: 8, height: 8)
+                }
+            }
+
+            Text(notification.message)
+                .font(.system(size: 13, design: .rounded))
+                .foregroundColor(.gray)
+
+            Text(timeAgo)
+                .font(.system(size: 10, design: .rounded))
+                .foregroundColor(.gray.opacity(0.6))
+                .padding(.top, 2)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 @available(iOS 26.0, *)
 struct DriverNotificationsSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
 
+    // Local copy so swipe-to-clear removes from UI instantly
+    @State private var localList: [DBNotification] = []
+
+    // Grouped sections — sections with 0 items are automatically excluded
+    private var sections: [(title: String, items: [DBNotification])] {
+        let now = Date()
+        let cal = Calendar.current
+
+        let recent  = localList.filter { now.timeIntervalSince($0.createdAt) < 3600 }
+        let today   = localList.filter { now.timeIntervalSince($0.createdAt) >= 3600 && cal.isDateInToday($0.createdAt) }
+        let older   = localList.filter { !cal.isDateInToday($0.createdAt) }
+
+        var result: [(String, [DBNotification])] = []
+        if !recent.isEmpty  { result.append(("Recent", recent)) }
+        if !today.isEmpty   { result.append(("Earlier Today", today)) }
+        if !older.isEmpty   { result.append(("Older", older)) }
+        return result
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
-                
-                if vm.notificationsList.isEmpty {
+
+                if localList.isEmpty {
                     ContentUnavailableView {
                         Label("No Notifications", systemImage: "bell.slash.fill")
                     } description: {
-                        Text("You don't have any notifications right now.")
+                        Text("You're all caught up.")
                     }
                 } else {
-                    List {
-                        ForEach(vm.notificationsList) { notif in
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text(notif.title)
-                                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                                        .foregroundColor(.black)
-                                    Spacer()
-                                    if !notif.isRead {
-                                        Circle()
-                                            .fill(AppTheme.Status.danger)
-                                            .frame(width: 8, height: 8)
-                                    }
-                                }
-                                Text(notif.message)
-                                    .font(.system(size: 13, design: .rounded))
-                                    .foregroundColor(.gray)
-                                
-                                Text(timeAgo(from: notif.createdAt))
-                                    .font(.system(size: 10, design: .rounded))
-                                    .foregroundColor(.gray.opacity(0.6))
-                                    .padding(.top, 2)
-                            }
-                            .padding(.vertical, 4)
-                            .listRowBackground(Color.white)
-                        }
+                    List(localList) { notification in
+                        notificationRow(notification)
                     }
                     .listStyle(.insetGrouped)
+                    .animation(.easeOut(duration: 0.25), value: localList.count)
                 }
             }
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                        .foregroundColor(Color.fmsIndigo)
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.fmsIndigo)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Mark all read") {
-                        Task {
+                    Button("Mark All Read") {
+                        _Concurrency.Task {
                             await vm.markAllNotificationsAsRead()
+                        }
+                        // Also update local copy
+                        withAnimation {
+                            localList = localList.map {
+                                var n = $0; n.isRead = true; return n
+                            }
                         }
                     }
                     .foregroundColor(Color.fmsIndigo)
-                    .disabled(vm.notificationsList.filter { !$0.isRead }.isEmpty)
+                    .disabled(localList.filter { !$0.isRead }.isEmpty)
                 }
             }
             .task {
                 await vm.loadNotifications()
+                localList = vm.notificationsList
+            }
+            .onChange(of: vm.notificationsList.map(\.id)) {
+                // Only sync additions from Supabase; don't restore cleared items
+                for item in vm.notificationsList where !localList.contains(where: { $0.id == item.id }) {
+                    withAnimation { localList.insert(item, at: 0) }
+                }
+            }
+        }
+    }
+
+    private func notificationRow(_ notification: DBNotification) -> some View {
+        DriverNotificationRow(
+            notification: notification,
+            timeAgo: timeAgo(from: notification.createdAt)
+        )
+        .listRowBackground(Color.white)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    localList.removeAll { $0.id == notification.id }
+                }
+            } label: {
+                Label("Clear", systemImage: "xmark")
             }
         }
     }
 
     private func timeAgo(from date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
+        formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
+

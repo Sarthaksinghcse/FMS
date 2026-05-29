@@ -97,7 +97,11 @@ struct DatabaseSeeder {
             fuelType: .diesel,
             odometerReading: 45230.0,
             status: .active,
-            assignedDriverId: driver1.id
+            assignedDriverId: driver1.id,
+            lastServiceDate: Date().addingTimeInterval(-86400 * 60),
+            nextServiceDate: Date().addingTimeInterval(86400 * 5),
+            insuranceExpiryDate: Date().addingTimeInterval(-86400 * 3),
+            permitExpiryDate: Date().addingTimeInterval(86400 * 45)
         )
         
         let v2 = Vehicle(
@@ -111,7 +115,11 @@ struct DatabaseSeeder {
             fuelType: .petrol,
             odometerReading: 32100.0,
             status: .active,
-            assignedDriverId: driver2.id
+            assignedDriverId: driver2.id,
+            lastServiceDate: Date().addingTimeInterval(-86400 * 30),
+            nextServiceDate: Date().addingTimeInterval(86400 * 60),
+            insuranceExpiryDate: Date().addingTimeInterval(86400 * 10),
+            permitExpiryDate: Date().addingTimeInterval(-86400 * 7)
         )
         
         let v3 = Vehicle(
@@ -125,7 +133,11 @@ struct DatabaseSeeder {
             fuelType: .electric,
             odometerReading: 12800.0,
             status: .inMaintenance,
-            assignedDriverId: nil
+            assignedDriverId: nil,
+            lastServiceDate: Date().addingTimeInterval(-86400 * 90),
+            nextServiceDate: Date().addingTimeInterval(-86400 * 10),
+            insuranceExpiryDate: Date().addingTimeInterval(86400 * 120),
+            permitExpiryDate: Date().addingTimeInterval(86400 * 12)
         )
         
         let v4 = Vehicle(
@@ -139,7 +151,11 @@ struct DatabaseSeeder {
             fuelType: .diesel,
             odometerReading: 78500.0,
             status: .inactive,
-            assignedDriverId: nil
+            assignedDriverId: nil,
+            lastServiceDate: Date().addingTimeInterval(-86400 * 180),
+            nextServiceDate: Date().addingTimeInterval(-86400 * 20),
+            insuranceExpiryDate: Date().addingTimeInterval(-86400 * 15),
+            permitExpiryDate: Date().addingTimeInterval(-86400 * 30)
         )
         
         let v5 = Vehicle(
@@ -153,7 +169,11 @@ struct DatabaseSeeder {
             fuelType: .petrol,
             odometerReading: 8200.0,
             status: .active,
-            assignedDriverId: driver3.id
+            assignedDriverId: driver3.id,
+            lastServiceDate: Date().addingTimeInterval(-86400 * 15),
+            nextServiceDate: Date().addingTimeInterval(86400 * 75),
+            insuranceExpiryDate: Date().addingTimeInterval(86400 * 200),
+            permitExpiryDate: Date().addingTimeInterval(86400 * 90)
         )
         
         let v6 = Vehicle(
@@ -167,7 +187,11 @@ struct DatabaseSeeder {
             fuelType: .hybrid,
             odometerReading: 5600.0,
             status: .active,
-            assignedDriverId: nil
+            assignedDriverId: nil,
+            lastServiceDate: Date().addingTimeInterval(-86400 * 20),
+            nextServiceDate: Date().addingTimeInterval(86400 * 8),
+            insuranceExpiryDate: Date().addingTimeInterval(86400 * 6),
+            permitExpiryDate: Date().addingTimeInterval(86400 * 180)
         )
         
         [v1, v2, v3, v4, v5, v6].forEach { context.insert($0) }
@@ -276,6 +300,7 @@ struct DatabaseSeeder {
             serviceDate: Date().addingTimeInterval(-86400 * 5),
             cost: 3200.0,
             notes: "Replaced oil with Shell Helix 5W-40. Replaced air and oil filters.",
+            replacedParts: ["Engine Oil (Shell Helix 5W-40)", "Oil Filter", "Air Filter"],
             performedBy: tech2.id
         )
         
@@ -286,6 +311,7 @@ struct DatabaseSeeder {
             serviceDate: Date().addingTimeInterval(-86400 * 12),
             cost: 1800.0,
             notes: "Rotated all 4 tires and calibrated laser wheel alignment.",
+            replacedParts: ["Wheel Weights"],
             performedBy: tech1.id
         )
         
