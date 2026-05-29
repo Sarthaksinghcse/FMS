@@ -15,6 +15,7 @@ struct FleetDashboardView: View {
     @Query(sort: \WorkOrder.createdAt,    order: .reverse) private var workOrders:    [WorkOrder]
     @Query private var complianceAlerts: [ComplianceAlert]
 
+    @Binding var selectedTab: Int
     @State private var viewModel    = FleetDashboardViewModel()
     @State private var complianceVM = ComplianceAlertsViewModel()
     @State private var showProfile  = false
@@ -241,7 +242,12 @@ struct FleetDashboardView: View {
                                         Array(dashboardActivities.enumerated()),
                                         id: \.element.id
                                     ) { index, activity in
-                                        DashboardActivityRow(activity: activity)
+                                        Button {
+                                            handleActivityTap(activity)
+                                        } label: {
+                                            DashboardActivityRow(activity: activity)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
 
                                         if index < dashboardActivities.count - 1 {
                                             Divider().padding(.leading, 66)
@@ -280,8 +286,10 @@ struct FleetDashboardView: View {
             }
             // See All sheet
             .sheet(isPresented: $viewModel.showAllActivities) {
-                AllActivitiesView()
-                    .environment(\.modelContext, modelContext)
+                AllActivitiesView { activity in
+                    handleActivityTap(activity)
+                }
+                .environment(\.modelContext, modelContext)
             }
             // Profile sheet
             .sheet(isPresented: $showProfile) {
@@ -428,6 +436,16 @@ struct FleetDashboardView: View {
         default:               return .totalVehicles
         }
     }
+    
+    private func handleActivityTap(_ activity: DashboardActivity) {
+        if activity.title.contains("Defect") || activity.title.contains("SOS") {
+            viewModel.activeQuickAction = .alerts
+        } else if activity.title.contains("Work Order") {
+            viewModel.activeQuickAction = .maintenance
+        } else if activity.title.contains("Trip") {
+            selectedTab = 1
+        }
+    }
 }
 
 @available(iOS 26.0, *)
@@ -467,5 +485,5 @@ struct FleetCircularProgressView: View {
 }
 
 #Preview {
-    FleetDashboardView()
+    FleetDashboardView(selectedTab: .constant(0))
 }

@@ -24,6 +24,7 @@ struct MaintenanceDashboardTab: View {
 
     @State private var showingProfile = false
     @State private var showChat = false
+    @State private var showingNotifications = false
 
     private var personnelFirstName: String {
         guard !currentUser.fullName.isEmpty else { return "Staff" }
@@ -112,7 +113,7 @@ struct MaintenanceDashboardTab: View {
                             initials: initials,
                             avatarColor: AppTheme.Brand.primaryDeep,
                             notificationCount: unreadNotifications.count,
-                            onNotificationTap: {},
+                            onNotificationTap: { showingNotifications = true },
                             onProfileTap: { showingProfile = true },
                             showChat: false,
                             onChatTap: { showChat = true }
@@ -133,6 +134,9 @@ struct MaintenanceDashboardTab: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showingProfile) {
                 MaintenanceProfileView()
+            }
+            .sheet(isPresented: $showingNotifications) {
+                MaintenanceNotificationsSheet(currentUser: currentUser)
             }
             .navigationDestination(isPresented: $showChat) {
                 CommunicationView()

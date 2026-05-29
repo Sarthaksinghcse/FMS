@@ -7,13 +7,50 @@
 
 import SwiftUI
 import SwiftData
+import PhotosUI
+import Supabase
 
 struct MaintenanceTaskDetailView: View {
     let order: WorkOrder
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    @State private var repairNotes: String = ""
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var repairPhotos: [UIImage] = []
+    @State private var isSubmitting: Bool = false
+    @State private var showSuccessAlert: Bool = false
+    @State private var uploadError: String? = nil
 
     private var statusColor: Color { order.status.color }
+
+    private var mechanicDisplayId: String {
+        "TECH-" + order.assignedTo.uuidString.prefix(8).uppercased()
+    }
+
+    private var vehicleDisplayId: String {
+        "VEH-" + order.vehicleId.uuidString.prefix(8).uppercased()
+    }
+
+    private var serviceBayDisplay: String {
+        "Bay \(abs(order.id.hashValue % 6) + 1)"
+    }
+
+    private var estimatedCostDisplay: String {
+        guard let cost = order.estimatedCost else { return "₹0.00" }
+        return "₹" + String(format: "%.2f", cost)
+    }
+
+    private var partsCostDisplay: String {
+        guard let cost = order.estimatedCost else { return "₹0.00" }
+        return "₹" + String(format: "%.2f", cost * 0.4)
+    }
+
+    private var laborCostDisplay: String {
+        guard let cost = order.estimatedCost else { return "₹0.00" }
+        return "₹" + String(format: "%.2f", cost * 0.6)
+    }
 
     private var simulatedParts: [String] {
         let all = [
@@ -86,21 +123,21 @@ struct MaintenanceTaskDetailView: View {
                             VStack(spacing: 0) {
                                 DetailInfoRow(
                                     label: "Estimated Cost",
-                                    value: "₹\(String(format: "%.2f", cost))",
+                                    value: estimatedCostDisplay,
                                     icon: "indianrupeesign.circle",
                                     color: AppTheme.Status.success
                                 )
                                 Divider().padding(.leading, 52)
                                 DetailInfoRow(
                                     label: "Parts Cost",
-                                    value: "₹\(String(format: "%.2f", cost * 0.4))",
+                                    value: partsCostDisplay,
                                     icon: "cube.box.fill",
                                     color: AppTheme.Brand.primary
                                 )
                                 Divider().padding(.leading, 52)
                                 DetailInfoRow(
                                     label: "Labor Cost",
-                                    value: "₹\(String(format: "%.2f", cost * 0.6))",
+                                    value: laborCostDisplay,
                                     icon: "person.fill",
                                     color: AppTheme.Brand.violet
                                 )
@@ -145,24 +182,145 @@ struct MaintenanceTaskDetailView: View {
                         VStack(spacing: 0) {
                             DetailInfoRow(
                                 label: "Mechanic ID",
-                                value: "TECH-\(order.assignedTo.uuidString.prefix(8).uppercased())",
+                                value: mechanicDisplayId,
                                 icon: "person.badge.key.fill",
                                 color: AppTheme.Brand.violet
                             )
                             Divider().padding(.leading, 52)
                             DetailInfoRow(
                                 label: "Service Bay",
-                                value: "Bay \(abs(order.id.hashValue % 6) + 1)",
+                                value: serviceBayDisplay,
                                 icon: "mappin.circle.fill",
                                 color: AppTheme.Status.success
                             )
                             Divider().padding(.leading, 52)
                             DetailInfoRow(
                                 label: "Vehicle ID",
-                                value: "VEH-\(order.vehicleId.uuidString.prefix(8).uppercased())",
+                                value: vehicleDisplayId,
                                 icon: "car.fill",
                                 color: AppTheme.Brand.primary
                             )
+                        }
+                    }
+
+                    // ── Task Execution / Actions Section ─────────────────────
+                    DetailSection(title: "Task Execution", icon: "play.circle.fill", accentColor: AppTheme.Brand.primaryDeep) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            if order.status == .open {
+                                Button {
+                                    startTask()
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "play.fill")
+                                        Text("Start Repair Task")
+                                            .fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(AppTheme.Brand.primary.gradient)
+                                    .cornerRadius(10)
+                                }
+                                .padding(.horizontal)
+                                .padding(.vertical, 12)
+                            } else if order.status == .inProgress {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    Text("Repair Notes / Evidence")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                    
+                                    TextEditor(text: $repairNotes)
+                                        .frame(minHeight: 80)
+                                        .padding(8)
+                                        .background(Color.black.opacity(0.04))
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.black.opacity(0.1), lineWidth: 1)
+                                        )
+                                    
+                                    // PhotosPicker
+                                    PhotosPicker(
+                                        selection: $selectedPhotoItems,
+                                        maxSelectionCount: 5,
+                                        matching: .images,
+                                        photoLibrary: .shared()
+                                    ) {
+                                        Label("Attach Repair Evidence Photos", systemImage: "photo.badge.plus")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundColor(AppTheme.Brand.primary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .onChange(of: selectedPhotoItems) { _, newItems in
+                                        Task {
+                                            var loaded: [UIImage] = []
+                                            for item in newItems {
+                                                if let data = try? await item.loadTransferable(type: Data.self),
+                                                   let img = UIImage(data: data) {
+                                                    loaded.append(img)
+                                                }
+                                            }
+                                            repairPhotos = loaded
+                                        }
+                                    }
+                                    
+                                    if !repairPhotos.isEmpty {
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 8) {
+                                                ForEach(repairPhotos.indices, id: \.self) { idx in
+                                                    Image(uiImage: repairPhotos[idx])
+                                                        .resizable()
+                                                        .scaledToFill()
+                                                        .frame(width: 60, height: 60)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    if let error = uploadError {
+                                        Text(error)
+                                            .font(.caption)
+                                            .foregroundColor(AppTheme.Status.danger)
+                                    }
+                                    
+                                    Button {
+                                        completeTask()
+                                    } label: {
+                                        HStack {
+                                            if isSubmitting {
+                                                ProgressView().tint(.white)
+                                            } else {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                Text("Complete Repair Task")
+                                                    .fontWeight(.bold)
+                                            }
+                                        }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(repairNotes.isEmpty ? Color.gray.opacity(0.5) : AppTheme.Status.success)
+                                        .cornerRadius(10)
+                                    }
+                                    .disabled(repairNotes.isEmpty || isSubmitting)
+                                }
+                                .padding()
+                            } else if order.status == .completed {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .foregroundColor(AppTheme.Status.success)
+                                        .font(.system(size: 20))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Task Completed & Logged")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(AppTheme.Text.primary)
+                                        Text("Synced successfully back to Fleet Manager.")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                    }
+                                }
+                                .padding()
+                            }
                         }
                     }
 
@@ -174,6 +332,84 @@ struct MaintenanceTaskDetailView: View {
         }
         .navigationTitle(order.title)
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Repair Logged", isPresented: $showSuccessAlert) {
+            Button("OK") {}
+        } message: {
+            Text("Work order successfully completed and synchronized.")
+        }
+    }
+
+    private func startTask() {
+        order.status = .inProgress
+        try? modelContext.save()
+        
+        let dbOrder = order.asDBWorkOrder
+        Task {
+            try? await SupabaseManager.shared.updateWorkOrder(dbOrder)
+        }
+    }
+    
+    private func completeTask() {
+        isSubmitting = true
+        uploadError = nil
+        
+        let mechanicId = SupabaseManager.shared.currentUser?.id ?? order.assignedTo
+        
+        Task {
+            var imageUrls: [String] = []
+            
+            for (idx, photo) in repairPhotos.enumerated() {
+                if let data = photo.jpegData(compressionQuality: 0.8) {
+                    do {
+                        let url = try await SupabaseManager.shared.uploadRepairImage(recordId: order.id, imageData: data, index: idx)
+                        imageUrls.append(url)
+                    } catch {
+                        print("Failed to upload image: \(error.localizedDescription)")
+                    }
+                }
+            }
+            
+            let record = DBMaintenanceRecord(
+                id: UUID(),
+                vehicleId: order.vehicleId,
+                workOrderId: order.id,
+                serviceType: order.title,
+                serviceDate: Date(),
+                cost: order.estimatedCost ?? 0.0,
+                notes: repairNotes,
+                repairImages: imageUrls.isEmpty ? nil : imageUrls,
+                performedBy: mechanicId,
+                createdAt: Date()
+            )
+            
+            do {
+                try await SupabaseManager.shared.createMaintenanceRecord(record)
+                
+                if var dbVehicle = try? await SupabaseManager.shared.fetchVehicles().first(where: { $0.id == order.vehicleId }) {
+                    dbVehicle.status = .available
+                    try? await SupabaseManager.shared.updateVehicle(dbVehicle)
+                }
+                
+                await MainActor.run {
+                    order.status = .completed
+                    order.completedAt = Date()
+                    try? modelContext.save()
+                    
+                    let dbOrder = order.asDBWorkOrder
+                    Task {
+                        try? await SupabaseManager.shared.updateWorkOrder(dbOrder)
+                    }
+                    
+                    isSubmitting = false
+                    showSuccessAlert = true
+                }
+            } catch {
+                await MainActor.run {
+                    uploadError = "Failed to complete task on server: \(error.localizedDescription)"
+                    isSubmitting = false
+                }
+            }
+        }
     }
 }
 
