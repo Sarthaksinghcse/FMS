@@ -207,6 +207,60 @@ enum NotificationType: String, Codable {
 }
 
 
+enum ComplianceAlertType: String, Codable, CaseIterable {
+    case insurance
+    case permit
+    case servicing
+
+    var displayName: String {
+        switch self {
+        case .insurance: return "Insurance"
+        case .permit:    return "Permit"
+        case .servicing: return "Servicing"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .insurance: return "shield.checkered"
+        case .permit:    return "doc.text.fill"
+        case .servicing: return "wrench.and.screwdriver.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .insurance: return Color(red: 0.15, green: 0.38, blue: 0.90)
+        case .permit:    return Color(red: 0.58, green: 0.39, blue: 0.87)
+        case .servicing: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        }
+    }
+}
+
+
+enum ComplianceAlertStatus: String, Codable {
+    case upcoming
+    case overdue
+    case resolved
+
+    var displayName: String {
+        switch self {
+        case .upcoming: return "Upcoming"
+        case .overdue:  return "Overdue"
+        case .resolved: return "Resolved"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .upcoming: return Color(red: 0.90, green: 0.65, blue: 0.15)
+        case .overdue:  return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .resolved: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        }
+    }
+}
+
+
 
 
 
@@ -1312,6 +1366,7 @@ final class Vehicle {
     var lastServiceDate: Date?
     var nextServiceDate: Date?
     var insuranceExpiryDate: Date?
+    var permitExpiryDate: Date?
     var createdAt: Date
     var updatedAt: Date
 
@@ -1330,6 +1385,7 @@ final class Vehicle {
         lastServiceDate: Date? = nil,
         nextServiceDate: Date? = nil,
         insuranceExpiryDate: Date? = nil,
+        permitExpiryDate: Date? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now
     ) {
@@ -1347,6 +1403,7 @@ final class Vehicle {
         self.lastServiceDate = lastServiceDate
         self.nextServiceDate = nextServiceDate
         self.insuranceExpiryDate = insuranceExpiryDate
+        self.permitExpiryDate = permitExpiryDate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -1685,5 +1742,38 @@ final class InventoryItem {
         self.supplierName = supplierName
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+}
+
+
+@Model
+final class ComplianceAlert {
+    @Attribute(.unique) var id: UUID
+    var vehicleId: UUID
+    var alertType: ComplianceAlertType
+    var status: ComplianceAlertStatus
+    var deadlineDate: Date
+    var resolvedAt: Date?
+    var notes: String?
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        vehicleId: UUID,
+        alertType: ComplianceAlertType,
+        status: ComplianceAlertStatus,
+        deadlineDate: Date,
+        resolvedAt: Date? = nil,
+        notes: String? = nil,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.vehicleId = vehicleId
+        self.alertType = alertType
+        self.status = status
+        self.deadlineDate = deadlineDate
+        self.resolvedAt = resolvedAt
+        self.notes = notes
+        self.createdAt = createdAt
     }
 }

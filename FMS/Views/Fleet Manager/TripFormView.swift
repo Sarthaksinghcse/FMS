@@ -52,7 +52,8 @@ struct AddTripFormView: View {
                         
                         formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
-                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
+                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode,
+                                          isEditable: false)
                         }
                         
                         formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
@@ -86,11 +87,11 @@ struct AddTripFormView: View {
                             DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: nil)
                         }
                         
-                        formSection(title: "Distance & Cargo Type", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
+                        formSection(title: "Distance & Special Instructions", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
                             TripFormField(label: "Distance (km)", placeholder: "e.g. 1450",
                                           text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
                             FormDivider()
-                            TripNotesField(label: "Cargo Type", placeholder: "e.g. Dry Van Food Grd, Chemicals, etc.",
+                            TripNotesField(label: "Special Instructions", placeholder: "Optional special instructions",
                                            text: $notes, focus: $focusedField, tag: .notes)
                         }
                         
@@ -168,15 +169,16 @@ struct AddTripFormView: View {
             }
             .onAppear {
                 if tripCode.isEmpty {
-                    let currentMax = allTrips.compactMap { trip -> Int? in
-                        let components = trip.tripCode.components(separatedBy: "-")
-                        if components.count == 2, let number = Int(components[1]) {
-                            return number
-                        }
-                        return nil
-                    }.max() ?? 0
+                    let calendar = Calendar.current
+                    let todayTripsCount = allTrips.filter { calendar.isDateInToday($0.createdAt) }.count
+                    let nextTripNumber = todayTripsCount + 1
                     
-                    tripCode = String(format: "TRP-%03d", currentMax + 1)
+                    let date = Date()
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "MMdd"
+                    let dateStr = formatter.string(from: date)
+                    let tripNumberStr = String(format: "%02d", nextTripNumber)
+                    tripCode = "TRP-\(dateStr)\(tripNumberStr)"
                 }
             }
         }
@@ -423,7 +425,8 @@ struct EditTripFormView: View {
                         
                         formSection(title: "Trip Details", icon: "map.fill", iconColor: AppTheme.Brand.teal) {
                             TripFormField(label: "Trip Code", placeholder: "e.g. TRP-001",
-                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode)
+                                          text: $tripCode, keyboardType: .default, focus: $focusedField, tag: .tripCode,
+                                          isEditable: false)
                             FormDivider()
                             TripStatusPickerRow(selection: $tripStatus)
                         }
@@ -459,11 +462,11 @@ struct EditTripFormView: View {
                             DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: trip.id)
                         }
                         
-                        formSection(title: "Distance & Cargo Type", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
+                        formSection(title: "Distance & Special Instructions", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
                             TripFormField(label: "Distance (km)", placeholder: "e.g. 1450",
                                           text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
                             FormDivider()
-                            TripNotesField(label: "Cargo Type", placeholder: "e.g. Dry Van Food Grd, Chemicals, etc.",
+                            TripNotesField(label: "Special Instructions", placeholder: "Optional special instructions",
                                            text: $notes, focus: $focusedField, tag: .notes)
                         }
                         
@@ -906,6 +909,7 @@ struct TripFormField: View {
     let keyboardType: UIKeyboardType
     var focus: FocusState<TripFocusField?>.Binding
     let tag: TripFocusField
+    var isEditable: Bool = true
     
     var body: some View {
         HStack(spacing: 12) {
@@ -914,12 +918,20 @@ struct TripFormField: View {
                 .foregroundColor(.black)
                 .frame(width: 120, alignment: .leading)
             
-            TextField(placeholder, text: $text)
-                .font(.system(size: 14, design: .rounded))
-                .foregroundColor(AppTheme.Brand.royalBlue)
-                .keyboardType(keyboardType)
-                .focused(focus, equals: tag)
-                .multilineTextAlignment(.trailing)
+            if isEditable {
+                TextField(placeholder, text: $text)
+                    .font(.system(size: 14, design: .rounded))
+                    .foregroundColor(AppTheme.Brand.royalBlue)
+                    .keyboardType(keyboardType)
+                    .focused(focus, equals: tag)
+                    .multilineTextAlignment(.trailing)
+            } else {
+                Spacer()
+                Text(text)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.trailing)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

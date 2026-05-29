@@ -12,6 +12,8 @@ build/
 DerivedData/
 *.pbxuser
 *.xcuserstate
+UserInterfaceState.xcuserstate
+scuserstate
 xcuserdata/
 *.xcuserdata/
 xcshareddata/
