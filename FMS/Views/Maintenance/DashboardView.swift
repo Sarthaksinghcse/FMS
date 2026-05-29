@@ -107,7 +107,7 @@ struct MaintenanceDashboardTab: View {
                         // Premium header
                         MaintenanceHeaderView(
                             title: personnelFirstName,
-                            subtitle: "Maintenance Personnel",
+                            subtitle: "",
                             greeting: getGreetingTime() + ",",
                             initials: initials,
                             avatarColor: AppTheme.Brand.primaryDeep,
