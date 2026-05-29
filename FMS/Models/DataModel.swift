@@ -1255,6 +1255,30 @@ struct DBMaintenanceRecord: Codable, Identifiable {
     var performedBy: UUID
     var createdAt: Date
 
+    init(
+        id: UUID = UUID(),
+        vehicleId: UUID,
+        workOrderId: UUID? = nil,
+        serviceType: String,
+        serviceDate: Date = Date(),
+        cost: Double,
+        notes: String? = nil,
+        repairImages: [String]? = nil,
+        performedBy: UUID,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.vehicleId = vehicleId
+        self.workOrderId = workOrderId
+        self.serviceType = serviceType
+        self.serviceDate = serviceDate
+        self.cost = cost
+        self.notes = notes
+        self.repairImages = repairImages
+        self.performedBy = performedBy
+        self.createdAt = createdAt
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case vehicleId = "vehicle_id"
