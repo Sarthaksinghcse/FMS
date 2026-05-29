@@ -194,6 +194,7 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var sosSentAlert   = false
     @Published var showNotifications = false
     @Published var notificationsList: [DBNotification] = []
+    @Published var showFuelLog   = false   // Fuel refuel sheet
     private var autoRefreshTimer: AnyCancellable?
 
     @Published var confirmEnd    = false

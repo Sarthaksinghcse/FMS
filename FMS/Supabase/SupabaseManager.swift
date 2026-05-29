@@ -782,6 +782,14 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
+    func updateSOSAlert(_ alert: DBSOSAlert) async throws {
+        try await client
+            .from("sos_alerts")
+            .update(alert)
+            .eq("id", value: alert.id.uuidString)
+            .execute()
+    }
+    
     // Inventory
     func fetchInventory() async throws -> [DBInventoryItem] {
         return try await client
@@ -844,8 +852,8 @@ final class SupabaseManager: ObservableObject {
         _ = try await client.storage
             .from("maintenance-images")
             .upload(
-                path: path,
-                file: imageData,
+                path,
+                data: imageData,
                 options: FileOptions(contentType: "image/jpeg", upsert: true)
             )
         
@@ -970,7 +978,7 @@ final class SupabaseManager: ObservableObject {
                 let localTrips = (try? context.fetch(descriptor)) ?? []
                 for rt in remoteTrips {
                     if let local = localTrips.first(where: { $0.id == rt.id }) {
-                        local.tripCode = rt.tripCode
+                        local.tripCode = "TRP-\(rt.id.uuidString.prefix(4).uppercased())"
                         local.vehicleId = rt.vehicleId
                         local.driverId = rt.driverId
                         local.startLocation = rt.source

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import MapKit
 
 struct CardMetric: Identifiable {
     var id: String { label }
@@ -745,161 +746,65 @@ struct DriverListView: View {
     }
 
     private func driverCard(_ driver: User) -> some View {
-        let hasActiveTrip = activeTripForDriver(driver) != nil
-        
-        return VStack(alignment: .leading, spacing: 14) {
-            // Top Row: Avatar + Details + Edit Button
-            HStack(alignment: .top, spacing: 14) {
-                ZStack(alignment: .bottomTrailing) {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [AppTheme.Brand.royalBlue.opacity(0.8), AppTheme.Brand.royalBlue],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ))
-                    Text(initials(for: driver.fullName))
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                    
-                    // Realtime presence indicator
-                    Circle()
-                        .fill(driver.isActive ? Color.green : Color.gray)
-                        .frame(width: 14, height: 14)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white, lineWidth: 2)
-                        )
-                        .shadow(color: Color.black.opacity(0.15), radius: 4)
-                        .offset(x: 2, y: 2)
-                }
-                .frame(width: 56, height: 56)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(driver.fullName)
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundColor(.black)
-                        .lineLimit(1)
-                    
-                    HStack(spacing: 6) {
-                        Image(systemName: "envelope.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray.opacity(0.6))
-                        Text(driver.email)
-                            .font(.system(size: 13, design: .rounded))
-                            .foregroundColor(.gray)
-                            .lineLimit(1)
-                    }
-                    
-                    HStack(spacing: 6) {
-                        Image(systemName: "phone.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray.opacity(0.6))
-                        Text(driver.phoneNumber)
-                            .font(.system(size: 13, design: .rounded))
-                            .foregroundColor(.gray)
-                            .lineLimit(1)
-                    }
-                    
-                    if let v = vehicleForDriver(driver) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "car.fill")
-                                .font(.system(size: 11))
-                                .foregroundColor(AppTheme.Brand.royalBlue.opacity(0.7))
-                            Text(v.registrationNumber)
-                                .font(.system(size: 12, weight: .medium, design: .rounded))
-                                .foregroundColor(AppTheme.Brand.royalBlue)
-                                .lineLimit(1)
-                        }
-                    } else {
-                        HStack(spacing: 6) {
-                            Image(systemName: "car.fill")
-                                .font(.system(size: 11))
-                                .foregroundColor(.gray.opacity(0.4))
-                            Text("Unassigned")
-                                .font(.system(size: 12, weight: .medium, design: .rounded))
-                                .foregroundColor(.gray.opacity(0.5))
-                                .italic()
-                                .lineLimit(1)
-                        }
-                    }
-                }
-                
-                Spacer()
-                
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    selectedDriverForEdit = driver
-                } label: {
-                    ZStack {
-                        Circle().fill(Color.gray.opacity(0.08))
-                        Image(systemName: "pencil")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(AppTheme.Brand.royalBlue)
-                    }
-                    .frame(width: 40, height: 40)
-                }
-                .buttonStyle(ScaleButtonStyle())
-            }
-            
-            // Middle: Trip Assignment State
-            if let activeTrip = activeTripForDriver(driver) {
-                HStack(spacing: 8) {
+        HStack(spacing: 16) {
+            NavigationLink(destination: DriverHistoryView(driver: driver)) {
+                HStack(spacing: 16) {
                     ZStack {
                         Circle()
-                            .fill(AppTheme.Brand.royalBlue.opacity(0.1))
-                            .frame(width: 24, height: 24)
-                        Image(systemName: activeTrip.tripStatus == .assigned ? "calendar.badge.clock" : "road.lanes")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(AppTheme.Brand.royalBlue)
+                            .fill(LinearGradient(
+                                colors: [AppTheme.Brand.royalBlue.opacity(0.8), AppTheme.Brand.royalBlue],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 56, height: 56)
+                            .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 8, x: 0, y: 4)
+                        Text(initials(for: driver.fullName))
+                            .font(.system(size: 20, weight: .bold, design: .rounded)).foregroundColor(.white)
                     }
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Text(activeTrip.tripStatus == .assigned ? "Assigned Trip" : "Active Trip")
-                                .font(.system(size: 9, weight: .black, design: .rounded))
-                                .foregroundColor(AppTheme.Brand.royalBlue)
-                                .tracking(0.5)
-                            Spacer()
-                            Text(activeTrip.tripCode)
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
-                                .foregroundColor(.gray)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(driver.fullName)
+                            .font(.system(size: 17, weight: .semibold, design: .rounded)).foregroundColor(.black).lineLimit(1)
+
+                        HStack(spacing: 6) {
+                            Image(systemName: "envelope.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.6))
+                            Text(driver.email).font(.system(size: 13, design: .rounded)).foregroundColor(.gray).lineLimit(1)
                         }
-                        
-                        Text("\(activeTrip.startLocation) → \(activeTrip.endLocation)")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundColor(.black.opacity(0.8))
-                            .lineLimit(1)
+                        HStack(spacing: 6) {
+                            Image(systemName: "phone.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.6))
+                            Text(driver.phoneNumber).font(.system(size: 13, design: .rounded)).foregroundColor(.gray)
+                        }
+
+                        if let v = vehicleForDriver(driver) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "car.fill").font(.system(size: 11)).foregroundColor(AppTheme.Brand.royalBlue.opacity(0.7))
+                                Text(v.registrationNumber).font(.system(size: 12, weight: .medium, design: .rounded)).foregroundColor(AppTheme.Brand.royalBlue)
+                            }
+                        } else {
+                            HStack(spacing: 6) {
+                                Image(systemName: "car.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.4))
+                                Text("Unassigned").font(.system(size: 12, weight: .medium, design: .rounded)).foregroundColor(.gray.opacity(0.5)).italic()
+                            }
+                        }
+
+                    
                     }
                 }
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppTheme.Brand.royalBlue.opacity(0.04))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppTheme.Brand.royalBlue.opacity(0.12), lineWidth: 1)
-                )
-            } else {
-                HStack(spacing: 6) {
-                    Image(systemName: "road.lanes.curve.right")
-                        .font(.system(size: 10))
-                        .foregroundColor(.gray.opacity(0.4))
-                    Text("No Active Trip Assigned")
-                        .font(.system(size: 11, design: .rounded))
-                        .foregroundColor(.gray.opacity(0.5))
-                        .italic()
-                        .lineLimit(1)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            Spacer()
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                selectedDriverForEdit = driver
+            } label: {
+                ZStack {
+                    Circle().fill(Color.gray.opacity(0.08)).frame(width: 40, height: 40)
+                    Image(systemName: "pencil").font(.system(size: 16, weight: .semibold)).foregroundColor(AppTheme.Brand.royalBlue)
                 }
-                .padding(.horizontal, 4)
             }
-            
-            Divider()
-                .background(Color.black.opacity(0.06))
-            
-            // Bottom: Badges (Full width, won't wrap!)
-            HStack(spacing: 8) {
-                activeStatusBadge(isActive: driver.isActive)
-                Spacer()
-            }
+            .buttonStyle(ScaleButtonStyle())
         }
         .padding(18)
         .background(.ultraThinMaterial)
@@ -1576,15 +1481,18 @@ struct TripListView: View {
             LazyVStack(spacing: 16) {
                 ForEach(filteredTrips) { trip in
                     let idx = filteredTrips.firstIndex(where: { $0.id == trip.id }) ?? 0
-                    TripCardView(
-                        trip: trip,
-                        driverName: driverName(for: trip.driverId),
-                        accentColor: trip.tripStatus.badgeColor,
-                        onEdit: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            editingTrip = trip
-                        }
-                    )
+                    NavigationLink(destination: TripDetailView(trip: trip)) {
+                        TripCardView(
+                            trip: trip,
+                            driverName: driverName(for: trip.driverId),
+                            accentColor: trip.tripStatus.badgeColor,
+                            onEdit: {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                editingTrip = trip
+                            }
+                        )
+                    }
+                    .buttonStyle(.plain)
                     .opacity(cardAnimations.contains(trip.id) ? 1 : 0)
                     .offset(y: cardAnimations.contains(trip.id) ? 0 : 30)
                     .onAppear {
@@ -1648,7 +1556,7 @@ struct TripCardView: View {
     let accentColor: Color
     let onEdit: () -> Void
 
-    private static let dateFmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "dd MMM yyyy"; return f }()
+    private static let dateFmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "dd MMM yyyy · hh:mm a"; return f }()
     private static let timeFmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "hh:mm a"; return f }()
 
     var body: some View {
@@ -1711,6 +1619,19 @@ struct TripCardView: View {
                         Text("ASSIGNED DRIVER")
                             .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
                         Text(name).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                    }
+                    Spacer()
+                }
+            }
+
+            if let notes = trip.notes, !notes.isEmpty {
+                Divider().background(AppTheme.Glass.border)
+                HStack(spacing: 10) {
+                    Image(systemName: "box.truck.fill").font(.system(size: 18)).foregroundColor(accentColor.opacity(0.7))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("CARGO TYPE")
+                            .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                        Text(notes).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
                     }
                     Spacer()
                 }
@@ -1816,6 +1737,359 @@ struct EditTripStubView: View {
                     Button("Cancel") { dismiss() }.foregroundColor(tripBlue)
                 }
             }
+        }
+    }
+}
+
+
+// MARK: - Trip Detail View
+
+@available(iOS 26.0, *)
+struct TripDetailView: View {
+    let trip: Trip
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    @Query private var vehicles: [Vehicle]
+    @Query private var users: [User]
+
+    private var assignedVehicle: Vehicle? {
+        vehicles.first(where: { $0.id == trip.vehicleId })
+    }
+
+    private var assignedDriver: User? {
+        users.first(where: { $0.id == trip.driverId })
+    }
+
+    @State private var position: MapCameraPosition = .automatic
+
+    var body: some View {
+        ZStack {
+            AppTheme.Background.page.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    
+                    // ── Map View ──────────────────────────────
+                    mapCard
+                    
+                    // ── Route Info ────────────────────────────
+                    routeInfoCard
+                    
+                    // ── Schedule details ──────────────────────
+                    scheduleCard
+                    
+                    // ── Assignment Details ────────────────────
+                    assignmentCard
+
+                    // ── Distance & Instructions ────────────────
+                    additionalInfoCard
+
+                    Spacer().frame(height: 20)
+                }
+                .padding(16)
+            }
+        }
+        .navigationTitle(trip.tripCode)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            let startCoord = CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude)
+            let endCoord = CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude)
+            
+            // Set up camera bounds to fit both points nicely
+            let center = CLLocationCoordinate2D(
+                latitude: (startCoord.latitude + endCoord.latitude) / 2.0,
+                longitude: (startCoord.longitude + endCoord.longitude) / 2.0
+            )
+            let span = MKCoordinateSpan(
+                latitudeDelta: abs(startCoord.latitude - endCoord.latitude) * 1.5 + 0.05,
+                longitudeDelta: abs(startCoord.longitude - endCoord.longitude) * 1.5 + 0.05
+            )
+            position = .region(MKCoordinateRegion(center: center, span: span))
+        }
+    }
+
+    // MARK: - Map Card
+    private var mapCard: some View {
+        VStack(spacing: 0) {
+            Map(position: $position) {
+                Marker("Start", systemImage: "play.circle.fill", coordinate: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
+                    .tint(.green)
+                Marker("End", systemImage: "flag.fill", coordinate: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
+                    .tint(.red)
+            }
+            .frame(height: 220)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
+        }
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+    }
+
+    // MARK: - Route Info Card
+    private var routeInfoCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Route Details")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.Text.primary)
+
+            HStack(spacing: 12) {
+                Image(systemName: "mappin.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 18))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("START LOCATION")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Text(trip.startLocation)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(AppTheme.Text.primary)
+                }
+            }
+
+            Divider()
+
+            HStack(spacing: 12) {
+                Image(systemName: "flag.circle.fill")
+                    .foregroundColor(.red)
+                    .font(.system(size: 18))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("END LOCATION")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Text(trip.endLocation)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(AppTheme.Text.primary)
+                }
+            }
+        }
+        .padding(16)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+    }
+
+    // MARK: - Schedule Details Card
+    private var scheduleCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text("Schedule")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
+                Spacer()
+                
+                HStack(spacing: 4) {
+                    Image(systemName: trip.tripStatus.badgeIcon)
+                        .font(.system(size: 10))
+                    Text(trip.tripStatus.displayName)
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(trip.tripStatus.badgeColor)
+                .clipShape(Capsule())
+            }
+
+            HStack(alignment: .top, spacing: 16) {
+                // Vertical Timeline Line
+                VStack(spacing: 0) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 10, height: 10)
+                    
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 2, height: 75)
+                    
+                    Circle()
+                        .fill(trip.tripStatus == .completed ? Color.gray : Color.red)
+                        .frame(width: 10, height: 10)
+                }
+                .padding(.top, 5)
+                
+                // Content Columns
+                VStack(alignment: .leading, spacing: 20) {
+                    // Departure Info
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("DEPARTURE")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(.green)
+                            .tracking(0.8)
+                        
+                        Text(trip.scheduledStartTime.formatted(date: .long, time: .shortened))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
+                        
+                        if let actualStart = trip.actualStartTime {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.green)
+                                Text("Actual: \(actualStart.formatted(date: .long, time: .shortened))")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                            }
+                        }
+                    }
+                    
+                    // Arrival Info
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("ARRIVAL")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(trip.tripStatus == .completed ? .gray : .red)
+                            .tracking(0.8)
+                        
+                        Text(trip.scheduledEndTime.formatted(date: .long, time: .shortened))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
+                        
+                        if let actualEnd = trip.actualEndTime {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(trip.tripStatus == .completed ? .gray : .red)
+                                Text("Actual: \(actualEnd.formatted(date: .long, time: .shortened))")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+    }
+
+    // MARK: - Assignment Card
+    private var assignmentCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Assignments")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.Text.primary)
+
+            if let vehicle = assignedVehicle {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(vehicle.vehicleType.iconColor.opacity(0.12))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: vehicle.vehicleType.icon)
+                            .font(.system(size: 18))
+                            .foregroundColor(vehicle.vehicleType.iconColor)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("VEHICLE")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text("\(vehicle.make) \(vehicle.model) (\(vehicle.registrationNumber))")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(AppTheme.Text.primary)
+                        Text("VIN: \(vehicle.vinNumber) · \(vehicle.year)")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
+                }
+            } else {
+                Text("⚠️ No assigned vehicle found")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppTheme.Brand.accent)
+            }
+
+            Divider()
+
+            if let driver = assignedDriver {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.12))
+                            .frame(width: 40, height: 40)
+                        Text(initials(for: driver.fullName))
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.royalBlue)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("ASSIGNED DRIVER")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text(driver.fullName)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(AppTheme.Text.primary)
+                        Text("\(driver.email) · \(driver.phoneNumber)")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
+                }
+            } else {
+                Text("⚠️ No assigned driver found")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppTheme.Brand.accent)
+            }
+        }
+        .padding(16)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+    }
+
+    // MARK: - Distance & Special Instructions Card
+    private var additionalInfoCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Additional Information")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.Text.primary)
+
+            TripDetailRow(label: "Total Distance", value: String(format: "%.1f km", trip.distanceKm))
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("SPECIAL INSTRUCTIONS")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(AppTheme.Text.tertiary)
+                
+                Text(trip.notes ?? "No special instructions provided.")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppTheme.Text.primary)
+                    .lineSpacing(3)
+            }
+        }
+        .padding(16)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+    }
+
+    private func initials(for name: String) -> String {
+        let parts = name.components(separatedBy: " ")
+        if parts.count >= 2 {
+            return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
+        }
+        return String(name.prefix(2)).uppercased()
+    }
+}
+
+private struct TripDetailRow: View {
+    let label: String
+    let value: String
+    var valueColor: Color? = nil
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(AppTheme.Text.secondary)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(valueColor ?? AppTheme.Text.primary)
         }
     }
 }
