@@ -15,7 +15,7 @@ import PhotosUI
 struct FleetManagerEditProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
 
     @State private var fullName: String = ""
     @State private var phoneNumber: String = ""
@@ -290,4 +290,5 @@ struct FleetManagerEditProfileView: View {
 @available(iOS 26.0, *)
 #Preview {
     FleetManagerEditProfileView()
+        .environment(SupabaseManager.shared)
 }

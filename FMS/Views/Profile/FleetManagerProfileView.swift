@@ -4,7 +4,8 @@ import SwiftData
 @available(iOS 26.0, *)
 struct FleetManagerProfileView: View {
 
-    @ObservedObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
+    @Environment(\.dismiss) private var dismiss
     @State private var showEditProfile = false
     @State private var showNotificationSettings = false
     @State private var showSecuritySettings = false
@@ -12,6 +13,7 @@ struct FleetManagerProfileView: View {
     @State private var showAbout = false
     @State private var showSignOutConfirm = false
     @State private var signOutError: String?
+    @State private var isSigningOut = false
 
     private var user: DBUser? { supabase.currentUser }
 
@@ -68,11 +70,21 @@ struct FleetManagerProfileView: View {
             }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
+                    isSigningOut = true
+                    // Dismiss the sheet FIRST, then sign out.
+                    // This prevents SwiftUI from getting stuck trying to
+                    // tear down a view that has an active presented sheet.
+                    dismiss()
                     Task {
+                        // Small delay to let the sheet dismiss animation complete
+                        try? await Task.sleep(for: .milliseconds(350))
                         do {
-                            try await SupabaseManager.shared.signOut()
+                            try await supabase.signOut()
                         } catch {
-                            signOutError = error.localizedDescription
+                            await MainActor.run {
+                                signOutError = error.localizedDescription
+                                isSigningOut = false
+                            }
                         }
                     }
                 }
@@ -251,4 +263,5 @@ struct FleetManagerProfileView: View {
 @available(iOS 26.0, *)
 #Preview {
     FleetManagerProfileView()
+        .environment(SupabaseManager.shared)
 }

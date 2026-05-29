@@ -6,7 +6,7 @@ struct FleetManagerChatDetailView: View {
     let currentUser: DBUser
     let chatUser: DBUser
     
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
     @State private var messageText = ""
     @State private var messages: [DBMessage] = []
     @State private var realtimeChannel: RealtimeChannelV2?

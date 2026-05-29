@@ -17,6 +17,7 @@ final class FleetAnalyticsViewModel {
         let date: Date
         let count: Int
     }
+    
 
     struct TripStatusData: Identifiable {
         let id = UUID()

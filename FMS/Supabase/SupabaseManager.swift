@@ -9,6 +9,7 @@ import Foundation
 import Supabase
 import Combine
 import SwiftData
+import Observation
 
 
 class InMemoryLocalStorage: AuthLocalStorage, @unchecked Sendable {
@@ -52,7 +53,8 @@ enum AuthError: LocalizedError {
 
 
 @MainActor
-final class SupabaseManager: ObservableObject {
+@Observable
+final class SupabaseManager {
     static let shared = SupabaseManager()
     
     
@@ -64,11 +66,11 @@ final class SupabaseManager: ObservableObject {
     let client: SupabaseClient
     
     
-    @Published var currentUser: DBUser?
+    var currentUser: DBUser?
     
-    @Published var isLoading = false
+    var isLoading = false
     
-    @Published var authError: String?
+    var authError: String?
     
     private init() {
         self.client = SupabaseClient(
