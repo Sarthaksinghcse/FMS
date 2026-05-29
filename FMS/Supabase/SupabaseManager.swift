@@ -830,6 +830,32 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
+    func updateMaintenanceRecord(_ record: DBMaintenanceRecord) async throws {
+        try await client
+            .from("maintenance_records")
+            .update(record)
+            .eq("id", value: record.id.uuidString)
+            .execute()
+    }
+    
+    func uploadRepairImage(recordId: UUID, imageData: Data, index: Int) async throws -> String {
+        let path = "\(recordId.uuidString)_\(index).jpg"
+        
+        _ = try await client.storage
+            .from("maintenance-images")
+            .upload(
+                path: path,
+                file: imageData,
+                options: FileOptions(contentType: "image/jpeg", upsert: true)
+            )
+        
+        let url = try client.storage
+            .from("maintenance-images")
+            .getPublicURL(path: path)
+        
+        return url.absoluteString
+    }
+    
     // Storage Avatar Upload
     func uploadAvatar(userId: UUID, imageData: Data) async throws -> String {
         let path = "\(userId.uuidString).jpg"
@@ -1125,6 +1151,7 @@ final class SupabaseManager: ObservableObject {
                         local.serviceDate = rr.serviceDate
                         local.cost = rr.cost
                         local.notes = rr.notes
+                        local.repairImages = rr.repairImages
                         local.performedBy = rr.performedBy
                     } else {
                         context.insert(rr.asLocalRecord)
