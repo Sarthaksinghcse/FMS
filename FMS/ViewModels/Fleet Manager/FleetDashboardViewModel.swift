@@ -6,6 +6,39 @@ final class FleetDashboardViewModel {
     var activeQuickAction: ActiveQuickAction? = nil
     var showAllActivities: Bool = false
 
+    let quickActions: [DashboardQuickAction] = [
+        DashboardQuickAction(
+            icon: "car.fill",
+            iconColor: AppTheme.Brand.primary,
+            bgColor: AppTheme.IconBg.blue,
+            label: "Add Vehicle"
+        ),
+        DashboardQuickAction(
+            icon: "person.badge.plus",
+            iconColor: AppTheme.Brand.violet,
+            bgColor: AppTheme.IconBg.violet,
+            label: "Assign Driver"
+        ),
+        DashboardQuickAction(
+            icon: "chart.bar.fill",
+            iconColor: AppTheme.Brand.teal,
+            bgColor: AppTheme.IconBg.teal,
+            label: "Reports"
+        ),
+        DashboardQuickAction(
+            icon: "exclamationmark.octagon.fill",
+            iconColor: AppTheme.Status.danger,
+            bgColor: AppTheme.IconBg.red,
+            label: "Alerts"
+        ),
+        DashboardQuickAction(
+            icon: "wrench.and.screwdriver.fill",
+            iconColor: AppTheme.Brand.amber,
+            bgColor: AppTheme.IconBg.amber,
+            label: "Maintenance"
+        )
+    ]
+
     enum ActiveQuickAction: Identifiable {
         case addVehicle
         case assignDriver

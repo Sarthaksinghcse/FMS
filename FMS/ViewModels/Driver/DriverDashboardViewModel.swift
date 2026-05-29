@@ -212,7 +212,9 @@ final class DriverDashboardViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init() { 
-        seedMock()
+        if SupabaseManager.shared.currentUser == nil {
+            seedMock()
+        }
         setupAuthListener()
         startAutoRefresh()
     }

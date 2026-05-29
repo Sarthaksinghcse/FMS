@@ -7,9 +7,10 @@
 
 
 import SwiftUI
+import Supabase
 
 struct MessageThreadItem: Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
     let text: String
     let isSender: Bool
     let timestamp: Date
@@ -20,11 +21,13 @@ struct MessageThreadItem: Identifiable, Hashable {
 }
 
 struct ChatDetailView: View {
-    @Binding var channel: CommunicationChannel
+    let channel: CommunicationChannel
+    
+    @StateObject private var supabase = SupabaseManager.shared
     
     @State private var textMessage: String = ""
     @State private var messages: [MessageThreadItem] = []
-    @State private var replyIndex = 0
+    @State private var realtimeChannel: RealtimeChannelV2? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -97,31 +100,90 @@ struct ChatDetailView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            // Load sample history
-            messages = [
-                MessageThreadItem(text: "Hello! This is the coordination thread regarding recent diagnostics.", isSender: false, timestamp: Date().addingTimeInterval(-7200)),
-                MessageThreadItem(text: channel.textPreview, isSender: false, timestamp: Date().addingTimeInterval(-1800))
-            ]
-            channel.unreadCount = 0
+        .task {
+            await loadMessages()
+            startRealtimeListener()
+        }
+        .onDisappear {
+            if let activeChannel = realtimeChannel {
+                let client = supabase.client
+                Task {
+                    await client.removeChannel(activeChannel)
+                }
+                realtimeChannel = nil
+            }
+        }
+    }
+
+    func loadMessages() async {
+        do {
+            guard let currentUserId = supabase.currentUser?.id else { return }
+            let allDBMessages = try await supabase.fetchMessages()
+            let filtered = allDBMessages.filter { msg in
+                (msg.senderId == currentUserId && msg.receiverId == channel.id) ||
+                (msg.senderId == channel.id && msg.receiverId == currentUserId)
+            }
+            
+            // Map to MessageThreadItem
+            let mapped = filtered.map { msg in
+                MessageThreadItem(
+                    id: msg.id,
+                    text: msg.message,
+                    isSender: msg.senderId == currentUserId,
+                    timestamp: msg.timestamp
+                )
+            }
+            
+            await MainActor.run {
+                self.messages = mapped
+            }
+        } catch {
+            print("Failed to fetch messages: \(error)")
+        }
+    }
+    
+    func startRealtimeListener() {
+        guard realtimeChannel == nil else { return }
+        let client = supabase.client
+        let channel = client.channel("chat_detail_messages_realtime")
+        
+        Task {
+            let changes = channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "messages"
+            )
+            
+            try? await channel.subscribeWithError()
+            self.realtimeChannel = channel
+            
+            for await _ in changes {
+                await loadMessages()
+            }
         }
     }
 
     private func sendMessage() {
+        guard !textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard let currentUserId = supabase.currentUser?.id else { return }
+        
         let sentText = textMessage
         textMessage = ""
         
-        let userMsg = MessageThreadItem(text: sentText, isSender: true, timestamp: Date())
-        messages.append(userMsg)
-
-        // Trigger dynamic auto-responses
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            let autoReplyText = channel.autoReplies[replyIndex % channel.autoReplies.count]
-            replyIndex += 1
-            
-            let replyMsg = MessageThreadItem(text: autoReplyText, isSender: false, timestamp: Date())
-            withAnimation(.spring()) {
-                messages.append(replyMsg)
+        let dbMsg = DBMessage(
+            id: UUID(),
+            senderId: currentUserId,
+            receiverId: channel.id,
+            message: sentText,
+            timestamp: Date()
+        )
+        
+        Task {
+            do {
+                try await supabase.sendMessage(dbMsg)
+                await loadMessages()
+            } catch {
+                print("Failed to send message: \(error)")
             }
         }
     }
