@@ -236,7 +236,7 @@ struct FleetContentView: View {
             Task {
                 for await change in updateChanges {
                     guard let dbUser = try? change.record.decode(as: DBUser.self) else { continue }
-                    await handleUserRealtimeUpdate(dbUser: dbUser)
+                    handleUserRealtimeUpdate(dbUser: dbUser)
                 }
             }
             
@@ -244,7 +244,7 @@ struct FleetContentView: View {
             Task {
                 for await change in insertChanges {
                     guard let dbUser = try? change.record.decode(as: DBUser.self) else { continue }
-                    await handleUserRealtimeUpdate(dbUser: dbUser)
+                    handleUserRealtimeUpdate(dbUser: dbUser)
                 }
             }
         }
