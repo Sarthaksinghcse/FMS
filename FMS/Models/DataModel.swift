@@ -88,8 +88,8 @@ enum VehicleStatus: String, Codable {
 
     var displayName: String {
         switch self {
-        case .active:        return "Active"
-        case .inactive:      return "Inactive"
+        case .active:        return "Available"
+        case .inactive:      return "On Trip"
         case .inMaintenance: return "Maintenance"
         }
     }
@@ -213,8 +213,8 @@ enum NotificationType: String, Codable {
 
 enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     case all          = "All"
-    case active       = "Active"
-    case inactive     = "Inactive"
+    case active       = "Available"
+    case inactive     = "On Trip"
     case inMaintenance = "In Maintenance"
 
     var id: String { rawValue }
@@ -1550,6 +1550,7 @@ final class MaintenanceRecord {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+    var replacedParts: [String]
     var performedBy: UUID
     var createdAt: Date
 
@@ -1561,6 +1562,7 @@ final class MaintenanceRecord {
         serviceDate: Date,
         cost: Double,
         notes: String? = nil,
+        replacedParts: [String] = [],
         performedBy: UUID,
         createdAt: Date = .now
     ) {
@@ -1571,6 +1573,7 @@ final class MaintenanceRecord {
         self.serviceDate = serviceDate
         self.cost = cost
         self.notes = notes
+        self.replacedParts = replacedParts
         self.performedBy = performedBy
         self.createdAt = createdAt
     }

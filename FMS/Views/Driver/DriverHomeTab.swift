@@ -640,22 +640,23 @@ private struct AssignedTripCard: View {
 
             Divider()
 
-            // ── 6. Secondary buttons: View Route  |  Message ──────────────
+            // ── 6. Secondary buttons: Raise a Query  |  Message ──────────────
             HStack(spacing: 10) {
-                // View Route — no pre-inspection
+                // Raise a Query
                 Button {
-                    vm.viewRouteTrip = trip
+                    vm.queryTrip = trip
+                    vm.showRaiseQuery = true
                 } label: {
-                    Label("View Route", systemImage: "map.fill")
+                    Label("Raise Query", systemImage: "questionmark.bubble.fill")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.fmsIndigo)
+                        .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
-                        .background(Color.fmsIndigo.opacity(0.07))
+                        .background(Color.orange.opacity(0.09))
                         .clipShape(RoundedRectangle(cornerRadius: 11))
                         .overlay(
                             RoundedRectangle(cornerRadius: 11)
-                                .stroke(Color.fmsIndigo.opacity(0.22), lineWidth: 1)
+                                .stroke(Color.orange.opacity(0.25), lineWidth: 1)
                         )
                 }
 
@@ -679,14 +680,16 @@ private struct AssignedTripCard: View {
             .padding(.horizontal, 20)
             .padding(.top, 14)
 
-            // ── 7. Start Active Trip CTA ──────────────────────────────────
+            // ── 7. Confirm CTA ─────────────────────────────────────────────
             Button {
+                vm.showRaiseQuery = false
+                vm.queryTrip = nil
                 vm.mapActiveTrip = trip
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Start Active Trip")
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .bold))
+                    Text("Confirm")
                         .font(.system(size: 16, weight: .bold))
                 }
                 .foregroundStyle(.white)

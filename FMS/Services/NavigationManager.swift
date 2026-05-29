@@ -73,6 +73,9 @@ final class NavigationManager: NSObject, ObservableObject {
     // MARK: Private
     private let clManager = CLLocationManager()
 
+    /// The departure location (source) as geocoded from the address.
+    @Published private(set) var sourceCoordinate: CLLocationCoordinate2D?
+
     /// The destination as set by the calling view.
     @Published private(set) var destinationCoordinate: CLLocationCoordinate2D?
     private var destinationName: String = ""
@@ -121,13 +124,13 @@ final class NavigationManager: NSObject, ObservableObject {
         let srcReq = MKLocalSearch.Request()
         srcReq.naturalLanguageQuery = fromAddress
         let srcItem = try? await MKLocalSearch(request: srcReq).start()
-        let srcCoord = srcItem?.mapItems.first?.placemark.coordinate
+        let srcCoord = srcItem?.mapItems.first?.location.coordinate
         
         // Geocode destination
         let destReq = MKLocalSearch.Request()
         destReq.naturalLanguageQuery = toAddress
         let destItem = try? await MKLocalSearch(request: destReq).start()
-        guard let destCoord = destItem?.mapItems.first?.placemark.coordinate else {
+        guard let destCoord = destItem?.mapItems.first?.location.coordinate else {
             routingError = "Could not find \"\(toAddress)\""
             isRouting = false
             return
@@ -135,20 +138,22 @@ final class NavigationManager: NSObject, ObservableObject {
         
         // Use geocoded source, OR current location, OR fallback.
         let originCoord = srcCoord ?? userLocation?.coordinate ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+        sourceCoordinate = originCoord
         
         await calculateRoute(from: originCoord, to: destCoord, name: toAddress)
     }
 
     /// Calculate route from origin → destination and render polyline.
     func calculateRoute(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, name: String) async {
+        sourceCoordinate      = origin
         destinationCoordinate = destination
         destinationName       = name
         isRouting             = true
         routingError          = nil
 
         let request               = MKDirections.Request()
-        request.source            = MKMapItem(placemark: MKPlacemark(coordinate: origin))
-        request.destination       = MKMapItem(placemark: MKPlacemark(coordinate: destination))
+        request.source            = MKMapItem(location: CLLocation(latitude: origin.latitude, longitude: origin.longitude), address: nil)
+        request.destination       = MKMapItem(location: CLLocation(latitude: destination.latitude, longitude: destination.longitude), address: nil)
         request.transportType     = .automobile
         request.requestsAlternateRoutes = true
 

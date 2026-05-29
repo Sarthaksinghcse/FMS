@@ -186,6 +186,8 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showPostTrip  = false
     @Published var showDefect    = false
     @Published var showMessaging = false
+    @Published var showRaiseQuery = false
+    @Published var queryTrip: DBTrip?
     @Published var showProfile   = false
     @Published var showSOSConfirm = false
     @Published var showSOSCountdown = false

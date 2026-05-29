@@ -65,17 +65,22 @@ struct FleetManagerEditProfileView: View {
                                         .frame(width: 80, height: 80)
                                         .clipShape(Circle())
                                 } else if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
-                                    AsyncImage(url: imageURL) { phase in
-                                        switch phase {
-                                        case .success(let image):
-                                            image
-                                                .resizable()
-                                                .scaledToFill()
-                                        default:
-                                            Text(initials.isEmpty ? "FM" : initials)
-                                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                                .foregroundColor(.white)
-                                        }
+                                    CachedAsyncImage(url: imageURL) { image in
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                    } placeholder: {
+                                        Text(initials.isEmpty ? "FM" : initials)
+                                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                                            .foregroundColor(.white)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .background(
+                                                LinearGradient(
+                                                    colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
                                     }
                                     .frame(width: 80, height: 80)
                                     .clipShape(Circle())
@@ -194,7 +199,8 @@ struct FleetManagerEditProfileView: View {
                                 do {
                                     if let imgData = selectedImageData {
                                         let urlString = try await supabase.uploadAvatar(userId: updatedUser.id, imageData: imgData)
-                                        updatedUser.profileImage = urlString
+                                        let timestamp = Int(Date().timeIntervalSince1970)
+                                        updatedUser.profileImage = "\(urlString)?t=\(timestamp)"
                                     }
                                     
                                     try await supabase.updateDriver(updatedUser)

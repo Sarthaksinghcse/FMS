@@ -34,11 +34,6 @@ struct MaintenanceDashboardView: View {
                 }
                 .tag(1)
 
-            MaintenanceSchedulingTab(currentUser: currentUser, selectedFilter: $schedulingFilter)
-                .tabItem {
-                    Label("Scheduling", systemImage: "calendar")
-                }
-                .tag(2)
         }
         .accentColor(AppTheme.Brand.primary)
     }
