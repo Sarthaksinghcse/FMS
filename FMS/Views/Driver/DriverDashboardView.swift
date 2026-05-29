@@ -137,7 +137,10 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
         .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
-        .sheet(isPresented: $vm.showRaiseQuery) {
+        .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
+            vm.showRaiseQuery = false
+            vm.queryTrip = nil
+        }) {
             RaiseQuerySheet(trip: vm.queryTrip, vm: vm)
         }
         .sheet(isPresented: $vm.showNotifications) {
