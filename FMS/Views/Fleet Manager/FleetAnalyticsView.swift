@@ -234,7 +234,7 @@ struct FleetAnalyticsView: View {
                 HStack(spacing: 20) {
                     fleetStatusPill(label: "Active", count: counts.active, color: AppTheme.Status.success)
                     Spacer()
-                    fleetStatusPill(label: "In Maintenance", count: counts.maintenance, color: AppTheme.Status.danger)
+                    fleetStatusPill(label: "Maintenance", count: counts.maintenance, color: AppTheme.Status.danger)
                     Spacer()
                     fleetStatusPill(label: "Inactive", count: counts.inactive, color: Color.gray)
                 }

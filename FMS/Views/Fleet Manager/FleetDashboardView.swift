@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import MapKit
 
+@available(iOS 26.0, *)
 struct FleetDashboardView: View {
     @Environment(\.modelContext) private var modelContext
 
@@ -93,9 +94,26 @@ struct FleetDashboardView: View {
                                 Button {
                                     showProfile = true
                                 } label: {
-                                    Image(systemName: "person.crop.circle.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(AppTheme.Brand.primary)
+                                    ZStack {
+                                        if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                                           let imageURL = URL(string: imageURLString) {
+                                            CachedAsyncImage(url: imageURL) { image in
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                            } placeholder: {
+                                                Image(systemName: "person.crop.circle.fill")
+                                                    .font(.system(size: 32))
+                                                    .foregroundColor(AppTheme.Brand.primary)
+                                            }
+                                            .frame(width: 32, height: 32)
+                                            .clipShape(Circle())
+                                        } else {
+                                            Image(systemName: "person.crop.circle.fill")
+                                                .font(.system(size: 32))
+                                                .foregroundColor(AppTheme.Brand.primary)
+                                        }
+                                    }
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -119,7 +137,10 @@ struct FleetDashboardView: View {
                                 allUsers: allUsers,
                                 trips: trips
                             )) { stat in
-                                DashboardStatCard(stat: stat)
+                                NavigationLink(value: destinationFor(stat: stat)) {
+                                    DashboardStatCard(stat: stat)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -234,9 +255,12 @@ struct FleetDashboardView: View {
 
                         Spacer().frame(height: 40)
                     }
-                    .padding(.top, 8)
                 }
                 .scrollIndicators(.hidden)
+                .refreshable {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
+                }
             }
             .navigationBarHidden(true)
             // Quick action sheets

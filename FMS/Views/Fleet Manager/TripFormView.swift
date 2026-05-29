@@ -333,8 +333,8 @@ struct AddTripFormView: View {
         
         Task {
             let request = MKDirections.Request()
-            request.source = MKMapItem(placemark: MKPlacemark(coordinate: start))
-            request.destination = MKMapItem(placemark: MKPlacemark(coordinate: end))
+            request.source = MKMapItem(location: CLLocation(latitude: start.latitude, longitude: start.longitude), address: nil)
+            request.destination = MKMapItem(location: CLLocation(latitude: end.latitude, longitude: end.longitude), address: nil)
             request.transportType = .automobile
             
             do {
@@ -791,8 +791,8 @@ struct EditTripFormView: View {
         
         Task {
             let request = MKDirections.Request()
-            request.source = MKMapItem(placemark: MKPlacemark(coordinate: start))
-            request.destination = MKMapItem(placemark: MKPlacemark(coordinate: end))
+            request.source = MKMapItem(location: CLLocation(latitude: start.latitude, longitude: start.longitude), address: nil)
+            request.destination = MKMapItem(location: CLLocation(latitude: end.latitude, longitude: end.longitude), address: nil)
             request.transportType = .automobile
             
             do {
@@ -1211,7 +1211,7 @@ func geocodeAddress(_ address: String) async -> CLLocationCoordinate2D? {
     let search = MKLocalSearch(request: request)
     do {
         let response = try await search.start()
-        return response.mapItems.first?.placemark.coordinate
+        return response.mapItems.first?.location.coordinate
     } catch {
         return nil
     }

@@ -185,22 +185,32 @@ struct LocationPickerSheet: View {
     private func reverseGeocode(coordinate: CLLocationCoordinate2D) {
         isGeocoding = true
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        CLGeocoder().reverseGeocodeLocation(location) { placemarks, error in
-            isGeocoding = false
-            if let placemark = placemarks?.first {
-                let name = placemark.name ?? ""
-                let city = placemark.locality ?? ""
-                let state = placemark.administrativeArea ?? ""
-                
-                var parts: [String] = []
-                if !name.isEmpty { parts.append(name) }
-                if !city.isEmpty && city != name { parts.append(city) }
-                if !state.isEmpty { parts.append(state) }
-                
-                let newAddress = parts.joined(separator: ", ")
-                if !newAddress.isEmpty {
-                    self.addressText = newAddress
+        
+        Task {
+            if let request = MKReverseGeocodingRequest(location: location) {
+                do {
+                    let mapItems = try await request.mapItems
+                    await MainActor.run {
+                        self.isGeocoding = false
+                        if let item = mapItems.first {
+                            let name = item.name ?? ""
+                            let cityState = item.addressRepresentations?.cityWithContext ?? ""
+                            
+                            var parts: [String] = []
+                            if !name.isEmpty { parts.append(name) }
+                            if !cityState.isEmpty && !cityState.contains(name) { parts.append(cityState) }
+                            
+                            let newAddress = parts.joined(separator: ", ")
+                            if !newAddress.isEmpty {
+                                self.addressText = newAddress
+                            }
+                        }
+                    }
+                } catch {
+                    await MainActor.run { self.isGeocoding = false }
                 }
+            } else {
+                await MainActor.run { self.isGeocoding = false }
             }
         }
     }
@@ -214,7 +224,7 @@ struct LocationPickerSheet: View {
         let search = MKLocalSearch(request: searchRequest)
         search.start { response, error in
             isSearching = false
-            guard let coordinate = response?.mapItems.first?.placemark.coordinate else { return }
+            guard let coordinate = response?.mapItems.first?.location.coordinate else { return }
             
             withAnimation {
                 position = .region(MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)))

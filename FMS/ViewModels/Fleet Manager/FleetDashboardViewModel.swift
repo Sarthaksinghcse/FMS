@@ -75,7 +75,7 @@ final class FleetDashboardViewModel {
                           label: "Total Vehicles",    trend: "", isTrendPositive: true,  graphData: []),
             DashboardStat(icon: "location.fill",      iconColor: AppTheme.Status.success,
                           iconBgColor: AppTheme.IconBg.green,  value: "\(activeVehicles)",
-                          label: "Active Now",        trend: "", isTrendPositive: true,  graphData: []),
+                          label: "Available Now",     trend: "", isTrendPositive: true,  graphData: []),
             DashboardStat(icon: "person.2.fill",      iconColor: AppTheme.Brand.violet,
                           iconBgColor: AppTheme.IconBg.violet, value: "\(driversOnline)",
                           label: "Drivers Online",   trend: "", isTrendPositive: true,  graphData: []),
