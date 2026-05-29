@@ -231,6 +231,7 @@ CREATE TABLE IF NOT EXISTS public.maintenance_records (
     service_date  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     cost          NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (cost >= 0),
     notes         TEXT,
+    repair_images TEXT[],
     performed_by  UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -652,6 +653,7 @@ CREATE TABLE IF NOT EXISTS public.maintenance_records (
     service_date  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     cost          NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (cost >= 0),
     notes         TEXT,
+    repair_images TEXT[],
     performed_by  UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -694,3 +696,15 @@ ON CONFLICT (id) DO NOTHING;
 CREATE POLICY "Public Avatar Access" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
 CREATE POLICY "Insert own avatar" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
 CREATE POLICY "Update own avatar" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars');
+
+-- 9. Add Storage Bucket (Maintenance Images) and Policies
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('maintenance-images', 'maintenance-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Maintenance Image Access" ON storage.objects FOR SELECT USING (bucket_id = 'maintenance-images');
+CREATE POLICY "Insert maintenance image" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'maintenance-images');
+CREATE POLICY "Update maintenance image" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'maintenance-images');
+
+-- 10. Add repair_images column to maintenance_records if it doesn't exist
+ALTER TABLE public.maintenance_records ADD COLUMN IF NOT EXISTS repair_images TEXT[];

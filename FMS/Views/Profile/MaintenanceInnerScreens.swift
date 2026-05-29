@@ -20,7 +20,7 @@ import PhotosUI
 struct MaintenanceEditProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
 
     @State private var fullName = ""
     @State private var phoneNumber = ""
@@ -264,16 +264,19 @@ struct MaintenanceEditProfileView: View {
                     let url = try await supabase.uploadAvatar(userId: userId, imageData: data)
                     
                     if var currentUser = user {
-                        currentUser.profileImage = url
+                        let timestamp = Int(Date().timeIntervalSince1970)
+                        currentUser.profileImage = "\(url)?t=\(timestamp)"
                         try await supabase.updateDriver(currentUser)
                     }
                     
                     await MainActor.run {
                         isUploadingPhoto = false
+                        selectedPhotoItem = nil
                     }
                 } catch {
                     await MainActor.run {
                         isUploadingPhoto = false
+                        selectedPhotoItem = nil
                         errorMessage = "Failed to upload photo: \(error.localizedDescription)"
                         showError = true
                     }
@@ -281,6 +284,7 @@ struct MaintenanceEditProfileView: View {
             } else {
                 await MainActor.run {
                     isUploadingPhoto = false
+                    selectedPhotoItem = nil
                 }
             }
         }
@@ -809,7 +813,10 @@ struct MaintenanceHelpSupportView: View {
 
 
 @available(iOS 26.0, *)
-#Preview("Edit Profile") { MaintenanceEditProfileView() }
+#Preview("Edit Profile") { 
+    MaintenanceEditProfileView()
+        .environment(SupabaseManager.shared)
+}
 
 @available(iOS 26.0, *)
 struct MaintenanceSpecializationsView: View {

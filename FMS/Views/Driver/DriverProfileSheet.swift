@@ -7,7 +7,7 @@ struct DriverProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
     @State private var showSignOutConfirm = false
     @State private var showNotificationsFromProfile = false
 
@@ -132,10 +132,7 @@ struct DriverProfileSheet: View {
                     .padding(.bottom, 28)
                     // ── Sign out ───────────────────────────────────────────
                     Button {
-                        Task {
-                            try? await SupabaseManager.shared.signOut()
-                            dismiss()
-                        }
+                        showSignOutConfirm = true
                     } label: {
                         Text("Sign Out")
                             .font(.system(size: 16, weight: .semibold))
@@ -165,7 +162,11 @@ struct DriverProfileSheet: View {
             }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
-                    Task { try? await supabase.signOut() }
+                    dismiss()
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        try? await supabase.signOut()
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -241,7 +242,7 @@ private struct StatsStrip: View {
     var body: some View {
         HStack(spacing: 10) {
             StatPill(value: "\(totalTrips)", label: "Trips",  icon: "map.fill",          color: AppTheme.Brand.primaryDeep)
-            StatPill(value: String(format: "%.0f km", totalKm), label: "Driven", icon: "arrow.left.arrow.right", color: AppTheme.Brand.teal)
+            StatPill(value: String(format: "%.1f km", totalKm), label: "Driven", icon: "arrow.left.arrow.right", color: AppTheme.Brand.teal)
         }
     }
 }
@@ -354,6 +355,7 @@ private struct ProfileRow: View {
 @available(iOS 26.0, *)
 #Preview("Driver Profile") {
     DriverProfileSheet(vm: DriverDashboardViewModel())
+        .environment(SupabaseManager.shared)
 }
 
 // MARK: - Placeholder Views for Settings Navigation

@@ -13,6 +13,7 @@ struct FleetContentView: View {
     @State private var sosMessage = ""
     @State private var isPulsing = false
     @State private var realtimeChannel: RealtimeChannelV2?
+    @State private var usersRealtimeChannel: RealtimeChannelV2?
     
     var body: some View {
         ZStack {
@@ -23,29 +24,23 @@ struct FleetContentView: View {
                     }
                     .tag(0)
 
-                FleetTrackingView()
-                    .tabItem {
-                        Label("Tracking", systemImage: "location.fill")
-                    }
-                    .tag(1)
-
                 TripListView()
                     .tabItem {
                         Label("Trips", systemImage: "map.fill")
                     }
-                    .tag(2)
+                    .tag(1)
 
                 ManagementHubView()
                     .tabItem {
                         Label("Manage", systemImage: "slider.horizontal.3")
                     }
-                    .tag(3)
+                    .tag(2)
                 
                 FleetAnalyticsView()
                     .tabItem{
                         Label("Analytics", systemImage: "chart.bar.xaxis")
                     }
-                    .tag(4)
+                    .tag(3)
             }
             .tint(AppTheme.Brand.primary)
             
@@ -133,14 +128,21 @@ struct FleetContentView: View {
         }
         .task {
             startRealtimeSOSListener()
+            startRealtimeUsersListener()
         }
         .onDisappear {
+            let client = SupabaseManager.shared.client
             if let activeChannel = realtimeChannel {
-                let client = SupabaseManager.shared.client
                 Task {
                     await client.removeChannel(activeChannel)
                 }
                 realtimeChannel = nil
+            }
+            if let activeUsersChannel = usersRealtimeChannel {
+                Task {
+                    await client.removeChannel(activeUsersChannel)
+                }
+                usersRealtimeChannel = nil
             }
         }
     }
@@ -206,6 +208,65 @@ struct FleetContentView: View {
                     showRedSplash = false
                 }
             }
+        }
+    }
+    
+    private func startRealtimeUsersListener() {
+        guard usersRealtimeChannel == nil else { return }
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("fleet_manager_users_realtime")
+        
+        Task {
+            let updateChanges = channel.postgresChange(
+                UpdateAction.self,
+                schema: "public",
+                table: "users"
+            )
+            
+            let insertChanges = channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "users"
+            )
+            
+            try? await channel.subscribeWithError()
+            self.usersRealtimeChannel = channel
+            
+            // Listen to updates
+            Task {
+                for await change in updateChanges {
+                    guard let dbUser = try? change.record.decode(as: DBUser.self) else { continue }
+                    handleUserRealtimeUpdate(dbUser: dbUser)
+                }
+            }
+            
+            // Listen to inserts
+            Task {
+                for await change in insertChanges {
+                    guard let dbUser = try? change.record.decode(as: DBUser.self) else { continue }
+                    handleUserRealtimeUpdate(dbUser: dbUser)
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func handleUserRealtimeUpdate(dbUser: DBUser) {
+        let descriptor = FetchDescriptor<User>()
+        let localUsers = (try? modelContext.fetch(descriptor)) ?? []
+        if let local = localUsers.first(where: { $0.id == dbUser.id }) {
+            local.fullName = dbUser.name
+            local.email = dbUser.email
+            local.phoneNumber = dbUser.phoneNumber ?? ""
+            local.role = dbUser.role.asLocalRole
+            local.isActive = dbUser.isActive
+            try? modelContext.save()
+            print("🟢 [Realtime] Updated user \(dbUser.name) online status to \(dbUser.isActive)")
+        } else {
+            let newUser = dbUser.asLocalUser
+            modelContext.insert(newUser)
+            try? modelContext.save()
+            print("🟢 [Realtime] Added new user \(dbUser.name)")
         }
     }
 }

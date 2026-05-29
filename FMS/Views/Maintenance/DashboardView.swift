@@ -23,6 +23,19 @@ struct MaintenanceDashboardTab: View {
     @Binding var schedulingFilter: Int
 
     @State private var showingProfile = false
+    @State private var showChat = false
+
+    private var personnelFirstName: String {
+        guard !currentUser.fullName.isEmpty else { return "Staff" }
+        return currentUser.fullName.components(separatedBy: " ").first ?? currentUser.fullName
+    }
+
+    private func getGreetingTime() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return "Good Morning" }
+        else if hour < 17 { return "Good Afternoon" }
+        else { return "Good Evening" }
+    }
 
     // MARK: - Derived properties
 
@@ -93,14 +106,16 @@ struct MaintenanceDashboardTab: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Premium header
                         MaintenanceHeaderView(
-                            title: "Maintenance",
+                            title: personnelFirstName,
                             subtitle: "Maintenance Personnel",
-                            greeting: nil,
+                            greeting: getGreetingTime() + ",",
                             initials: initials,
                             avatarColor: AppTheme.Brand.primaryDeep,
                             notificationCount: unreadNotifications.count,
                             onNotificationTap: {},
-                            onProfileTap: { showingProfile = true }
+                            onProfileTap: { showingProfile = true },
+                            showChat: false,
+                            onChatTap: { showChat = true }
                         )
                         .padding(.top, 8)
 
@@ -113,10 +128,14 @@ struct MaintenanceDashboardTab: View {
                     .frame(maxWidth: .infinity)
                     .padding(.bottom, 32)
                 }
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showingProfile) {
                 MaintenanceProfileView()
+            }
+            .navigationDestination(isPresented: $showChat) {
+                CommunicationView()
             }
         }
     }
@@ -131,13 +150,13 @@ struct MaintenanceDashboardTab: View {
                 columns: [GridItem(.flexible()), GridItem(.flexible())],
                 spacing: 12
             ) {
-                // ── 1. Pending Repairs ────────────────────────────────────────
+                // ── 1. Scheduling (renamed from Pending Repairs) ─────────────────
                 TappableOverviewCard(
                     icon: "doc.text.fill",
                     iconColor: AppTheme.Text.secondary,
                     iconBg: Color(.systemGray6),
                     gradient: [Color.clear, Color.clear],
-                    title: "Pending Repairs",
+                    title: "Scheduling",
                     value: "\(scheduledToday.count)",
                     footnote: scheduledToday.count == 1 ? "1 open work order" : "\(scheduledToday.count) open work orders",
                     valueColor: Color(red: 0.08, green: 0.12, blue: 0.22)
@@ -206,7 +225,15 @@ struct MaintenanceDashboardTab: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Quick Actions")
             
-            HStack(alignment: .top, spacing: 10) {
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10)
+                ],
+                spacing: 10
+            ) {
                 GridQuickActionButton(
                     icon: "wrench.and.screwdriver.fill",
                     label: "Create Work Order",
@@ -227,7 +254,7 @@ struct MaintenanceDashboardTab: View {
                 
                 GridQuickActionButton(
                     icon: "bubble.left.and.bubble.right.fill",
-                    label: "Communication",
+                    label: "Chat",
                     destination: CommunicationView()
                 )
             }

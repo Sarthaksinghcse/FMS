@@ -9,7 +9,7 @@ struct DriverProfileView: View {
     @Query private var allUsers: [User]
 
 
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
 
     @State private var showEditProfile = false
     @State private var showLicenseDetails = false
@@ -358,4 +358,5 @@ struct DriverProfileView: View {
 @available(iOS 26.0, *)
 #Preview {
     DriverProfileView()
+        .environment(SupabaseManager.shared)
 }

@@ -9,6 +9,7 @@ import SwiftUI
 import MapKit
 import Combine
 import SwiftData
+import Observation
 
 
 
@@ -176,6 +177,8 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var tripElapsed   = 0
     @Published var fuelLevel: Double = 0.72
     @Published var isLoading     = false
+    @Published var allVehicles: [DBVehicle] = []
+    @Published var allLocalVehicles: [Vehicle] = []
 
     
     @Published var showVoiceLog  = false
@@ -184,12 +187,15 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showPostTrip  = false
     @Published var showDefect    = false
     @Published var showMessaging = false
+    @Published var showRaiseQuery = false
+    @Published var queryTrip: DBTrip?
     @Published var showProfile   = false
     @Published var showSOSConfirm = false
     @Published var showSOSCountdown = false
     @Published var sosSentAlert   = false
     @Published var showNotifications = false
     @Published var notificationsList: [DBNotification] = []
+    @Published var showFuelLog   = false   // Fuel refuel sheet
     private var autoRefreshTimer: AnyCancellable?
 
     @Published var confirmEnd    = false
@@ -220,19 +226,19 @@ final class DriverDashboardViewModel: ObservableObject {
     }
 
     private func setupAuthListener() {
-        SupabaseManager.shared.$currentUser
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
+        withObservationTracking {
+            _ = SupabaseManager.shared.currentUser
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
                 guard let self = self else { return }
-                Task {
-                    if let context = self.modelContext {
-                        await self.load(context: context)
-                    } else {
-                        await self.load()
-                    }
+                if let context = self.modelContext {
+                    await self.load(context: context)
+                } else {
+                    await self.load()
                 }
+                self.setupAuthListener()
             }
-            .store(in: &cancellables)
+        }
     }
 
     private func startAutoRefresh() {
@@ -281,6 +287,7 @@ final class DriverDashboardViewModel: ObservableObject {
             let vehicleDescriptor = FetchDescriptor<Vehicle>()
             let localVehicles = (try? context.fetch(vehicleDescriptor)) ?? []
             let vehicles = localVehicles.map { $0.asDBVehicle }
+            allLocalVehicles = localVehicles
             
             let mine = trips.filter { $0.driverId == uid }
             currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
@@ -297,6 +304,7 @@ final class DriverDashboardViewModel: ObservableObject {
             updateLocalDriverStatusState()
             let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
             assignedVehicle = vehicles.first(where: { $0.id == vid })
+            allVehicles = vehicles
             
             
             let completed = mine.filter { $0.status == .completed }
@@ -333,6 +341,7 @@ final class DriverDashboardViewModel: ObservableObject {
                 updateLocalDriverStatusState()
                 let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                 assignedVehicle = vehicles.first(where: { $0.id == vid })
+                allVehicles = vehicles
                 
                 
                 let completed = mine.filter { $0.status == .completed }
@@ -369,6 +378,7 @@ final class DriverDashboardViewModel: ObservableObject {
                     updateLocalDriverStatusState()
                     let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
                     assignedVehicle = vehicles.first(where: { $0.id == vid })
+                    allVehicles = vehicles
                     
                     
                     let completed = mine.filter { $0.status == .completed }
@@ -536,6 +546,16 @@ final class DriverDashboardViewModel: ObservableObject {
     var vehicleManufacturer: String { assignedVehicle?.manufacturer ?? "Maruti Suzuki" }
     var vehicleModel: String        { assignedVehicle?.model       ?? "Swift Dzire" }
     var vehicleYear: String         { assignedVehicle.map { String($0.year) } ?? "2023" }
+
+    /// Look up the vehicle assigned to a specific trip
+    func vehicleForTrip(_ trip: DBTrip) -> DBVehicle? {
+        allVehicles.first(where: { $0.id == trip.vehicleId }) ?? assignedVehicle
+    }
+
+    /// Look up the full local Vehicle (with vehicleType, fuelType, insuranceExpiryDate)
+    func localVehicleForTrip(_ trip: DBTrip) -> Vehicle? {
+        allLocalVehicles.first(where: { $0.id == trip.vehicleId })
+    }
 
     func fire(_ action: DashboardAction) {
         switch action {

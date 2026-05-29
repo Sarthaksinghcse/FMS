@@ -4,7 +4,8 @@ import SwiftData
 @available(iOS 26.0, *)
 struct MaintenanceProfileView: View {
 
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
+    @Environment(\.dismiss) private var dismiss
 
     @State private var showEditProfile = false
     @State private var showWorkHistory = false
@@ -74,7 +75,11 @@ struct MaintenanceProfileView: View {
             }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
-                    Task { try? await supabase.signOut() }
+                    dismiss()
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        try? await supabase.signOut()
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -266,4 +271,5 @@ struct MaintenanceProfileView: View {
 @available(iOS 26.0, *)
 #Preview {
     MaintenanceProfileView()
+        .environment(SupabaseManager.shared)
 }
