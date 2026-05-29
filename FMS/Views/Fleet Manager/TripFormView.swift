@@ -86,11 +86,11 @@ struct AddTripFormView: View {
                             DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: nil)
                         }
                         
-                        formSection(title: "Distance & Notes", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
+                        formSection(title: "Distance & Cargo Type", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
                             TripFormField(label: "Distance (km)", placeholder: "e.g. 1450",
                                           text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
                             FormDivider()
-                            TripNotesField(label: "Notes", placeholder: "Optional notes",
+                            TripNotesField(label: "Cargo Type", placeholder: "e.g. Dry Van Food Grd, Chemicals, etc.",
                                            text: $notes, focus: $focusedField, tag: .notes)
                         }
                         
@@ -459,11 +459,11 @@ struct EditTripFormView: View {
                             DriverPickerRow(label: "Driver", drivers: drivers, selection: $selectedDriver, allTrips: allTrips, startTime: scheduledStartTime, endTime: scheduledEndTime, currentTripId: trip.id)
                         }
                         
-                        formSection(title: "Distance & Notes", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
+                        formSection(title: "Distance & Cargo Type", icon: "gauge.with.needle.fill", iconColor: AppTheme.Brand.royalBlue) {
                             TripFormField(label: "Distance (km)", placeholder: "e.g. 1450",
                                           text: $distanceText, keyboardType: .decimalPad, focus: $focusedField, tag: .distance)
                             FormDivider()
-                            TripNotesField(label: "Notes", placeholder: "Optional notes",
+                            TripNotesField(label: "Cargo Type", placeholder: "e.g. Dry Van Food Grd, Chemicals, etc.",
                                            text: $notes, focus: $focusedField, tag: .notes)
                         }
                         

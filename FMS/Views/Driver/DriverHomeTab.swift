@@ -4,6 +4,7 @@ import SwiftUI
 struct DriverHomeTab: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTab: Int
+    @State private var selectedTripForAddress: DBTrip?
 
     var body: some View {
         NavigationStack {
@@ -35,7 +36,7 @@ struct DriverHomeTab: View {
                             }
                         }
 
-                        PrimaryCard(vm: vm)
+                        PrimaryCard(vm: vm, selectedTripForAddress: $selectedTripForAddress)
                     }
                     .padding(.horizontal, 20)
 
@@ -97,6 +98,9 @@ struct DriverHomeTab: View {
             .refreshable { await vm.load() }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationBarHidden(true)
+            .sheet(item: $selectedTripForAddress) { trip in
+                FullAddressSheet(source: trip.source, destination: trip.destination, tripCode: trip.tripCode)
+            }
         }
     }
 }
@@ -185,12 +189,13 @@ private struct DashboardInlineHeader: View {
 
 private struct PrimaryCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
+    @Binding var selectedTripForAddress: DBTrip?
 
     var body: some View {
         if vm.isTripActive {
-            LiveTripCard(vm: vm)
+            LiveTripCard(vm: vm, selectedTripForAddress: $selectedTripForAddress)
         } else {
-            IdleCard(vm: vm)
+            IdleCard(vm: vm, selectedTripForAddress: $selectedTripForAddress)
         }
     }
 }
@@ -211,44 +216,85 @@ private struct VerticalDashedLine: View {
 
 private struct LiveTripCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
+    @Binding var selectedTripForAddress: DBTrip?
+
+    private func formatTime(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f.string(from: date)
+    }
+
+    private func departureTime(for trip: DBTrip) -> String {
+        formatTime(trip.startTime ?? trip.createdAt)
+    }
+
+    private func arrivalTime(for trip: DBTrip) -> String {
+        let dep = trip.startTime ?? trip.createdAt
+        let arrival = dep.addingTimeInterval((trip.distance / 60.0) * 3600)
+        return formatTime(arrival)
+    }
+
+    private func etaString(for trip: DBTrip) -> String {
+        let hours = trip.distance / 60.0
+        let h = Int(hours)
+        let m = Int((hours - Double(h)) * 60)
+        return h > 0 ? "\(h)h \(m)m" : "\(m) min"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if let trip = vm.activeTrip {
                 
-                HStack {
-                    Text(trip.tripCode)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Text("IN PROGRESS")
-                        .font(.system(size: 10, weight: .bold))
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(trip.tripCode)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text("IN PROGRESS")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.red.opacity(0.10))
+                            .cornerRadius(6)
+                    }
+                    if let notes = trip.notes, !notes.isEmpty {
+                        HStack {
+                            Image(systemName: "box.truck.fill")
+                                .font(.system(size: 10))
+                            Text(notes)
+                                .font(.system(size: 11, weight: .semibold))
+                        }
                         .foregroundStyle(.red)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.red.opacity(0.10))
-                        .cornerRadius(6)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.red.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
                 }
 
                 Divider()
 
                 
                 HStack(alignment: .top, spacing: 14) {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 0) {
                         Circle()
                             .stroke(Color.fmsIndigo, lineWidth: 3)
                             .frame(width: 14, height: 14)
                         
-                        VerticalDashedLine()
-                            .frame(height: 24)
+                        Rectangle()
+                            .fill(Color(UIColor.systemGray4))
+                            .frame(width: 2)
+                            .frame(minHeight: 24)
                         
                         Circle()
                             .stroke(Color.orange, lineWidth: 3)
                             .frame(width: 14, height: 14)
                     }
-                    .padding(.top, 4)
+                    .padding(.vertical, 4)
+                    .frame(width: 14)
                     
-                    VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("DEPARTURE PORT")
                                 .font(.system(size: 10, weight: .bold))
@@ -256,6 +302,8 @@ private struct LiveTripCard: View {
                             Text(trip.source)
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(.primary)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
@@ -265,33 +313,52 @@ private struct LiveTripCard: View {
                             Text(trip.destination)
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(.primary)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
 
                 Divider()
 
-                
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("DISTANCE")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.secondary)
-                        Text(String(format: "%.1f km", trip.distance))
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.primary)
+                    Button {
+                        selectedTripForAddress = trip
+                    } label: {
+                        Label("View Full Address", systemImage: "map.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.fmsIndigo)
                     }
-                    
+                    .buttonStyle(.plain)
                     Spacer()
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("CARGO SPEC")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.secondary)
-                        Text(trip.notes ?? "General Cargo")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.primary)
-                    }
+                }
+                
+                Divider()
+                
+                HStack(spacing: 0) {
+                    TripMetricChip(
+                        icon: "road.lanes",
+                        label: "DISTANCE",
+                        value: String(format: "%.1f km", trip.distance)
+                    )
+                    TripChipDivider()
+                    TripMetricChip(
+                        icon: "arrow.up.circle.fill",
+                        label: "DEPARTURE",
+                        value: departureTime(for: trip)
+                    )
+                    TripChipDivider()
+                    TripMetricChip(
+                        icon: "arrow.down.circle.fill",
+                        label: "EST. ARRIVAL",
+                        value: arrivalTime(for: trip)
+                    )
+                    TripChipDivider()
+                    TripMetricChip(
+                        icon: "clock.fill",
+                        label: "LIVE ETA",
+                        value: etaString(for: trip)
+                    )
                 }
                 
                 Divider()
@@ -347,10 +414,11 @@ private struct LiveTripCard: View {
 
 private struct IdleCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
+    @Binding var selectedTripForAddress: DBTrip?
 
     var body: some View {
         if let trip = vm.upcomingTrips.first {
-            AssignedTripCard(trip: trip, vm: vm)
+            AssignedTripCard(trip: trip, vm: vm, selectedTripForAddress: $selectedTripForAddress)
         } else {
             // ── Empty state ────────────────────────────────────────────────
             VStack(alignment: .center, spacing: 12) {
@@ -381,6 +449,7 @@ private struct IdleCard: View {
 private struct AssignedTripCard: View {
     let trip: DBTrip
     @ObservedObject var vm: DriverDashboardViewModel
+    @Binding var selectedTripForAddress: DBTrip?
 
     // ── Computed helpers ─────────────────────────────────────────────────────
 
@@ -432,18 +501,32 @@ private struct AssignedTripCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // ── 1. Header: Trip ID + badge ────────────────────────────────
-            HStack(alignment: .center) {
-                Text(tripCode)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color(UIColor.label))
-                Spacer()
-                Text("ASSIGNED")
-                    .font(.system(size: 10, weight: .bold))
+            // ── 1. Header: Trip ID + Cargo Badge + status badge ─────────────────
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center) {
+                    Text(tripCode)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color(UIColor.label))
+                    Spacer()
+                    Text("ASSIGNED")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.fmsIndigo)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Color.fmsIndigo.opacity(0.10))
+                        .clipShape(Capsule())
+                }
+                if let notes = trip.notes, !notes.isEmpty {
+                    HStack {
+                        Image(systemName: "box.truck.fill")
+                            .font(.system(size: 10))
+                        Text(notes)
+                            .font(.system(size: 11, weight: .semibold))
+                    }
                     .foregroundStyle(Color.fmsIndigo)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(Color.fmsIndigo.opacity(0.10))
-                    .clipShape(Capsule())
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.fmsIndigo.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 18).padding(.bottom, 14)
@@ -453,7 +536,7 @@ private struct AssignedTripCard: View {
             // ── 2. Route Track ────────────────────────────────────────────
             HStack(alignment: .top, spacing: 12) {
 
-                // Left: vertical track with two icons + dashed line
+                // Left: vertical track with two icons + connector line
                 VStack(spacing: 0) {
                     // Departure icon — solid filled circle with arrow
                     Circle()
@@ -465,15 +548,10 @@ private struct AssignedTripCard: View {
                                 .foregroundColor(.white)
                         )
 
-                    // Dashed vertical connector
-                    VStack(spacing: 4) {
-                        ForEach(0..<6, id: \.self) { _ in
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(Color(UIColor.systemGray3))
-                                .frame(width: 2.5, height: 6)
-                        }
-                    }
-                    .padding(.vertical, 4)
+                    // Dynamic vertical connector line
+                    Rectangle()
+                        .fill(Color(UIColor.systemGray3))
+                        .frame(width: 2.5)
 
                     // Arrival icon — orange filled circle with flag
                     Circle()
@@ -485,9 +563,11 @@ private struct AssignedTripCard: View {
                                 .foregroundColor(.white)
                         )
                 }
+                .padding(.vertical, 8)
+                .frame(width: 38)
 
                 // Right: text for both stops
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 16) {
                     // Departure text block
                     VStack(alignment: .leading, spacing: 4) {
                         Text("DEPARTURE")
@@ -497,12 +577,12 @@ private struct AssignedTripCard: View {
                         Text(trip.source)
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(Color(UIColor.label))
-                            .lineLimit(2)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
                         Text(departureTimeString)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color(UIColor.secondaryLabel))
                     }
-                    .frame(height: 70, alignment: .center)
 
                     // Arrival text block
                     VStack(alignment: .leading, spacing: 4) {
@@ -513,12 +593,12 @@ private struct AssignedTripCard: View {
                         Text(trip.destination)
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(Color(UIColor.label))
-                            .lineLimit(2)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
                         Text("ETA \(arrivalTimeString)")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color(UIColor.secondaryLabel))
                     }
-                    .frame(height: 70, alignment: .center)
                 }
 
                 Spacer(minLength: 0)
@@ -528,7 +608,23 @@ private struct AssignedTripCard: View {
 
             Divider()
 
-            // ── 3. Metrics row: Distance · ETA · Pickup ───────────────────
+            HStack {
+                Button {
+                    selectedTripForAddress = trip
+                } label: {
+                    Label("View Full Address", systemImage: "map.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.fmsIndigo)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            // ── 3. Metrics row: Distance · Departure · Arrival · ETA ───────────
             HStack(spacing: 0) {
                 TripMetricChip(
                     icon: "road.lanes",
@@ -537,15 +633,21 @@ private struct AssignedTripCard: View {
                 )
                 TripChipDivider()
                 TripMetricChip(
-                    icon: "clock.fill",
-                    label: "ETA",
-                    value: etaString
+                    icon: "arrow.up.circle.fill",
+                    label: "DEPARTURE",
+                    value: pickupTimeString
                 )
                 TripChipDivider()
                 TripMetricChip(
-                    icon: "alarm.fill",
-                    label: "PICKUP",
-                    value: pickupTimeString
+                    icon: "arrow.down.circle.fill",
+                    label: "EST. ARRIVAL",
+                    value: arrivalTimeString
+                )
+                TripChipDivider()
+                TripMetricChip(
+                    icon: "clock.fill",
+                    label: "ETA",
+                    value: etaString
                 )
             }
 

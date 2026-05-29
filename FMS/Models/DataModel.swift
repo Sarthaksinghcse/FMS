@@ -679,7 +679,7 @@ struct DBTrip: Codable, Identifiable {
     }
 
     /// Memberwise init used throughout the app
-    init(
+    nonisolated init(
         id: UUID = UUID(),
         tripCode: String = "",
         vehicleId: UUID,
@@ -1204,6 +1204,7 @@ struct DBMaintenanceRecord: Codable, Identifiable {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+    var repairImages: [String]?
     var performedBy: UUID
     var createdAt: Date
 
@@ -1215,6 +1216,7 @@ struct DBMaintenanceRecord: Codable, Identifiable {
         case serviceDate = "service_date"
         case cost
         case notes
+        case repairImages = "repair_images"
         case performedBy = "performed_by"
         case createdAt = "created_at"
     }
@@ -1230,6 +1232,7 @@ extension DBMaintenanceRecord {
             serviceDate: serviceDate,
             cost: cost,
             notes: notes,
+            repairImages: repairImages,
             performedBy: performedBy,
             createdAt: createdAt
         )
@@ -1246,6 +1249,7 @@ extension MaintenanceRecord {
             serviceDate: serviceDate,
             cost: cost,
             notes: notes,
+            repairImages: repairImages,
             performedBy: performedBy,
             createdAt: createdAt
         )
@@ -1551,6 +1555,7 @@ final class MaintenanceRecord {
     var cost: Double
     var notes: String?
     var replacedParts: [String]
+    var repairImages: [String]?
     var performedBy: UUID
     var createdAt: Date
 
@@ -1563,6 +1568,7 @@ final class MaintenanceRecord {
         cost: Double,
         notes: String? = nil,
         replacedParts: [String] = [],
+        repairImages: [String]? = nil,
         performedBy: UUID,
         createdAt: Date = .now
     ) {
@@ -1574,6 +1580,7 @@ final class MaintenanceRecord {
         self.cost = cost
         self.notes = notes
         self.replacedParts = replacedParts
+        self.repairImages = repairImages
         self.performedBy = performedBy
         self.createdAt = createdAt
     }

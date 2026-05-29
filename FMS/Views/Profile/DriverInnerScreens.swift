@@ -762,7 +762,7 @@ struct DriverPerformanceStatsView: View {
                                     iconColor: AppTheme.Brand.primary,
                                     iconBg: AppTheme.IconBg.blue,
                                     title: "Distance Driven",
-                                    value: String(format: "%.0f km", totalKmDriven),
+                                    value: String(format: "%.1f km", totalKmDriven),
                                     subtitle: "Accumulated"
                                 )
                                 ProfileStatCard(

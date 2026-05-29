@@ -340,11 +340,12 @@ struct FMSRouteRow: View {
     let destination: String
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 0) {
                 Circle()
                     .fill(Color.fmsIndigo)
                     .frame(width: 9, height: 9)
+                
                 Rectangle()
                     .fill(
                         LinearGradient(
@@ -352,20 +353,26 @@ struct FMSRouteRow: View {
                             startPoint: .top, endPoint: .bottom
                         )
                     )
-                    .frame(width: 2, height: 28)
+                    .frame(width: 2)
+                
                 Circle()
                     .fill(AppTheme.Status.success)
                     .frame(width: 9, height: 9)
             }
-            VStack(alignment: .leading, spacing: 10) {
+            .padding(.vertical, 4)
+            .frame(width: 9)
+
+            VStack(alignment: .leading, spacing: 12) {
                 Text(source)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.primary)
-                    .lineLimit(1)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(destination)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.primary)
-                    .lineLimit(1)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
         }

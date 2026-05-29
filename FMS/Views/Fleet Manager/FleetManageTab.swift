@@ -1606,6 +1606,19 @@ struct TripCardView: View {
                     Spacer()
                 }
             }
+
+            if let notes = trip.notes, !notes.isEmpty {
+                Divider().background(AppTheme.Glass.border)
+                HStack(spacing: 10) {
+                    Image(systemName: "box.truck.fill").font(.system(size: 18)).foregroundColor(accentColor.opacity(0.7))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("CARGO TYPE")
+                            .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                        Text(notes).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                    }
+                    Spacer()
+                }
+            }
         }
         .padding(20)
         .background(.ultraThinMaterial)
