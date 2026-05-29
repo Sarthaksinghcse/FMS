@@ -695,10 +695,7 @@ struct DBTrip: Codable, Identifiable {
     /// Provide a default tripCode when the backend column is absent
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        let decodedId = try c.decode(UUID.self, forKey: .id)
-        id          = decodedId
-        tripCode    = (try? c.decodeIfPresent(String.self, forKey: .tripCode))
-                      ?? "TRP-\(decodedId.uuidString.prefix(4).uppercased())"
+        id          = try c.decode(UUID.self, forKey: .id)
         vehicleId   = try c.decode(UUID.self,   forKey: .vehicleId)
         driverId    = try c.decode(UUID.self,   forKey: .driverId)
         source      = try c.decode(String.self, forKey: .source)
@@ -745,7 +742,6 @@ struct DBTrip: Codable, Identifiable {
         createdAt: Date
     ) {
         self.id          = id
-        self.tripCode    = tripCode.isEmpty ? "TRP-\(id.uuidString.prefix(4).uppercased())" : tripCode
         self.vehicleId   = vehicleId
         self.driverId    = driverId
         self.source      = source
@@ -1786,3 +1782,37 @@ final class FuelLog {
         self.loggedAt = loggedAt
     }
 }
+
+
+@Model
+final class ComplianceAlert {
+    @Attribute(.unique) var id: UUID
+    var vehicleId: UUID
+    var alertType: ComplianceAlertType
+    var status: ComplianceAlertStatus
+    var deadlineDate: Date
+    var resolvedAt: Date?
+    var notes: String?
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        vehicleId: UUID,
+        alertType: ComplianceAlertType,
+        status: ComplianceAlertStatus,
+        deadlineDate: Date,
+        resolvedAt: Date? = nil,
+        notes: String? = nil,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.vehicleId = vehicleId
+        self.alertType = alertType
+        self.status = status
+        self.deadlineDate = deadlineDate
+        self.resolvedAt = resolvedAt
+        self.notes = notes
+        self.createdAt = createdAt
+    }
+}
+
