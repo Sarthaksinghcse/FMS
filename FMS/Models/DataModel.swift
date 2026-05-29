@@ -207,6 +207,60 @@ enum NotificationType: String, Codable {
 }
 
 
+enum ComplianceAlertType: String, Codable, CaseIterable {
+    case insurance
+    case permit
+    case servicing
+
+    var displayName: String {
+        switch self {
+        case .insurance: return "Insurance"
+        case .permit:    return "Permit"
+        case .servicing: return "Servicing"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .insurance: return "shield.checkered"
+        case .permit:    return "doc.text.fill"
+        case .servicing: return "wrench.and.screwdriver.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .insurance: return Color(red: 0.15, green: 0.38, blue: 0.90)
+        case .permit:    return Color(red: 0.58, green: 0.39, blue: 0.87)
+        case .servicing: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        }
+    }
+}
+
+
+enum ComplianceAlertStatus: String, Codable {
+    case upcoming
+    case overdue
+    case resolved
+
+    var displayName: String {
+        switch self {
+        case .upcoming: return "Upcoming"
+        case .overdue:  return "Overdue"
+        case .resolved: return "Resolved"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .upcoming: return Color(red: 0.90, green: 0.65, blue: 0.15)
+        case .overdue:  return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .resolved: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        }
+    }
+}
+
+
 
 
 
@@ -679,7 +733,7 @@ struct DBTrip: Codable, Identifiable {
     }
 
     /// Memberwise init used throughout the app
-    init(
+    nonisolated init(
         id: UUID = UUID(),
         tripCode: String = "",
         vehicleId: UUID,
@@ -1204,6 +1258,7 @@ struct DBMaintenanceRecord: Codable, Identifiable {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+    var repairImages: [String]?
     var performedBy: UUID
     var createdAt: Date
 
@@ -1215,6 +1270,7 @@ struct DBMaintenanceRecord: Codable, Identifiable {
         case serviceDate = "service_date"
         case cost
         case notes
+        case repairImages = "repair_images"
         case performedBy = "performed_by"
         case createdAt = "created_at"
     }
@@ -1230,6 +1286,7 @@ extension DBMaintenanceRecord {
             serviceDate: serviceDate,
             cost: cost,
             notes: notes,
+            repairImages: repairImages,
             performedBy: performedBy,
             createdAt: createdAt
         )
@@ -1246,6 +1303,7 @@ extension MaintenanceRecord {
             serviceDate: serviceDate,
             cost: cost,
             notes: notes,
+            repairImages: repairImages,
             performedBy: performedBy,
             createdAt: createdAt
         )
@@ -1308,6 +1366,7 @@ final class Vehicle {
     var lastServiceDate: Date?
     var nextServiceDate: Date?
     var insuranceExpiryDate: Date?
+    var permitExpiryDate: Date?
     var createdAt: Date
     var updatedAt: Date
 
@@ -1326,6 +1385,7 @@ final class Vehicle {
         lastServiceDate: Date? = nil,
         nextServiceDate: Date? = nil,
         insuranceExpiryDate: Date? = nil,
+        permitExpiryDate: Date? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now
     ) {
@@ -1343,6 +1403,7 @@ final class Vehicle {
         self.lastServiceDate = lastServiceDate
         self.nextServiceDate = nextServiceDate
         self.insuranceExpiryDate = insuranceExpiryDate
+        self.permitExpiryDate = permitExpiryDate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -1551,6 +1612,7 @@ final class MaintenanceRecord {
     var cost: Double
     var notes: String?
     var replacedParts: [String]
+    var repairImages: [String]?
     var performedBy: UUID
     var createdAt: Date
 
@@ -1563,6 +1625,7 @@ final class MaintenanceRecord {
         cost: Double,
         notes: String? = nil,
         replacedParts: [String] = [],
+        repairImages: [String]? = nil,
         performedBy: UUID,
         createdAt: Date = .now
     ) {
@@ -1574,6 +1637,7 @@ final class MaintenanceRecord {
         self.cost = cost
         self.notes = notes
         self.replacedParts = replacedParts
+        self.repairImages = repairImages
         self.performedBy = performedBy
         self.createdAt = createdAt
     }
@@ -1678,5 +1742,38 @@ final class InventoryItem {
         self.supplierName = supplierName
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+}
+
+
+@Model
+final class ComplianceAlert {
+    @Attribute(.unique) var id: UUID
+    var vehicleId: UUID
+    var alertType: ComplianceAlertType
+    var status: ComplianceAlertStatus
+    var deadlineDate: Date
+    var resolvedAt: Date?
+    var notes: String?
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        vehicleId: UUID,
+        alertType: ComplianceAlertType,
+        status: ComplianceAlertStatus,
+        deadlineDate: Date,
+        resolvedAt: Date? = nil,
+        notes: String? = nil,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.vehicleId = vehicleId
+        self.alertType = alertType
+        self.status = status
+        self.deadlineDate = deadlineDate
+        self.resolvedAt = resolvedAt
+        self.notes = notes
+        self.createdAt = createdAt
     }
 }
