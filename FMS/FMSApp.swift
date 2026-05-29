@@ -25,7 +25,8 @@ struct FMSApp: App {
             MaintenanceRecord.self,
             SOSAlert.self,
             AppNotification.self,
-            InventoryItem.self
+            InventoryItem.self,
+            ComplianceAlert.self
         ])
     }
 }

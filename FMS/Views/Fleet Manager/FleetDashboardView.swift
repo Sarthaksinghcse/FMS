@@ -12,8 +12,10 @@ struct FleetDashboardView: View {
     @Query(sort: \SOSAlert.createdAt,     order: .reverse) private var sosAlerts:     [SOSAlert]
     @Query(sort: \DefectReport.createdAt, order: .reverse) private var defectReports: [DefectReport]
     @Query(sort: \WorkOrder.createdAt,    order: .reverse) private var workOrders:    [WorkOrder]
+    @Query private var complianceAlerts: [ComplianceAlert]
 
     @State private var viewModel    = FleetDashboardViewModel()
+    @State private var complianceVM = ComplianceAlertsViewModel()
     @State private var showProfile  = false
     @State private var showChat     = false
 
@@ -186,6 +188,9 @@ struct FleetDashboardView: View {
                         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                         .padding(.horizontal, 16)
 
+                        // ── Compliance & Renewal Alerts ───────────
+                        complianceAlertsSummary
+
                         // ── Recent Activity ───────────────────────
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(alignment: .center, spacing: 8) {
@@ -313,6 +318,121 @@ struct FleetDashboardView: View {
 //        }
 //        return String(vm.driverName.prefix(2)).uppercased()
 //    }
+
+    // MARK: - Compliance Summary Card
+
+    private var complianceAlertsSummary: some View {
+        let allItems = complianceVM.generateAlerts(vehicles: vehicles, persistedAlerts: complianceAlerts)
+        let overdueCount = complianceVM.overdueCount(from: allItems)
+        let upcomingCount = complianceVM.upcomingCount(from: allItems)
+        let totalActive = overdueCount + upcomingCount
+
+        return NavigationLink(destination: ComplianceAlertsView()) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(
+                                overdueCount > 0
+                                    ? ComplianceAlertStatus.overdue.color.opacity(0.12)
+                                    : AppTheme.Brand.primary.opacity(0.08)
+                            )
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "shield.checkered")
+                            .font(.system(size: 18))
+                            .foregroundColor(
+                                overdueCount > 0
+                                    ? ComplianceAlertStatus.overdue.color
+                                    : AppTheme.Brand.primary
+                            )
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text("Compliance & Renewals")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+
+                            if totalActive > 0 {
+                                Text("\(totalActive)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(minWidth: 18, minHeight: 18)
+                                    .background(
+                                        overdueCount > 0
+                                            ? ComplianceAlertStatus.overdue.color
+                                            : ComplianceAlertStatus.upcoming.color
+                                    )
+                                    .clipShape(Circle())
+                            }
+                        }
+
+                        Text(complianceSummaryText(overdue: overdueCount, upcoming: upcomingCount))
+                            .font(.system(size: 12))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                }
+
+                // Mini summary pills
+                if totalActive > 0 {
+                    HStack(spacing: 8) {
+                        if overdueCount > 0 {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(ComplianceAlertStatus.overdue.color)
+                                    .frame(width: 6, height: 6)
+                                Text("\(overdueCount) overdue")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(ComplianceAlertStatus.overdue.color)
+                            }
+                        }
+                        if upcomingCount > 0 {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(ComplianceAlertStatus.upcoming.color)
+                                    .frame(width: 6, height: 6)
+                                Text("\(upcomingCount) upcoming")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(ComplianceAlertStatus.upcoming.color)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(14)
+            .background(AppTheme.Background.card)
+            .cornerRadius(AppTheme.Radius.card)
+            .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                    .stroke(
+                        overdueCount > 0
+                            ? ComplianceAlertStatus.overdue.color.opacity(0.25)
+                            : AppTheme.Glass.border,
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+    }
+
+    private func complianceSummaryText(overdue: Int, upcoming: Int) -> String {
+        if overdue == 0 && upcoming == 0 {
+            return "All vehicles within compliance limits"
+        } else if overdue > 0 {
+            return "\(overdue) alert\(overdue == 1 ? "" : "s") require immediate attention"
+        } else {
+            return "\(upcoming) renewal\(upcoming == 1 ? "" : "s") due soon"
+        }
+    }
 }
 
 
