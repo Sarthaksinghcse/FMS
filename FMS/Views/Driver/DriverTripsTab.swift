@@ -1078,13 +1078,10 @@ struct TripNavigationView: View {
             // Quick action buttons
             HStack(spacing: 10) {
                 MapActionButton(
-                    label: "Raise Query",
-                    icon:  "questionmark.bubble.fill",
-                    style: .warning
-                ) {
-                    vm.queryTrip = trip
-                    vm.showRaiseQuery = true
-                }
+                    label: preTripPassed ? "Passed ✓" : "Pre-Trip",
+                    icon:  preTripPassed ? "checkmark.seal.fill" : "checklist",
+                    style: preTripPassed ? .primary : .glass
+                ) { showPreTripNav = true }
 
                 MapActionButton(label: "Defect", icon: "wrench.and.screwdriver.fill",
                                 style: .warning)  { vm.showDefect   = true }
@@ -1093,24 +1090,47 @@ struct TripNavigationView: View {
             }
             .padding(.horizontal, 20).padding(.top, 12)
 
+            // Warning banner if pre-trip not done
+            if !preTripPassed {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.Brand.accent)
+                    Text("Complete Pre-Trip Inspection before starting")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AppTheme.Brand.accent)
+                    Spacer()
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 10)
+                    .fill(AppTheme.Brand.accent.opacity(0.10)))
+                .padding(.horizontal, 20).padding(.top, 10)
+            }
+
             // START NOW
             Button {
-                // Start trip directly — pre-inspection handled at Confirm step
+                guard preTripPassed else { showPreTripNav = true; return }
                 vm.beginTrip(trip: trip)
                 withAnimation(.spring(response: 0.5)) {
                     nav.beginNavigation()
                 }
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 15, weight: .bold))
-                    Text("Start Now")
+                    if !preTripPassed {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    Text(preTripPassed ? "Start Now" : "Complete Inspection to Start")
                         .font(.system(size: 17, weight: .bold))
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
-                .background(AnyShapeStyle(Color.fmsIndigo.gradient))
+                .background(
+                    preTripPassed
+                        ? AnyShapeStyle(Color.fmsIndigo.gradient)
+                        : AnyShapeStyle(Color(UIColor.systemGray3).gradient)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
             .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 28)
