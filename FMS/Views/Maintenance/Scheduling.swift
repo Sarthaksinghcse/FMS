@@ -83,6 +83,7 @@ extension WorkOrderPriority {
 struct ScheduledTasksView: View {
     let currentUser: User
     @StateObject private var vm: ScheduledTasksViewModel
+    @Environment(\.dismiss) private var dismiss
     private var externalFilter: Binding<Int>?
 
     @Query private var allNotifications: [AppNotification]
@@ -119,21 +120,11 @@ struct ScheduledTasksView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottomTrailing) {
             AppTheme.Background.page.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Premium Custom Header
-                MaintenanceHeaderView(
-                    title: "Scheduling",
-                    subtitle: "Track and organize your maintenance work orders.",
-                    initials: initials,
-                    avatarColor: AppTheme.Brand.amber,
-                    notificationCount: unreadNotificationsCount,
-                    showActions: false
-                )
-                .background(AppTheme.Background.card)
-                .shadow(color: AppTheme.Shadow.card, radius: 4, y: 2)
+                CustomCenteredHeaderView(title: "Scheduling")
 
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
@@ -177,8 +168,27 @@ struct ScheduledTasksView: View {
                     }
                 }
             }
+            
+            Button(action: {
+                // Add Schedule action
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Add Schedule")
+                        .font(.system(size: 15, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(AppTheme.Brand.primary)
+                .clipShape(Capsule())
+                .shadow(color: AppTheme.Brand.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+            }
+            .padding(20)
         }
         .navigationBarHidden(true)
+        .navigationBarBackButtonHidden(true)
     }
 }
 

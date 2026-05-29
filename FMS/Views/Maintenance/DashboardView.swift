@@ -110,7 +110,7 @@ struct MaintenanceDashboardTab: View {
                         recentWorkOrdersSection
                         MessagesPreviewSection()
                     }
-                    .frame(width: UIScreen.main.bounds.width)
+                    .frame(maxWidth: .infinity)
                     .padding(.bottom, 32)
                 }
             }
@@ -216,7 +216,7 @@ struct MaintenanceDashboardTab: View {
                 GridQuickActionButton(
                     icon: "checkmark.square.fill",
                     label: "Update Maintenance",
-                    destination: UpdateMaintenanceView()
+                    destination: UpdateMaintenanceView(currentUser: currentUser)
                 )
                 
                 GridQuickActionButton(

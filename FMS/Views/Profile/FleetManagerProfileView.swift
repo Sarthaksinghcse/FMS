@@ -93,17 +93,22 @@ struct FleetManagerProfileView: View {
                     .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 16, y: 6)
 
                 if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
-                    AsyncImage(url: imageURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        default:
-                            Text(initials)
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                        }
+                    CachedAsyncImage(url: imageURL) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        Text(initials)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(
+                                LinearGradient(
+                                    colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                     }
                     .frame(width: 90, height: 90)
                     .clipShape(Circle())

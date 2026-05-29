@@ -11,6 +11,12 @@ import SwiftData
 @main
 @available(iOS 26.0, *)
 struct FMSApp: App {
+    init() {
+        #if DEBUG
+        DashboardNavigationTests.runTests()
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
