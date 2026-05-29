@@ -8,7 +8,7 @@ import Supabase
 
 struct FleetManagerChatListView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
     
     @State private var searchText = ""
     @State private var selectedRoleFilter: RoleFilter = .all

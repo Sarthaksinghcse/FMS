@@ -20,7 +20,7 @@ import PhotosUI
 struct DriverEditProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
 
     @State private var fullName = ""
     @State private var phoneNumber = ""
@@ -165,7 +165,8 @@ struct DriverEditProfileView: View {
                                 do {
                                     if let imgData = selectedImageData {
                                         let urlString = try await supabase.uploadAvatar(userId: updatedUser.id, imageData: imgData)
-                                        updatedUser.profileImage = urlString
+                                        let timestamp = Int(Date().timeIntervalSince1970)
+                                        updatedUser.profileImage = "\(urlString)?t=\(timestamp)"
                                     }
                                     
                                     try await supabase.updateDriver(updatedUser)
@@ -225,6 +226,7 @@ struct DriverEditProfileView: View {
                     if let data = try? await newValue?.loadTransferable(type: Data.self) {
                         await MainActor.run {
                             self.selectedImageData = data
+                            self.selectedItem = nil
                         }
                     }
                 }
@@ -525,29 +527,56 @@ struct DriverSecuritySettingsView: View {
                     VStack(spacing: 24) {
                         ProfileInnerScreenHeader(
                             icon: "lock.shield.fill",
-                            iconColor: AppTheme.Status.success,
-                            title: "Security",
-                            subtitle: "Password & authentication"
+                            iconColor: AppTheme.Brand.primaryDeep,
+                            title: "Privacy & Security",
+                            subtitle: "Manage password & authentication"
                         )
 
-                        VStack(spacing: 0) {
-                            ProfileSecureField(label: "Current Password", text: $currentPassword)
-                            Divider().padding(.leading, 16)
-                            ProfileSecureField(label: "New Password", text: $newPassword)
-                            Divider().padding(.leading, 16)
-                            ProfileSecureField(label: "Confirm Password", text: $confirmPassword)
-                        }
-                        .background(AppTheme.Background.card)
-                        .cornerRadius(AppTheme.Radius.card)
-                        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
+                        // CHANGE PASSWORD section
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("CHANGE PASSWORD")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                                .tracking(0.6)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
 
-                        VStack(spacing: 0) {
-                            ProfileToggleRow(icon: "faceid", iconColor: AppTheme.Status.success, title: "Face ID / Touch ID", subtitle: "Use biometrics to unlock", isOn: $biometricEnabled, tintColor: AppTheme.Status.success)
+                            VStack(spacing: 0) {
+                                ProfileSecureField(label: "Current Password", text: $currentPassword)
+                                Divider().padding(.leading, 16)
+                                ProfileSecureField(label: "New Password", text: $newPassword)
+                                Divider().padding(.leading, 16)
+                                ProfileSecureField(label: "Confirm New Password", text: $confirmPassword)
+                            }
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                         }
-                        .background(AppTheme.Background.card)
-                        .cornerRadius(AppTheme.Radius.card)
-                        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
 
+                        // AUTHENTICATION section
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("AUTHENTICATION")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                                .tracking(0.6)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
+
+                            VStack(spacing: 0) {
+                                ProfileToggleRow(
+                                    icon: "faceid",
+                                    iconColor: AppTheme.Brand.primary,
+                                    title: "Face ID / Touch ID",
+                                    subtitle: "Use biometrics to unlock",
+                                    isOn: $biometricEnabled
+                                )
+                            }
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                        }
+
+                        // Update Password button
                         Button {
                             isSaving = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { isSaving = false; showSaved = true }
@@ -558,8 +587,9 @@ struct DriverSecuritySettingsView: View {
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.white)
-                            .frame(maxWidth: .infinity).frame(height: 52)
-                            .background(AppTheme.Status.success)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(AppTheme.Brand.primary)
                             .cornerRadius(AppTheme.Radius.medium)
                         }
                         .disabled(isSaving || newPassword.isEmpty)
@@ -570,11 +600,12 @@ struct DriverSecuritySettingsView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .navigationTitle("Security")
+            .navigationTitle("Privacy & Security")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }.foregroundColor(AppTheme.Status.success)
+                    Button("Done") { dismiss() }
+                        .foregroundColor(AppTheme.Brand.primary)
                 }
             }
             .alert("Password Updated", isPresented: $showSaved) {
@@ -834,7 +865,10 @@ private struct DriverPerformanceStatsRing: View {
 
 
 @available(iOS 26.0, *)
-#Preview("Edit Profile") { DriverEditProfileView() }
+#Preview("Edit Profile") { 
+    DriverEditProfileView()
+        .environment(SupabaseManager.shared)
+}
 
 @available(iOS 26.0, *)
 #Preview("License") { DriverLicenseDetailView() }

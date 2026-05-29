@@ -9,7 +9,7 @@ import SwiftUI
 
 @available(iOS 26.0, *)
 struct ContentView: View {
-    @StateObject private var supabaseManager = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabaseManager
 
     var body: some View {
         Group {
@@ -33,7 +33,7 @@ struct ContentView: View {
 
 @available(iOS 26.0, *)
 struct DashboardView: View {
-    @StateObject private var supabaseManager = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabaseManager
     @State private var vehicles: [DBVehicle] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -138,6 +138,7 @@ struct DashboardView: View {
 @available(iOS 26.0, *)
 #Preview {
     ContentView()
+        .environment(SupabaseManager.shared)
 }
 
 
@@ -145,7 +146,7 @@ struct DashboardView: View {
 @available(iOS 26.0, *)
 struct DriverPlaceholderView: View {
     let user: DBUser
-    @StateObject private var supabaseManager = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabaseManager
 
     var body: some View {
         NavigationStack {

@@ -14,6 +14,12 @@ final class FleetDashboardViewModel {
             label: "Chat"
         ),
         DashboardQuickAction(
+            icon: "location.fill",
+            iconColor: Color(red: 0.13, green: 0.69, blue: 0.45),
+            bgColor: Color(red: 0.13, green: 0.69, blue: 0.45).opacity(0.12),
+            label: "Tracking"
+        ),
+        DashboardQuickAction(
             icon: "person.badge.plus",
             iconColor: AppTheme.Brand.violet,
             bgColor: AppTheme.IconBg.violet,

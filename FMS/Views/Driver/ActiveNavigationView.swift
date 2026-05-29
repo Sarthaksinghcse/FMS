@@ -1,10 +1,4 @@
 
-//  ActiveNavigationView.swift
-//  FMS — Apple Maps-style real-time navigation overlay
-//
-//  This view is embedded inside TripNavigationView's ZStack once isNavigating == true.
-//  It is NOT a separate screen — it layers over the live MapKit map.
-
 import SwiftUI
 import MapKit
 import CoreLocation

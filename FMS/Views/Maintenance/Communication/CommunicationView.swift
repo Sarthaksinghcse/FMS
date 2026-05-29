@@ -34,7 +34,7 @@ struct CommunicationView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allUsers: [User]
     
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
     
     @State private var searchText: String = ""
     @State private var selectedCategory: ChatCategory = .all
@@ -306,5 +306,6 @@ private struct CommunicationRow: View {
 #Preview {
     NavigationView {
         CommunicationView()
+            .environment(SupabaseManager.shared)
     }
 }

@@ -13,11 +13,13 @@ DerivedData/
 *.pbxuser
 *.xcuserstate
 UserInterfaceState.xcuserstate
-scuserstate
+*UserInterfaceState*
 xcuserdata/
 *.xcuserdata/
 xcshareddata/
 *.xcshareddata/
+xcshareddata
+xcuserdata
 
 # Playground
 timeline.xctimeline
