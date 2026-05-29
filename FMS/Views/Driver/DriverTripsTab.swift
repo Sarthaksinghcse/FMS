@@ -695,7 +695,7 @@ private struct TripRow: View {
             
             HStack(spacing: 8) {
                 TripChip(icon: "arrow.left.arrow.right",
-                         label: String(format: "%.0f km", trip.distance))
+                         label: String(format: "%.1f km", trip.distance))
                 if let s = trip.startTime {
                     TripChip(icon: "clock",
                              label: s.formatted(.dateTime.hour().minute()))
