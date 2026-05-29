@@ -16,7 +16,7 @@ BEGIN
         VALUES (
             NEW.assigned_to,
             'New Work Order Assigned',
-            'You have been assigned a new work order: ' || NEW.title || ' (ID: ' || NEW.id || ')',
+            'You have been assigned a new work order: ' || NEW.issue_description || ' (ID: ' || NEW.id || ')',
             'maintenance',
             FALSE,
             NOW()

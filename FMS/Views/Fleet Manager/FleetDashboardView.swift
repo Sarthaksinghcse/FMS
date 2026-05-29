@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import Supabase
 
 @available(iOS 26.0, *)
 struct FleetDashboardView: View {
@@ -21,6 +22,7 @@ struct FleetDashboardView: View {
     @State private var showProfile  = false
     @State private var showChat     = false
     @State private var showTracking = false
+    @State private var realtimeChannel: RealtimeChannelV2? = nil
 
     // Compute the full activity list once per body eval
     private var recentActivities: [DashboardActivity] {
@@ -303,9 +305,15 @@ struct FleetDashboardView: View {
             .task {
                 DatabaseSeeder.seedIfEmpty(context: modelContext)
                 await SupabaseManager.shared.syncAllData(context: modelContext)
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(15))
-                    await SupabaseManager.shared.syncAllData(context: modelContext)
+                startRealtimeListener()
+            }
+            .onDisappear {
+                if let activeChannel = realtimeChannel {
+                    let client = SupabaseManager.shared.client
+                    Task {
+                        await client.removeChannel(activeChannel)
+                    }
+                    realtimeChannel = nil
                 }
             }
             .navigationDestination(for: DashboardNavigationDestination.self) { destination in
@@ -444,6 +452,47 @@ struct FleetDashboardView: View {
             viewModel.activeQuickAction = .maintenance
         } else if activity.title.contains("Trip") {
             selectedTab = 1
+        }
+    }
+
+    private func startRealtimeListener() {
+        guard realtimeChannel == nil else { return }
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("fleet_manager_realtime_channel")
+        
+        let tripsStream = channel.postgresChange(AnyAction.self, schema: "public", table: "trips")
+        let sosStream = channel.postgresChange(AnyAction.self, schema: "public", table: "sos_alerts")
+        let defectStream = channel.postgresChange(AnyAction.self, schema: "public", table: "defect_reports")
+        let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
+        let notifStream = channel.postgresChange(AnyAction.self, schema: "public", table: "notifications")
+        let taskStream = channel.postgresChange(AnyAction.self, schema: "public", table: "maintenance_tasks")
+        let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
+        let fuelStream = channel.postgresChange(AnyAction.self, schema: "public", table: "fuel_logs")
+        let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+        
+        Task {
+            try? await channel.subscribeWithError()
+            self.realtimeChannel = channel
+            
+            async let _ : () = handleStream(tripsStream)
+            async let _ : () = handleStream(sosStream)
+            async let _ : () = handleStream(defectStream)
+            async let _ : () = handleStream(workOrderStream)
+            async let _ : () = handleStream(notifStream)
+            async let _ : () = handleStream(taskStream)
+            async let _ : () = handleStream(vehicleStream)
+            async let _ : () = handleStream(fuelStream)
+            async let _ : () = handleStream(complianceStream)
+        }
+    }
+    
+    private func handleStream<S: AsyncSequence>(_ stream: S) async {
+        do {
+            for try await _ in stream {
+                try? await SupabaseManager.shared.syncAllData(context: modelContext)
+            }
+        } catch {
+            print("Stream error: \(error)")
         }
     }
 }

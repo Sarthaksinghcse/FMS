@@ -378,29 +378,68 @@ struct FuelLogSheet: View {
         let driverId  = SupabaseManager.shared.currentUser?.id ?? UUID()
         let vehicleId = vm.assignedVehicle?.id
 
-        let log = FuelLog(
-            driverId: driverId,
-            vehicleId: vehicleId,
-            tripId: vm.currentTrip?.id,
-            fuelType: vehicleFuelType.rawValue,
-            litres: l,
-            amountPaid: a,
-            receiptImageData: receiptImage.flatMap { $0.jpegData(compressionQuality: 0.8) },
-            notes: notes.isEmpty ? nil : notes
-        )
+        Task {
+            let imgData = receiptImage.flatMap { $0.jpegData(compressionQuality: 0.8) }
+            var receiptUrl: String? = nil
+            let logId = UUID()
+            
+            if let data = imgData {
+                do {
+                    receiptUrl = try await SupabaseManager.shared.uploadReceiptImage(logId: logId, imageData: data)
+                } catch {
+                    print("Failed to upload receipt image to Supabase: \(error.localizedDescription)")
+                }
+            }
 
-        modelContext.insert(log)
-        try? modelContext.save()
+            let dbLog = DBFuelLog(
+                id: logId,
+                driverId: driverId,
+                vehicleId: vehicleId,
+                tripId: vm.currentTrip?.id,
+                fuelType: vehicleFuelType.rawValue,
+                litres: l,
+                amountPaid: a,
+                odometer: vm.assignedVehicle?.odometerReading,
+                receiptUrl: receiptUrl,
+                notes: notes.isEmpty ? nil : notes,
+                createdAt: Date()
+            )
 
-        withAnimation {
-            saving = false
-            saved  = true
-        }
+            do {
+                try await SupabaseManager.shared.createFuelLog(dbLog)
+            } catch {
+                print("Failed to sync fuel log to Supabase: \(error.localizedDescription)")
+            }
 
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+            let log = FuelLog(
+                id: logId,
+                driverId: driverId,
+                vehicleId: vehicleId,
+                tripId: vm.currentTrip?.id,
+                fuelType: vehicleFuelType.rawValue,
+                litres: l,
+                amountPaid: a,
+                odometer: vm.assignedVehicle?.odometerReading,
+                receiptImageData: imgData,
+                notes: notes.isEmpty ? nil : notes,
+                loggedAt: Date()
+            )
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            dismiss()
+            await MainActor.run {
+                modelContext.insert(log)
+                try? modelContext.save()
+
+                withAnimation {
+                    saving = false
+                    saved  = true
+                }
+
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    dismiss()
+                }
+            }
         }
     }
 }

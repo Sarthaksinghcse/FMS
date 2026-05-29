@@ -13,6 +13,7 @@
 
 import SwiftUI
 import PhotosUI
+import SwiftData
 
 
 
@@ -361,14 +362,15 @@ private struct DriverLicenseInfo: View {
 @available(iOS 26.0, *)
 struct DriverTripHistoryView: View {
     @Environment(\.dismiss) private var dismiss
-
-    private let mockTrips: [(code: String, from: String, to: String, date: String, distance: String, status: String)] = [
-        ("TRP-2240", "Warehouse A – Sector 17", "Distribution Hub – Phase 5", "22 May 2026", "48.2 km", "Completed"),
-        ("TRP-2238", "Distribution Hub – Phase 5", "Client Site – Noida", "21 May 2026", "31.0 km", "Completed"),
-        ("TRP-2235", "Depot – Gurugram", "Mall Road – Delhi", "20 May 2026", "52.7 km", "Completed"),
-        ("TRP-2230", "Warehouse B – Faridabad", "Corporate Office – Cyber City", "19 May 2026", "38.5 km", "Completed"),
-        ("TRP-2225", "Depot – Gurugram", "Warehouse A – Sector 17", "18 May 2026", "22.1 km", "Cancelled"),
-    ]
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
+    
+    init() {}
+    
+    private var driverTrips: [Trip] {
+        guard let driverId = SupabaseManager.shared.currentUser?.id else { return [] }
+        return allTrips.filter { $0.driverId == driverId }
+    }
 
     var body: some View {
         NavigationStack {
@@ -377,56 +379,73 @@ struct DriverTripHistoryView: View {
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(Array(mockTrips.enumerated()), id: \.offset) { _, trip in
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Text(trip.code)
-                                        .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                        .foregroundColor(AppTheme.Text.primary)
-                                    Spacer()
-                                    Text(trip.status)
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(trip.status == "Completed" ? AppTheme.Status.success : AppTheme.Text.secondary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background((trip.status == "Completed" ? AppTheme.Status.success : AppTheme.Text.secondary).opacity(0.10))
-                                        .clipShape(Capsule())
-                                }
-
-                                HStack(spacing: 10) {
-                                    VStack(spacing: 0) {
-                                        Circle().fill(AppTheme.Brand.primary).frame(width: 7, height: 7)
-                                        Rectangle()
-                                            .fill(LinearGradient(colors: [AppTheme.Brand.primary.opacity(0.5), AppTheme.Status.success.opacity(0.5)], startPoint: .top, endPoint: .bottom))
-                                            .frame(width: 1.5, height: 20)
-                                        Circle().fill(AppTheme.Status.success).frame(width: 7, height: 7)
-                                    }
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text(trip.from)
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(AppTheme.Text.secondary)
-                                            .lineLimit(1)
-                                        Text(trip.to)
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(AppTheme.Text.secondary)
-                                            .lineLimit(1)
-                                    }
-                                }
-
-                                HStack {
-                                    Label(trip.date, systemImage: "calendar")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(AppTheme.Text.tertiary)
-                                    Spacer()
-                                    Label(trip.distance, systemImage: "road.lanes")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(AppTheme.Text.secondary)
-                                }
+                        if driverTrips.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "road.lanes.curve.right")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                                    .padding(.top, 40)
+                                Text("No trip history")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                                Text("Your completed trips will be listed here.")
+                                    .font(.system(size: 12, design: .rounded))
+                                    .foregroundColor(AppTheme.Text.tertiary)
                             }
-                            .padding(16)
-                            .background(AppTheme.Background.card)
-                            .cornerRadius(AppTheme.Radius.medium)
-                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                        } else {
+                            ForEach(driverTrips) { trip in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Text(trip.tripCode)
+                                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                            .foregroundColor(AppTheme.Text.primary)
+                                        Spacer()
+                                        Text(trip.tripStatus.displayName)
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(trip.tripStatus == .completed ? AppTheme.Status.success : AppTheme.Text.secondary)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background((trip.tripStatus == .completed ? AppTheme.Status.success : AppTheme.Text.secondary).opacity(0.10))
+                                            .clipShape(Capsule())
+                                    }
+
+                                    HStack(spacing: 10) {
+                                        VStack(spacing: 0) {
+                                            Circle().fill(AppTheme.Brand.primary).frame(width: 7, height: 7)
+                                            Rectangle()
+                                                .fill(LinearGradient(colors: [AppTheme.Brand.primary.opacity(0.5), AppTheme.Status.success.opacity(0.5)], startPoint: .top, endPoint: .bottom))
+                                                .frame(width: 1.5, height: 20)
+                                            Circle().fill(AppTheme.Status.success).frame(width: 7, height: 7)
+                                        }
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text(trip.startLocation)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(AppTheme.Text.secondary)
+                                                .lineLimit(1)
+                                            Text(trip.endLocation)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(AppTheme.Text.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+
+                                    HStack {
+                                        Label(trip.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(AppTheme.Text.tertiary)
+                                        Spacer()
+                                        Label(String(format: "%.1f km", trip.distanceKm), systemImage: "road.lanes")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                    }
+                                }
+                                .padding(16)
+                                .background(AppTheme.Background.card)
+                                .cornerRadius(AppTheme.Radius.medium)
+                                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                            }
                         }
                     }
                     .padding(.horizontal, 16)

@@ -508,20 +508,32 @@ struct DBVehicle: Codable, Identifiable {
     var status: DBVehicleStatus
     var assignedDriverId: UUID?
     var lastServiceDate: Date?
+    var vehicleType: String?
+    var fuelType: String?
+    var odometerReading: Double?
+    var insuranceExpiryDate: Date?
+    var permitExpiryDate: Date?
+    var nextServiceDate: Date?
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id
-        case vehicleNumber    = "vehicle_number"
+        case vehicleNumber       = "vehicle_number"
         case model
         case manufacturer
         case year
         case vin
-        case licensePlate     = "license_plate"
+        case licensePlate        = "license_plate"
         case status
-        case assignedDriverId = "assigned_driver_id"
-        case lastServiceDate  = "last_service_date"
-        case createdAt        = "created_at"
+        case assignedDriverId    = "assigned_driver_id"
+        case lastServiceDate     = "last_service_date"
+        case vehicleType         = "vehicle_type"
+        case fuelType            = "fuel_type"
+        case odometerReading     = "odometer_reading"
+        case insuranceExpiryDate = "insurance_expiry_date"
+        case permitExpiryDate    = "permit_expiry_date"
+        case nextServiceDate     = "next_service_date"
+        case createdAt           = "created_at"
     }
 }
 
@@ -555,12 +567,15 @@ extension DBVehicle {
             make: manufacturer,
             model: model,
             year: year,
-            vehicleType: .truck, 
-            fuelType: .petrol, 
-            odometerReading: 0.0,
+            vehicleType: VehicleType(rawValue: vehicleType ?? "") ?? .car, 
+            fuelType: FuelType(rawValue: fuelType ?? "") ?? .petrol, 
+            odometerReading: odometerReading ?? 0.0,
             status: status.toLocalStatus,
             assignedDriverId: assignedDriverId,
             lastServiceDate: lastServiceDate,
+            nextServiceDate: nextServiceDate,
+            insuranceExpiryDate: insuranceExpiryDate,
+            permitExpiryDate: permitExpiryDate,
             createdAt: createdAt,
             updatedAt: Date()
         )
@@ -580,6 +595,12 @@ extension Vehicle {
             status: status.toDBStatus,
             assignedDriverId: assignedDriverId,
             lastServiceDate: lastServiceDate,
+            vehicleType: vehicleType.rawValue,
+            fuelType: fuelType.rawValue,
+            odometerReading: odometerReading,
+            insuranceExpiryDate: insuranceExpiryDate,
+            permitExpiryDate: permitExpiryDate,
+            nextServiceDate: nextServiceDate,
             createdAt: createdAt
         )
     }
@@ -780,6 +801,77 @@ struct DBVehicleInspection: Codable, Identifiable {
         case defects
         case inspectionDate = "inspection_date"
         case status
+    }
+}
+
+extension DBVehicleInspection {
+    var asLocalInspection: VehicleInspection {
+        var brake = true
+        var tire = true
+        var engine = true
+        var lights = true
+        var oil = true
+        
+        for item in checklist {
+            let parts = item.components(separatedBy: ": ")
+            guard parts.count == 2 else { continue }
+            let label = parts[0]
+            let passed = parts[1] == "passed"
+            
+            if label.contains("Brakes") {
+                brake = passed
+            } else if label.contains("Tyres") {
+                tire = passed
+            } else if label.contains("Engine") {
+                engine = passed
+            } else if label.contains("Headlights") || label.contains("Indicators") {
+                lights = passed
+            } else if label.contains("Windshield") || label.contains("Wipers") {
+                oil = passed
+            }
+        }
+        
+        return VehicleInspection(
+            id: id,
+            vehicleId: vehicleId,
+            driverId: driverId,
+            tripId: nil,
+            inspectionType: .preTrip,
+            brakeCondition: brake,
+            tireCondition: tire,
+            engineCondition: engine,
+            lightsCondition: lights,
+            oilLevelOk: oil,
+            remarks: defects,
+            defectReported: status == .failed,
+            createdAt: inspectionDate
+        )
+    }
+}
+
+extension VehicleInspection {
+    var asDBInspection: DBVehicleInspection {
+        var checklistArray: [String] = []
+        checklistArray.append("Brakes & Brake Lights: \(brakeCondition ? "passed" : "failed")")
+        checklistArray.append("Tyres & Tyre Pressure: \(tireCondition ? "passed" : "failed")")
+        checklistArray.append("Engine & Oil Level: \(engineCondition ? "passed" : "failed")")
+        checklistArray.append("Headlights & Indicators: \(lightsCondition ? "passed" : "failed")")
+        checklistArray.append("Windshield & Wipers: \(oilLevelOk ? "passed" : "failed")")
+        checklistArray.append("Seat Belts: passed")
+        checklistArray.append("Mirrors: passed")
+        checklistArray.append("Horn: passed")
+        checklistArray.append("First Aid Kit: passed")
+        checklistArray.append("Documents & Permits: passed")
+        
+        return DBVehicleInspection(
+            id: id,
+            vehicleId: vehicleId,
+            driverId: driverId,
+            checklist: checklistArray,
+            defects: remarks,
+            inspectionDate: createdAt,
+            status: defectReported ? .failed : .passed
+        )
     }
 }
 
@@ -1837,6 +1929,122 @@ final class ComplianceAlert {
         self.resolvedAt = resolvedAt
         self.notes = notes
         self.createdAt = createdAt
+    }
+}
+
+
+// MARK: - Fuel Log DB Mappings
+struct DBFuelLog: Codable, Identifiable {
+    let id: UUID
+    var driverId: UUID
+    var vehicleId: UUID?
+    var tripId: UUID?
+    var fuelType: String
+    var litres: Double
+    var amountPaid: Double
+    var odometer: Double?
+    var receiptUrl: String?
+    var notes: String?
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case driverId   = "driver_id"
+        case vehicleId  = "vehicle_id"
+        case tripId     = "trip_id"
+        case fuelType   = "fuel_type"
+        case litres
+        case amountPaid = "amount_paid"
+        case odometer
+        case receiptUrl = "receipt_url"
+        case notes
+        case createdAt  = "created_at"
+    }
+
+    var asLocalLog: FuelLog {
+        FuelLog(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId,
+            tripId: tripId,
+            fuelType: fuelType,
+            litres: litres,
+            amountPaid: amountPaid,
+            odometer: odometer,
+            receiptImageData: nil,
+            notes: notes,
+            loggedAt: createdAt
+        )
+    }
+}
+
+extension FuelLog {
+    var asDBLog: DBFuelLog {
+        DBFuelLog(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId,
+            tripId: tripId,
+            fuelType: fuelType,
+            litres: litres,
+            amountPaid: amountPaid,
+            odometer: odometer,
+            receiptUrl: nil,
+            notes: notes,
+            createdAt: loggedAt
+        )
+    }
+}
+
+
+// MARK: - Compliance Alert DB Mappings
+struct DBComplianceAlert: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var alertType: String
+    var status: String
+    var deadlineDate: Date
+    var resolvedAt: Date?
+    var notes: String?
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case alertType = "alert_type"
+        case status
+        case deadlineDate = "deadline_date"
+        case resolvedAt = "resolved_at"
+        case notes
+        case createdAt = "created_at"
+    }
+
+    var asLocalAlert: ComplianceAlert {
+        ComplianceAlert(
+            id: id,
+            vehicleId: vehicleId,
+            alertType: ComplianceAlertType(rawValue: alertType) ?? .insurance,
+            status: ComplianceAlertStatus(rawValue: status) ?? .upcoming,
+            deadlineDate: deadlineDate,
+            resolvedAt: resolvedAt,
+            notes: notes,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension ComplianceAlert {
+    var asDBAlert: DBComplianceAlert {
+        DBComplianceAlert(
+            id: id,
+            vehicleId: vehicleId,
+            alertType: alertType.rawValue,
+            status: status.rawValue,
+            deadlineDate: deadlineDate,
+            resolvedAt: resolvedAt,
+            notes: notes,
+            createdAt: createdAt
+        )
     }
 }
 

@@ -13,6 +13,7 @@
 
 import SwiftUI
 import PhotosUI
+import SwiftData
 
 
 
@@ -296,14 +297,20 @@ struct MaintenanceEditProfileView: View {
 @available(iOS 26.0, *)
 struct MaintenanceWorkHistoryView: View {
     @Environment(\.dismiss) private var dismiss
-
-    private let mockOrders: [(id: String, title: String, vehicle: String, priority: String, status: String, date: String)] = [
-        ("WO-1024", "Brake Pad Replacement", "VH-001 (Ford Transit)", "High", "Completed", "22 May 2026"),
-        ("WO-1021", "Oil Change & Filter", "VH-003 (Tata Ace)", "Medium", "Completed", "21 May 2026"),
-        ("WO-1018", "Tire Rotation", "VH-005 (Mahindra Bolero)", "Low", "Completed", "20 May 2026"),
-        ("WO-1015", "AC Compressor Fix", "VH-002 (Ashok Leyland)", "High", "Completed", "19 May 2026"),
-        ("WO-1010", "Battery Replacement", "VH-001 (Ford Transit)", "Urgent", "Completed", "18 May 2026"),
-    ]
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \WorkOrder.createdAt, order: .reverse) private var allWorkOrders: [WorkOrder]
+    @Query private var vehicles: [Vehicle]
+    
+    init() {}
+    
+    private var completedWorkOrders: [WorkOrder] {
+        guard let currentUserId = SupabaseManager.shared.currentUser?.id else { return [] }
+        return allWorkOrders.filter { $0.assignedTo == currentUserId && ($0.status == .completed || $0.status == .cancelled) }
+    }
+    
+    private func vehicleRegistration(for id: UUID) -> String {
+        vehicles.first(where: { $0.id == id })?.registrationNumber ?? "Unknown"
+    }
 
     var body: some View {
         NavigationStack {
@@ -312,55 +319,72 @@ struct MaintenanceWorkHistoryView: View {
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(Array(mockOrders.enumerated()), id: \.offset) { _, order in
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Text(order.id)
-                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                        .foregroundColor(AppTheme.Brand.amber)
-
-                                    Spacer()
-
-                                    Text(order.priority)
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundColor(priorityColor(order.priority))
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background(priorityColor(order.priority).opacity(0.10))
-                                        .clipShape(Capsule())
-                                }
-
-                                Text(order.title)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.primary)
-
-                                HStack(spacing: 16) {
-                                    Label(order.vehicle, systemImage: "truck.box.fill")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(AppTheme.Text.secondary)
-
-                                    Spacer()
-
-                                    Label(order.date, systemImage: "calendar")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(AppTheme.Text.tertiary)
-                                }
-
-                                HStack {
-                                    Spacer()
-                                    Text(order.status)
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(AppTheme.Status.success)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 4)
-                                        .background(AppTheme.Status.success.opacity(0.10))
-                                        .clipShape(Capsule())
-                                }
+                        if completedWorkOrders.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "wrench.and.screwdriver")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                                    .padding(.top, 40)
+                                Text("No work history")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                                Text("Your completed or cancelled work orders will appear here.")
+                                    .font(.system(size: 12, design: .rounded))
+                                    .foregroundColor(AppTheme.Text.tertiary)
                             }
-                            .padding(16)
-                            .background(AppTheme.Background.card)
-                            .cornerRadius(AppTheme.Radius.medium)
-                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                        } else {
+                            ForEach(completedWorkOrders) { order in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Text("WO-\(order.id.uuidString.prefix(4).uppercased())")
+                                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                            .foregroundColor(AppTheme.Brand.amber)
+
+                                        Spacer()
+
+                                        Text(order.priority.rawValue.capitalized)
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(priorityColor(order.priority.rawValue.capitalized))
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background(priorityColor(order.priority.rawValue.capitalized).opacity(0.10))
+                                            .clipShape(Capsule())
+                                    }
+
+                                    Text(order.title)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(AppTheme.Text.primary)
+
+                                    HStack(spacing: 16) {
+                                        Label(vehicleRegistration(for: order.vehicleId), systemImage: "truck.box.fill")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(AppTheme.Text.secondary)
+
+                                        Spacer()
+
+                                        Label(order.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(AppTheme.Text.tertiary)
+                                    }
+
+                                    HStack {
+                                        Spacer()
+                                        Text(order.status.displayName)
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundColor(order.status == .completed ? AppTheme.Status.success : AppTheme.Status.danger)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 4)
+                                            .background((order.status == .completed ? AppTheme.Status.success : AppTheme.Status.danger).opacity(0.10))
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                                .padding(16)
+                                .background(AppTheme.Background.card)
+                                .cornerRadius(AppTheme.Radius.medium)
+                                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
