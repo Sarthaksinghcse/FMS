@@ -1,17 +1,6 @@
 
-
-
-
-
-
-
-
 import SwiftUI
 import SwiftData
-
-
-
-
 
 @available(iOS 26.0, *)
 struct AddMaintenanceFormView: View {

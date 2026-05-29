@@ -15,7 +15,6 @@ struct AuthView: View {
     
     @State private var email = ""
     @State private var password = ""
-    @State private var selectedRole: UserRole = .fleetManager
 
     
     @FocusState private var focusedField: FocusField?
@@ -84,38 +83,7 @@ struct AuthView: View {
                     VStack(spacing: 24) {
 
                         
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("SELECT ROLE")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Text.tertiary.opacity(0.8))
-                                .tracking(1.0)
 
-                            Menu {
-                                Picker("Role", selection: $selectedRole) {
-                                    ForEach(UserRole.allRoles, id: \.self) { role in
-                                        Text(role.displayName).tag(role)
-                                    }
-                                }
-                            } label: {
-                                HStack {
-                                    Text(selectedRole.displayName)
-                                        .foregroundColor(AppTheme.Text.primary)
-                                        .font(.system(.body, design: .rounded))
-                                    Spacer()
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .font(.caption)
-                                        .foregroundColor(AppTheme.Text.tertiary)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 16)
-                                .background(.ultraThinMaterial)
-                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous)
-                                        .stroke(AppTheme.Glass.border, lineWidth: 1)
-                                )
-                            }
-                        }
 
                         
                         VStack(spacing: 16) {
@@ -241,8 +209,7 @@ struct AuthView: View {
             do {
                 try await supabaseManager.signIn(
                     email: trimmedEmail,
-                    passwordString: password,
-                    expectedRole: selectedRole.toDBUserRole
+                    passwordString: password
                 )
             } catch {
                 errorAlertMessage = error.localizedDescription

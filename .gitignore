@@ -12,10 +12,14 @@ build/
 DerivedData/
 *.pbxuser
 *.xcuserstate
+UserInterfaceState.xcuserstate
+*UserInterfaceState*
 xcuserdata/
 *.xcuserdata/
 xcshareddata/
 *.xcshareddata/
+xcshareddata
+xcuserdata
 
 # Playground
 timeline.xctimeline

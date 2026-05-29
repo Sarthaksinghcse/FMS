@@ -165,7 +165,8 @@ struct DriverEditProfileView: View {
                                 do {
                                     if let imgData = selectedImageData {
                                         let urlString = try await supabase.uploadAvatar(userId: updatedUser.id, imageData: imgData)
-                                        updatedUser.profileImage = urlString
+                                        let timestamp = Int(Date().timeIntervalSince1970)
+                                        updatedUser.profileImage = "\(urlString)?t=\(timestamp)"
                                     }
                                     
                                     try await supabase.updateDriver(updatedUser)
@@ -225,6 +226,7 @@ struct DriverEditProfileView: View {
                     if let data = try? await newValue?.loadTransferable(type: Data.self) {
                         await MainActor.run {
                             self.selectedImageData = data
+                            self.selectedItem = nil
                         }
                     }
                 }

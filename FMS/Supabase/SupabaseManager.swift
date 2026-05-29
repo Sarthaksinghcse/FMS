@@ -782,6 +782,14 @@ final class SupabaseManager: ObservableObject {
             .execute()
     }
     
+    func updateSOSAlert(_ alert: DBSOSAlert) async throws {
+        try await client
+            .from("sos_alerts")
+            .update(alert)
+            .eq("id", value: alert.id.uuidString)
+            .execute()
+    }
+    
     // Inventory
     func fetchInventory() async throws -> [DBInventoryItem] {
         return try await client
