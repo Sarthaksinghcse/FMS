@@ -8,22 +8,16 @@ final class FleetDashboardViewModel {
 
     let quickActions: [DashboardQuickAction] = [
         DashboardQuickAction(
-            icon: "car.fill",
+            icon: "bubble.left.and.bubble.right.fill",
             iconColor: AppTheme.Brand.primary,
             bgColor: AppTheme.IconBg.blue,
-            label: "Add Vehicle"
+            label: "Chat"
         ),
         DashboardQuickAction(
             icon: "person.badge.plus",
             iconColor: AppTheme.Brand.violet,
             bgColor: AppTheme.IconBg.violet,
             label: "Assign Driver"
-        ),
-        DashboardQuickAction(
-            icon: "chart.bar.fill",
-            iconColor: AppTheme.Brand.teal,
-            bgColor: AppTheme.IconBg.teal,
-            label: "Reports"
         ),
         DashboardQuickAction(
             icon: "exclamationmark.octagon.fill",

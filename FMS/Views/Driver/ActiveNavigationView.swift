@@ -231,8 +231,8 @@ struct ActiveNavigationOverlay: View {
     }
 
     private var currentSpeedText: String {
-        guard let speed = nav.userLocation?.speed, speed > 0 else { return "0 km/h" }
-        return String(format: "%.0f km/h", speed * 3.6)
+        guard let speed = nav.userLocation?.speed, speed > 0 else { return "0.0 km/h" }
+        return String(format: "%.1f km/h", speed * 3.6)
     }
 
     private func formattedDistance(_ metres: CLLocationDistance) -> String {
