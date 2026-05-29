@@ -73,6 +73,9 @@ final class NavigationManager: NSObject, ObservableObject {
     // MARK: Private
     private let clManager = CLLocationManager()
 
+    /// The departure location (source) as geocoded from the address.
+    @Published private(set) var sourceCoordinate: CLLocationCoordinate2D?
+
     /// The destination as set by the calling view.
     @Published private(set) var destinationCoordinate: CLLocationCoordinate2D?
     private var destinationName: String = ""
@@ -135,12 +138,14 @@ final class NavigationManager: NSObject, ObservableObject {
         
         // Use geocoded source, OR current location, OR fallback.
         let originCoord = srcCoord ?? userLocation?.coordinate ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+        sourceCoordinate = originCoord
         
         await calculateRoute(from: originCoord, to: destCoord, name: toAddress)
     }
 
     /// Calculate route from origin → destination and render polyline.
     func calculateRoute(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, name: String) async {
+        sourceCoordinate      = origin
         destinationCoordinate = destination
         destinationName       = name
         isRouting             = true
