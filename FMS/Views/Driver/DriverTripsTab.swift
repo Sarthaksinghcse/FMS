@@ -163,6 +163,12 @@ struct DriverTripsTab: View {
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trips")
             .navigationBarTitleDisplayMode(.large)
+            .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
+                vm.showRaiseQuery = false
+                vm.queryTrip = nil
+            }) {
+                RaiseQuerySheet(trip: vm.queryTrip, vm: vm)
+            }
         }
     }
 }

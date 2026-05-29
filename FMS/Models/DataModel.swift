@@ -1131,6 +1131,7 @@ struct DBMaintenanceRecord: Codable, Identifiable {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+    var repairImages: [String]?
     var performedBy: UUID
     var createdAt: Date
 
@@ -1142,6 +1143,7 @@ struct DBMaintenanceRecord: Codable, Identifiable {
         case serviceDate = "service_date"
         case cost
         case notes
+        case repairImages = "repair_images"
         case performedBy = "performed_by"
         case createdAt = "created_at"
     }
@@ -1157,6 +1159,7 @@ extension DBMaintenanceRecord {
             serviceDate: serviceDate,
             cost: cost,
             notes: notes,
+            repairImages: repairImages,
             performedBy: performedBy,
             createdAt: createdAt
         )
@@ -1173,6 +1176,7 @@ extension MaintenanceRecord {
             serviceDate: serviceDate,
             cost: cost,
             notes: notes,
+            repairImages: repairImages,
             performedBy: performedBy,
             createdAt: createdAt
         )
@@ -1477,6 +1481,7 @@ final class MaintenanceRecord {
     var serviceDate: Date
     var cost: Double
     var notes: String?
+    var repairImages: [String]?
     var replacedParts: [String]
     var performedBy: UUID
     var createdAt: Date
@@ -1489,6 +1494,7 @@ final class MaintenanceRecord {
         serviceDate: Date,
         cost: Double,
         notes: String? = nil,
+        repairImages: [String]? = nil,
         replacedParts: [String] = [],
         performedBy: UUID,
         createdAt: Date = .now
@@ -1500,6 +1506,7 @@ final class MaintenanceRecord {
         self.serviceDate = serviceDate
         self.cost = cost
         self.notes = notes
+        self.repairImages = repairImages
         self.replacedParts = replacedParts
         self.performedBy = performedBy
         self.createdAt = createdAt
