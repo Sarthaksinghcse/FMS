@@ -20,6 +20,7 @@ struct FMSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(SupabaseManager.shared)
         }
         .modelContainer(for: [
             User.self,

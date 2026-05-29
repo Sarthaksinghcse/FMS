@@ -19,6 +19,7 @@ struct FleetDashboardView: View {
     @State private var complianceVM = ComplianceAlertsViewModel()
     @State private var showProfile  = false
     @State private var showChat     = false
+    @State private var showTracking = false
 
     // Compute the full activity list once per body eval
     private var recentActivities: [DashboardActivity] {
@@ -161,6 +162,7 @@ struct FleetDashboardView: View {
                                             case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
                                             case "Alerts":         viewModel.activeQuickAction = .alerts
                                             case "Maintenance":    viewModel.activeQuickAction = .maintenance
+                                            case "Tracking":       showTracking = true
                                             case "Chat":           showChat = true
                                             default: break
                                             }
@@ -313,6 +315,11 @@ struct FleetDashboardView: View {
                     TripListView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
                 }
+            }
+            // Tracking navigation push
+            .navigationDestination(isPresented: $showTracking) {
+                FleetTrackingView()
+                    .environment(\.modelContext, modelContext)
             }
 
         }
