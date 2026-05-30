@@ -244,13 +244,5 @@ class ComplianceAlertsViewModel {
         )
         context.insert(alert)
         try? context.save()
-
-        Task {
-            do {
-                try await SupabaseManager.shared.createComplianceAlert(alert.asDBAlert)
-            } catch {
-                print("Failed to sync compliance alert resolution to Supabase: \(error.localizedDescription)")
-            }
-        }
     }
 }
