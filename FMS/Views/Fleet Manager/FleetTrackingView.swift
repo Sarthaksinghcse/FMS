@@ -4,7 +4,6 @@ import MapKit
 struct FleetTrackingView: View {
     @State private var viewModel = FleetTrackingViewModel()
     @State private var selectedVehicle: MappedVehicle?
-    @Environment(\.dismiss) private var dismiss
     
     @State private var cameraPosition: MapCameraPosition = .automatic
     
@@ -57,22 +56,8 @@ struct FleetTrackingView: View {
         }
         .navigationTitle("Live Tracking")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Dashboard")
-                            .font(.system(size: 16, weight: .medium))
-                    }
-                    .foregroundColor(AppTheme.Brand.primary)
-                }
-            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
                     Task { await viewModel.loadVehicles() }
