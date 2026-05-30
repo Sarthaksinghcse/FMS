@@ -1,10 +1,5 @@
 
 
-
-
-
-
-
 import Foundation
 import Supabase
 import Combine
@@ -59,8 +54,8 @@ final class SupabaseManager {
     
     
     
-    private static let supabaseURL = Secrets.supabaseURL
-    private static let supabaseAnonKey = Secrets.supabaseAnonKey
+    private static let supabaseURL = URL(string: "https://trkurrtlyzfsssnptdsc.supabase.co")!
+    private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRya3VycnRseXpmc3NzbnB0ZHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTI0NTgsImV4cCI6MjA5NDkyODQ1OH0.380Es9QbO6ppO9bFUiFV3qmNKpgWzf3fzBKR9S9Ajuo"
     
     
     let client: SupabaseClient
@@ -99,7 +94,6 @@ final class SupabaseManager {
     
     
     
-    @available(*, deprecated, message: "Use signUp(email:passwordString:fullName:role:) instead")
     func signUp(email: String, password: UUID, fullName: String, role: DBUserRole = .fleetManager) async throws {
         isLoading = true
         authError = nil
@@ -109,7 +103,7 @@ final class SupabaseManager {
             
             let response = try await client.auth.signUp(
                 email: email,
-                password: password.uuidString, 
+                password: password.uuidString,
                 data: [
                     "name": .string(fullName),
                     "role": .string(role.rawValue)
@@ -849,135 +843,6 @@ final class SupabaseManager {
             .execute()
     }
     
-    // Vehicle Inspections
-    func fetchInspections() async throws -> [DBVehicleInspection] {
-        return try await client
-            .from("vehicle_inspections")
-            .select()
-            .execute()
-            .value
-    }
-
-    // Delete methods
-    func deleteMaintenanceTask(id: UUID) async throws {
-        try await client
-            .from("maintenance_tasks")
-            .delete()
-            .eq("id", value: id.uuidString)
-            .execute()
-    }
-
-    func deleteDefectReport(id: UUID) async throws {
-        try await client
-            .from("defect_reports")
-            .delete()
-            .eq("id", value: id.uuidString)
-            .execute()
-    }
-
-    func deleteSOSAlert(id: UUID) async throws {
-        try await client
-            .from("sos_alerts")
-            .delete()
-            .eq("id", value: id.uuidString)
-            .execute()
-    }
-
-    func deleteMessage(id: UUID) async throws {
-        try await client
-            .from("messages")
-            .delete()
-            .eq("id", value: id.uuidString)
-            .execute()
-    }
-
-    func deleteNotification(id: UUID) async throws {
-        try await client
-            .from("notifications")
-            .delete()
-            .eq("id", value: id.uuidString)
-            .execute()
-    }
-
-    func markAllNotificationsAsRead(userId: UUID) async throws {
-        try await client
-            .from("notifications")
-            .update(["is_read": true])
-            .eq("user_id", value: userId.uuidString)
-            .execute()
-    }
-
-    // Fuel Logs
-    func fetchFuelLogs() async throws -> [DBFuelLog] {
-        return try await client
-            .from("fuel_logs")
-            .select()
-            .execute()
-            .value
-    }
-
-    func createFuelLog(_ log: DBFuelLog) async throws {
-        try await client
-            .from("fuel_logs")
-            .insert(log)
-            .execute()
-    }
-
-    func deleteFuelLog(id: UUID) async throws {
-        try await client
-            .from("fuel_logs")
-            .delete()
-            .eq("id", value: id.uuidString)
-            .execute()
-    }
-
-    func uploadReceiptImage(logId: UUID, imageData: Data) async throws -> String {
-        let path = "\(logId.uuidString).jpg"
-        _ = try await client.storage
-            .from("receipts")
-            .upload(
-                path,
-                data: imageData,
-                options: FileOptions(contentType: "image/jpeg", upsert: true)
-            )
-        let url = try client.storage
-            .from("receipts")
-            .getPublicURL(path: path)
-        return url.absoluteString
-    }
-
-    // Compliance Alerts
-    func fetchComplianceAlerts() async throws -> [DBComplianceAlert] {
-        return try await client
-            .from("compliance_alerts")
-            .select()
-            .execute()
-            .value
-    }
-
-    func createComplianceAlert(_ alert: DBComplianceAlert) async throws {
-        try await client
-            .from("compliance_alerts")
-            .insert(alert)
-            .execute()
-    }
-
-    func updateComplianceAlert(_ alert: DBComplianceAlert) async throws {
-        try await client
-            .from("compliance_alerts")
-            .update(alert)
-            .eq("id", value: alert.id.uuidString)
-            .execute()
-    }
-
-    func deleteComplianceAlert(id: UUID) async throws {
-        try await client
-            .from("compliance_alerts")
-            .delete()
-            .eq("id", value: id.uuidString)
-            .execute()
-    }
-
     func uploadRepairImage(recordId: UUID, imageData: Data, index: Int) async throws -> String {
         let path = "\(recordId.uuidString)_\(index).jpg"
         
@@ -1036,12 +901,6 @@ final class SupabaseManager {
                         local.status = rv.status.toLocalStatus
                         local.assignedDriverId = rv.assignedDriverId
                         local.lastServiceDate = rv.lastServiceDate
-                        local.vehicleType = VehicleType(rawValue: rv.vehicleType ?? "") ?? .car
-                        local.fuelType = FuelType(rawValue: rv.fuelType ?? "") ?? .petrol
-                        local.odometerReading = rv.odometerReading ?? 0.0
-                        local.insuranceExpiryDate = rv.insuranceExpiryDate
-                        local.permitExpiryDate = rv.permitExpiryDate
-                        local.nextServiceDate = rv.nextServiceDate
                     } else {
                         context.insert(rv.asLocalVehicle)
                     }
@@ -1315,64 +1174,6 @@ final class SupabaseManager {
                 }
             }
             
-            // Sync Fuel Logs
-            if let remoteFuelLogs = try? await fetchFuelLogs() {
-                let descriptor = FetchDescriptor<FuelLog>()
-                let localFuelLogs = (try? context.fetch(descriptor)) ?? []
-                for rf in remoteFuelLogs {
-                    if let local = localFuelLogs.first(where: { $0.id == rf.id }) {
-                        local.driverId = rf.driverId
-                        local.vehicleId = rf.vehicleId
-                        local.tripId = rf.tripId
-                        local.fuelType = rf.fuelType
-                        local.litres = rf.litres
-                        local.amountPaid = rf.amountPaid
-                        local.odometer = rf.odometer
-                        local.notes = rf.notes
-                        local.loggedAt = rf.createdAt
-                    } else {
-                        context.insert(rf.asLocalLog)
-                    }
-                }
-                
-                if currentUser?.role == .fleetManager {
-                    let remoteIds = Set(remoteFuelLogs.map { $0.id })
-                    for localFuelLog in localFuelLogs {
-                        if !remoteIds.contains(localFuelLog.id) {
-                            context.delete(localFuelLog)
-                        }
-                    }
-                }
-            }
-            
-            // Sync Compliance Alerts
-            if let remoteCompliance = try? await fetchComplianceAlerts() {
-                let descriptor = FetchDescriptor<ComplianceAlert>()
-                let localCompliance = (try? context.fetch(descriptor)) ?? []
-                for rc in remoteCompliance {
-                    if let local = localCompliance.first(where: { $0.id == rc.id }) {
-                        local.vehicleId = rc.vehicleId
-                        local.alertType = ComplianceAlertType(rawValue: rc.alertType) ?? .insurance
-                        local.status = ComplianceAlertStatus(rawValue: rc.status) ?? .upcoming
-                        local.deadlineDate = rc.deadlineDate
-                        local.resolvedAt = rc.resolvedAt
-                        local.notes = rc.notes
-                        local.createdAt = rc.createdAt
-                    } else {
-                        context.insert(rc.asLocalAlert)
-                    }
-                }
-                
-                if currentUser?.role == .fleetManager {
-                    let remoteIds = Set(remoteCompliance.map { $0.id })
-                    for localAlert in localCompliance {
-                        if !remoteIds.contains(localAlert.id) {
-                            context.delete(localAlert)
-                        }
-                    }
-                }
-            }
-            
             try context.save()
             print("Successfully synchronized and deduplicated all data from Supabase to SwiftData")
         } catch {
@@ -1380,5 +1181,3 @@ final class SupabaseManager {
         }
     }
 }
-
-
