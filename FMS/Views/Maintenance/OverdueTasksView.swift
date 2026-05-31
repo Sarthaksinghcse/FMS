@@ -256,7 +256,7 @@ private struct OverdueTaskCard: View {
                     Divider().padding(.horizontal, 14)
 
                     // Detail rows
-                    VStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
                         OverdueDetailRow(
                             icon: "wrench.fill",
                             label: "Pending Service",
@@ -343,6 +343,7 @@ private struct OverdueDetailRow: View {
                 .foregroundColor(AppTheme.Text.primary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
+            Spacer()
         }
     }
 }
