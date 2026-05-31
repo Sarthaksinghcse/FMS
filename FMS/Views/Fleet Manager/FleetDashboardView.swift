@@ -175,33 +175,30 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 16)
 
-                            LazyVGrid(
-                                columns: [
-                                    GridItem(.flexible(), spacing: 10),
-                                    GridItem(.flexible(), spacing: 10),
-                                    GridItem(.flexible(), spacing: 10),
-                                    GridItem(.flexible(), spacing: 10)
-                                ],
-                                spacing: 10
-                            ) {
-                                ForEach(viewModel.quickActions) { action in
-                                    FleetGridQuickActionButton(
-                                        icon: action.icon,
-                                        label: action.label
-                                    ) {
-                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                        switch action.label {
-                                        case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
-                                        case "Alerts":         viewModel.activeQuickAction = .alerts
-                                        case "Maintenance":    viewModel.activeQuickAction = .maintenance
-                                        case "Tracking":       showTracking = true
-                                        case "Chat":           showChat = true
-                                        default: break
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 14) {
+                                    ForEach(viewModel.quickActions) { action in
+                                        FleetGridQuickActionButton(
+                                            icon: action.icon,
+                                            label: action.label,
+                                            iconColor: action.iconColor,
+                                            bgColor: action.bgColor
+                                        ) {
+                                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                            switch action.label {
+                                            case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
+                                            case "Alerts":         viewModel.activeQuickAction = .alerts
+                                            case "Maintenance":    viewModel.activeQuickAction = .maintenance
+                                            case "Reports", "AI Report": viewModel.activeQuickAction = .reports
+                                            case "Tracking":       showTracking = true
+                                            case "Chat":           showChat = true
+                                            default: break
+                                            }
                                         }
                                     }
                                 }
+                                .padding(.horizontal, 16)
                             }
-                            .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                         }
 
@@ -311,7 +308,10 @@ struct FleetDashboardView: View {
                     switch action {
                     case .addVehicle:   AddVehicleFormView()
                     case .assignDriver: AddTripFormView()
-                    case .reports:      ReportsView()
+                    case .reports:
+                        NavigationStack {
+                            AIReportsView(isPresentedAsSheet: true)
+                        }
                     case .alerts:       AlertsFeedView()
                     case .maintenance:  MaintenanceManagementView()
                     }
@@ -625,29 +625,31 @@ struct FleetCircularProgressView: View {
 struct FleetGridQuickActionButton: View {
     let icon: String
     let label: String
+    var iconColor: Color = AppTheme.Brand.royalBlue
+    var bgColor: Color = AppTheme.Brand.primary.opacity(0.08)
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(AppTheme.Brand.primary.opacity(0.08))
-                        .frame(width: 48, height: 48)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(bgColor)
+                        .frame(width: 58, height: 58)
                     Image(systemName: icon)
-                        .font(.system(size: 20))
-                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .font(.system(size: 24))
+                        .foregroundColor(iconColor)
                 }
                 
                 Text(label)
-                    .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.75)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.Text.primary)
-                    .frame(height: 28, alignment: .top)
+                    .frame(height: 32, alignment: .top)
                     .lineLimit(2)
             }
-            .frame(maxWidth: .infinity)
+            .frame(width: 82)
         }
         .buttonStyle(PlainButtonStyle())
     }
