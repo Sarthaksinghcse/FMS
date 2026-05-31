@@ -26,12 +26,6 @@ final class FleetDashboardViewModel {
             label: "Assign Driver"
         ),
         DashboardQuickAction(
-            icon: "exclamationmark.octagon.fill",
-            iconColor: AppTheme.Status.danger,
-            bgColor: AppTheme.IconBg.red,
-            label: "Alerts"
-        ),
-        DashboardQuickAction(
             icon: "wrench.and.screwdriver.fill",
             iconColor: AppTheme.Brand.amber,
             bgColor: AppTheme.IconBg.amber,

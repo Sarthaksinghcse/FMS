@@ -125,7 +125,7 @@ struct MaintenanceDashboardTab: View {
                         aiInsightsSection
                         recentWorkOrdersSection
                     }
-                    .frame(width: UIScreen.main.bounds.width, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 32)
                 }
                 .safeAreaPadding(.top)
