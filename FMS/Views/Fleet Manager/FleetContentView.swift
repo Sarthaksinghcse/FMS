@@ -18,35 +18,29 @@ struct FleetContentView: View {
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
-                FleetDashboardView()
+                FleetDashboardView(selectedTab: $selectedTab)
                     .tabItem {
                         Label("Dashboard", systemImage: "square.grid.2x2.fill")
                     }
                     .tag(0)
 
-                FleetTrackingView()
-                    .tabItem {
-                        Label("Tracking", systemImage: "location.fill")
-                    }
-                    .tag(1)
-
                 TripListView()
                     .tabItem {
                         Label("Trips", systemImage: "map.fill")
                     }
-                    .tag(2)
+                    .tag(1)
 
                 ManagementHubView()
                     .tabItem {
                         Label("Manage", systemImage: "slider.horizontal.3")
                     }
-                    .tag(3)
+                    .tag(2)
                 
                 FleetAnalyticsView()
                     .tabItem{
                         Label("Analytics", systemImage: "chart.bar.xaxis")
                     }
-                    .tag(4)
+                    .tag(3)
             }
             .tint(AppTheme.Brand.primary)
             

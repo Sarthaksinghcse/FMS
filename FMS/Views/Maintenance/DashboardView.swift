@@ -24,6 +24,7 @@ struct MaintenanceDashboardTab: View {
 
     @State private var showingProfile = false
     @State private var showChat = false
+    @State private var showingNotifications = false
 
     private var personnelFirstName: String {
         guard !currentUser.fullName.isEmpty else { return "Staff" }
@@ -107,14 +108,14 @@ struct MaintenanceDashboardTab: View {
                         // Premium header
                         MaintenanceHeaderView(
                             title: personnelFirstName,
-                            subtitle: "Maintenance Personnel",
+                            subtitle: "",
                             greeting: getGreetingTime() + ",",
                             initials: initials,
                             avatarColor: AppTheme.Brand.primaryDeep,
                             notificationCount: unreadNotifications.count,
-                            onNotificationTap: {},
+                            onNotificationTap: { showingNotifications = true },
                             onProfileTap: { showingProfile = true },
-                            showChat: true,
+                            showChat: false,
                             onChatTap: { showChat = true }
                         )
                         .padding(.top, 8)
@@ -123,15 +124,19 @@ struct MaintenanceDashboardTab: View {
                         quickActionsSection
                         aiInsightsSection
                         recentWorkOrdersSection
-                        MessagesPreviewSection()
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 32)
                 }
+                .safeAreaPadding(.top)
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showingProfile) {
                 MaintenanceProfileView()
+            }
+            .sheet(isPresented: $showingNotifications) {
+                MaintenanceNotificationsSheet(currentUser: currentUser)
             }
             .navigationDestination(isPresented: $showChat) {
                 CommunicationView()
@@ -149,13 +154,13 @@ struct MaintenanceDashboardTab: View {
                 columns: [GridItem(.flexible()), GridItem(.flexible())],
                 spacing: 12
             ) {
-                // ── 1. Pending Repairs ────────────────────────────────────────
+                // ── 1. Scheduling (renamed from Pending Repairs) ─────────────────
                 TappableOverviewCard(
                     icon: "doc.text.fill",
                     iconColor: AppTheme.Text.secondary,
                     iconBg: Color(.systemGray6),
                     gradient: [Color.clear, Color.clear],
-                    title: "Pending Repairs",
+                    title: "Scheduling",
                     value: "\(scheduledToday.count)",
                     footnote: scheduledToday.count == 1 ? "1 open work order" : "\(scheduledToday.count) open work orders",
                     valueColor: Color(red: 0.08, green: 0.12, blue: 0.22)
@@ -224,7 +229,15 @@ struct MaintenanceDashboardTab: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Quick Actions")
             
-            HStack(alignment: .top, spacing: 10) {
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10)
+                ],
+                spacing: 10
+            ) {
                 GridQuickActionButton(
                     icon: "wrench.and.screwdriver.fill",
                     label: "Create Work Order",
@@ -245,7 +258,7 @@ struct MaintenanceDashboardTab: View {
                 
                 GridQuickActionButton(
                     icon: "bubble.left.and.bubble.right.fill",
-                    label: "Communication",
+                    label: "Chat",
                     destination: CommunicationView()
                 )
             }
@@ -309,8 +322,108 @@ struct MaintenanceDashboardTab: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
-            .padding(.horizontal)
+            
+            NavigationLink(destination: SparePartsForecastView()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.purple.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "box.truck.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.purple)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("AI Parts Demand Forecasting")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("PREDICT")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.purple)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Calculate upcoming parts consumption & reorder recommendations...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            NavigationLink(destination: VehicleHealthAnalysisView()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.teal.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "heart.text.square.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.teal)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("AI Vehicle Health Analytics")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("HEALTH")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.teal)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Assess fleet vehicle health grades, issue flags and repair tasks...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
         }
+        .padding(.horizontal)
     }
 
     // MARK: - Recent Work Orders

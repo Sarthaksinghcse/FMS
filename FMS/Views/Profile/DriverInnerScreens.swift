@@ -13,6 +13,7 @@
 
 import SwiftUI
 import PhotosUI
+import SwiftData
 
 
 
@@ -20,7 +21,7 @@ import PhotosUI
 struct DriverEditProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabase = SupabaseManager.shared
+    @Environment(SupabaseManager.self) private var supabase
 
     @State private var fullName = ""
     @State private var phoneNumber = ""
@@ -361,14 +362,15 @@ private struct DriverLicenseInfo: View {
 @available(iOS 26.0, *)
 struct DriverTripHistoryView: View {
     @Environment(\.dismiss) private var dismiss
-
-    private let mockTrips: [(code: String, from: String, to: String, date: String, distance: String, status: String)] = [
-        ("TRP-2240", "Warehouse A – Sector 17", "Distribution Hub – Phase 5", "22 May 2026", "48.2 km", "Completed"),
-        ("TRP-2238", "Distribution Hub – Phase 5", "Client Site – Noida", "21 May 2026", "31.0 km", "Completed"),
-        ("TRP-2235", "Depot – Gurugram", "Mall Road – Delhi", "20 May 2026", "52.7 km", "Completed"),
-        ("TRP-2230", "Warehouse B – Faridabad", "Corporate Office – Cyber City", "19 May 2026", "38.5 km", "Completed"),
-        ("TRP-2225", "Depot – Gurugram", "Warehouse A – Sector 17", "18 May 2026", "22.1 km", "Cancelled"),
-    ]
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
+    
+    init() {}
+    
+    private var driverTrips: [Trip] {
+        guard let driverId = SupabaseManager.shared.currentUser?.id else { return [] }
+        return allTrips.filter { $0.driverId == driverId }
+    }
 
     var body: some View {
         NavigationStack {
@@ -377,56 +379,73 @@ struct DriverTripHistoryView: View {
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(Array(mockTrips.enumerated()), id: \.offset) { _, trip in
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Text(trip.code)
-                                        .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                        .foregroundColor(AppTheme.Text.primary)
-                                    Spacer()
-                                    Text(trip.status)
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(trip.status == "Completed" ? AppTheme.Status.success : AppTheme.Text.secondary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background((trip.status == "Completed" ? AppTheme.Status.success : AppTheme.Text.secondary).opacity(0.10))
-                                        .clipShape(Capsule())
-                                }
-
-                                HStack(spacing: 10) {
-                                    VStack(spacing: 0) {
-                                        Circle().fill(AppTheme.Brand.primary).frame(width: 7, height: 7)
-                                        Rectangle()
-                                            .fill(LinearGradient(colors: [AppTheme.Brand.primary.opacity(0.5), AppTheme.Status.success.opacity(0.5)], startPoint: .top, endPoint: .bottom))
-                                            .frame(width: 1.5, height: 20)
-                                        Circle().fill(AppTheme.Status.success).frame(width: 7, height: 7)
-                                    }
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text(trip.from)
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(AppTheme.Text.secondary)
-                                            .lineLimit(1)
-                                        Text(trip.to)
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(AppTheme.Text.secondary)
-                                            .lineLimit(1)
-                                    }
-                                }
-
-                                HStack {
-                                    Label(trip.date, systemImage: "calendar")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(AppTheme.Text.tertiary)
-                                    Spacer()
-                                    Label(trip.distance, systemImage: "road.lanes")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(AppTheme.Text.secondary)
-                                }
+                        if driverTrips.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "road.lanes.curve.right")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                                    .padding(.top, 40)
+                                Text("No trip history")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                                Text("Your completed trips will be listed here.")
+                                    .font(.system(size: 12, design: .rounded))
+                                    .foregroundColor(AppTheme.Text.tertiary)
                             }
-                            .padding(16)
-                            .background(AppTheme.Background.card)
-                            .cornerRadius(AppTheme.Radius.medium)
-                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                        } else {
+                            ForEach(driverTrips) { trip in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Text(trip.tripCode)
+                                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                            .foregroundColor(AppTheme.Text.primary)
+                                        Spacer()
+                                        Text(trip.tripStatus.displayName)
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(trip.tripStatus == .completed ? AppTheme.Status.success : AppTheme.Text.secondary)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background((trip.tripStatus == .completed ? AppTheme.Status.success : AppTheme.Text.secondary).opacity(0.10))
+                                            .clipShape(Capsule())
+                                    }
+
+                                    HStack(spacing: 10) {
+                                        VStack(spacing: 0) {
+                                            Circle().fill(AppTheme.Brand.primary).frame(width: 7, height: 7)
+                                            Rectangle()
+                                                .fill(LinearGradient(colors: [AppTheme.Brand.primary.opacity(0.5), AppTheme.Status.success.opacity(0.5)], startPoint: .top, endPoint: .bottom))
+                                                .frame(width: 1.5, height: 20)
+                                            Circle().fill(AppTheme.Status.success).frame(width: 7, height: 7)
+                                        }
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text(trip.startLocation)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(AppTheme.Text.secondary)
+                                                .lineLimit(1)
+                                            Text(trip.endLocation)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(AppTheme.Text.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+
+                                    HStack {
+                                        Label(trip.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(AppTheme.Text.tertiary)
+                                        Spacer()
+                                        Label(String(format: "%.1f km", trip.distanceKm), systemImage: "road.lanes")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                    }
+                                }
+                                .padding(16)
+                                .background(AppTheme.Background.card)
+                                .cornerRadius(AppTheme.Radius.medium)
+                                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -527,29 +546,56 @@ struct DriverSecuritySettingsView: View {
                     VStack(spacing: 24) {
                         ProfileInnerScreenHeader(
                             icon: "lock.shield.fill",
-                            iconColor: AppTheme.Status.success,
-                            title: "Security",
-                            subtitle: "Password & authentication"
+                            iconColor: AppTheme.Brand.primaryDeep,
+                            title: "Privacy & Security",
+                            subtitle: "Manage password & authentication"
                         )
 
-                        VStack(spacing: 0) {
-                            ProfileSecureField(label: "Current Password", text: $currentPassword)
-                            Divider().padding(.leading, 16)
-                            ProfileSecureField(label: "New Password", text: $newPassword)
-                            Divider().padding(.leading, 16)
-                            ProfileSecureField(label: "Confirm Password", text: $confirmPassword)
-                        }
-                        .background(AppTheme.Background.card)
-                        .cornerRadius(AppTheme.Radius.card)
-                        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
+                        // CHANGE PASSWORD section
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("CHANGE PASSWORD")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                                .tracking(0.6)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
 
-                        VStack(spacing: 0) {
-                            ProfileToggleRow(icon: "faceid", iconColor: AppTheme.Status.success, title: "Face ID / Touch ID", subtitle: "Use biometrics to unlock", isOn: $biometricEnabled, tintColor: AppTheme.Status.success)
+                            VStack(spacing: 0) {
+                                ProfileSecureField(label: "Current Password", text: $currentPassword)
+                                Divider().padding(.leading, 16)
+                                ProfileSecureField(label: "New Password", text: $newPassword)
+                                Divider().padding(.leading, 16)
+                                ProfileSecureField(label: "Confirm New Password", text: $confirmPassword)
+                            }
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
                         }
-                        .background(AppTheme.Background.card)
-                        .cornerRadius(AppTheme.Radius.card)
-                        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
 
+                        // AUTHENTICATION section
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("AUTHENTICATION")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                                .tracking(0.6)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
+
+                            VStack(spacing: 0) {
+                                ProfileToggleRow(
+                                    icon: "faceid",
+                                    iconColor: AppTheme.Brand.primary,
+                                    title: "Face ID / Touch ID",
+                                    subtitle: "Use biometrics to unlock",
+                                    isOn: $biometricEnabled
+                                )
+                            }
+                            .background(AppTheme.Background.card)
+                            .cornerRadius(AppTheme.Radius.card)
+                            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                        }
+
+                        // Update Password button
                         Button {
                             isSaving = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { isSaving = false; showSaved = true }
@@ -560,8 +606,9 @@ struct DriverSecuritySettingsView: View {
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.white)
-                            .frame(maxWidth: .infinity).frame(height: 52)
-                            .background(AppTheme.Status.success)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(AppTheme.Brand.primary)
                             .cornerRadius(AppTheme.Radius.medium)
                         }
                         .disabled(isSaving || newPassword.isEmpty)
@@ -572,11 +619,12 @@ struct DriverSecuritySettingsView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .navigationTitle("Security")
+            .navigationTitle("Privacy & Security")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }.foregroundColor(AppTheme.Status.success)
+                    Button("Done") { dismiss() }
+                        .foregroundColor(AppTheme.Brand.primary)
                 }
             }
             .alert("Password Updated", isPresented: $showSaved) {
@@ -836,7 +884,10 @@ private struct DriverPerformanceStatsRing: View {
 
 
 @available(iOS 26.0, *)
-#Preview("Edit Profile") { DriverEditProfileView() }
+#Preview("Edit Profile") { 
+    DriverEditProfileView()
+        .environment(SupabaseManager.shared)
+}
 
 @available(iOS 26.0, *)
 #Preview("License") { DriverLicenseDetailView() }
