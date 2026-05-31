@@ -1180,4 +1180,50 @@ final class SupabaseManager {
             print("Reconciled data synchronization error: \(error.localizedDescription)")
         }
     }
+    
+    // MARK: - AI Additions
+    
+    func fetchFuelLogs() async throws -> [DBFuelLog] {
+        return try await client.from("fuel_logs")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(500)
+            .execute()
+            .value
+    }
+
+    func fetchPredictiveAlerts(onlyActive: Bool = true) async throws -> [DBPredictiveAlert] {
+        var query = client.from("predictive_alerts").select()
+        if onlyActive { query = query.is("resolved_at", value: nil) }
+        return try await query
+            .order("created_at", ascending: false)
+            .limit(50)
+            .execute()
+            .value
+    }
+
+    func fetchVehicleHealthScores() async throws -> [DBVehicleHealthScore] {
+        return try await client.from("vehicle_health_scores")
+            .select()
+            .order("health_score", ascending: true)   // worst first
+            .execute()
+            .value
+    }
+
+    func saveVehicleHealthScore(_ score: DBVehicleHealthScore) async throws {
+        try await client.from("vehicle_health_scores")
+            .upsert(score, onConflict: "vehicle_id")
+            .execute()
+    }
+
+    func fetchLatestAIReport() async throws -> AIAnalyticsReport? {
+        let reports: [AIAnalyticsReport] = try await client.from("ai_analytics_reports")
+            .select()
+            .order("generated_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return reports.first
+    }
 }
+

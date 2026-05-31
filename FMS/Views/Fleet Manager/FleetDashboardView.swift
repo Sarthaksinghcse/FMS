@@ -22,6 +22,7 @@ struct FleetDashboardView: View {
     @State private var showProfile  = false
     @State private var showChat     = false
     @State private var showTracking = false
+    @State private var showingFuelInsights = false
     @State private var realtimeChannel: RealtimeChannelV2? = nil
 
     // Compute the full activity list once per body eval
@@ -50,6 +51,15 @@ struct FleetDashboardView: View {
         return name.components(separatedBy: " ").first ?? name
     }
 
+    private var managerInitials: String {
+        guard let name = SupabaseManager.shared.currentUser?.name, !name.isEmpty else { return "FM" }
+        let components = name.components(separatedBy: " ")
+        let first = components.first?.first.map(String.init) ?? ""
+        let last = components.count > 1 ? components.last?.first.map(String.init) ?? "" : ""
+        let combined = first + last
+        return combined.isEmpty ? "M" : combined.uppercased()
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -59,8 +69,8 @@ struct FleetDashboardView: View {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
-                        HStack(alignment: .center, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(viewModel.getGreetingTime() + ",")
                                     .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(.secondary)
@@ -106,16 +116,25 @@ struct FleetDashboardView: View {
                                                     .resizable()
                                                     .scaledToFill()
                                             } placeholder: {
-                                                Image(systemName: "person.crop.circle.fill")
-                                                    .font(.system(size: 32))
-                                                    .foregroundColor(AppTheme.Brand.primary)
+                                                ProgressView()
                                             }
-                                            .frame(width: 32, height: 32)
+                                            .frame(width: 40, height: 40)
                                             .clipShape(Circle())
                                         } else {
-                                            Image(systemName: "person.crop.circle.fill")
-                                                .font(.system(size: 32))
-                                                .foregroundColor(AppTheme.Brand.primary)
+                                            ZStack {
+                                                Circle()
+                                                    .fill(
+                                                        LinearGradient(
+                                                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                                    .frame(width: 40, height: 40)
+                                                Text(managerInitials)
+                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                    .foregroundColor(.white)
+                                            }
                                         }
                                     }
                                 }
@@ -123,7 +142,7 @@ struct FleetDashboardView: View {
                             }
                         }
                         .padding(.horizontal, 16)
-                        .padding(.top, 16)
+                        .padding(.top, 24)
 
                         Text("Overview")
                             .font(.system(size: 18, weight: .bold))
@@ -150,38 +169,49 @@ struct FleetDashboardView: View {
                         .padding(.horizontal, 16)
 
                         // ── Quick Actions ─────────────────────────
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("Quick Actions")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 16)
 
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                    ForEach(viewModel.quickActions) { action in
-                                        DashboardQuickActionCard(action: action) {
-                                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                            switch action.label {
-                                            case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
-                                            case "Alerts":         viewModel.activeQuickAction = .alerts
-                                            case "Maintenance":    viewModel.activeQuickAction = .maintenance
-                                            case "Tracking":       showTracking = true
-                                            case "Chat":           showChat = true
-                                            default: break
-                                            }
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.flexible(), spacing: 10),
+                                    GridItem(.flexible(), spacing: 10),
+                                    GridItem(.flexible(), spacing: 10),
+                                    GridItem(.flexible(), spacing: 10)
+                                ],
+                                spacing: 10
+                            ) {
+                                ForEach(viewModel.quickActions) { action in
+                                    FleetGridQuickActionButton(
+                                        icon: action.icon,
+                                        label: action.label
+                                    ) {
+                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                        switch action.label {
+                                        case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
+                                        case "Alerts":         viewModel.activeQuickAction = .alerts
+                                        case "Maintenance":    viewModel.activeQuickAction = .maintenance
+                                        case "Tracking":       showTracking = true
+                                        case "Chat":           showChat = true
+                                        default: break
                                         }
-                                        .frame(width: 80)
                                     }
                                 }
-                                .padding(.horizontal, 16)
                             }
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
                         }
 
 
 
                         // ── Compliance & Renewal Alerts ───────────
                         complianceAlertsSummary
+                        
+                        // ── Fuel Insights Summary ─────────────────
+                        fuelInsightsSummary
 
                         // ── Recent Activity ───────────────────────
                         VStack(alignment: .leading, spacing: 14) {
@@ -267,6 +297,8 @@ struct FleetDashboardView: View {
                     }
                 }
                 .scrollIndicators(.hidden)
+                .safeAreaPadding(.top)
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
                 .refreshable {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -346,6 +378,63 @@ struct FleetDashboardView: View {
 //        }
 //        return String(vm.driverName.prefix(2)).uppercased()
 //    }
+
+    // MARK: - Fuel Insights Summary Card
+
+    private var fuelInsightsSummary: some View {
+        Button {
+            showingFuelInsights = true
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.green.opacity(0.1))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "fuelpump.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.green)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Fuel Insights & Optimization")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
+
+                        Text("Uncover cost savings and consumption anomalies")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.purple)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                }
+            }
+            .padding(14)
+            .background(AppTheme.Background.card)
+            .cornerRadius(AppTheme.Radius.card)
+            .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                    .stroke(AppTheme.Glass.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .sheet(isPresented: $showingFuelInsights) {
+            NavigationStack {
+                FuelOptimizationView()
+            }
+        }
+    }
 
     // MARK: - Compliance Summary Card
 
@@ -529,6 +618,38 @@ struct FleetCircularProgressView: View {
                 .foregroundColor(AppTheme.Brand.primary)
         }
         .frame(width: 52, height: 52)
+    }
+}
+
+// MARK: - FleetGridQuickActionButton
+struct FleetGridQuickActionButton: View {
+    let icon: String
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(AppTheme.Brand.primary.opacity(0.08))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: icon)
+                        .font(.system(size: 20))
+                        .foregroundColor(AppTheme.Brand.royalBlue)
+                }
+                
+                Text(label)
+                    .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.75)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(AppTheme.Text.primary)
+                    .frame(height: 28, alignment: .top)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
