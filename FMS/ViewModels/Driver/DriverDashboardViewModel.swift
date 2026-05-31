@@ -218,9 +218,6 @@ final class DriverDashboardViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init() { 
-        if SupabaseManager.shared.currentUser == nil {
-            seedMock()
-        }
         setupAuthListener()
         startAutoRefresh()
     }
@@ -359,81 +356,12 @@ final class DriverDashboardViewModel: ObservableObject {
                     )
                 }.sorted(by: { $0.completedAt > $1.completedAt })
             } catch {
-                print("Failed to fetch live driver data, using local fallback/mock: \(error.localizedDescription)")
-                do {
-                    let trips    = try await db.fetchTrips()
-                    let vehicles = try await db.fetchVehicles()
-                    let mine = trips.filter { $0.driverId == uid }
-                    currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
-                    if let current = currentTrip {
-                        activeTrip = current
-                    } else if let prevActive = activeTrip {
-                        let stillExists = mine.contains { $0.id == prevActive.id && ($0.status == .assigned || $0.status == .started) }
-                        if !stillExists {
-                            activeTrip = nil
-                        }
-                    }
-                    upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
-                    isTripActive  = currentTrip != nil
-                    updateLocalDriverStatusState()
-                    let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
-                    assignedVehicle = vehicles.first(where: { $0.id == vid })
-                    allVehicles = vehicles
-                    
-                    
-                    let completed = mine.filter { $0.status == .completed }
-                    self.completedTrips = completed.map { trip in
-                        let elapsed = Int(trip.endTime?.timeIntervalSince(trip.startTime ?? Date()) ?? 0)
-                        return CompletedTripRecord(
-                            id: trip.id,
-                            trip: trip,
-                            completedAt: trip.endTime ?? trip.createdAt,
-                            elapsedSeconds: elapsed > 0 ? elapsed : 0,
-                            distanceKm: trip.distance,
-                            inspectionPassed: true,
-                            issuesFound: 0,
-                            inspectionRemarks: "System logged"
-                        )
-                    }.sorted(by: { $0.completedAt > $1.completedAt })
-                } catch {
-                    
-                }
+                print("Failed to fetch live driver data: \(error.localizedDescription)")
             }
         }
 
-        
-        if SupabaseManager.shared.currentUser == nil && upcomingTrips.isEmpty && currentTrip == nil {
-            upcomingTrips = [
-                DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!,
-                       vehicleId: assignedVehicle?.id ?? UUID(),
-                       driverId: uid,
-                       source: "San Francisco Dock C",
-                       destination: "Los Angeles Warehouse 4",
-                       startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
-                       endTime:   Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                       distance: 612.0, status: .assigned, notes: "Dry Van Food Grd", createdAt: .now)
-            ]
-        }
-        
-        
         await loadMessages()
         await loadNotifications()
-        
-        if assignedVehicle == nil {
-            assignedVehicle = DBVehicle(
-                id: UUID(),
-                vehicleNumber: "TN-07-AB-1234",
-                model: "Swift Dzire",
-                manufacturer: "Maruti Suzuki",
-                year: 2023,
-                vin: "FMSMOCKVIN000101",
-                licensePlate: "TN-07-AB-1234",
-                status: .inUse,
-                assignedDriverId: uid,
-                lastServiceDate: nil,
-                createdAt: .now
-            )
-        }
     }
 
     

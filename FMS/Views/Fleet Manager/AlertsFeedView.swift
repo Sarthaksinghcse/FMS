@@ -244,6 +244,19 @@ struct AlertsFeedView: View {
                     }
                 }
             }
+            .navigationTitle("Alerts")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Close")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.red)
+                    }
+                }
+            }
             .sheet(item: $selectedDefectForAssignment) { defect in
                 AssignTechnicianSheet(defect: defect, users: users, viewModel: viewModel, context: modelContext, defectReports: defectReports)
             }
