@@ -479,10 +479,10 @@ struct VoiceLogSheet: View {
                         Button(action: toggleRec) {
                             ZStack {
                                 Circle()
-                                    .fill(voiceLogger.isRecording ? Color.red.gradient : Color.fmsIndigo.gradient)
+                                    .fill(voiceLogger.isRecording ? AppTheme.Brand.accent.gradient : Color.fmsIndigo.gradient)
                                     .frame(width: 88, height: 88)
                                     .shadow(
-                                        color: voiceLogger.isRecording ? Color.red.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
+                                        color: voiceLogger.isRecording ? AppTheme.Brand.accent.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
                                         radius: 20, y: 6
                                     )
                                 Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
@@ -501,7 +501,7 @@ struct VoiceLogSheet: View {
                             : "Tap to Record"
                         )
                         .font(.system(size: 30, weight: .bold, design: .monospaced))
-                        .foregroundStyle(voiceLogger.isRecording ? Color.red : Color.fmsIndigo)
+                        .foregroundStyle(voiceLogger.isRecording ? AppTheme.Brand.accent : Color.fmsIndigo)
                         .contentTransition(.numericText())
 
                         Text(
@@ -518,7 +518,7 @@ struct VoiceLogSheet: View {
                     if let err = voiceLogger.errorMessage {
                         Text(err)
                             .font(.system(size: 13))
-                            .foregroundStyle(Color.red)
+                            .foregroundStyle(AppTheme.Status.danger)
                             .padding(.horizontal, 40)
                             .multilineTextAlignment(.center)
                     }
@@ -762,11 +762,11 @@ struct RaiseQuerySheet: View {
                     VStack(spacing: 10) {
                         ZStack {
                             Circle()
-                                .fill(Color.orange.opacity(0.12))
+                                .fill(AppTheme.Brand.accent.opacity(0.12))
                                 .frame(width: 72, height: 72)
                             Image(systemName: "questionmark.bubble.fill")
                                 .font(.system(size: 32))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(AppTheme.Brand.accent)
                         }
                         Text("Raise a Query")
                             .font(.system(size: 18, weight: .bold))
@@ -779,7 +779,7 @@ struct RaiseQuerySheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
-                    .background(Color.orange.opacity(0.06))
+                    .background(AppTheme.Brand.accent.opacity(0.06))
                     .clipShape(RoundedRectangle(cornerRadius: 18))
 
                     // Reason picker
@@ -801,7 +801,7 @@ struct RaiseQuerySheet: View {
                                     HStack(spacing: 14) {
                                         Image(systemName: selectedReason == idx
                                               ? "checkmark.circle.fill" : "circle")
-                                            .foregroundStyle(selectedReason == idx ? Color.orange : .secondary)
+                                            .foregroundStyle(selectedReason == idx ? AppTheme.Brand.accent : .secondary)
                                             .font(.system(size: 18))
                                         Text(reason)
                                             .font(.system(size: 14))
@@ -855,9 +855,9 @@ struct RaiseQuerySheet: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(submitted ? AppTheme.Status.success.gradient : Color.orange.gradient)
+                        .background(submitted ? AppTheme.Status.success.gradient : AppTheme.Brand.accent.gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: Color.orange.opacity(0.28), radius: 10, y: 4)
+                        .shadow(color: AppTheme.Brand.accent.opacity(0.28), radius: 10, y: 4)
                         .animation(.spring(response: 0.35), value: submitted)
                     }
                     .disabled(submitted)
@@ -1626,7 +1626,7 @@ struct ChatSheet: View {
                             .font(.system(size: 18))
                             .foregroundColor(Color.white)
                             .padding(10)
-                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : AppTheme.Brand.primary)
+                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
                             .clipShape(Circle())
                     }
                     .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -1722,7 +1722,7 @@ struct ChatHubSheet: View {
                                         .font(.system(size: 10, weight: .semibold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 8).padding(.vertical, 3)
-                                        .background(Color(UIColor.systemGray3))
+                                        .background(AppTheme.Brand.primary.opacity(0.15))
                                         .clipShape(Capsule())
                                 }
                             }
@@ -1905,7 +1905,7 @@ struct RecordingRing: View {
     
     var body: some View {
         Circle()
-            .stroke(isRecording ? Color.red.opacity(0.12) : Color.clear, lineWidth: 1.5)
+            .stroke(isRecording ? Theme.darkOrange.opacity(0.12) : Color.clear, lineWidth: 1.5)
             .frame(width: CGFloat(100 + index * 36), height: CGFloat(100 + index * 36))
             .scaleEffect(isRecording ? 1.0 : 0.85)
             .animation(

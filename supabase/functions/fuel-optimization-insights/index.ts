@@ -94,16 +94,16 @@ Return JSON:
       .select()
       .single();
 
-    const responsePayload = saved ? {
-      id: saved.id,
-      insightsText: saved.insights_text,
-      highConsumers: saved.high_consumers,
-      estimatedSavings: saved.estimated_savings,
-      generatedAt: saved.generated_at
-    } : {
-      insightsText: insight.insights,
-      highConsumers: insight.vehicles,
-      estimatedSavings: insight.estimatedSavings
+    const responsePayload = {
+      id: saved?.id,
+      insights_text: saved?.insights_text ?? insight.insights,
+      high_consumers: (saved?.high_consumers ?? insight.vehicles).map((v: any) => ({
+        vehicle_id: v.vehicleId ?? v.vehicle_id,
+        issue: v.issue,
+        recommendation: v.recommendation
+      })),
+      estimated_savings: saved?.estimated_savings ?? insight.estimatedSavings,
+      generated_at: saved?.generated_at
     };
 
     return new Response(JSON.stringify(responsePayload), {

@@ -227,7 +227,7 @@ struct FleetManagerChatListView: View {
                 
                 // Status dot indicator
                 Circle()
-                    .fill(user.isActive ? Color.green : Color.gray)
+                    .fill(user.isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
                     .frame(width: 12, height: 12)
                     .overlay(Circle().stroke(Color.white, lineWidth: 2))
                     .offset(x: 2, y: 2)
@@ -290,9 +290,9 @@ struct FleetManagerChatListView: View {
         case .driver:
             return AppTheme.Brand.royalBlue
         case .maintenance:
-            return Color(red: 236/255, green: 110/255, blue: 37/255) // Orange/Amber
+            return AppTheme.Brand.accent
         case .fleetManager:
-            return .purple
+            return AppTheme.Brand.primaryDeep
         }
     }
     
@@ -358,11 +358,11 @@ struct FleetManagerBroadcastSheet: View {
                 VStack(spacing: 8) {
                     ZStack {
                         Circle()
-                            .fill(Color.orange.opacity(0.12))
+                            .fill(AppTheme.Brand.accent.opacity(0.12))
                             .frame(width: 64, height: 64)
                         Image(systemName: "megaphone.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(AppTheme.Brand.accent)
                     }
                     Text("Broadcast Message")
                         .font(.system(size: 20, weight: .bold))
@@ -386,7 +386,7 @@ struct FleetManagerBroadcastSheet: View {
                 if let err = errorMsg {
                     Text(err)
                         .font(.system(size: 13))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(AppTheme.Status.danger)
                         .padding(.horizontal, 20)
                 }
 

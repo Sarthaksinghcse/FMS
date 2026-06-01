@@ -48,14 +48,14 @@ struct DashboardView: View {
                                 .font(.headline)
                             Text(user.email)
                                 .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .foregroundColor(AppTheme.Text.secondary)
                             Text("Role: \(user.role.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)")
                                 .font(.caption)
                                 .bold()
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.1))
-                                .foregroundColor(.blue)
+                                .background(AppTheme.Brand.primary.opacity(0.1))
+                                .foregroundColor(AppTheme.Brand.primary)
                                 .cornerRadius(4)
                         }
                         .padding(.vertical, 4)
@@ -71,7 +71,7 @@ struct DashboardView: View {
                         }
                     } else if let error = errorMessage {
                         Text(error)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppTheme.Status.danger)
                     } else if vehicles.isEmpty {
                         Text("No vehicles found in database.")
                             .foregroundColor(.secondary)
@@ -88,7 +88,7 @@ struct DashboardView: View {
                                     Text(vehicle.status.rawValue.uppercased())
                                         .font(.caption)
                                         .bold()
-                                        .foregroundColor(vehicle.status == .available ? .green : .orange)
+                                        .foregroundColor(vehicle.status == .available ? AppTheme.Status.success : AppTheme.Status.warning)
                                 }
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -198,7 +198,7 @@ struct DriverPlaceholderView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 40)
                         .padding(.vertical, 16)
-                        .background(Color.red.opacity(0.75))
+                        .background(AppTheme.Brand.accent.opacity(0.75))
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                     .padding(.bottom, 48)
