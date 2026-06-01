@@ -9,34 +9,37 @@ struct DashboardStatCard: View {
     let stat: DashboardStat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
+                Circle()
                     .fill(stat.iconBgColor)
-                    .frame(width: 40, height: 40)
-                
+                    .frame(width: 36, height: 36)
                 Image(systemName: stat.icon)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(stat.iconColor)
             }
             
-            Spacer()
-                .frame(height: 2)
-            
-            Text(stat.value)
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundColor(AppTheme.Text.primary)
-            
-            Text(stat.label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(AppTheme.Text.secondary)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(stat.value)
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
+                
+                Text(stat.label)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(AppTheme.Background.card)
         .cornerRadius(AppTheme.Radius.card)
-        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
+        .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                .stroke(Color.black.opacity(0.05), lineWidth: 0.8)
+        )
     }
 }
 
