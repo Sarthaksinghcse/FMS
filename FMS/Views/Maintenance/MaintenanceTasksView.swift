@@ -331,7 +331,7 @@ struct MaintenanceTaskDetailView: View {
                                         .foregroundColor(.white)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(repairNotes.isEmpty ? Color.gray.opacity(0.5) : AppTheme.Status.success)
+                                        .background(repairNotes.isEmpty ? AppTheme.Status.success.opacity(0.3) : AppTheme.Status.success)
                                         .cornerRadius(10)
                                     }
                                     .disabled(repairNotes.isEmpty || isSubmitting)
@@ -461,7 +461,7 @@ private struct DetailHeroCard: View {
         case .completed: return [AppTheme.Status.success.opacity(0.08), Color.clear]
         case .inProgress: return [AppTheme.Brand.primary.opacity(0.08), Color.clear]
         case .open: return [AppTheme.Brand.amber.opacity(0.08), Color.clear]
-        case .cancelled: return [Color.gray.opacity(0.08), Color.clear]
+        case .cancelled: return [AppTheme.Brand.primary.opacity(0.08), Color.clear]
         }
     }
 

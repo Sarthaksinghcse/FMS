@@ -49,7 +49,7 @@ struct AddMaintenanceFormView: View {
                                             text: $password, focus: $focusedField, tag: .password)
                         }
 
-                        formSection(title: "Status", icon: "circle.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
+                        formSection(title: "Status", icon: "circle.fill", iconColor: Theme.royalBlue) {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
@@ -67,7 +67,7 @@ struct AddMaintenanceFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.darkOrange)
                         .disabled(isSaving)
                 }
             }
@@ -107,7 +107,7 @@ struct AddMaintenanceFormView: View {
             .frame(height: 54)
             .background(
                 LinearGradient(
-                    colors: [AppTheme.Brand.accent, Color(red: 0.85, green: 0.35, blue: 0.25)],
+                    colors: [AppTheme.Brand.accent, AppTheme.Brand.accent.opacity(0.7)],
                     startPoint: .leading, endPoint: .trailing
                 )
             )
@@ -280,7 +280,7 @@ struct EditMaintenanceFormView: View {
                                          text: $phoneNumber, keyboardType: .phonePad, focus: $focusedField, tag: .phoneNumber)
                         }
 
-                        formSection(title: "Status", icon: "circle.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
+                        formSection(title: "Status", icon: "circle.fill", iconColor: Theme.royalBlue) {
                             StatusToggleRow(label: "Active Status", isOn: $isActive)
                         }
 
@@ -301,7 +301,7 @@ struct EditMaintenanceFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.darkOrange)
                         .disabled(isSaving || isDeleting)
                 }
             }
@@ -373,7 +373,7 @@ struct EditMaintenanceFormView: View {
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
             .background(LinearGradient(
-                colors: [AppTheme.Brand.accent, Color(red: 0.85, green: 0.35, blue: 0.25)],
+                colors: [AppTheme.Brand.accent, AppTheme.Brand.accent.opacity(0.7)],
                 startPoint: .leading, endPoint: .trailing
             ))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -389,18 +389,18 @@ struct EditMaintenanceFormView: View {
             HStack(spacing: 8) {
                 if isDeleting {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                        .progressViewStyle(CircularProgressViewStyle(tint: Theme.darkOrange))
                 } else {
                     Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
                 }
                 Text(isDeleting ? "Deleting..." : "Delete Staff Member").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
+            .foregroundColor(Theme.darkOrange)
             .frame(maxWidth: .infinity).frame(height: 50)
-            .background(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.08))
+            .background(Theme.darkOrange.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
+                .stroke(Theme.darkOrange.opacity(0.25), lineWidth: 1))
         }
         .disabled(isSaving || isDeleting)
     }

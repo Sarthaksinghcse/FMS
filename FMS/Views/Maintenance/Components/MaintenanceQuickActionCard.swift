@@ -18,22 +18,22 @@ enum QuickActionTheme {
         switch self {
         case .purple:
             return LinearGradient(
-                colors: [Color(red: 0.91, green: 0.88, blue: 0.98), Color(red: 0.96, green: 0.94, blue: 0.99)],
+                colors: [Theme.royalBlue.opacity(0.12), Theme.royalBlue.opacity(0.04)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         case .peach:
             return LinearGradient(
-                colors: [Color(red: 1.00, green: 0.89, blue: 0.87), Color(red: 1.00, green: 0.94, blue: 0.93)],
+                colors: [Theme.darkOrange.opacity(0.12), Theme.darkOrange.opacity(0.04)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         case .orange:
             return LinearGradient(
-                colors: [Color(red: 1.00, green: 0.91, blue: 0.82), Color(red: 1.00, green: 0.96, blue: 0.90)],
+                colors: [Theme.darkOrange.opacity(0.20), Theme.darkOrange.opacity(0.08)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         case .green:
             return LinearGradient(
-                colors: [Color(red: 0.87, green: 0.95, blue: 0.90), Color(red: 0.94, green: 0.98, blue: 0.96)],
+                colors: [Theme.royalBlue.opacity(0.22), Theme.royalBlue.opacity(0.08)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         }
@@ -41,10 +41,10 @@ enum QuickActionTheme {
 
     var accentColor: Color {
         switch self {
-        case .purple: return Color(red: 0.47, green: 0.31, blue: 0.85)
-        case .peach:  return Color(red: 0.90, green: 0.35, blue: 0.35)
-        case .orange: return Color(red: 0.88, green: 0.45, blue: 0.05)
-        case .green:  return Color(red: 0.15, green: 0.60, blue: 0.35)
+        case .purple: return Theme.royalBlue
+        case .peach:  return Theme.darkOrange
+        case .orange: return Theme.darkOrange
+        case .green:  return Theme.royalBlue
         }
     }
 }
@@ -82,7 +82,7 @@ struct QuickActionCard: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
-                        .background(Color.red.opacity(0.85))
+                        .background(AppTheme.Status.danger)
                         .clipShape(Capsule())
                 }
             }

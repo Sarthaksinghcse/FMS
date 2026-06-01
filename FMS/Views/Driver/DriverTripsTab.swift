@@ -402,7 +402,7 @@ struct TripDetailSheet: View {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(alignment: .top, spacing: 10) {
                                 Circle()
-                                    .fill(Color(UIColor.systemGray3))
+                                    .fill(Color.fmsIndigo.opacity(0.4))
                                     .frame(width: 8, height: 8)
                                     .padding(.top, 4)
                                 Text(record.trip.source)
@@ -636,12 +636,12 @@ private struct ActiveTripCell: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(.red)
+                            .fill(Color.fmsIndigo)
                             .frame(width: 6, height: 6)
-                            .shadow(color: .red.opacity(0.5), radius: 3)
+                            .shadow(color: Color.fmsIndigo.opacity(0.5), radius: 3)
                         Text("In Progress")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.fmsIndigo)
                     }
                     Text(vm.elapsedFormatted)
                         .font(.system(size: 40, weight: .bold, design: .monospaced))
@@ -652,9 +652,9 @@ private struct ActiveTripCell: View {
                 
                 Label(String(format: "%.0f%%", vm.fuelLevel * 100), systemImage: "fuelpump.fill")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(vm.fuelLevel < 0.25 ? .red : Color.fmsIndigo)
+                    .foregroundStyle(vm.fuelLevel < 0.25 ? AppTheme.Status.danger : Color.fmsIndigo)
                     .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background((vm.fuelLevel < 0.25 ? Color.red : Color.fmsIndigo).opacity(0.08))
+                    .background((vm.fuelLevel < 0.25 ? AppTheme.Status.danger : Color.fmsIndigo).opacity(0.08))
                     .clipShape(Capsule())
             }
 
@@ -712,7 +712,7 @@ private struct TripRow: View {
         switch trip.status {
         case .assigned:  return Color.fmsIndigo
         case .started:   return AppTheme.Status.success
-        case .completed: return Color(UIColor.systemGray)
+        case .completed: return Color.fmsIndigo
         case .cancelled: return AppTheme.Status.danger
         }
     }
@@ -874,7 +874,7 @@ private struct TripActionButton: View {
         case .primary:     return AnyShapeStyle(Color.fmsIndigo.gradient)
         case .glass:       return AnyShapeStyle(Color.fmsIndigo.opacity(0.08))
         case .warning:     return AnyShapeStyle(AppTheme.Brand.accent.opacity(0.10))
-        case .destructive: return AnyShapeStyle(Color.red.gradient)
+        case .destructive: return AnyShapeStyle(AppTheme.Status.danger.gradient)
         }
     }
 }
@@ -921,14 +921,14 @@ struct TripNavigationView: View {
                         Annotation("Driver", coordinate: loc) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.blue.opacity(0.3))
+                                    .fill(Color.fmsIndigo.opacity(0.3))
                                     .frame(width: 44, height: 44)
                                 Circle()
                                     .fill(.white)
                                     .frame(width: 22, height: 22)
                                     .shadow(radius: 3)
                                 Circle()
-                                    .fill(Color.blue)
+                                    .fill(Color.fmsIndigo)
                                     .frame(width: 14, height: 14)
                             }
                         }
@@ -940,7 +940,7 @@ struct TripNavigationView: View {
                     ForEach(nav.alternateRoutes, id: \.name) { alt in
                         MapPolyline(alt.polyline)
                             .stroke(
-                                Color.gray.opacity(0.35),
+                                Color.fmsIndigo.opacity(0.25),
                                 style: StrokeStyle(lineWidth: 4, lineCap: .round,
                                                    lineJoin: .round, dash: [8, 6])
                             )
@@ -1236,7 +1236,7 @@ struct TripNavigationView: View {
                 .background(
                     preTripPassed
                         ? AnyShapeStyle(Color.fmsIndigo.gradient)
-                        : AnyShapeStyle(Color(UIColor.systemGray3).gradient)
+                        : AnyShapeStyle(Color.fmsIndigo.opacity(0.3).gradient)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
@@ -1367,7 +1367,7 @@ struct MapActionButton: View {
         case .primary:     return Color.fmsIndigo
         case .glass:       return Color.fmsIndigo
         case .warning:     return AppTheme.Brand.accent
-        case .destructive: return .red
+        case .destructive: return AppTheme.Status.danger
         }
     }
 

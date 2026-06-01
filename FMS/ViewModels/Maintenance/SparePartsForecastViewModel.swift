@@ -15,9 +15,9 @@ struct PartForecast: Codable, Identifiable {
 
     var urgencyColor: Color {
         switch urgency {
-        case "high":   return .red
-        case "medium": return .orange
-        default:       return .green
+        case "high":   return AppTheme.Status.danger
+        case "medium": return AppTheme.Status.warning
+        default:       return AppTheme.Status.success
         }
     }
 }

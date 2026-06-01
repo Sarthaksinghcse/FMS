@@ -46,10 +46,10 @@ enum VehicleType: String, Codable, CaseIterable {
     }
     var iconColor: Color {
         switch self {
-        case .truck: return AppTheme.Brand.royalBlue
-        case .van:   return Color(red: 0.58, green: 0.39, blue: 0.87)
-        case .car:   return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .bike:  return AppTheme.Brand.accent
+        case .truck: return Theme.royalBlue
+        case .van:   return Theme.royalBlue.opacity(0.70)
+        case .car:   return Theme.royalBlue.opacity(0.85)
+        case .bike:  return Theme.darkOrange
         }
     }
 }
@@ -95,9 +95,9 @@ enum VehicleStatus: String, Codable {
     }
     var statusColor: Color {
         switch self {
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .active:        return Theme.royalBlue
+        case .inactive:      return Theme.darkOrange
+        case .inMaintenance: return Theme.darkOrange.opacity(0.80)
         }
     }
     var statusIcon: String {
@@ -128,11 +128,11 @@ enum TripStatus: String, Codable {
     }
     var badgeColor: Color {
         switch self {
-        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90) 
-        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46) 
-        case .inProgress: return Color(red: 0.30, green: 0.70, blue: 0.46) 
-        case .completed:  return Color(red: 0.55, green: 0.58, blue: 0.62) 
-        case .cancelled:  return Color(red: 0.85, green: 0.25, blue: 0.25) 
+        case .assigned:   return Theme.royalBlue.opacity(0.60)
+        case .started:    return Theme.royalBlue.opacity(0.85)
+        case .inProgress: return Theme.royalBlue
+        case .completed:  return Theme.royalBlue.opacity(0.75)
+        case .cancelled:  return Theme.darkOrange
         }
     }
     var badgeIcon: String {
@@ -230,9 +230,9 @@ enum ComplianceAlertType: String, Codable, CaseIterable {
 
     var color: Color {
         switch self {
-        case .insurance: return Color(red: 0.15, green: 0.38, blue: 0.90)
-        case .permit:    return Color(red: 0.58, green: 0.39, blue: 0.87)
-        case .servicing: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        case .insurance: return Theme.royalBlue
+        case .permit:    return Theme.royalBlue.opacity(0.70)
+        case .servicing: return Theme.darkOrange
         }
     }
 }
@@ -253,9 +253,9 @@ enum ComplianceAlertStatus: String, Codable {
 
     var color: Color {
         switch self {
-        case .upcoming: return Color(red: 0.90, green: 0.65, blue: 0.15)
-        case .overdue:  return Color(red: 0.85, green: 0.25, blue: 0.25)
-        case .resolved: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        case .upcoming: return Theme.darkOrange.opacity(0.70)
+        case .overdue:  return Theme.darkOrange
+        case .resolved: return Theme.royalBlue
         }
     }
 }
@@ -283,10 +283,10 @@ enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     }
     var chipColor: Color {
         switch self {
-        case .all:           return AppTheme.Brand.accent
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .all:           return Theme.darkOrange
+        case .active:        return Theme.royalBlue
+        case .inactive:      return Theme.darkOrange.opacity(0.80)
+        case .inMaintenance: return Theme.darkOrange
         }
     }
 }

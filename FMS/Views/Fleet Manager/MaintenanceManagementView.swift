@@ -99,8 +99,8 @@ struct MaintenanceManagementView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
-                            .foregroundColor(sortByAIPriority ? .white : .purple)
-                            .background(sortByAIPriority ? Color.purple : Color.purple.opacity(0.1))
+                            .foregroundColor(sortByAIPriority ? .white : Theme.darkOrange)
+                            .background(sortByAIPriority ? Theme.darkOrange : Theme.darkOrange.opacity(0.1))
                             .cornerRadius(10)
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -256,10 +256,10 @@ struct MaintenanceManagementView: View {
                     Text(String(format: "AI Score: %.0f", score))
                         .font(.system(size: 9, weight: .bold, design: .rounded))
                 }
-                .foregroundColor(.purple)
+                .foregroundColor(Theme.darkOrange)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color.purple.opacity(0.1))
+                .background(Theme.darkOrange.opacity(0.1))
                 .cornerRadius(6)
                 
                 Spacer()

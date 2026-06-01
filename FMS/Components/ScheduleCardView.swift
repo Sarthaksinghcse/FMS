@@ -57,11 +57,11 @@ struct ScheduleCardView: View {
     private var statusColor: Color {
         switch model.status {
         case "Completed":
-            return Color(red: 39/255, green: 174/255, blue: 96/255)
+            return Theme.royalBlue
         case "In Progress":
-            return Color(red: 236/255, green: 110/255, blue: 37/255)
+            return Theme.darkOrange
         default:
-            return AppTheme.Brand.royalBlue
+            return Theme.royalBlue
         }
     }
     

@@ -383,6 +383,7 @@ final class DriverDashboardViewModel: ObservableObject {
             LocationService.shared.startTracking(vehicleId: dbTrip.vehicleId)
             Task {
                 try? await SupabaseManager.shared.updateTrip(dbTrip)
+                await updateDriverActiveStatus(isActive: true)
             }
         }
         
@@ -438,6 +439,7 @@ final class DriverDashboardViewModel: ObservableObject {
             showPostTripOnEnd = false
             tripElapsed = 0
         }
+        updateLocalDriverStatusState()
         
         if let id = endingId {
             upcomingTrips.removeAll { $0.id == id }
