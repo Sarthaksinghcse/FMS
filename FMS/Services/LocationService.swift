@@ -37,6 +37,8 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
         self.activeVehicleId = vehicleId
         self.isTrackingActive = true
         manager.startUpdatingLocation()
+        // Immediately fetch the current location so stationary vehicles are uploaded at the start of the trip
+        manager.requestLocation()
     }
     
     public func stopTracking() {

@@ -33,8 +33,8 @@ struct DashboardNavigationTests {
         let totalVehicles = stats.first(where: { $0.label == "Total Vehicles" })?.value
         assert(totalVehicles == "3", "Expected Total Vehicles to be 3, got \(String(describing: totalVehicles))")
         
-        let activeNow = stats.first(where: { $0.label == "Available Now" })?.value
-        assert(activeNow == "2", "Expected Available Now to be 2, got \(String(describing: activeNow))")
+        let activeNow = stats.first(where: { $0.label == "Ready Vehicles" })?.value
+        assert(activeNow == "2", "Expected Ready Vehicles to be 2, got \(String(describing: activeNow))")
         
         let driversOnline = stats.first(where: { $0.label == "Drivers Online" })?.value
         assert(driversOnline == "1", "Expected Drivers Online to be 1, got \(String(describing: driversOnline))")
@@ -46,7 +46,7 @@ struct DashboardNavigationTests {
         func destinationFor(label: String) -> DashboardNavigationDestination {
             switch label {
             case "Total Vehicles": return .totalVehicles
-            case "Available Now":  return .activeNow
+            case "Ready Vehicles":  return .activeNow
             case "Drivers Online": return .driversOnline
             case "Live Trips":     return .liveTrips
             default:               return .totalVehicles
@@ -54,7 +54,7 @@ struct DashboardNavigationTests {
         }
         
         assert(destinationFor(label: "Total Vehicles") == .totalVehicles)
-        assert(destinationFor(label: "Available Now") == .activeNow)
+        assert(destinationFor(label: "Ready Vehicles") == .activeNow)
         assert(destinationFor(label: "Drivers Online") == .driversOnline)
         assert(destinationFor(label: "Live Trips") == .liveTrips)
         

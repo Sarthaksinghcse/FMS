@@ -47,7 +47,8 @@ struct ComplianceAlertsView: View {
             }
         }
         .navigationTitle("Compliance & Renewals")
-        .navigationBarTitleDisplayMode(.large)
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .sheet(item: $selectedAlert) { item in
             ComplianceAlertDetailSheet(item: item) {
                 resolveFromDetail(item: item)
