@@ -64,6 +64,14 @@ struct PredictiveAlertDetailView: View {
         guard let vehicleId = activeAlert?.vehicleId else { return nil }
         return maintenanceRecords.filter { $0.vehicleId == vehicleId }.first
     }
+    
+    private func vehicle(for alert: DBPredictiveAlert) -> Vehicle? {
+        return vehicles.first(where: { $0.id == alert.vehicleId })
+    }
+    
+    private func isSelected(_ alert: DBPredictiveAlert) -> Bool {
+        return activeAlert?.id == alert.id
+    }
 
     var body: some View {
         ZStack {
@@ -94,8 +102,8 @@ struct PredictiveAlertDetailView: View {
                                     ForEach(alerts) { alert in
                                         PredictionSelectorCard(
                                             alert: alert,
-                                            vehicle: vehicles.first { $0.id == alert.vehicleId },
-                                            isSelected: activeAlert?.id == alert.id,
+                                            vehicle: vehicle(for: alert),
+                                            isSelected: isSelected(alert),
                                             action: {
                                                 selectedAlertId = alert.id
                                             }
@@ -253,7 +261,7 @@ struct PredictiveAlertDetailView: View {
                                         }
                                         
                                         if let lastInspection = vehicleInspections.first {
-                                            let typeText = lastInspection.checklist.isEmpty ? "Vehicle" : "Pre/Post-Trip"
+                                            let typeText = lastInspection.inspectionType == .preTrip ? "Pre-Trip" : "Post-Trip"
                                             let dateText = lastInspection.createdAt.formatted(date: .abbreviated, time: .shortened)
                                             Text("Last \(typeText) Checkup: \(dateText)")
                                                 .font(.system(size: 10, weight: .semibold))
