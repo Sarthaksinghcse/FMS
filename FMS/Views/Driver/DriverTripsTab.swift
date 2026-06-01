@@ -2,6 +2,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import AVFoundation
 
 
 
@@ -900,6 +901,9 @@ struct TripNavigationView: View {
     @State private var timeSavedMin      = 0
     @State private var rerouteDismissed  = false
 
+    // ── Drowsiness detection ────────────────────────────────────────────────
+    @StateObject private var drowsiness = DrowsinessDetector()
+
     // ── Computed ─────────────────────────────────────────────────────────────
     private var isActiveTrip: Bool { vm.isTripActive && vm.activeTrip?.id == trip.id }
 
@@ -977,6 +981,22 @@ struct TripNavigationView: View {
                     .padding(.horizontal, 16).padding(.vertical, 12)
                     .glassEffect(.regular, in: Capsule())
                     .padding(.bottom, 320)
+                }
+
+                // ── Drowsiness monitor HUD ───────────────────────────────────
+                if isActiveTrip {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            DrowsinessMonitorHUD(detector: drowsiness)
+                                .padding(.top, 64)
+                                .padding(.trailing, 16)
+                        }
+                        Spacer()
+                    }
+                    .ignoresSafeArea(edges: .top)
+                    .allowsHitTesting(true)
+                    .zIndex(20)
                 }
 
                 // ── Reroute banner ───────────────────────────────────────────
@@ -1089,7 +1109,6 @@ struct TripNavigationView: View {
         }
         .onAppear {
             if viewRouteOnly {
-                // View Route mode — skip inspection, just show the map
                 preTripPassed = true
             } else if !isActiveTrip {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
@@ -1097,7 +1116,27 @@ struct TripNavigationView: View {
                 }
             } else {
                 nav.beginNavigation()
+                drowsiness.start()
             }
+        }
+        .onDisappear {
+            nav.endNavigation()
+            drowsiness.stop()
+        }
+        .onChange(of: vm.isTripActive) { _, active in
+            if active && vm.activeTrip?.id == trip.id {
+                drowsiness.start()
+            } else {
+                drowsiness.stop()
+            }
+        }
+        // ── Full-screen Drowsiness Alarm ─────────────────────────────────────
+        .fullScreenCover(isPresented: Binding(
+            get: { drowsiness.state == .alarm },
+            set: { if !$0 { drowsiness.dismissAlarm() } }
+        )) {
+            DrowsinessAlarmView(detector: drowsiness)
+                .ignoresSafeArea()
         }
     }
 
