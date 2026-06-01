@@ -4,8 +4,7 @@ import MapKit
 struct FleetTrackingView: View {
     @State private var viewModel = FleetTrackingViewModel()
     @State private var selectedVehicle: MappedVehicle?
-    @Environment(\.dismiss) private var dismiss
-    
+    @Environment(\.dismiss)private var dismiss
     @State private var cameraPosition: MapCameraPosition = .automatic
     
     var body: some View {
@@ -76,7 +75,6 @@ struct FleetTrackingView: View {
         }
         .navigationTitle("Live Tracking")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {

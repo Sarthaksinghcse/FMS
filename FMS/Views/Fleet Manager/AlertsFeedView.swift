@@ -35,7 +35,8 @@ struct AlertsFeedView: View {
         users.first(where: { $0.id == id })?.fullName ?? "Unknown Driver"
     }
     
-    private func vehicleName(for id: UUID) -> String {
+    private func vehicleName(for id: UUID?) -> String {
+        guard let id = id else { return "No Assigned Vehicle" }
         if let vehicle = vehicles.first(where: { $0.id == id }) {
             return "\(vehicle.registrationNumber) (\(vehicle.make) \(vehicle.model))"
         }

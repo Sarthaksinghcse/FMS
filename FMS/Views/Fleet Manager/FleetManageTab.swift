@@ -1495,7 +1495,7 @@ struct TripListView: View {
                             trip: trip,
                             driverName: driverName(for: trip.driverId),
                             accentColor: trip.tripStatus.badgeColor,
-                            onEdit: {
+                            onEdit: (trip.tripStatus == .completed || trip.tripStatus == .cancelled) ? nil : {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 editingTrip = trip
                             }
@@ -1563,7 +1563,7 @@ struct TripCardView: View {
     let trip: Trip
     let driverName: String?
     let accentColor: Color
-    let onEdit: () -> Void
+    var onEdit: (() -> Void)? = nil
 
     private static let dateFmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "dd MMM yyyy · hh:mm a"; return f }()
     private static let timeFmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "hh:mm a"; return f }()
@@ -1590,11 +1590,13 @@ struct TripCardView: View {
                 }
                 Spacer()
                 tripStatusBadge
-                Button(action: onEdit) {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 26)).foregroundColor(.gray.opacity(0.35))
+                if let onEdit {
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 26)).foregroundColor(.gray.opacity(0.35))
+                    }
+                    .buttonStyle(ScaleButtonStyle())
                 }
-                .buttonStyle(ScaleButtonStyle())
             }
 
             

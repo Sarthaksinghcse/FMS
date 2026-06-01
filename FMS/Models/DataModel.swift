@@ -1251,7 +1251,7 @@ extension DBSOSAlert {
         SOSAlert(
             id: id,
             driverId: driverId,
-            vehicleId: vehicleId ?? UUID(),
+            vehicleId: vehicleId,
             tripId: tripId,
             latitude: latitude,
             longitude: longitude,
@@ -1756,7 +1756,7 @@ final class MaintenanceRecord {
 final class SOSAlert {
     @Attribute(.unique) var id: UUID
     var driverId: UUID
-    var vehicleId: UUID
+    var vehicleId: UUID?
     var tripId: UUID?
     var latitude: Double
     var longitude: Double
@@ -1767,7 +1767,7 @@ final class SOSAlert {
     init(
         id: UUID = UUID(),
         driverId: UUID,
-        vehicleId: UUID,
+        vehicleId: UUID? = nil,
         tripId: UUID? = nil,
         latitude: Double,
         longitude: Double,

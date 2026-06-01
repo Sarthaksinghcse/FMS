@@ -162,24 +162,6 @@ struct ScheduledTasksView: View {
                     }
                 }
             }
-            
-            Button(action: {
-                // Add Schedule action
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Add Schedule")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(AppTheme.Brand.primary)
-                .clipShape(Capsule())
-                .shadow(color: AppTheme.Brand.primary.opacity(0.4), radius: 8, x: 0, y: 4)
-            }
-            .padding(20)
         }
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
@@ -249,10 +231,15 @@ private struct ScheduledTaskCard: View {
 
             // Footer: Status + chevron
             HStack {
+                let isPending = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+                let displayLabel = isPending ? "Approval Pending" : order.status.displayLabel
+                let displayColor = isPending ? AppTheme.Brand.amber : order.status.color
+                let displayIcon = isPending ? "clock.fill" : "circle.fill"
+                
                 TaskStatusBadge(
-                    label: order.status.displayLabel,
-                    color: order.status.color,
-                    icon: "circle.fill"
+                    label: displayLabel,
+                    color: displayColor,
+                    icon: displayIcon
                 )
                 Spacer()
                 Image(systemName: "chevron.right")

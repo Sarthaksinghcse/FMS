@@ -1134,7 +1134,7 @@ final class SupabaseManager {
                 for rs in remoteSOS {
                     if let local = localSOS.first(where: { $0.id == rs.id }) {
                         local.driverId = rs.driverId
-                        local.vehicleId = rs.vehicleId ?? UUID()
+                        local.vehicleId = rs.vehicleId
                         local.tripId = rs.tripId
                         local.latitude = rs.latitude
                         local.longitude = rs.longitude
@@ -1262,6 +1262,40 @@ final class SupabaseManager {
             .execute()
             .value
         return reports.first
+    }
+    
+    // Fuel Logs
+    func createFuelLog(_ log: DBFuelLog) async throws {
+        try await client
+            .from("fuel_logs")
+            .insert(log)
+            .execute()
+    }
+    
+    func uploadReceiptImage(logId: UUID, imageData: Data) async throws -> String {
+        let path = "\(logId.uuidString).jpg"
+        
+        _ = try await client.storage
+            .from("receipts")
+            .upload(
+                path,
+                data: imageData,
+                options: FileOptions(contentType: "image/jpeg", upsert: true)
+            )
+        
+        let url = try client.storage
+            .from("receipts")
+            .getPublicURL(path: path)
+        
+        return url.absoluteString
+    }
+    
+    // Chat Broadcast
+    func sendBroadcastMessages(_ messages: [DBMessage]) async throws {
+        try await client
+            .from("messages")
+            .insert(messages)
+            .execute()
     }
 }
 
