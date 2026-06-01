@@ -47,7 +47,7 @@ struct MessageInputView: View {
                 Button(action: onSend) {
                     ZStack {
                         Circle()
-                            .fill(textMessage.isEmpty ? Color.gray.opacity(0.3) : AppTheme.Brand.primary)
+                            .fill(textMessage.isEmpty ? AppTheme.Brand.primary.opacity(0.15) : AppTheme.Brand.primary)
                             .frame(width: 34, height: 34)
                         
                         Image(systemName: "arrow.up")

@@ -279,7 +279,7 @@ struct AlertsFeedView: View {
                             Text("Predictive")
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                         }
-                        .foregroundColor(.purple)
+                        .foregroundColor(Theme.royalBlue)
                     }
                 }
 
@@ -289,7 +289,7 @@ struct AlertsFeedView: View {
                     } label: {
                         Text("Close")
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(.red)
+                            .foregroundColor(Theme.darkOrange)
                     }
                 }
             }
@@ -633,7 +633,7 @@ struct AlertFeedCard: View {
         .background(
             alert.type == .sos && alert.statusText == "Active"
                 ? LinearGradient(
-                    colors: [AppTheme.Status.danger.opacity(0.08), Color.red.opacity(0.02)],
+                    colors: [AppTheme.Status.danger.opacity(0.08), Theme.darkOrange.opacity(0.02)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                   )
@@ -819,7 +819,7 @@ struct AssignTechnicianSheet: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(selectedMechanicId != nil ? AppTheme.Brand.primary : Color.gray.opacity(0.5))
+                            .background(selectedMechanicId != nil ? AppTheme.Brand.primary : AppTheme.Brand.primary.opacity(0.3))
                             .cornerRadius(12)
                         }
                         .disabled(selectedMechanicId == nil || isSubmitting)

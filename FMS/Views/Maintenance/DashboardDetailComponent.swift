@@ -255,7 +255,7 @@ struct PriorityBadge: View {
 extension WorkOrderPriority {
     var detailColor: Color {
         switch self {
-        case .low:    return .gray
+        case .low:    return AppTheme.Brand.primary.opacity(0.5)
         case .medium: return AppTheme.Brand.primary
         case .high:   return AppTheme.Brand.amber
         case .urgent: return AppTheme.Status.danger

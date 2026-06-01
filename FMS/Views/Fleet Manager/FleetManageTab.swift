@@ -61,7 +61,7 @@ struct ManagementHubView: View {
                     CardMetric(label: "Total",   value: "\(vehicles.count)",
                                systemIcon: "car.fill",                       iconColor: AppTheme.Brand.royalBlue),
                     CardMetric(label: "Available", value: "\(vehicles.filter { $0.status == .active }.count)",
-                               systemIcon: "checkmark.circle.fill",          iconColor: .green),
+                               systemIcon: "checkmark.circle.fill",          iconColor: AppTheme.Status.success),
                     CardMetric(label: "Maintenance",  value: "\(vehicles.filter { $0.status == .inMaintenance }.count)",
                                systemIcon: "exclamationmark.triangle.fill",  iconColor: AppTheme.Brand.accent)
                 ],
@@ -71,14 +71,14 @@ struct ManagementHubView: View {
                 title: "Driver Management",
                 subtitle: "Manage drivers & assignments",
                 icon: "person.fill",
-                accentColor: Color(red: 0.30, green: 0.70, blue: 0.46),
+                accentColor: AppTheme.Brand.primary,
                 metrics: [
                     CardMetric(label: "Total",   value: "\(driverCount)",
-                               systemIcon: "person.2.fill",  iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)),
+                               systemIcon: "person.2.fill",  iconColor: AppTheme.Brand.primary),
                     CardMetric(label: "Active",  value: "\(users.filter { $0.role == .driver && $0.isActive }.count)",
-                               systemIcon: "checkmark.circle.fill",    iconColor: .green),
+                               systemIcon: "checkmark.circle.fill",    iconColor: AppTheme.Status.success),
                     CardMetric(label: "Inactive", value: "\(users.filter { $0.role == .driver && !$0.isActive }.count)",
-                               systemIcon: "xmark.circle.fill",    iconColor: .gray)
+                               systemIcon: "xmark.circle.fill",    iconColor: AppTheme.Brand.primary.opacity(0.4))
                 ],
                 destination: .driverList
             ),
@@ -91,9 +91,9 @@ struct ManagementHubView: View {
                     CardMetric(label: "Staff",        value: "\(maintenanceCount)",
                                systemIcon: "person.3.fill",      iconColor: AppTheme.Brand.accent),
                     CardMetric(label: "Active Orders", value: "\(workOrders.filter { $0.status == .open || $0.status == .inProgress }.count)",
-                               systemIcon: "doc.text.fill",      iconColor: .orange),
+                               systemIcon: "doc.text.fill",      iconColor: AppTheme.Brand.accent),
                     CardMetric(label: "Done Orders",  value: "\(workOrders.filter { $0.status == .completed }.count)",
-                               systemIcon: "checkmark.seal.fill", iconColor: .green)
+                               systemIcon: "checkmark.seal.fill", iconColor: AppTheme.Status.success)
                 ],
                 destination: .maintenanceStaff
             )
@@ -595,8 +595,8 @@ enum DriverStatusFilter: String, CaseIterable, Identifiable {
     var chipColor: Color {
         switch self {
         case .all: return AppTheme.Brand.royalBlue
-        case .online: return .green
-        case .offline: return .gray
+        case .online: return AppTheme.Status.success
+        case .offline: return AppTheme.Brand.primary.opacity(0.4)
         }
     }
 }
@@ -624,10 +624,11 @@ struct DriverListView: View {
 
     private var filteredDrivers: [User] {
         let baseDrivers = drivers.filter { d in
+            let isOnline = d.isActive || activeTripForDriver(d)?.tripStatus == .started || activeTripForDriver(d)?.tripStatus == .inProgress
             switch selectedFilter {
             case .all: return true
-            case .online: return d.isActive
-            case .offline: return !d.isActive
+            case .online: return isOnline
+            case .offline: return !isOnline
             }
         }
         guard !searchText.isEmpty else { return baseDrivers }
@@ -636,7 +637,14 @@ struct DriverListView: View {
     }
 
     private func vehicleForDriver(_ d: User) -> Vehicle? {
-        vehicles.first { $0.assignedDriverId == d.id }
+        if let v = vehicles.first(where: { $0.assignedDriverId == d.id }) {
+            return v
+        }
+        if let activeTrip = activeTripForDriver(d),
+           let v = vehicles.first(where: { $0.id == activeTrip.vehicleId }) {
+            return v
+        }
+        return nil
     }
 
     private func activeTripForDriver(_ d: User) -> Trip? {
@@ -698,7 +706,7 @@ struct DriverListView: View {
             }
         }
         .refreshable {
-            await syncDrivers()
+            await syncDriverAssignments()
         }
         .navigationTitle("Driver Management")
         .navigationBarTitleDisplayMode(.large)
@@ -716,7 +724,7 @@ struct DriverListView: View {
         .task {
             triggerCardAnimations()
             while !Task.isCancelled {
-                await syncDrivers()
+                await syncDriverAssignments()
                 try? await Task.sleep(for: .seconds(5))
             }
         }
@@ -748,8 +756,12 @@ struct DriverListView: View {
     private func countForFilter(_ filter: DriverStatusFilter) -> Int {
         switch filter {
         case .all: return drivers.count
-        case .online: return drivers.filter { $0.isActive }.count
-        case .offline: return drivers.filter { !$0.isActive }.count
+        case .online: return drivers.filter { d in
+            d.isActive || activeTripForDriver(d)?.tripStatus == .started || activeTripForDriver(d)?.tripStatus == .inProgress
+        }.count
+        case .offline: return drivers.filter { d in
+            !(d.isActive || activeTripForDriver(d)?.tripStatus == .started || activeTripForDriver(d)?.tripStatus == .inProgress)
+        }.count
         }
     }
 
@@ -828,21 +840,21 @@ struct DriverListView: View {
         HStack(spacing: 4) {
             Image(systemName: isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(isActive ? Color.green : Color.gray)
+                .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
             Text(isActive ? "Active" : "Inactive")
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .tracking(0.3)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .foregroundColor(isActive ? .green : .gray)
+        .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(isActive ? Color.green.opacity(0.08) : Color.gray.opacity(0.08))
+        .background(isActive ? AppTheme.Status.success.opacity(0.08) : AppTheme.Brand.primary.opacity(0.08))
         .cornerRadius(6)
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(isActive ? Color.green.opacity(0.2) : Color.gray.opacity(0.2), lineWidth: 1)
+                .stroke(isActive ? AppTheme.Status.success.opacity(0.2) : AppTheme.Brand.primary.opacity(0.2), lineWidth: 1)
         )
     }
 
@@ -854,12 +866,16 @@ struct DriverListView: View {
         }
     }
 
-    private func syncDrivers() async {
+    private func syncDriverAssignments() async {
         isLoading = true
         defer { isLoading = false }
         do {
             let dbDrivers = try await SupabaseManager.shared.fetchDrivers()
+            let dbVehicles = try await SupabaseManager.shared.fetchVehicles()
+            let dbTrips = try await SupabaseManager.shared.fetchTrips()
+            
             await MainActor.run {
+                // Sync drivers
                 for dbd in dbDrivers {
                     if let localDriver = allUsers.first(where: { $0.id == dbd.id }) {
                         localDriver.fullName = dbd.name
@@ -872,7 +888,6 @@ struct DriverListView: View {
                         modelContext.insert(newDriver)
                     }
                 }
-                
                 if SupabaseManager.shared.currentUser?.role == .fleetManager {
                     let remoteIds = Set(dbDrivers.map { $0.id })
                     let localDrivers = allUsers.filter { $0.role == .driver }
@@ -883,10 +898,62 @@ struct DriverListView: View {
                     }
                 }
                 
+                // Sync vehicles
+                for dbv in dbVehicles {
+                    if let localVehicle = vehicles.first(where: { $0.id == dbv.id }) {
+                        localVehicle.registrationNumber = dbv.vehicleNumber
+                        localVehicle.vinNumber = dbv.vin
+                        localVehicle.make = dbv.manufacturer
+                        localVehicle.model = dbv.model
+                        localVehicle.year = dbv.year
+                        localVehicle.status = dbv.status.toLocalStatus
+                        localVehicle.assignedDriverId = dbv.assignedDriverId
+                        localVehicle.lastServiceDate = dbv.lastServiceDate
+                    } else {
+                        let newVehicle = dbv.asLocalVehicle
+                        modelContext.insert(newVehicle)
+                    }
+                }
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbVehicles.map { $0.id })
+                    for localVehicle in vehicles {
+                        if !remoteIds.contains(localVehicle.id) {
+                            modelContext.delete(localVehicle)
+                        }
+                    }
+                }
+                
+                // Sync trips
+                for dbt in dbTrips {
+                    if let localTrip = trips.first(where: { $0.id == dbt.id }) {
+                        localTrip.vehicleId = dbt.vehicleId
+                        localTrip.driverId = dbt.driverId
+                        localTrip.startLocation = dbt.source
+                        localTrip.endLocation = dbt.destination
+                        localTrip.scheduledStartTime = dbt.startTime ?? Date()
+                        localTrip.scheduledEndTime = dbt.endTime ?? Date().addingTimeInterval(7200)
+                        localTrip.actualStartTime = dbt.startTime
+                        localTrip.actualEndTime = dbt.endTime
+                        localTrip.distanceKm = dbt.distance
+                        localTrip.tripStatus = dbt.status.toLocalStatus
+                        localTrip.notes = dbt.notes
+                    } else {
+                        modelContext.insert(dbt.asLocalTrip)
+                    }
+                }
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbTrips.map { $0.id })
+                    for localTrip in trips {
+                        if !remoteIds.contains(localTrip.id) {
+                            modelContext.delete(localTrip)
+                        }
+                    }
+                }
+                
                 try? modelContext.save()
             }
         } catch {
-            print("Failed to sync drivers: \(error)")
+            print("Failed to sync driver assignments: \(error)")
         }
     }
 }
@@ -1161,12 +1228,12 @@ struct MaintenanceStaffListView: View {
 
     private func staffStatusBadge(isActive: Bool) -> some View {
         HStack(spacing: 5) {
-            Circle().fill(isActive ? Color.green : AppTheme.Brand.accent).frame(width: 7, height: 7)
+            Circle().fill(isActive ? AppTheme.Status.success : AppTheme.Brand.accent).frame(width: 7, height: 7)
             Text(isActive ? "Available" : "Busy").font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundColor(isActive ? Color.green : AppTheme.Brand.accent)
+                .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.accent)
         }
         .padding(.horizontal, 10).padding(.vertical, 4)
-        .background(Capsule().fill((isActive ? Color.green : AppTheme.Brand.accent).opacity(0.12)))
+        .background(Capsule().fill((isActive ? AppTheme.Status.success : AppTheme.Brand.accent).opacity(0.12)))
     }
 
     private var staffRoleBadge: some View {
@@ -1456,9 +1523,9 @@ struct TripListView: View {
                     let chipColor: Color = {
                         switch filter {
                         case .all:      return AppTheme.Brand.accent 
-                        case .active:   return Color(red: 0.30, green: 0.70, blue: 0.46) 
-                        case .upcoming: return Color(red: 0.15, green: 0.38, blue: 0.90) 
-                        case .completed: return Color(red: 0.55, green: 0.58, blue: 0.62) 
+                        case .active:   return AppTheme.Brand.primary 
+                        case .upcoming: return AppTheme.Brand.accent 
+                        case .completed: return Theme.royalBlue.opacity(0.5) 
                         }
                     }()
                     
@@ -1611,10 +1678,10 @@ struct TripCardView: View {
 
             
             HStack(spacing: 8) {
-                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(.green.opacity(0.7))
+                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(AppTheme.Status.success.opacity(0.7))
                 Text(trip.startLocation).font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
                 Image(systemName: "arrow.right").font(.system(size: 11, weight: .bold)).foregroundColor(.gray.opacity(0.5))
-                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(.red.opacity(0.7))
+                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(AppTheme.Status.danger.opacity(0.7))
                 Text(trip.endLocation).font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
@@ -1848,9 +1915,9 @@ struct TripDetailView: View {
         VStack(spacing: 0) {
             Map(position: $position) {
                 Marker("Start", systemImage: "play.circle.fill", coordinate: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
-                    .tint(.green)
+                    .tint(AppTheme.Status.success)
                 Marker("End", systemImage: "flag.fill", coordinate: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
-                    .tint(.red)
+                    .tint(AppTheme.Status.danger)
             }
             .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
@@ -1869,7 +1936,7 @@ struct TripDetailView: View {
 
             HStack(spacing: 12) {
                 Image(systemName: "mappin.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppTheme.Status.success)
                     .font(.system(size: 18))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("START LOCATION")
@@ -1885,7 +1952,7 @@ struct TripDetailView: View {
 
             HStack(spacing: 12) {
                 Image(systemName: "flag.circle.fill")
-                    .foregroundColor(.red)
+                    .foregroundColor(AppTheme.Status.danger)
                     .font(.system(size: 18))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("END LOCATION")
@@ -1929,15 +1996,15 @@ struct TripDetailView: View {
                 // Vertical Timeline Line
                 VStack(spacing: 0) {
                     Circle()
-                        .fill(Color.green)
+                        .fill(AppTheme.Status.success)
                         .frame(width: 10, height: 10)
                     
                     Rectangle()
-                        .fill(Color.gray.opacity(0.15))
+                        .fill(AppTheme.Brand.primary.opacity(0.15))
                         .frame(width: 2, height: 75)
                     
                     Circle()
-                        .fill(trip.tripStatus == .completed ? Color.gray : Color.red)
+                        .fill(trip.tripStatus == .completed ? AppTheme.Brand.primary.opacity(0.4) : AppTheme.Status.danger)
                         .frame(width: 10, height: 10)
                 }
                 .padding(.top, 5)
@@ -1948,7 +2015,7 @@ struct TripDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("DEPARTURE")
                             .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundColor(.green)
+                            .foregroundColor(AppTheme.Status.success)
                             .tracking(0.8)
                         
                         Text(trip.scheduledStartTime.formatted(date: .long, time: .shortened))
@@ -1959,7 +2026,7 @@ struct TripDetailView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 10))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppTheme.Status.success)
                                 Text("Actual: \(actualStart.formatted(date: .long, time: .shortened))")
                                     .font(.system(size: 11))
                                     .foregroundColor(AppTheme.Text.secondary)
@@ -1971,7 +2038,7 @@ struct TripDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("ARRIVAL")
                             .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundColor(trip.tripStatus == .completed ? .gray : .red)
+                            .foregroundColor(trip.tripStatus == .completed ? AppTheme.Brand.primary.opacity(0.4) : AppTheme.Status.danger)
                             .tracking(0.8)
                         
                         Text(trip.scheduledEndTime.formatted(date: .long, time: .shortened))
@@ -1982,7 +2049,7 @@ struct TripDetailView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 10))
-                                    .foregroundColor(trip.tripStatus == .completed ? .gray : .red)
+                                    .foregroundColor(trip.tripStatus == .completed ? AppTheme.Brand.primary.opacity(0.4) : AppTheme.Status.danger)
                                 Text("Actual: \(actualEnd.formatted(date: .long, time: .shortened))")
                                     .font(.system(size: 11))
                                     .foregroundColor(AppTheme.Text.secondary)

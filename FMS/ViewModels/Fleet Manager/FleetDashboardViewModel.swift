@@ -15,8 +15,8 @@ final class FleetDashboardViewModel {
         ),
         DashboardQuickAction(
             icon: "location.fill",
-            iconColor: Color(red: 0.13, green: 0.69, blue: 0.45),
-            bgColor: Color(red: 0.13, green: 0.69, blue: 0.45).opacity(0.12),
+            iconColor: Theme.royalBlue,
+            bgColor: Theme.royalBlue.opacity(0.12),
             label: "Tracking"
         ),
         DashboardQuickAction(
@@ -72,7 +72,11 @@ final class FleetDashboardViewModel {
     func getDynamicStats(vehicles: [Vehicle], allUsers: [User], trips: [Trip]) -> [DashboardStat] {
         let totalVehicles  = vehicles.count
         let activeVehicles = vehicles.filter { $0.status == .active }.count
-        let driversOnline  = allUsers.filter { $0.role == .driver && $0.isActive }.count
+        let driversOnline  = allUsers.filter { user in
+            guard user.role == .driver else { return false }
+            let hasLiveTrip = trips.contains { $0.driverId == user.id && ($0.tripStatus == .started || $0.tripStatus == .inProgress) }
+            return user.isActive || hasLiveTrip
+        }.count
         let liveTrips      = trips.filter { $0.tripStatus == .inProgress || $0.tripStatus == .started }.count
 
         return [

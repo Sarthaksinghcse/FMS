@@ -152,13 +152,13 @@ struct MaintenanceDashboardTab: View {
                 columns: [GridItem(.flexible()), GridItem(.flexible())],
                 spacing: 12
             ) {
-                // ── 1. Scheduling (renamed from Pending Repairs) ─────────────────
+                // ── 1. Scheduled (renamed from Pending Repairs) ──────────────────
                 TappableOverviewCard(
                     icon: "doc.text.fill",
                     iconColor: AppTheme.Text.secondary,
                     iconBg: Color(.systemGray6),
                     gradient: [Color.clear, Color.clear],
-                    title: "Scheduling",
+                    title: "Scheduled",
                     value: "\(scheduledToday.count)",
                     footnote: scheduledToday.count == 1 ? "1 open work order" : "\(scheduledToday.count) open work orders",
                     valueColor: Color(red: 0.08, green: 0.12, blue: 0.22)
@@ -325,11 +325,11 @@ struct MaintenanceDashboardTab: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.purple.opacity(0.08))
+                            .fill(Theme.darkOrange.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "box.truck.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.purple)
+                            .foregroundColor(Theme.darkOrange)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -343,7 +343,7 @@ struct MaintenanceDashboardTab: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.purple)
+                                .background(Theme.darkOrange)
                                 .cornerRadius(4)
                         }
                         
@@ -375,11 +375,11 @@ struct MaintenanceDashboardTab: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.teal.opacity(0.08))
+                            .fill(Theme.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "heart.text.square.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.teal)
+                            .foregroundColor(Theme.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -393,7 +393,7 @@ struct MaintenanceDashboardTab: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.teal)
+                                .background(Theme.royalBlue)
                                 .cornerRadius(4)
                         }
                         

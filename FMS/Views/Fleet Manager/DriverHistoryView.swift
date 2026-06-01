@@ -30,8 +30,19 @@ struct DriverHistoryView: View {
     }
 
     // Helper data computed dynamically
+    private var isOnline: Bool {
+        driver.isActive || driverTrips.contains { $0.tripStatus == .started || $0.tripStatus == .inProgress }
+    }
+
     private var assignedVehicle: Vehicle? {
-        vehicles.first { $0.assignedDriverId == driver.id }
+        if let v = vehicles.first(where: { $0.assignedDriverId == driver.id }) {
+            return v
+        }
+        let activeTrip = driverTrips.first { $0.tripStatus == .assigned || $0.tripStatus == .started || $0.tripStatus == .inProgress }
+        if let trip = activeTrip, let v = vehicles.first(where: { $0.id == trip.vehicleId }) {
+            return v
+        }
+        return nil
     }
 
     private var driverTrips: [Trip] {
@@ -147,16 +158,16 @@ struct DriverHistoryView: View {
             HStack(spacing: 12) {
                 HStack(spacing: 5) {
                     Circle()
-                        .fill(driver.isActive ? Color.green : Color.red)
+                        .fill(isOnline ? AppTheme.Status.success : AppTheme.Status.danger)
                         .frame(width: 8, height: 8)
-                    Text(driver.isActive ? "Active" : "Inactive")
+                    Text(isOnline ? "Active" : "Inactive")
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                 }
-                .foregroundColor(driver.isActive ? .green : .red)
+                .foregroundColor(isOnline ? AppTheme.Status.success : AppTheme.Status.danger)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(Capsule().fill(driver.isActive ? Color.green.opacity(0.1) : Color.red.opacity(0.1)))
-                .overlay(Capsule().stroke(driver.isActive ? Color.green.opacity(0.2) : Color.red.opacity(0.2), lineWidth: 1))
+                .background(Capsule().fill(isOnline ? AppTheme.Status.success.opacity(0.1) : AppTheme.Status.danger.opacity(0.1)))
+                .overlay(Capsule().stroke(isOnline ? AppTheme.Status.success.opacity(0.2) : AppTheme.Status.danger.opacity(0.2), lineWidth: 1))
 
                 HStack(spacing: 5) {
                     Image(systemName: "person.fill")
@@ -396,14 +407,14 @@ struct DriverHistoryView: View {
                             Spacer()
                             
                             HStack(spacing: 4) {
-                                Circle().fill(inspection.defectReported ? Color.red : Color.green).frame(width: 6, height: 6)
+                                Circle().fill(inspection.defectReported ? AppTheme.Status.danger : AppTheme.Status.success).frame(width: 6, height: 6)
                                 Text(inspection.defectReported ? "Issue Reported" : "All Clear")
                                     .font(.system(size: 10, weight: .bold, design: .rounded))
-                                    .foregroundColor(inspection.defectReported ? .red : .green)
+                                    .foregroundColor(inspection.defectReported ? AppTheme.Status.danger : AppTheme.Status.success)
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Capsule().fill(inspection.defectReported ? Color.red.opacity(0.1) : Color.green.opacity(0.1)))
+                            .background(Capsule().fill(inspection.defectReported ? AppTheme.Status.danger.opacity(0.1) : AppTheme.Status.success.opacity(0.1)))
                         }
 
                         // Inspection checklist summary
@@ -457,7 +468,7 @@ struct DriverHistoryView: View {
         HStack(spacing: 4) {
             Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.system(size: 10))
-                .foregroundColor(ok ? .green : .red)
+                .foregroundColor(ok ? AppTheme.Status.success : AppTheme.Status.danger)
             Text(label)
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundColor(.black.opacity(0.7))
@@ -601,9 +612,9 @@ extension DefectSeverity {
 
     var color: Color {
         switch self {
-        case .low: return Color.green
-        case .medium: return Color.orange
-        case .high: return Color.red
+        case .low: return AppTheme.Status.success
+        case .medium: return AppTheme.Status.warning
+        case .high: return AppTheme.Status.danger
         }
     }
 }
@@ -619,9 +630,9 @@ extension DefectStatus {
 
     var color: Color {
         switch self {
-        case .open: return Color.red
-        case .inProgress: return Color.orange
-        case .resolved: return Color.green
+        case .open: return AppTheme.Status.danger
+        case .inProgress: return AppTheme.Status.warning
+        case .resolved: return AppTheme.Status.success
         }
     }
 }

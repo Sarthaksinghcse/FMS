@@ -16,11 +16,11 @@ struct FuelOptimizationView: View {
                         HStack {
                             ZStack {
                                 Circle()
-                                    .fill(Color.green.opacity(0.12))
+                                    .fill(Theme.royalBlue.opacity(0.12))
                                     .frame(width: 42, height: 42)
                                 Image(systemName: "indianrupeesign.circle.fill")
                                     .font(.system(size: 20))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(Theme.royalBlue)
                             }
                             
                             VStack(alignment: .leading, spacing: 2) {
@@ -61,7 +61,7 @@ struct FuelOptimizationView: View {
                     .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                            .stroke(Color.green.opacity(0.15), lineWidth: 1.5)
+                            .stroke(Theme.royalBlue.opacity(0.15), lineWidth: 1.5)
                     )
                     .padding(16)
                 }
@@ -76,11 +76,11 @@ struct FuelOptimizationView: View {
                     VStack(spacing: 16) {
                         ZStack {
                             Circle()
-                                .fill(Color.blue.opacity(0.08))
+                                .fill(Theme.royalBlue.opacity(0.08))
                                 .frame(width: 80, height: 80)
                             Image(systemName: "fuelpump.slash.fill")
                                 .font(.system(size: 34))
-                                .foregroundColor(.blue.opacity(0.7))
+                                .foregroundColor(Theme.royalBlue.opacity(0.7))
                         }
                         
                         Text("No Fuel Logs Logged")
@@ -126,7 +126,7 @@ struct FuelOptimizationView: View {
                                 VStack(alignment: .leading, spacing: 12) {
                                     HStack(spacing: 6) {
                                         Image(systemName: "sparkles")
-                                            .foregroundColor(.purple)
+                                            .foregroundColor(Theme.darkOrange)
                                         Text("AI Optimization Targets")
                                             .font(.system(size: 14, weight: .bold, design: .rounded))
                                             .foregroundColor(.black)
@@ -141,10 +141,10 @@ struct FuelOptimizationView: View {
                                                 Spacer()
                                                 Text("High Consumption")
                                                     .font(.system(size: 9, weight: .bold, design: .rounded))
-                                                    .foregroundColor(.red)
+                                                    .foregroundColor(Theme.darkOrange)
                                                     .padding(.horizontal, 8)
                                                     .padding(.vertical, 4)
-                                                    .background(Color.red.opacity(0.1))
+                                                    .background(Theme.darkOrange.opacity(0.1))
                                                     .cornerRadius(6)
                                             }
                                             
@@ -154,10 +154,10 @@ struct FuelOptimizationView: View {
                                             
                                             Text("Advice: " + vehicle.recommendation)
                                                 .font(.system(size: 11, design: .rounded))
-                                                .foregroundColor(.purple)
+                                                .foregroundColor(Theme.darkOrange)
                                                 .padding(8)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                                .background(Color.purple.opacity(0.04))
+                                                .background(Theme.darkOrange.opacity(0.04))
                                                 .cornerRadius(6)
                                         }
                                         .padding(14)
@@ -183,11 +183,11 @@ struct FuelOptimizationView: View {
                                     HStack(spacing: 12) {
                                         ZStack {
                                             Circle()
-                                                .fill(stats.isHighConsumer ? Color.red.opacity(0.1) : Color.blue.opacity(0.1))
+                                                .fill(stats.isHighConsumer ? Theme.darkOrange.opacity(0.1) : Theme.royalBlue.opacity(0.1))
                                                 .frame(width: 36, height: 36)
                                             Image(systemName: "fuelpump.fill")
                                                 .font(.system(size: 14))
-                                                .foregroundColor(stats.isHighConsumer ? .red : .blue)
+                                                .foregroundColor(stats.isHighConsumer ? Theme.darkOrange : Theme.royalBlue)
                                         }
                                         
                                         VStack(alignment: .leading, spacing: 2) {
@@ -209,11 +209,11 @@ struct FuelOptimizationView: View {
                                             if stats.percentAboveAverage > 0 {
                                                 Text(String(format: "+%.0f%% vs avg", stats.percentAboveAverage))
                                                     .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                                    .foregroundColor(.red)
+                                                    .foregroundColor(Theme.darkOrange)
                                             } else {
                                                 Text("Optimal")
                                                     .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                                    .foregroundColor(.green)
+                                                    .foregroundColor(Theme.royalBlue)
                                             }
                                         }
                                     }
@@ -222,7 +222,7 @@ struct FuelOptimizationView: View {
                                     .cornerRadius(12)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(stats.isHighConsumer ? Color.red.opacity(0.2) : AppTheme.Glass.border, lineWidth: 1)
+                                            .stroke(stats.isHighConsumer ? Theme.darkOrange.opacity(0.2) : AppTheme.Glass.border, lineWidth: 1)
                                     )
                                     .padding(.horizontal, 16)
                                 }
@@ -240,7 +240,7 @@ struct FuelOptimizationView: View {
                 Button("Close") {
                     dismiss()
                 }
-                .foregroundColor(.red)
+                .foregroundColor(Theme.darkOrange)
             }
         }
         .onAppear {

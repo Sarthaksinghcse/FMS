@@ -393,11 +393,11 @@ struct FleetDashboardView: View {
                 HStack(spacing: 10) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color.green.opacity(0.1))
+                            .fill(Theme.royalBlue.opacity(0.1))
                             .frame(width: 40, height: 40)
                         Image(systemName: "fuelpump.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.green)
+                            .foregroundColor(Theme.royalBlue)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -415,7 +415,7 @@ struct FleetDashboardView: View {
 
                     Image(systemName: "sparkles")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.purple)
+                        .foregroundColor(Theme.darkOrange)
 
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .bold))

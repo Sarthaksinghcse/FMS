@@ -51,7 +51,7 @@ struct ChatDetailView: View {
                     
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(Color.green)
+                            .fill(AppTheme.Status.success)
                             .frame(width: 6, height: 6)
                         Text("Active Coordination")
                             .font(.system(size: 10))

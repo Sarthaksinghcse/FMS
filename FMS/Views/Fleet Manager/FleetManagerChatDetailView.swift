@@ -33,7 +33,7 @@ struct FleetManagerChatDetailView: View {
                         .foregroundColor(roleColor(for: chatUser.role))
                     
                     Circle()
-                        .fill(chatUser.isActive ? Color.green : Color.gray)
+                        .fill(chatUser.isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
                         .frame(width: 10, height: 10)
                         .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
                         .offset(x: 1, y: 1)
@@ -45,7 +45,7 @@ struct FleetManagerChatDetailView: View {
                         .foregroundColor(.primary)
                     Text(chatUser.isActive ? "Online" : "Offline")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(chatUser.isActive ? .green : .secondary)
+                        .foregroundColor(chatUser.isActive ? AppTheme.Status.success : .secondary)
                 }
                 
                 Spacer()
@@ -168,7 +168,7 @@ struct FleetManagerChatDetailView: View {
                         .font(.system(size: 18))
                         .foregroundColor(Color.white)
                         .padding(10)
-                        .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : AppTheme.Brand.primary)
+                        .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
                         .clipShape(Circle())
                 }
                 .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -204,9 +204,9 @@ struct FleetManagerChatDetailView: View {
         case .driver:
             return AppTheme.Brand.royalBlue
         case .maintenance:
-            return Color(red: 236/255, green: 110/255, blue: 37/255)
+            return AppTheme.Brand.accent
         case .fleetManager:
-            return .purple
+            return AppTheme.Brand.primaryDeep
         }
     }
     
