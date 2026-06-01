@@ -40,6 +40,10 @@ struct PredictiveAlertDetailView: View {
         return vehicles.first { $0.id == vehicleId }
     }
     
+    private func vehicle(for alert: DBPredictiveAlert) -> Vehicle? {
+        vehicles.first { $0.id == alert.vehicleId }
+    }
+    
     private var maintenanceStaff: [User] {
         allUsers.filter { $0.role == .maintenance }
     }
