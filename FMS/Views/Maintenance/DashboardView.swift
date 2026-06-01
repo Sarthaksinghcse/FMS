@@ -250,7 +250,7 @@ struct MaintenanceDashboardTab: View {
                 
                 GridQuickActionButton(
                     icon: "camera.fill",
-                    label: "Upload Repair Notes",
+                    label: "Report an issue",
                     destination: ReportIssueView()
                 )
                 
@@ -544,20 +544,20 @@ struct GridQuickActionButton<Destination: View>: View {
         NavigationLink(destination: destination) {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(AppTheme.Brand.primary.opacity(0.08))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 56, height: 56)
                     Image(systemName: icon)
-                        .font(.system(size: 20))
+                        .font(.system(size: 24))
                         .foregroundColor(AppTheme.Brand.royalBlue)
                 }
                 
                 Text(label)
-                    .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.75)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.Text.primary)
-                    .frame(height: 28, alignment: .top)
+                    .frame(height: 32, alignment: .top)
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity)

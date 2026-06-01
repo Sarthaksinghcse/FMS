@@ -1,21 +1,5 @@
 
-
-
-
-
-
-
-
 import SwiftUI
-
-
-
-
-
-
-
-
-
 struct ProfileMenuButton: View {
 
     let initials: String
