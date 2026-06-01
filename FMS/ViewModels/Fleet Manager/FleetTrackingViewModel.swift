@@ -49,32 +49,32 @@ final class FleetTrackingViewModel {
         do {
             let fetchedVehicles = try await supabaseManager.fetchVehicles()
             
-            var locationMap: [UUID: CLLocationCoordinate2D] = [:]
+            var locationMap: [UUID: DBVehicleLocation] = [:]
             do {
                 let latestLocations = try await supabaseManager.fetchLatestVehicleLocations()
+                let oneDayAgo = Date().addingTimeInterval(-86400)
                 for loc in latestLocations {
-                    locationMap[loc.vehicleId] = CLLocationCoordinate2D(
-                        latitude: loc.latitude,
-                        longitude: loc.longitude
-                    )
+                    if loc.timestamp > oneDayAgo {
+                        locationMap[loc.vehicleId] = loc
+                    }
                 }
             } catch {
-                print("⚠️ Could not fetch live vehicle locations, falling back to defaults: \(error.localizedDescription)")
+                throw error
             }
             
             self.mappedVehicles = fetchedVehicles.compactMap { vehicle in
-                guard let realCoord = locationMap[vehicle.id] else {
+                guard let loc = locationMap[vehicle.id] else {
                     return nil
                 }
-                return MappedVehicle(vehicle: vehicle, coordinate: realCoord)
+                return MappedVehicle(
+                    vehicle: vehicle,
+                    coordinate: CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude),
+                    lastUpdated: loc.timestamp
+                )
             }
-            if !isBackgroundRefresh {
-                self.errorMessage = nil
-            }
+            self.errorMessage = nil
         } catch {
-            if !isBackgroundRefresh {
-                self.errorMessage = "Failed to load vehicles: \(error.localizedDescription)"
-            }
+            self.errorMessage = "Failed to load vehicles: \(error.localizedDescription)"
         }
         
         if !isBackgroundRefresh {

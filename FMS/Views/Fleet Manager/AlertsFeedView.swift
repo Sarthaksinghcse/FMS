@@ -15,6 +15,7 @@ struct AlertsFeedView: View {
     @Query private var users: [User]
     @Query private var vehicles: [Vehicle]
     
+    @State private var routeDeviations: [DBRouteDeviationAlert] = []
     
     @State private var selectedFilter: AlertFilterType = .all
     @State private var searchQuery: String = ""
@@ -23,6 +24,7 @@ struct AlertsFeedView: View {
         case all = "All"
         case sos = "SOS"
         case defects = "Defects"
+        case geofence = "Geofence"
         
         var id: String { self.rawValue }
     }
@@ -58,6 +60,7 @@ struct AlertsFeedView: View {
         enum AlertType {
             case sos
             case defect
+            case routeDeviation
         }
     }
     
@@ -83,6 +86,23 @@ struct AlertsFeedView: View {
             ))
         }
         
+        for deviation in routeDeviations {
+            list.append(DisplayAlert(
+                id: deviation.id,
+                type: .routeDeviation,
+                title: "ROUTE DEVIATION",
+                description: "Driver drifted \(Int(deviation.deviationDistanceMeters)) meters off the planned route.",
+                severityText: "WARNING",
+                severityColor: .white,
+                severityBgColor: AppTheme.Status.warning,
+                date: deviation.createdAt,
+                statusText: deviation.status == .active ? "Active" : "Resolved",
+                statusColor: deviation.status == .active ? AppTheme.Status.warning : AppTheme.Status.success,
+                driverName: driverName(for: deviation.driverId),
+                vehicleName: vehicleName(for: deviation.vehicleId),
+                rawObject: deviation
+            ))
+        }
         
         for defect in defectReports {
             let sevColor: Color
@@ -134,17 +154,18 @@ struct AlertsFeedView: View {
     private var filteredAlerts: [DisplayAlert] {
         let alerts = allDisplayAlerts
         
-        
-        let typedAlerts: [DisplayAlert]
-        switch selectedFilter {
-        case .all:
-            typedAlerts = alerts
-        case .sos:
-            typedAlerts = alerts.filter { $0.type == .sos }
-        case .defects:
-            typedAlerts = alerts.filter { $0.type == .defect }
+        let typedAlerts = alerts.filter { alert in
+            switch selectedFilter {
+            case .all:
+                return true
+            case .sos:
+                return alert.type == .sos
+            case .defects:
+                return alert.type == .defect
+            case .geofence:
+                return alert.type == .routeDeviation
+            }
         }
-        
         
         if searchQuery.isEmpty {
             return typedAlerts
@@ -252,6 +273,13 @@ struct AlertsFeedView: View {
                     }
                     .foregroundColor(AppTheme.Brand.primary)
                     .font(.system(.body, design: .rounded))
+                }
+            }
+            .task {
+                do {
+                    routeDeviations = try await SupabaseManager.shared.fetchRouteDeviationAlerts()
+                } catch {
+                    print("Failed to fetch route deviations: \(error)")
                 }
             }
         }

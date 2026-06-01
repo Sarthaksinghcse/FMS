@@ -51,11 +51,11 @@ struct MaintenanceHeaderView: View {
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.primary)
                 
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(AppTheme.Text.secondary)
-                }
+//                if !subtitle.isEmpty {
+//                    Text(subtitle)
+//                        .font(.system(size: 13, weight: .medium, design: .rounded))
+//                        .foregroundColor(AppTheme.Text.secondary)
+//                }
             }
             
             Spacer()

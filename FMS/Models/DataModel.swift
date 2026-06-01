@@ -382,6 +382,7 @@ struct MappedVehicle: Identifiable, Hashable {
     let id = UUID()
     let vehicle: DBVehicle
     let coordinate: CLLocationCoordinate2D
+    let lastUpdated: Date
 
     static func == (lhs: MappedVehicle, rhs: MappedVehicle) -> Bool {
         lhs.id == rhs.id

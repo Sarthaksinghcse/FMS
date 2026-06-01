@@ -48,11 +48,28 @@ struct FleetTrackingView: View {
                 .padding(.top, 40)
             }
             
-            if let selected = selectedVehicle {
-                VehicleDetailCard(mappedVehicle: selected, onClose: {
-                    selectedVehicle = nil
-                })
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+            if !viewModel.mappedVehicles.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(viewModel.mappedVehicles) { vehicle in
+                            VehicleHorizontalCard(
+                                mappedVehicle: vehicle,
+                                isSelected: selectedVehicle == vehicle
+                            )
+                            .onTapGesture {
+                                withAnimation(.easeInOut) {
+                                    selectedVehicle = vehicle
+                                    cameraPosition = .region(MKCoordinateRegion(
+                                        center: vehicle.coordinate,
+                                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                    ))
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.bottom, 24)
             }
         }
         .navigationTitle("Live Tracking")
@@ -92,65 +109,51 @@ struct FleetTrackingView: View {
     }
 }
 
-struct VehicleDetailCard: View {
+struct VehicleHorizontalCard: View {
     let mappedVehicle: MappedVehicle
-    let onClose: () -> Void
+    let isSelected: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                VStack(alignment: .leading) {
-                    Text(mappedVehicle.vehicle.vehicleNumber)
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    
-                    Text("\(mappedVehicle.vehicle.manufacturer) \(mappedVehicle.vehicle.model) (\(String(mappedVehicle.vehicle.year)))")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
+                Text(mappedVehicle.vehicle.vehicleNumber)
+                    .font(.headline)
+                    .fontWeight(.bold)
                 
                 Spacer()
                 
-                Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.Text.secondary)
-                        .font(.title3)
-                }
+                Circle()
+                    .fill(mappedVehicle.statusColor)
+                    .frame(width: 8, height: 8)
             }
             
-            Divider()
+            Text("\(mappedVehicle.vehicle.manufacturer) \(mappedVehicle.vehicle.model)")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
             
-            HStack(spacing: 24) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Status")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(mappedVehicle.statusColor)
-                            .frame(width: 8, height: 8)
-                        Text(mappedVehicle.vehicle.status.rawValue.capitalized.replacingOccurrences(of: "_", with: " "))
-                            .font(.callout)
-                            .fontWeight(.medium)
-                    }
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Plate")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(mappedVehicle.vehicle.licensePlate)
-                        .font(.callout)
-                        .fontWeight(.medium)
-                }
+            HStack {
+                Text(timeAgo(from: mappedVehicle.lastUpdated))
+                    .font(.caption2)
+                    .foregroundColor(AppTheme.Brand.primary)
             }
+            .padding(.top, 4)
         }
-        .padding()
-        .background(AppTheme.Background.card)
+        .padding(16)
+        .frame(width: 200)
+        .background(isSelected ? AppTheme.Brand.primary.opacity(0.1) : AppTheme.Background.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                .stroke(isSelected ? AppTheme.Brand.primary : Color.clear, lineWidth: 2)
+        )
         .cornerRadius(AppTheme.Radius.card)
-        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
-        .padding(.horizontal)
-        .padding(.bottom, 24)
+        .shadow(color: AppTheme.Shadow.card, radius: isSelected ? 8 : 4, x: 0, y: 2)
+    }
+    
+    private func timeAgo(from date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 

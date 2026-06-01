@@ -65,6 +65,10 @@ final class NavigationManager: NSObject, ObservableObject {
     
     /// True when we are artificially driving the route (for demo/testing)
     @Published private(set) var isSimulating: Bool = false
+    
+    /// Route Deviation flags
+    @Published private(set) var isOffRoute: Bool = false
+    private var hasFiredDeviationAlert: Bool = false
 
     /// ETA in seconds remaining along the current route.
     @Published private(set) var remainingTime: TimeInterval = 0
@@ -388,6 +392,71 @@ final class NavigationManager: NSObject, ObservableObject {
             currentStepIndex += 1
         }
     }
+    
+    /// Checks if the driver has deviated more than 500 meters from the route
+    private func checkRouteDeviation(location: CLLocation) {
+        guard isNavigating, let route = route else { return }
+        
+        let pointCount = route.polyline.pointCount
+        var coords = [CLLocationCoordinate2D](repeating: kCLLocationCoordinate2DInvalid, count: pointCount)
+        route.polyline.getCoordinates(&coords, range: NSRange(location: 0, length: pointCount))
+        
+        var minDistance: CLLocationDistance = .infinity
+        
+        // Find distance to the closest coordinate point in the polyline
+        for coord in coords {
+            let pointLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+            let dist = location.distance(from: pointLocation)
+            if dist < minDistance {
+                minDistance = dist
+            }
+        }
+        
+        // Threshold is 500 meters
+        let deviationThreshold: CLLocationDistance = 500.0
+        
+        if minDistance > deviationThreshold {
+            if !isOffRoute {
+                isOffRoute = true
+                if !hasFiredDeviationAlert {
+                    hasFiredDeviationAlert = true
+                    fireDeviationAlert(location: location, distance: minDistance)
+                }
+            }
+        } else {
+            // They came back to the route
+            if isOffRoute {
+                isOffRoute = false
+                hasFiredDeviationAlert = false
+            }
+        }
+    }
+    
+    private func fireDeviationAlert(location: CLLocation, distance: Double) {
+        Task {
+            do {
+                guard let user = SupabaseManager.shared.currentUser else { return }
+                
+                // Active vehicle for this driver
+                // Typically fetched from Supabase, assuming they are assigned
+                let alert = DBRouteDeviationAlert(
+                    id: UUID(),
+                    driverId: user.id,
+                    vehicleId: UUID(), // Placeholder: fetched from active trip or user session
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude,
+                    deviationDistanceMeters: distance,
+                    createdAt: Date(),
+                    status: .active
+                )
+                
+                try await SupabaseManager.shared.createRouteDeviationAlert(alert)
+                print("🚨 Route Deviation Alert Fired: Driver deviated by \(distance)m")
+            } catch {
+                print("Failed to fire deviation alert: \(error)")
+            }
+        }
+    }
 }
 
 // MARK: - CLLocationManagerDelegate
@@ -415,6 +484,7 @@ extension NavigationManager: CLLocationManagerDelegate {
             self.userLocation = loc
             self.updateFollowCamera(location: loc)
             self.evaluateProgress(location: loc)
+            self.checkRouteDeviation(location: loc)
         }
     }
 

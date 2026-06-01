@@ -10,5 +10,9 @@
 	<string>FMS needs camera access to capture photos of vehicle defects and repair notes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FMS needs photo library access to upload images of vehicle defects and repair notes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>FMS needs access to your location to provide live tracking, navigation, and geofencing.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>FMS needs continuous location access to track fleet vehicles even when the app is in the background.</string>
 </dict>
 </plist>
