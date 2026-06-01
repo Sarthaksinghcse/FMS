@@ -48,9 +48,6 @@ final class DrowsinessDetector: NSObject, ObservableObject {
     private let videoOutput  = AVCaptureVideoDataOutput()
     private let captureQueue = DispatchQueue(label: "fms.drowsiness.capture", qos: .userInteractive)
 
-    // MARK: Private Vision — used only on captureQueue
-    private let sequenceHandler = VNSequenceRequestHandler()
-
     // MARK: Counters — written from captureQueue, protected by serial queue
     private var closedFrames    = 0   // frames with EAR < threshold this second
     private var detectedFrames  = 0   // frames where a face was detected this second
@@ -143,7 +140,9 @@ final class DrowsinessDetector: NSObject, ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.secondTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                self?.tickSecond()
+                Task { @MainActor [weak self] in
+                    self?.tickSecond()
+                }
             }
         }
     }
@@ -257,7 +256,8 @@ extension DrowsinessDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
             }
         }
 
-        try? sequenceHandler.perform([request], on: pixelBuffer, orientation: .leftMirrored)
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .leftMirrored, options: [:])
+        try? handler.perform([request])
     }
 }
 
