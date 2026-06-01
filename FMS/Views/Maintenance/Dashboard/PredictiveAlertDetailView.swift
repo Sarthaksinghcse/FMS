@@ -40,6 +40,10 @@ struct PredictiveAlertDetailView: View {
         return vehicles.first { $0.id == vehicleId }
     }
     
+    private func vehicle(for alert: DBPredictiveAlert) -> Vehicle? {
+        vehicles.first { $0.id == alert.vehicleId }
+    }
+    
     private var maintenanceStaff: [User] {
         allUsers.filter { $0.role == .maintenance }
     }
@@ -94,7 +98,7 @@ struct PredictiveAlertDetailView: View {
                                     ForEach(alerts) { alert in
                                         PredictionSelectorCard(
                                             alert: alert,
-                                            vehicle: vehicles.first { $0.id == alert.vehicleId },
+                                            vehicle: vehicle(for: alert),
                                             isSelected: activeAlert?.id == alert.id,
                                             action: {
                                                 selectedAlertId = alert.id
@@ -253,7 +257,7 @@ struct PredictiveAlertDetailView: View {
                                         }
                                         
                                         if let lastInspection = vehicleInspections.first {
-                                            let typeText = lastInspection.checklist.isEmpty ? "Vehicle" : "Pre/Post-Trip"
+                                            let typeText = lastInspection.inspectionType == .preTrip ? "Pre-Trip" : "Post-Trip"
                                             let dateText = lastInspection.createdAt.formatted(date: .abbreviated, time: .shortened)
                                             Text("Last \(typeText) Checkup: \(dateText)")
                                                 .font(.system(size: 10, weight: .semibold))
