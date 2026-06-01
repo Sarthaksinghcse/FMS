@@ -19,8 +19,8 @@ export async function callGemini(
   prompt: string,
   requireJson = false
 ): Promise<string> {
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!apiKey) throw new Error("GEMINI_API_KEY secret is not set");
+  const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("Gemini_Key");
+  if (!apiKey) throw new Error("GEMINI_API_KEY or Gemini_Key secret is not set");
 
   const systemInstruction = requireJson
     ? "You are a helpful fleet management AI assistant. Always respond with valid JSON only. Do not include markdown code fences or any explanation outside the JSON."
