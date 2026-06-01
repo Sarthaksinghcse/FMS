@@ -248,6 +248,17 @@ final class SupabaseManager {
                     isActive: true,
                     createdAt: Date()
                 )
+                
+                // CRITICAL: We must upsert this fallback user into the database, otherwise 
+                // the current_user_role() SQL function will return NULL and all RLS policies will fail!
+                do {
+                    try await client
+                        .from("users")
+                        .upsert(dbUser)
+                        .execute()
+                } catch {
+                    print("Failed to upsert fallback user profile: \(error)")
+                }
             }
             
             

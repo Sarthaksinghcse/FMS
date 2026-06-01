@@ -410,14 +410,38 @@ struct AlertFeedCard: View {
                                 .scaleEffect(isPulsing ? 1.25 : 0.95)
                         }
                         
-                        Image(systemName: alert.type == .sos ? "exclamationmark.shield.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Brand.amber)
+                        let headerIcon: String = {
+                            switch alert.type {
+                            case .sos: return "exclamationmark.shield.fill"
+                            case .routeDeviation: return "map.fill"
+                            case .defect: return "exclamationmark.triangle.fill"
+                            }
+                        }()
+                        
+                        let headerColor: Color = {
+                            switch alert.type {
+                            case .sos: return AppTheme.Status.danger
+                            case .routeDeviation: return AppTheme.Brand.amber
+                            case .defect: return AppTheme.Brand.amber
+                            }
+                        }()
+                        
+                        Image(systemName: headerIcon)
+                            .foregroundColor(headerColor)
                             .font(.system(size: alert.type == .sos ? 16 : 14, weight: .bold))
                     }
                     .frame(width: 32, height: 32)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(alert.type == .sos ? "SOS EMERGENCY ALERT" : "DEFECT REPORT")
+                        let headerTitle: String = {
+                            switch alert.type {
+                            case .sos: return "SOS EMERGENCY ALERT"
+                            case .routeDeviation: return "GEOFENCE ALERT"
+                            case .defect: return "DEFECT REPORT"
+                            }
+                        }()
+                        
+                        Text(headerTitle)
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Text.secondary)
                             .tracking(0.5)

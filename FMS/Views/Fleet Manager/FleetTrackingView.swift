@@ -15,11 +15,11 @@ struct FleetTrackingView: View {
                     .foregroundStyle(AppTheme.Brand.primary.opacity(0.1))
                     .stroke(AppTheme.Brand.primary, lineWidth: 2)
                 
-                ForEach(viewModel.mappedVehicles) { mappedVehicle in
+                ForEach(viewModel.mappedVehicles.filter { $0.coordinate != nil }) { mappedVehicle in
                     Marker(
                         mappedVehicle.vehicle.vehicleNumber,
                         systemImage: "car.fill",
-                        coordinate: mappedVehicle.coordinate
+                        coordinate: mappedVehicle.coordinate!
                     )
                     .tint(mappedVehicle.statusColor)
                     .tag(mappedVehicle)
@@ -59,10 +59,12 @@ struct FleetTrackingView: View {
                             .onTapGesture {
                                 withAnimation(.easeInOut) {
                                     selectedVehicle = vehicle
-                                    cameraPosition = .region(MKCoordinateRegion(
-                                        center: vehicle.coordinate,
-                                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                                    ))
+                                    if let coordinate = vehicle.coordinate {
+                                        cameraPosition = .region(MKCoordinateRegion(
+                                            center: coordinate,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                        ))
+                                    }
                                 }
                             }
                         }
@@ -129,9 +131,15 @@ struct VehicleHorizontalCard: View {
                 .lineLimit(1)
             
             HStack {
-                Text(timeAgo(from: mappedVehicle.lastUpdated))
-                    .font(.caption2)
-                    .foregroundColor(AppTheme.Brand.primary)
+                if let lastUpdated = mappedVehicle.lastUpdated {
+                    Text(timeAgo(from: lastUpdated))
+                        .font(.caption2)
+                        .foregroundColor(AppTheme.Brand.primary)
+                } else {
+                    Text("Location Pending")
+                        .font(.caption2)
+                        .foregroundColor(AppTheme.Text.secondary)
+                }
             }
             .padding(.top, 4)
         }

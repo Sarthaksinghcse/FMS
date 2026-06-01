@@ -17,7 +17,8 @@ final class FleetTrackingViewModel {
     var isLoading = false
     var errorMessage: String?
     
-    let hubCoordinate = CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020)
+    // Changed from Cupertino to New Delhi to align with the rest of the app's mock data
+    let hubCoordinate = CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
     let geofenceRadius: CLLocationDistance = 5000
     
     private let supabaseManager = SupabaseManager.shared
@@ -65,13 +66,20 @@ final class FleetTrackingViewModel {
         
         do {
             let fetchedVehicles = try await supabaseManager.fetchVehicles()
+            let fetchedTrips = try await supabaseManager.fetchTrips()
+            
+            // Only include vehicles that are assigned to an active trip
+            let activeTrips = fetchedTrips.filter { $0.status == .assigned || $0.status == .started }
+            let activeVehicleIds = Set(activeTrips.map { $0.vehicleId })
+            
+            let assignedVehicles = fetchedVehicles.filter { activeVehicleIds.contains($0.id) }
             
             var locationMap: [UUID: DBVehicleLocation] = [:]
             do {
                 let latestLocations = try await supabaseManager.fetchLatestVehicleLocations()
                 let oneDayAgo = Date().addingTimeInterval(-86400)
                 for loc in latestLocations {
-                    if loc.timestamp > oneDayAgo {
+                    if loc.timestamp > oneDayAgo && locationMap[loc.vehicleId] == nil {
                         locationMap[loc.vehicleId] = loc
                     }
                 }
@@ -79,14 +87,22 @@ final class FleetTrackingViewModel {
                 throw error
             }
             
-            self.mappedVehicles = fetchedVehicles.compactMap { vehicle in
-                guard let loc = locationMap[vehicle.id] else {
-                    return nil
+            self.mappedVehicles = assignedVehicles.map { vehicle in
+                let coordinate: CLLocationCoordinate2D?
+                let lastUpdated: Date?
+                
+                if let loc = locationMap[vehicle.id] {
+                    coordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
+                    lastUpdated = loc.timestamp
+                } else {
+                    coordinate = nil
+                    lastUpdated = nil
                 }
+                
                 return MappedVehicle(
                     vehicle: vehicle,
-                    coordinate: CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude),
-                    lastUpdated: loc.timestamp
+                    coordinate: coordinate,
+                    lastUpdated: lastUpdated
                 )
             }
             self.errorMessage = nil

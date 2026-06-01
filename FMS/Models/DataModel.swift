@@ -379,10 +379,10 @@ struct DashboardActivity: Identifiable {
 import MapKit
 
 struct MappedVehicle: Identifiable, Hashable {
-    let id = UUID()
+    var id: UUID { vehicle.id }
     let vehicle: DBVehicle
-    let coordinate: CLLocationCoordinate2D
-    let lastUpdated: Date
+    let coordinate: CLLocationCoordinate2D?
+    let lastUpdated: Date?
 
     static func == (lhs: MappedVehicle, rhs: MappedVehicle) -> Bool {
         lhs.id == rhs.id
@@ -1018,19 +1018,17 @@ struct DBDefectReport: Codable, Identifiable {
 }
 
 
-struct DBVehicleLocation: Codable, Identifiable {
+struct DBVehicleLocation: Codable, Identifiable, Hashable {
     let id: UUID
-    var vehicleId: UUID
-    var latitude: Double
-    var longitude: Double
-    var timestamp: Date
+    let vehicleId: UUID
+    let latitude: Double
+    let longitude: Double
+    let timestamp: Date
 
     enum CodingKeys: String, CodingKey {
         case id
         case vehicleId = "vehicle_id"
-        case latitude
-        case longitude
-        case timestamp
+        case latitude, longitude, timestamp
     }
 }
 
