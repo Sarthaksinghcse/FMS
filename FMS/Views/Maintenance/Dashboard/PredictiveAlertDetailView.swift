@@ -442,34 +442,6 @@ struct PredictiveAlertDetailView: View {
                                 .shadow(color: AppTheme.Brand.royalBlue.opacity(0.25), radius: 6, y: 3)
                             }
                         }
-                        
-                        Button {
-                            runAIDiagnostic()
-                        } label: {
-                            HStack {
-                                if isRunningAI {
-                                    ProgressView().tint(AppTheme.Brand.royalBlue)
-                                        .padding(.trailing, 8)
-                                    Text("Analyzing Telematics...")
-                                        .foregroundColor(AppTheme.Brand.royalBlue)
-                                } else {
-                                    Image(systemName: "sparkles")
-                                        .foregroundColor(AppTheme.Brand.royalBlue)
-                                    Text("Run AI Diagnostic Analysis")
-                                        .foregroundColor(AppTheme.Brand.royalBlue)
-                                }
-                            }
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(AppTheme.Brand.royalBlue.opacity(0.08))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(AppTheme.Brand.royalBlue.opacity(0.2), lineWidth: 1)
-                            )
-                        }
-                        .disabled(isRunningAI || isLoading)
                     }
                     .padding(.horizontal)
                     .padding(.top, 12)
@@ -487,6 +459,23 @@ struct PredictiveAlertDetailView: View {
         }
         .navigationTitle("AI Smart Diagnostic")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    runAIDiagnostic()
+                } label: {
+                    if isRunningAI || isLoading {
+                        ProgressView()
+                            .tint(AppTheme.Brand.royalBlue)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.royalBlue)
+                    }
+                }
+                .disabled(isRunningAI || isLoading)
+            }
+        }
         .task {
             await fetchAlertsFromDatabase()
         }
