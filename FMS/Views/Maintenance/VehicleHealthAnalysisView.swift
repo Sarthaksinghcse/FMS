@@ -158,7 +158,9 @@ struct VehicleHealthAnalysisView: View {
                         .foregroundColor(AppTheme.Text.secondary)
                         .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
                 .background(Color.purple.opacity(0.03))
                 .cornerRadius(10)
@@ -213,6 +215,5 @@ struct VehicleHealthAnalysisView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(AppTheme.Glass.border, lineWidth: 1)
         )
-        .padding(.horizontal, 16)
     }
 }
