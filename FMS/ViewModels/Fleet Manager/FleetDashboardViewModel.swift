@@ -36,6 +36,12 @@ final class FleetDashboardViewModel {
             iconColor: AppTheme.Status.purple,
             bgColor: AppTheme.IconBg.purple,
             label: "AI Report"
+        ),
+        DashboardQuickAction(
+            icon: "shield.checkered",
+            iconColor: AppTheme.Brand.primary,
+            bgColor: AppTheme.IconBg.blue,
+            label: "Compliance"
         )
     ]
 

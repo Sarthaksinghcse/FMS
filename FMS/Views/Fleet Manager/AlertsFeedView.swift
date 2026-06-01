@@ -270,6 +270,16 @@ struct AlertsFeedView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Close")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.red)
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         PredictiveAlertsView()
                     } label: {
@@ -280,16 +290,6 @@ struct AlertsFeedView: View {
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                         }
                         .foregroundColor(.purple)
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Close")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(.red)
                     }
                 }
             }
