@@ -68,6 +68,12 @@ struct PredictiveAlertDetailView: View {
         guard let vehicleId = activeAlert?.vehicleId else { return nil }
         return maintenanceRecords.filter { $0.vehicleId == vehicleId }.first
     }
+    
+
+    
+    private func isSelected(_ alert: DBPredictiveAlert) -> Bool {
+        return activeAlert?.id == alert.id
+    }
 
     var body: some View {
         ZStack {
@@ -99,7 +105,7 @@ struct PredictiveAlertDetailView: View {
                                         PredictionSelectorCard(
                                             alert: alert,
                                             vehicle: vehicle(for: alert),
-                                            isSelected: activeAlert?.id == alert.id,
+                                            isSelected: isSelected(alert),
                                             action: {
                                                 selectedAlertId = alert.id
                                             }
