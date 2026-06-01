@@ -884,6 +884,7 @@ struct TripNavigationView: View {
     let trip: DBTrip
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     /// When true: show map + route only, skip pre-trip inspection entirely.
     var viewRouteOnly: Bool = false
@@ -1016,6 +1017,14 @@ struct TripNavigationView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .animation(.spring(response: 0.45), value: nav.isNavigating)
                 }
+
+                if vm.showSOSCountdown {
+                    SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
+                        vm.triggerSOS(context: modelContext)
+                    }
+                    .transition(.opacity)
+                    .zIndex(999)
+                }
             }
             // ── NavBar ───────────────────────────────────────────────────────
             .navigationTitle(nav.isNavigating ? "" : "Navigation")
@@ -1062,17 +1071,6 @@ struct TripNavigationView: View {
                 InspectionFormSheet(isPreTrip: true) { passed, _, _ in
                     preTripPassed = passed
                 }
-            }
-        }
-
-        // ── SOS overlay (sits above NavigationStack) ─────────────────────────
-        .overlay {
-            if vm.showSOSCountdown {
-                SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
-                    vm.sosSentAlert = true
-                }
-                .transition(.opacity)
-                .zIndex(999)
             }
         }
         .alert("🚨 SOS Triggered", isPresented: $vm.sosSentAlert) {

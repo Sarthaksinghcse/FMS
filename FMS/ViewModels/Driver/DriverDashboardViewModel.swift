@@ -607,6 +607,53 @@ final class DriverDashboardViewModel: ObservableObject {
         }
     }
     
+    func triggerSOS(context: ModelContext) {
+        sosSentAlert = true
+        let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+        let notif = DBNotification(
+            id: UUID(),
+            userId: driverId,
+            title: "🚨 EMERGENCY SOS SIGNAL TRIGGERED",
+            message: "Driver \(SupabaseManager.shared.currentUser?.name ?? "Naman Yadav") has triggered a panic alarm. Assistance is required immediately.",
+            type: .emergency,
+            isRead: false,
+            createdAt: Date()
+        )
+        Task {
+            do {
+                try await SupabaseManager.shared.createNotification(notif)
+                print("✅ [Supabase] SOS Notification inserted successfully.")
+            } catch {
+                print("❌ [Supabase] Failed to insert SOS Notification: \(error.localizedDescription)")
+            }
+            
+            let localSOS = SOSAlert(
+                id: notif.id,
+                driverId: driverId,
+                vehicleId: assignedVehicle?.id,
+                tripId: activeTrip?.id,
+                latitude: 28.5450,
+                longitude: 77.2600,
+                message: notif.message,
+                status: .active,
+                createdAt: notif.createdAt
+            )
+            
+            do {
+                try await SupabaseManager.shared.createSOSAlert(localSOS.asDBSOSAlert)
+                print("✅ [Supabase] SOS Alert inserted successfully.")
+            } catch {
+                print("❌ [Supabase] Failed to insert SOS Alert: \(error.localizedDescription)")
+            }
+            
+            await MainActor.run {
+                context.insert(notif.asLocalNotification)
+                context.insert(localSOS)
+                try? context.save()
+            }
+        }
+    }
+    
     func loadNotifications() async {
         do {
             let dbNotifications = try await SupabaseManager.shared.fetchNotifications()
