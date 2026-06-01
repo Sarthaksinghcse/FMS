@@ -9,9 +9,6 @@ struct FleetContentView: View {
     @State private var selectedTab = 0
     
     
-    @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]
-    @State private var acknowledgedAlertIds: Set<UUID> = []
-    
     @State private var showRedSplash = false
     @State private var sosMessage = ""
     @State private var isPulsing = false
@@ -96,10 +93,6 @@ struct FleetContentView: View {
                             .lineLimit(4)
                         
                         Button {
-                            let activeAlerts = sosAlerts.filter { $0.status == .active }
-                            for alert in activeAlerts {
-                                acknowledgedAlertIds.insert(alert.id)
-                            }
                             withAnimation(.easeIn(duration: 0.25)) {
                                 showRedSplash = false
                             }
@@ -133,11 +126,7 @@ struct FleetContentView: View {
                 }
             }
         }
-        .onChange(of: sosAlerts) { _, _ in
-            checkActiveSOSAlerts()
-        }
         .task {
-            checkActiveSOSAlerts()
             startRealtimeSOSListener()
             startRealtimeUsersListener()
         }
@@ -322,33 +311,6 @@ struct FleetContentView: View {
             modelContext.insert(newUser)
             try? modelContext.save()
             print("🟢 [Realtime] Added new user \(dbUser.name)")
-        }
-    }
-    
-    @MainActor
-    private func checkActiveSOSAlerts() {
-        let active = sosAlerts.filter { $0.status == .active }
-        guard let firstActive = active.first else {
-            if showRedSplash {
-                withAnimation {
-                    showRedSplash = false
-                }
-            }
-            return
-        }
-        
-        if !acknowledgedAlertIds.contains(firstActive.id) {
-            let descriptor = FetchDescriptor<User>()
-            let localUsers = (try? modelContext.fetch(descriptor)) ?? []
-            let driverName = localUsers.first(where: { $0.id == firstActive.driverId })?.fullName ?? "Driver"
-            
-            sosMessage = firstActive.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately."
-            
-            if !showRedSplash {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                    showRedSplash = true
-                }
-            }
         }
     }
 }
