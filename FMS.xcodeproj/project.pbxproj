@@ -286,8 +286,9 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FMS/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "FMS needs camera access to capture photos of vehicle defects and to monitor driver drowsiness for safety during active trips.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need access to your location to update your real time location";
+				INFOPLIST_KEY_NSCameraUsageDescription = "FMS needs camera access to capture photos of vehicle defects and repair notes.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "FMS needs continuous location access to track fleet vehicles even when the app is in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FMS needs access to your location to provide live tracking, navigation, and geofencing.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone to log voice trips.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "FMS needs photo library access to upload images of vehicle defects and repair notes.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We need speech recognition to transcribe your trip logs.";
@@ -339,8 +340,9 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FMS/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "FMS needs camera access to capture photos of vehicle defects and to monitor driver drowsiness for safety during active trips.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need access to your location to update your real time location";
+				INFOPLIST_KEY_NSCameraUsageDescription = "FMS needs camera access to capture photos of vehicle defects and repair notes.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "FMS needs continuous location access to track fleet vehicles even when the app is in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FMS needs access to your location to provide live tracking, navigation, and geofencing.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone to log voice trips.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "FMS needs photo library access to upload images of vehicle defects and repair notes.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We need speech recognition to transcribe your trip logs.";

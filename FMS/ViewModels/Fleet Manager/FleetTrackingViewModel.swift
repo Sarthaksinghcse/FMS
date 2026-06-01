@@ -17,7 +17,8 @@ final class FleetTrackingViewModel {
     var isLoading = false
     var errorMessage: String?
     
-    let hubCoordinate = CLLocationCoordinate2D(latitude: 37.334900, longitude: -122.009020)
+    // Changed from Cupertino to New Delhi to align with the rest of the app's mock data
+    let hubCoordinate = CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
     let geofenceRadius: CLLocationDistance = 5000
     
     private let supabaseManager = SupabaseManager.shared
@@ -65,33 +66,48 @@ final class FleetTrackingViewModel {
         
         do {
             let fetchedVehicles = try await supabaseManager.fetchVehicles()
+            let fetchedTrips = try await supabaseManager.fetchTrips()
             
-            var locationMap: [UUID: CLLocationCoordinate2D] = [:]
+            // Only include vehicles that are assigned to an active trip
+            let activeTrips = fetchedTrips.filter { $0.status == .assigned || $0.status == .started }
+            let activeVehicleIds = Set(activeTrips.map { $0.vehicleId })
+            
+            let assignedVehicles = fetchedVehicles.filter { activeVehicleIds.contains($0.id) }
+            
+            var locationMap: [UUID: DBVehicleLocation] = [:]
             do {
                 let latestLocations = try await supabaseManager.fetchLatestVehicleLocations()
+                let oneDayAgo = Date().addingTimeInterval(-86400)
                 for loc in latestLocations {
-                    locationMap[loc.vehicleId] = CLLocationCoordinate2D(
-                        latitude: loc.latitude,
-                        longitude: loc.longitude
-                    )
+                    if loc.timestamp > oneDayAgo && locationMap[loc.vehicleId] == nil {
+                        locationMap[loc.vehicleId] = loc
+                    }
                 }
             } catch {
-                print("⚠️ Could not fetch live vehicle locations, falling back to defaults: \(error.localizedDescription)")
+                throw error
             }
             
-            self.mappedVehicles = fetchedVehicles.compactMap { vehicle in
-                guard let realCoord = locationMap[vehicle.id] else {
-                    return nil
+            self.mappedVehicles = assignedVehicles.map { vehicle in
+                let coordinate: CLLocationCoordinate2D?
+                let lastUpdated: Date?
+                
+                if let loc = locationMap[vehicle.id] {
+                    coordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
+                    lastUpdated = loc.timestamp
+                } else {
+                    coordinate = nil
+                    lastUpdated = nil
                 }
-                return MappedVehicle(vehicle: vehicle, coordinate: realCoord)
+                
+                return MappedVehicle(
+                    vehicle: vehicle,
+                    coordinate: coordinate,
+                    lastUpdated: lastUpdated
+                )
             }
-            if !isBackgroundRefresh {
-                self.errorMessage = nil
-            }
+            self.errorMessage = nil
         } catch {
-            if !isBackgroundRefresh {
-                self.errorMessage = "Failed to load vehicles: \(error.localizedDescription)"
-            }
+            self.errorMessage = "Failed to load vehicles: \(error.localizedDescription)"
         }
         
         if !isBackgroundRefresh {

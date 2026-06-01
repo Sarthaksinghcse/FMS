@@ -248,6 +248,17 @@ final class SupabaseManager {
                     isActive: true,
                     createdAt: Date()
                 )
+                
+                // CRITICAL: We must upsert this fallback user into the database, otherwise 
+                // the current_user_role() SQL function will return NULL and all RLS policies will fail!
+                do {
+                    try await client
+                        .from("users")
+                        .upsert(dbUser)
+                        .execute()
+                } catch {
+                    print("Failed to upsert fallback user profile: \(error)")
+                }
             }
             
             
@@ -757,8 +768,10 @@ final class SupabaseManager {
     
     func fetchLatestVehicleLocations() async throws -> [DBVehicleLocation] {
         return try await client
-            .from("v_latest_vehicle_location")
+            .from("vehicle_locations")
             .select()
+            .order("timestamp", ascending: false)
+            .limit(100)
             .execute()
             .value
     }
@@ -782,6 +795,31 @@ final class SupabaseManager {
     func updateSOSAlert(_ alert: DBSOSAlert) async throws {
         try await client
             .from("sos_alerts")
+            .update(alert)
+            .eq("id", value: alert.id.uuidString)
+            .execute()
+    }
+    
+    // Route Deviation Alerts
+    func fetchRouteDeviationAlerts() async throws -> [DBRouteDeviationAlert] {
+        let response: [DBRouteDeviationAlert] = try await client
+            .from("route_deviation_alerts")
+            .select()
+            .execute()
+            .value
+        return response
+    }
+    
+    func createRouteDeviationAlert(_ alert: DBRouteDeviationAlert) async throws {
+        try await client
+            .from("route_deviation_alerts")
+            .insert(alert)
+            .execute()
+    }
+    
+    func updateRouteDeviationAlert(_ alert: DBRouteDeviationAlert) async throws {
+        try await client
+            .from("route_deviation_alerts")
             .update(alert)
             .eq("id", value: alert.id.uuidString)
             .execute()
