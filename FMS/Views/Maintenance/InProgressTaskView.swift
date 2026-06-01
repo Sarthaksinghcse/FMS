@@ -218,7 +218,7 @@ struct InProgressTasksView: View {
                 Divider().padding(.horizontal, 16)
                 
                 // ── Detail rows ──────────────────────────────────────────────────
-                VStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 8) {
                     InProgressDetailRow(
                         icon: "person.fill",
                         label: "Mechanic",
@@ -344,6 +344,7 @@ struct InProgressTasksView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(AppTheme.Text.primary)
                     .lineLimit(1)
+                Spacer()
             }
         }
     }

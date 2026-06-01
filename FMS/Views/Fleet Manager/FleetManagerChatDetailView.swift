@@ -11,6 +11,7 @@ struct FleetManagerChatDetailView: View {
     @State private var messages: [DBMessage] = []
     @State private var realtimeChannel: RealtimeChannelV2?
     @Environment(\.dismiss) private var dismiss
+    @State private var forwardSuccess = false
     
     private var conversationMessages: [DBMessage] {
         messages.filter {
@@ -92,6 +93,13 @@ struct FleetManagerChatDetailView: View {
                                                 .padding(.vertical, 10)
                                                 .background(AppTheme.Brand.primary)
                                                 .cornerRadius(16)
+                                                .contextMenu {
+                                                    Button {
+                                                        forwardToAll(messageText: message.message)
+                                                    } label: {
+                                                        Label("Forward to All (Broadcast)", systemImage: "megaphone.fill")
+                                                    }
+                                                }
                                             Text(formatTime(message.timestamp))
                                                 .font(.system(size: 9))
                                                 .foregroundColor(.gray)
@@ -106,6 +114,13 @@ struct FleetManagerChatDetailView: View {
                                                 .padding(.vertical, 10)
                                                 .background(Color(.systemGray6))
                                                 .cornerRadius(16)
+                                                .contextMenu {
+                                                    Button {
+                                                        forwardToAll(messageText: message.message)
+                                                    } label: {
+                                                        Label("Forward to All (Broadcast)", systemImage: "megaphone.fill")
+                                                    }
+                                                }
                                             Text(formatTime(message.timestamp))
                                                 .font(.system(size: 9))
                                                 .foregroundColor(.gray)
@@ -161,6 +176,11 @@ struct FleetManagerChatDetailView: View {
             .padding()
             .background(Color.white)
             .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
+        }
+        .alert("Forwarded Successfully", isPresented: $forwardSuccess) {
+            Button("OK") {}
+        } message: {
+            Text("This message has been successfully broadcast to all drivers and maintenance staff.")
         }
         .navigationTitle(chatUser.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -223,6 +243,37 @@ struct FleetManagerChatDetailView: View {
                 }
             } catch {
                 print("Failed to send message from Fleet Manager: \(error)")
+            }
+        }
+    }
+    
+    private func forwardToAll(messageText: String) {
+        Task {
+            do {
+                let drivers = try await supabase.fetchDrivers()
+                let maintenance = try await supabase.fetchMaintenancePersonnel()
+                let myId = currentUser.id
+                let allRecipients = (drivers + maintenance).filter { $0.id != myId }
+                
+                if !allRecipients.isEmpty {
+                    let messages = allRecipients.map { recipient in
+                        DBMessage(
+                            id: UUID(),
+                            senderId: myId,
+                            receiverId: recipient.id,
+                            message: messageText,
+                            timestamp: Date()
+                        )
+                    }
+                    try await supabase.sendBroadcastMessages(messages)
+                    
+                    await MainActor.run {
+                        forwardSuccess = true
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    }
+                }
+            } catch {
+                print("Failed to forward message: \(error)")
             }
         }
     }

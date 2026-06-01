@@ -26,16 +26,16 @@ final class FleetDashboardViewModel {
             label: "Assign Driver"
         ),
         DashboardQuickAction(
-            icon: "exclamationmark.octagon.fill",
-            iconColor: AppTheme.Status.danger,
-            bgColor: AppTheme.IconBg.red,
-            label: "Alerts"
-        ),
-        DashboardQuickAction(
             icon: "wrench.and.screwdriver.fill",
             iconColor: AppTheme.Brand.amber,
             bgColor: AppTheme.IconBg.amber,
             label: "Maintenance"
+        ),
+        DashboardQuickAction(
+            icon: "chart.bar.doc.horizontal.fill",
+            iconColor: AppTheme.Status.purple,
+            bgColor: AppTheme.IconBg.purple,
+            label: "AI Report"
         )
     ]
 
@@ -114,7 +114,8 @@ final class FleetDashboardViewModel {
         func driverName(for id: UUID) -> String {
             users.first(where: { $0.id == id })?.fullName ?? "Unknown Driver"
         }
-        func vehicleLabel(for id: UUID) -> String {
+        func vehicleLabel(for id: UUID?) -> String {
+            guard let id = id else { return "No Assigned Vehicle" }
             guard let v = vehicles.first(where: { $0.id == id }) else { return "Unknown Vehicle" }
             return "\(v.make) \(v.model)"
         }

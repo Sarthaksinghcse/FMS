@@ -32,14 +32,8 @@ final class ScheduledTasksViewModel: ObservableObject {
 
     // MARK: Filtered tasks
     var filteredTasks: [WorkOrder] {
-        let today = Calendar.current.startOfDay(for: .now)
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
-
         var base = allWorkOrders.filter { order in
-            // Scheduled Today = open orders created today
-            order.status == .open &&
-            order.createdAt >= today &&
-            order.createdAt < tomorrow
+            order.status == .open
         }
 
         // Apply chip filter
@@ -168,24 +162,6 @@ struct ScheduledTasksView: View {
                     }
                 }
             }
-            
-            Button(action: {
-                // Add Schedule action
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Add Schedule")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(AppTheme.Brand.primary)
-                .clipShape(Capsule())
-                .shadow(color: AppTheme.Brand.primary.opacity(0.4), radius: 8, x: 0, y: 4)
-            }
-            .padding(20)
         }
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
@@ -223,7 +199,7 @@ private struct ScheduledTaskCard: View {
                 .padding(.horizontal, 16)
 
             // Detail rows
-            VStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 8) {
                 ScheduledDetailRow(
                     icon: "wrench.and.screwdriver",
                     label: "Service Type",
@@ -255,10 +231,15 @@ private struct ScheduledTaskCard: View {
 
             // Footer: Status + chevron
             HStack {
+                let isPending = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+                let displayLabel = isPending ? "Approval Pending" : order.status.displayLabel
+                let displayColor = isPending ? AppTheme.Brand.amber : order.status.color
+                let displayIcon = isPending ? "clock.fill" : "circle.fill"
+                
                 TaskStatusBadge(
-                    label: order.status.displayLabel,
-                    color: order.status.color,
-                    icon: "circle.fill"
+                    label: displayLabel,
+                    color: displayColor,
+                    icon: displayIcon
                 )
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -302,6 +283,7 @@ private struct ScheduledDetailRow: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(AppTheme.Text.primary)
                 .lineLimit(1)
+            Spacer()
         }
     }
 }

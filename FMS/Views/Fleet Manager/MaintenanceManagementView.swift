@@ -24,23 +24,33 @@ struct MaintenanceManagementView: View {
     @Query(sort: \WorkOrder.createdAt, order: .reverse) private var workOrders: [WorkOrder]
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
+    @Query private var defectReports: [DefectReport]
     
     @State private var showingScheduler = false
     @State private var showingCompletionDialog = false
     @State private var selectedWorkOrderForCompletion: WorkOrder? = nil
     @State private var finalCostString: String = ""
     @State private var selectedTab: Int = 0 
+    @State private var sortByAIPriority = false
     
     private var maintenanceStaff: [User] {
         allUsers.filter { $0.role == .maintenance }
     }
     
     private var activeWorkOrders: [WorkOrder] {
-        workOrders.filter { $0.status == .open || $0.status == .inProgress }
+        let base = workOrders.filter { $0.status == .open || $0.status == .inProgress }
+        if sortByAIPriority {
+            return AIWorkOrderService.shared.sorted(base, defects: defectReports, vehicles: vehicles)
+        }
+        return base
     }
     
     private var historicWorkOrders: [WorkOrder] {
-        workOrders.filter { $0.status == .completed || $0.status == .cancelled }
+        let base = workOrders.filter { $0.status == .completed || $0.status == .cancelled }
+        if sortByAIPriority {
+            return AIWorkOrderService.shared.sorted(base, defects: defectReports, vehicles: vehicles)
+        }
+        return base
     }
     
     private func getVehicleName(for id: UUID) -> String {
@@ -69,11 +79,32 @@ struct MaintenanceManagementView: View {
                     }
                     
                     
-                    Picker("Orders", selection: $selectedTab) {
-                        Text("Active (\(activeWorkOrders.count))").tag(0)
-                        Text("History (\(historicWorkOrders.count))").tag(1)
+                    HStack(spacing: 12) {
+                        Picker("Orders", selection: $selectedTab) {
+                            Text("Active (\(activeWorkOrders.count))").tag(0)
+                            Text("History (\(historicWorkOrders.count))").tag(1)
+                        }
+                        .pickerStyle(.segmented)
+                        
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                sortByAIPriority.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: sortByAIPriority ? "sparkles" : "sparkles.left")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text("AI Sort")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .foregroundColor(sortByAIPriority ? .white : .purple)
+                            .background(sortByAIPriority ? Color.purple : Color.purple.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .pickerStyle(.segmented)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .background(AppTheme.Background.card)
@@ -180,21 +211,28 @@ struct MaintenanceManagementView: View {
             priBg = AppTheme.IconBg.red
         }
         
+        let isPendingApproval = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+        
         let statColor: Color
         let statText: String
-        switch order.status {
-        case .open:
-            statColor = AppTheme.Status.danger
-            statText = "Open"
-        case .inProgress:
-            statColor = AppTheme.Status.warning
-            statText = "In Progress"
-        case .completed:
-            statColor = AppTheme.Status.success
-            statText = "Completed"
-        case .cancelled:
-            statColor = .gray
-            statText = "Cancelled"
+        if isPendingApproval {
+            statColor = AppTheme.Brand.amber
+            statText = "Approval Pending"
+        } else {
+            switch order.status {
+            case .open:
+                statColor = AppTheme.Status.danger
+                statText = "Open"
+            case .inProgress:
+                statColor = AppTheme.Status.warning
+                statText = "In Progress"
+            case .completed:
+                statColor = AppTheme.Status.success
+                statText = "Completed"
+            case .cancelled:
+                statColor = .gray
+                statText = "Cancelled"
+            }
         }
         
         return VStack(alignment: .leading, spacing: 12) {
@@ -207,6 +245,22 @@ struct MaintenanceManagementView: View {
                     .padding(.vertical, 4)
                     .background(priBg)
                     .cornerRadius(6)
+                
+                let localDefect = defectReports.first(where: { $0.vehicleId == order.vehicleId })
+                let localVehicle = vehicles.first(where: { $0.id == order.vehicleId })
+                let score = AIWorkOrderService.shared.computePriorityScore(workOrder: order, defect: localDefect, vehicle: localVehicle)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 9))
+                    Text(String(format: "AI Score: %.0f", score))
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(.purple)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.purple.opacity(0.1))
+                .cornerRadius(6)
                 
                 Spacer()
                 
@@ -263,7 +317,25 @@ struct MaintenanceManagementView: View {
             }
             
             
-            if order.status == .open {
+            if isPendingApproval {
+                Button {
+                    approveWorkOrder(order)
+                } label: {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "checkmark.shield.fill")
+                        Text("Approve Work Order")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                        Spacer()
+                    }
+                    .padding(.vertical, 10)
+                    .foregroundColor(.white)
+                    .background(AppTheme.Status.success)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.top, 4)
+            } else if order.status == .open {
                 Button {
                     _ = viewModel.startWork(workOrderId: order.id, context: modelContext, workOrders: workOrders)
                 } label: {
@@ -350,6 +422,34 @@ struct MaintenanceManagementView: View {
             RoundedRectangle(cornerRadius: AppTheme.Radius.medium)
                 .stroke(AppTheme.Status.danger.opacity(0.2), lineWidth: 1)
         )
+    }
+    
+    private func approveWorkOrder(_ order: WorkOrder) {
+        order.workDescription = order.workDescription
+            .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
+            .replacingOccurrences(of: "[PENDING_APPROVAL]", with: "")
+        try? modelContext.save()
+        
+        let dbWO = order.asDBWorkOrder
+        Task {
+            do {
+                try await SupabaseManager.shared.updateWorkOrder(dbWO)
+                
+                // Add a notification for the mechanic
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: order.assignedTo,
+                    title: "✅ Work Order Approved",
+                    message: "Fleet Manager has approved work order \"\(order.title)\". You can now start work.",
+                    type: .maintenance,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await SupabaseManager.shared.createNotification(notif)
+            } catch {
+                print("Failed to approve work order on Supabase: \(error)")
+            }
+        }
     }
 }
 

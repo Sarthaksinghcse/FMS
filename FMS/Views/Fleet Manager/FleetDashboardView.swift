@@ -22,6 +22,7 @@ struct FleetDashboardView: View {
     @State private var showProfile  = false
     @State private var showChat     = false
     @State private var showTracking = false
+    @State private var showingFuelInsights = false
     @State private var realtimeChannel: RealtimeChannelV2? = nil
 
     // Compute the full activity list once per body eval
@@ -50,6 +51,15 @@ struct FleetDashboardView: View {
         return name.components(separatedBy: " ").first ?? name
     }
 
+    private var managerInitials: String {
+        guard let name = SupabaseManager.shared.currentUser?.name, !name.isEmpty else { return "FM" }
+        let components = name.components(separatedBy: " ")
+        let first = components.first?.first.map(String.init) ?? ""
+        let last = components.count > 1 ? components.last?.first.map(String.init) ?? "" : ""
+        let combined = first + last
+        return combined.isEmpty ? "M" : combined.uppercased()
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -59,8 +69,8 @@ struct FleetDashboardView: View {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
-                        HStack(alignment: .center, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(viewModel.getGreetingTime() + ",")
                                     .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(.secondary)
@@ -106,16 +116,25 @@ struct FleetDashboardView: View {
                                                     .resizable()
                                                     .scaledToFill()
                                             } placeholder: {
-                                                Image(systemName: "person.crop.circle.fill")
-                                                    .font(.system(size: 32))
-                                                    .foregroundColor(AppTheme.Brand.primary)
+                                                ProgressView()
                                             }
-                                            .frame(width: 32, height: 32)
+                                            .frame(width: 40, height: 40)
                                             .clipShape(Circle())
                                         } else {
-                                            Image(systemName: "person.crop.circle.fill")
-                                                .font(.system(size: 32))
-                                                .foregroundColor(AppTheme.Brand.primary)
+                                            ZStack {
+                                                Circle()
+                                                    .fill(
+                                                        LinearGradient(
+                                                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                                    .frame(width: 40, height: 40)
+                                                Text(managerInitials)
+                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                    .foregroundColor(.white)
+                                            }
                                         }
                                     }
                                 }
@@ -123,7 +142,7 @@ struct FleetDashboardView: View {
                             }
                         }
                         .padding(.horizontal, 16)
-                        .padding(.top, 16)
+                        .padding(.top, 24)
 
                         Text("Overview")
                             .font(.system(size: 18, weight: .bold))
@@ -150,38 +169,46 @@ struct FleetDashboardView: View {
                         .padding(.horizontal, 16)
 
                         // ── Quick Actions ─────────────────────────
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("Quick Actions")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 16)
 
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
+                                HStack(spacing: 14) {
                                     ForEach(viewModel.quickActions) { action in
-                                        DashboardQuickActionCard(action: action) {
+                                        FleetGridQuickActionButton(
+                                            icon: action.icon,
+                                            label: action.label,
+                                            iconColor: action.iconColor,
+                                            bgColor: action.bgColor
+                                        ) {
                                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                             switch action.label {
                                             case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
                                             case "Alerts":         viewModel.activeQuickAction = .alerts
                                             case "Maintenance":    viewModel.activeQuickAction = .maintenance
+                                            case "Reports", "AI Report": viewModel.activeQuickAction = .reports
                                             case "Tracking":       showTracking = true
                                             case "Chat":           showChat = true
                                             default: break
                                             }
                                         }
-                                        .frame(width: 80)
                                     }
                                 }
                                 .padding(.horizontal, 16)
                             }
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 8)
                         }
 
 
 
                         // ── Compliance & Renewal Alerts ───────────
                         complianceAlertsSummary
+                        
+                        // ── Fuel Insights Summary ─────────────────
+                        fuelInsightsSummary
 
                         // ── Recent Activity ───────────────────────
                         VStack(alignment: .leading, spacing: 14) {
@@ -267,6 +294,8 @@ struct FleetDashboardView: View {
                     }
                 }
                 .scrollIndicators(.hidden)
+                .safeAreaPadding(.top)
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
                 .refreshable {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -279,7 +308,10 @@ struct FleetDashboardView: View {
                     switch action {
                     case .addVehicle:   AddVehicleFormView()
                     case .assignDriver: AddTripFormView()
-                    case .reports:      ReportsView()
+                    case .reports:
+                        NavigationStack {
+                            AIReportsView(isPresentedAsSheet: true)
+                        }
                     case .alerts:       AlertsFeedView()
                     case .maintenance:  MaintenanceManagementView()
                     }
@@ -303,7 +335,6 @@ struct FleetDashboardView: View {
                 FleetManagerChatListView()
             }
             .task {
-                DatabaseSeeder.seedIfEmpty(context: modelContext)
                 await SupabaseManager.shared.syncAllData(context: modelContext)
                 startRealtimeListener()
             }
@@ -347,6 +378,63 @@ struct FleetDashboardView: View {
 //        }
 //        return String(vm.driverName.prefix(2)).uppercased()
 //    }
+
+    // MARK: - Fuel Insights Summary Card
+
+    private var fuelInsightsSummary: some View {
+        Button {
+            showingFuelInsights = true
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.green.opacity(0.1))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "fuelpump.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.green)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Fuel Insights & Optimization")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
+
+                        Text("Uncover cost savings and consumption anomalies")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.purple)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                }
+            }
+            .padding(14)
+            .background(AppTheme.Background.card)
+            .cornerRadius(AppTheme.Radius.card)
+            .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                    .stroke(AppTheme.Glass.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .sheet(isPresented: $showingFuelInsights) {
+            NavigationStack {
+                FuelOptimizationView()
+            }
+        }
+    }
 
     // MARK: - Compliance Summary Card
 
@@ -459,20 +547,20 @@ struct FleetDashboardView: View {
         guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
         let channel = client.channel("fleet_manager_realtime_channel")
-        
-        let tripsStream = channel.postgresChange(AnyAction.self, schema: "public", table: "trips")
-        let sosStream = channel.postgresChange(AnyAction.self, schema: "public", table: "sos_alerts")
-        let defectStream = channel.postgresChange(AnyAction.self, schema: "public", table: "defect_reports")
-        let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
-        let notifStream = channel.postgresChange(AnyAction.self, schema: "public", table: "notifications")
-        let taskStream = channel.postgresChange(AnyAction.self, schema: "public", table: "maintenance_tasks")
-        let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
-        let fuelStream = channel.postgresChange(AnyAction.self, schema: "public", table: "fuel_logs")
-        let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+        self.realtimeChannel = channel
         
         Task {
+            let tripsStream = channel.postgresChange(AnyAction.self, schema: "public", table: "trips")
+            let sosStream = channel.postgresChange(AnyAction.self, schema: "public", table: "sos_alerts")
+            let defectStream = channel.postgresChange(AnyAction.self, schema: "public", table: "defect_reports")
+            let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
+            let notifStream = channel.postgresChange(AnyAction.self, schema: "public", table: "notifications")
+            let taskStream = channel.postgresChange(AnyAction.self, schema: "public", table: "maintenance_tasks")
+            let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
+            let fuelStream = channel.postgresChange(AnyAction.self, schema: "public", table: "fuel_logs")
+            let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+            
             try? await channel.subscribeWithError()
-            self.realtimeChannel = channel
             
             async let _ : () = handleStream(tripsStream)
             async let _ : () = handleStream(sosStream)
@@ -489,7 +577,7 @@ struct FleetDashboardView: View {
     private func handleStream<S: AsyncSequence>(_ stream: S) async {
         do {
             for try await _ in stream {
-                try? await SupabaseManager.shared.syncAllData(context: modelContext)
+                await SupabaseManager.shared.syncAllData(context: modelContext)
             }
         } catch {
             print("Stream error: \(error)")
@@ -530,6 +618,40 @@ struct FleetCircularProgressView: View {
                 .foregroundColor(AppTheme.Brand.primary)
         }
         .frame(width: 52, height: 52)
+    }
+}
+
+// MARK: - FleetGridQuickActionButton
+struct FleetGridQuickActionButton: View {
+    let icon: String
+    let label: String
+    var iconColor: Color = AppTheme.Brand.royalBlue
+    var bgColor: Color = AppTheme.Brand.primary.opacity(0.08)
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(bgColor)
+                        .frame(width: 58, height: 58)
+                    Image(systemName: icon)
+                        .font(.system(size: 24))
+                        .foregroundColor(iconColor)
+                }
+                
+                Text(label)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(AppTheme.Text.primary)
+                    .frame(height: 32, alignment: .top)
+                    .lineLimit(2)
+            }
+            .frame(width: 82)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
