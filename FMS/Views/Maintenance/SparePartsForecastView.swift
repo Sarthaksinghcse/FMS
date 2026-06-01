@@ -10,51 +10,19 @@ struct SparePartsForecastView: View {
             AppTheme.Background.page.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header Summary Card
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.purple.opacity(0.1))
-                                .frame(width: 38, height: 38)
-                            Image(systemName: "box.truck.fill")
-                                .foregroundColor(.purple)
-                                .font(.system(size: 16))
-                        }
-                        
-                        Text("AI Spare Parts Demand Forecast")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundColor(.black)
-                        
-                        Spacer()
-                        
-                        Button {
-                            Task {
-                                await viewModel.loadForecast(forceRefresh: true)
-                            }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(AppTheme.Brand.primary)
-                                .padding(8)
-                                .background(AppTheme.Background.page)
-                                .clipShape(Circle())
-                        }
-                        .disabled(viewModel.isLoading)
-                    }
-
-                    if !viewModel.summary.isEmpty {
-                        Text(viewModel.summary)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(AppTheme.Text.secondary)
-                            .lineSpacing(4)
-                    }
+                // Header Summary
+                HStack {
+                    Text("AI Spare Parts Demand Forecast")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                    Spacer()
                 }
-                .padding(18)
-                .background(AppTheme.Background.card)
-                .cornerRadius(AppTheme.Radius.card)
-                .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
-                .padding(16)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
 
                 if viewModel.isLoading && viewModel.forecasts.isEmpty {
                     Spacer()
@@ -92,8 +60,27 @@ struct SparePartsForecastView: View {
                 }
             }
         }
-        .navigationTitle("Parts Forecast")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    Task {
+                        await viewModel.loadForecast(forceRefresh: true)
+                    }
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.black)
+                        .frame(width: 44, height: 44)
+                        .background(Color.white)
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                }
+                .disabled(viewModel.isLoading)
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
         .onAppear {
             Task {
                 await viewModel.loadForecast(forceRefresh: false)

@@ -11,6 +11,8 @@ import SwiftUI
 import SwiftData
 
 struct MaintenanceDashboardView: View {
+    @Environment(\.modelContext) private var modelContext
+
     // Logged-in maintenance user
     let currentUser: User
 
@@ -36,6 +38,9 @@ struct MaintenanceDashboardView: View {
 
         }
         .accentColor(AppTheme.Brand.primary)
+        .task {
+            await SupabaseManager.shared.syncAllData(context: modelContext)
+        }
     }
 }
 

@@ -32,14 +32,8 @@ final class ScheduledTasksViewModel: ObservableObject {
 
     // MARK: Filtered tasks
     var filteredTasks: [WorkOrder] {
-        let today = Calendar.current.startOfDay(for: .now)
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
-
         var base = allWorkOrders.filter { order in
-            // Scheduled Today = open orders created today
-            order.status == .open &&
-            order.createdAt >= today &&
-            order.createdAt < tomorrow
+            order.status == .open
         }
 
         // Apply chip filter
@@ -223,7 +217,7 @@ private struct ScheduledTaskCard: View {
                 .padding(.horizontal, 16)
 
             // Detail rows
-            VStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 8) {
                 ScheduledDetailRow(
                     icon: "wrench.and.screwdriver",
                     label: "Service Type",
@@ -302,6 +296,7 @@ private struct ScheduledDetailRow: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(AppTheme.Text.primary)
                 .lineLimit(1)
+            Spacer()
         }
     }
 }

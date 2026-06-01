@@ -10,6 +10,7 @@ import SwiftUI
 import SwiftData
 
 struct MaintenanceDashboardTab: View {
+    @Environment(\.modelContext) private var modelContext
     // Logged-in maintenance user (passed from parent/login)
     let currentUser: User
 
@@ -49,24 +50,18 @@ struct MaintenanceDashboardTab: View {
     }
 
     private var scheduledToday: [WorkOrder] {
-        let today = Calendar.current.startOfDay(for: .now)
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
         return allWorkOrders.filter {
-            $0.assignedTo == currentUser.id &&
-            $0.status == .open &&
-            $0.createdAt >= today &&
-            $0.createdAt < tomorrow
+            $0.status == .open
         }
     }
 
     private var inProgressOrders: [WorkOrder] {
-        allWorkOrders.filter { $0.assignedTo == currentUser.id && $0.status == .inProgress }
+        allWorkOrders.filter { $0.status == .inProgress }
     }
 
     private var completedToday: [WorkOrder] {
         let startOfDay = Calendar.current.startOfDay(for: .now)
         return allWorkOrders.filter {
-            $0.assignedTo == currentUser.id &&
             $0.status == .completed &&
             ($0.completedAt ?? .distantPast) >= startOfDay
         }
@@ -130,6 +125,9 @@ struct MaintenanceDashboardTab: View {
                 }
                 .safeAreaPadding(.top)
                 .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .refreshable {
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
+                }
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showingProfile) {

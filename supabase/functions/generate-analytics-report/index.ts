@@ -19,57 +19,78 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Check if a recent report already exists (< 6 hours old)
-    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
-    const { data: existing } = await supabase
-      .from("ai_analytics_reports")
-      .select("*")
-      .gt("generated_at", sixHoursAgo)
-      .order("generated_at", { ascending: false })
-      .limit(1);
+    // Parse fleet snapshot if passed from client
+    let fleetSnapshot = null;
+    let bypassCache = false;
 
-    if (existing?.length) {
-      return new Response(JSON.stringify(existing[0]), {
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        if (body && body.fleetSnapshot) {
+          fleetSnapshot = body.fleetSnapshot;
+          bypassCache = true;
+          console.log("Using live local fleet snapshot provided by client:", JSON.stringify(fleetSnapshot));
+        }
+      } catch (e) {
+        console.log("No valid JSON payload in request, falling back to database query:", e.message);
+      }
     }
 
-    // Aggregate fleet data
-    const [
-      { data: vehicles },
-      { data: trips },
-      { data: workOrders },
-      { data: maintenance },
-      { data: fuelLogs },
-    ] = await Promise.all([
-      supabase.from("vehicles").select("id, status, vehicle_type, fuel_type"),
-      supabase.from("trips").select("id, status, created_at").order("created_at", { ascending: false }).limit(500),
-      supabase.from("work_orders").select("id, priority, status"),
-      supabase.from("maintenance_records").select("id, cost, service_date").order("service_date", { ascending: false }).limit(100),
-      supabase.from("fuel_logs").select("id, litres, amount_paid, created_at").order("created_at", { ascending: false }).limit(200),
-    ]);
+    if (!bypassCache) {
+      // Check if a recent report already exists (< 6 hours old)
+      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from("ai_analytics_reports")
+        .select("*")
+        .gt("generated_at", sixHoursAgo)
+        .order("generated_at", { ascending: false })
+        .limit(1);
 
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      if (existing?.length) {
+        return new Response(JSON.stringify(existing[0]), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
 
-    const fleetSnapshot = {
-      totalVehicles: vehicles?.length ?? 0,
-      activeVehicles: vehicles?.filter(v => v.status === "available").length ?? 0,
-      vehiclesInMaintenance: vehicles?.filter(v => v.status === "maintenance").length ?? 0,
-      tripsThisMonth: trips?.filter(t => new Date(t.created_at) > thirtyDaysAgo).length ?? 0,
-      completedTrips: trips?.filter(t => t.status === "completed").length ?? 0,
-      openWorkOrders: workOrders?.filter(wo => wo.status === "open").length ?? 0,
-      urgentWorkOrders: workOrders?.filter(wo => wo.priority === "urgent").length ?? 0,
-      maintenanceCostThisMonth: maintenance
-        ?.filter(m => new Date(m.service_date) > thirtyDaysAgo)
-        .reduce((sum, m) => sum + (m.cost ?? 0), 0) ?? 0,
-      totalFuelSpend: fuelLogs
-        ?.filter(f => new Date(f.created_at) > thirtyDaysAgo)
-        .reduce((sum, f) => sum + (f.amount_paid ?? 0), 0) ?? 0,
-      totalFuelLitres: fuelLogs
-        ?.filter(f => new Date(f.created_at) > thirtyDaysAgo)
-        .reduce((sum, f) => sum + (f.litres ?? 0), 0) ?? 0,
-    };
+    if (!fleetSnapshot) {
+      // Aggregate fleet data from remote database
+      const [
+        { data: vehicles },
+        { data: trips },
+        { data: workOrders },
+        { data: maintenance },
+        { data: fuelLogs },
+      ] = await Promise.all([
+        supabase.from("vehicles").select("id, status, vehicle_type, fuel_type"),
+        supabase.from("trips").select("id, status, created_at").order("created_at", { ascending: false }).limit(500),
+        supabase.from("work_orders").select("id, priority, status"),
+        supabase.from("maintenance_records").select("id, cost, service_date").order("service_date", { ascending: false }).limit(100),
+        supabase.from("fuel_logs").select("id, litres, amount_paid, created_at").order("created_at", { ascending: false }).limit(200),
+      ]);
+
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      fleetSnapshot = {
+        totalVehicles: vehicles?.length ?? 0,
+        activeVehicles: vehicles?.filter(v => v.status === "available").length ?? 0,
+        vehiclesInMaintenance: vehicles?.filter(v => v.status === "maintenance").length ?? 0,
+        tripsThisMonth: trips?.filter(t => new Date(t.created_at) > thirtyDaysAgo).length ?? 0,
+        completedTrips: trips?.filter(t => t.status === "completed").length ?? 0,
+        openWorkOrders: workOrders?.filter(wo => wo.status === "open").length ?? 0,
+        urgentWorkOrders: workOrders?.filter(wo => wo.priority === "urgent").length ?? 0,
+        maintenanceCostThisMonth: maintenance
+          ?.filter(m => new Date(m.service_date) > thirtyDaysAgo)
+          .reduce((sum, m) => sum + (m.cost ?? 0), 0) ?? 0,
+        totalFuelSpend: fuelLogs
+          ?.filter(f => new Date(f.created_at) > thirtyDaysAgo)
+          .reduce((sum, f) => sum + (f.amount_paid ?? 0), 0) ?? 0,
+        totalFuelLitres: fuelLogs
+          ?.filter(f => new Date(f.created_at) > thirtyDaysAgo)
+          .reduce((sum, f) => sum + (f.litres ?? 0), 0) ?? 0,
+      };
+    }
 
     const prompt = `
 You are a fleet operations analyst. Generate a concise executive analytics report 

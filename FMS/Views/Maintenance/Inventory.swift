@@ -10,6 +10,7 @@ import SwiftUI
 import SwiftData
 
 struct InventoryTabView: View {
+    @Environment(\.modelContext) private var modelContext
     let currentUser: User
     let items: [InventoryItem]
 
@@ -61,16 +62,7 @@ struct InventoryTabView: View {
         NavigationView {
             ZStack(alignment: .bottomTrailing) {
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 20) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Manage spare parts and monitor stock levels.")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundColor(AppTheme.Text.secondary)
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
+                    VStack(spacing: 12) {
                         // Stats Dashboard Bar
                         HStack(spacing: 12) {
                             // Total Parts
@@ -92,7 +84,7 @@ struct InventoryTabView: View {
                                 Text("Low Stock")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
-                                HStack(spacing: 4) {
+                                  HStack(spacing: 4) {
                                     Text("\(lowStock.count)")
                                         .font(.system(size: 20, weight: .bold, design: .rounded))
                                         .foregroundColor(lowStock.isEmpty ? AppTheme.Text.primary : AppTheme.Status.danger)
@@ -123,8 +115,7 @@ struct InventoryTabView: View {
                             .cornerRadius(12)
                         }
                         .padding(.horizontal)
-                        .padding(.top, 16)
-                        .padding(.bottom, 12)
+                        .padding(.top, 8)
 
                         // Search & Filter Controls
                         VStack(spacing: 10) {
@@ -156,7 +147,6 @@ struct InventoryTabView: View {
                             .pickerStyle(.segmented)
                             .padding(.horizontal)
                         }
-                        .padding(.bottom, 12)
 
                         // Cards List
                         if filteredItems.isEmpty {
@@ -187,6 +177,9 @@ struct InventoryTabView: View {
                             .padding(.bottom, 24)
                         }
                     }
+                }
+                .refreshable {
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
                 
                 // FAB to Add Spare Parts
