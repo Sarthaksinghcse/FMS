@@ -20,6 +20,7 @@ struct FMSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(SupabaseManager.shared)
         }
         .modelContainer(for: [
             User.self,
@@ -32,7 +33,8 @@ struct FMSApp: App {
             SOSAlert.self,
             AppNotification.self,
             InventoryItem.self,
-            FuelLog.self
+            FuelLog.self,
+            ComplianceAlert.self
         ])
     }
 }

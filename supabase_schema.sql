@@ -302,7 +302,7 @@ ALTER TABLE public.maintenance_records ENABLE ROW LEVEL SECURITY;
 
 -- Helper: get role of logged-in user
 CREATE OR REPLACE FUNCTION public.current_user_role()
-RETURNS user_role LANGUAGE sql STABLE AS $$
+RETURNS user_role LANGUAGE sql SECURITY DEFINER STABLE AS $$
     SELECT role FROM public.users WHERE id = auth.uid();
 $$;
 
@@ -376,12 +376,23 @@ CREATE POLICY "defect_reports_select_all" ON public.defect_reports FOR SELECT US
 DROP POLICY IF EXISTS "defect_reports_insert_driver" ON public.defect_reports;
 CREATE POLICY "defect_reports_insert_driver" ON public.defect_reports FOR INSERT WITH CHECK (reported_by = auth.uid());
 DROP POLICY IF EXISTS "defect_reports_update_all" ON public.defect_reports;
-CREATE POLICY "defect_reports_update_all" ON public.defect_reports FOR UPDATE USING (TRUE);
+DROP POLICY IF EXISTS "defect_reports_update_policy" ON public.defect_reports;
+CREATE POLICY "defect_reports_update_policy" ON public.defect_reports FOR UPDATE USING (
+    reported_by = auth.uid() OR
+    public.current_user_role() = 'fleet_manager' OR
+    public.current_user_role() = 'maintenance'
+);
 DROP POLICY IF EXISTS "defect_reports_delete_manager" ON public.defect_reports;
 CREATE POLICY "defect_reports_delete_manager" ON public.defect_reports FOR DELETE USING (public.current_user_role() = 'fleet_manager');
 
 -- ---- vehicle_locations ----
+DROP POLICY IF EXISTS "locations_select_manager" ON public.vehicle_locations;
 CREATE POLICY "locations_select_manager" ON public.vehicle_locations FOR SELECT USING (public.current_user_role() = 'fleet_manager');
+DROP POLICY IF EXISTS "locations_select_driver" ON public.vehicle_locations;
+CREATE POLICY "locations_select_driver" ON public.vehicle_locations FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.vehicles WHERE id = vehicle_id AND assigned_driver_id = auth.uid())
+);
+DROP POLICY IF EXISTS "locations_insert_driver" ON public.vehicle_locations;
 CREATE POLICY "locations_insert_driver"  ON public.vehicle_locations FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM public.vehicles WHERE id = vehicle_id AND assigned_driver_id = auth.uid())
 );
@@ -618,93 +629,107 @@ ORDER BY mt.due_date ASC;
 -- 8. SCHEMA UPDATES FOR NEW SYSTEM FEATURES
 -- ============================================================
 
--- 1. Create sos_alerts table
-CREATE TABLE IF NOT EXISTS public.sos_alerts (
+-- 1. Create fuel_logs table
+CREATE TABLE IF NOT EXISTS public.fuel_logs (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     driver_id   UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
-    vehicle_id  UUID,
-    trip_id     UUID,
-    latitude    DOUBLE PRECISION NOT NULL,
-    longitude   DOUBLE PRECISION NOT NULL,
-    message     TEXT,
-    status      TEXT NOT NULL DEFAULT 'active',
+    vehicle_id  UUID                 REFERENCES public.vehicles (id) ON DELETE SET NULL,
+    trip_id     UUID                 REFERENCES public.trips (id) ON DELETE SET NULL,
+    fuel_type   TEXT        NOT NULL DEFAULT 'petrol',
+    litres      NUMERIC(10, 2) NOT NULL CHECK (litres >= 0),
+    amount_paid NUMERIC(10, 2) NOT NULL CHECK (amount_paid >= 0),
+    odometer    DOUBLE PRECISION,
+    receipt_url TEXT,
+    notes       TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. Create inventory table
-CREATE TABLE IF NOT EXISTS public.inventory (
-    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    part_name          TEXT        NOT NULL,
-    part_number        TEXT        NOT NULL UNIQUE,
-    quantity_in_stock  INTEGER     NOT NULL DEFAULT 0,
-    reorder_threshold  INTEGER     NOT NULL DEFAULT 0,
-    unit_cost          NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    supplier_name      TEXT,
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 3. Create maintenance_records table
-CREATE TABLE IF NOT EXISTS public.maintenance_records (
+-- 2. Create compliance_alerts table
+CREATE TABLE IF NOT EXISTS public.compliance_alerts (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vehicle_id    UUID        NOT NULL REFERENCES public.vehicles (id) ON DELETE CASCADE,
-    work_order_id UUID                 REFERENCES public.work_orders (id) ON DELETE SET NULL,
-    service_type  TEXT        NOT NULL,
-    service_date  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    cost          NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (cost >= 0),
+    alert_type    TEXT        NOT NULL, -- 'insurance' | 'permit' | 'servicing'
+    status        TEXT        NOT NULL, -- 'upcoming' | 'overdue' | 'resolved'
+    deadline_date TIMESTAMPTZ NOT NULL,
+    resolved_at   TIMESTAMPTZ,
     notes         TEXT,
-    repair_images TEXT[],
-    performed_by  UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. Create Indexes
-CREATE INDEX IF NOT EXISTS idx_sos_alerts_driver ON public.sos_alerts (driver_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_records_vehicle ON public.maintenance_records (vehicle_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_records_date ON public.maintenance_records (service_date DESC);
+-- 3. Create Indexes
+CREATE INDEX IF NOT EXISTS idx_fuel_logs_driver ON public.fuel_logs (driver_id);
+CREATE INDEX IF NOT EXISTS idx_fuel_logs_vehicle ON public.fuel_logs (vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_compliance_alerts_vehicle ON public.compliance_alerts (vehicle_id);
 
--- 5. Enable Row Level Security (RLS)
-ALTER TABLE public.sos_alerts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.inventory ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.maintenance_records ENABLE ROW LEVEL SECURITY;
+-- 4. Enable Row Level Security (RLS)
+ALTER TABLE public.fuel_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.compliance_alerts ENABLE ROW LEVEL SECURITY;
 
--- 6. Add RLS Policies
-CREATE POLICY "sos_alerts_select_all" ON public.sos_alerts FOR SELECT USING (TRUE);
-CREATE POLICY "sos_alerts_insert_driver" ON public.sos_alerts FOR INSERT WITH CHECK (driver_id = auth.uid());
-CREATE POLICY "sos_alerts_update_all" ON public.sos_alerts FOR UPDATE USING (TRUE);
+-- 5. Add RLS Policies
+DROP POLICY IF EXISTS "fuel_logs_select_all" ON public.fuel_logs;
+CREATE POLICY "fuel_logs_select_all" ON public.fuel_logs FOR SELECT USING (TRUE);
+DROP POLICY IF EXISTS "fuel_logs_insert_driver" ON public.fuel_logs;
+CREATE POLICY "fuel_logs_insert_driver" ON public.fuel_logs FOR INSERT WITH CHECK (driver_id = auth.uid());
+DROP POLICY IF EXISTS "fuel_logs_update_all" ON public.fuel_logs;
+CREATE POLICY "fuel_logs_update_all" ON public.fuel_logs FOR UPDATE USING (TRUE);
+DROP POLICY IF EXISTS "fuel_logs_delete_manager" ON public.fuel_logs;
+CREATE POLICY "fuel_logs_delete_manager" ON public.fuel_logs FOR DELETE USING (public.current_user_role() = 'fleet_manager');
 
-CREATE POLICY "inventory_select_all" ON public.inventory FOR SELECT USING (TRUE);
-CREATE POLICY "inventory_modify_manager" ON public.inventory FOR ALL USING (public.current_user_role() = 'fleet_manager');
-CREATE POLICY "inventory_modify_maintenance" ON public.inventory FOR ALL USING (public.current_user_role() = 'maintenance');
-
-CREATE POLICY "maintenance_records_select_all" ON public.maintenance_records FOR SELECT USING (TRUE);
-CREATE POLICY "maintenance_records_modify_all" ON public.maintenance_records FOR ALL USING (
+DROP POLICY IF EXISTS "compliance_alerts_select_all" ON public.compliance_alerts;
+CREATE POLICY "compliance_alerts_select_all" ON public.compliance_alerts FOR SELECT USING (TRUE);
+DROP POLICY IF EXISTS "compliance_alerts_modify_all" ON public.compliance_alerts;
+CREATE POLICY "compliance_alerts_modify_all" ON public.compliance_alerts FOR ALL USING (
     public.current_user_role() = 'fleet_manager' OR 
     public.current_user_role() = 'maintenance'
 );
 
--- 7. Add Tables to Realtime Publication
-ALTER PUBLICATION supabase_realtime ADD TABLE public.sos_alerts;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.maintenance_records;
+-- 6. Add Tables to Realtime Publication
+ALTER PUBLICATION supabase_realtime ADD TABLE public.fuel_logs;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.compliance_alerts;
 
--- 8. Add Storage Bucket (Avatars) and Policies
+-- 7. Add Storage Bucket (Avatars) and Policies
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "Public Avatar Access" ON storage.objects;
 CREATE POLICY "Public Avatar Access" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+DROP POLICY IF EXISTS "Insert own avatar" ON storage.objects;
 CREATE POLICY "Insert own avatar" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
+DROP POLICY IF EXISTS "Update own avatar" ON storage.objects;
 CREATE POLICY "Update own avatar" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars');
 
--- 9. Add Storage Bucket (Maintenance Images) and Policies
+-- 8. Add Storage Bucket (Maintenance Images) and Policies
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('maintenance-images', 'maintenance-images', true)
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "Public Maintenance Image Access" ON storage.objects;
 CREATE POLICY "Public Maintenance Image Access" ON storage.objects FOR SELECT USING (bucket_id = 'maintenance-images');
+DROP POLICY IF EXISTS "Insert maintenance image" ON storage.objects;
 CREATE POLICY "Insert maintenance image" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'maintenance-images');
+DROP POLICY IF EXISTS "Update maintenance image" ON storage.objects;
 CREATE POLICY "Update maintenance image" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'maintenance-images');
+
+-- 9. Add Storage Bucket (Fuel Receipts) and Policies
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('receipts', 'receipts', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public Receipt Access" ON storage.objects;
+CREATE POLICY "Public Receipt Access" ON storage.objects FOR SELECT USING (bucket_id = 'receipts');
+DROP POLICY IF EXISTS "Insert own receipt" ON storage.objects;
+CREATE POLICY "Insert own receipt" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'receipts');
+DROP POLICY IF EXISTS "Update own receipt" ON storage.objects;
+CREATE POLICY "Update own receipt" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'receipts');
 
 -- 10. Add repair_images column to maintenance_records if it doesn't exist
 ALTER TABLE public.maintenance_records ADD COLUMN IF NOT EXISTS repair_images TEXT[];
+
+-- 11. Alter vehicles table to add compliance & extended fields
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'car';
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS fuel_type TEXT DEFAULT 'petrol';
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS odometer_reading DOUBLE PRECISION DEFAULT 0.0;
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS insurance_expiry_date TIMESTAMPTZ;
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS permit_expiry_date TIMESTAMPTZ;
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS next_service_date TIMESTAMPTZ;

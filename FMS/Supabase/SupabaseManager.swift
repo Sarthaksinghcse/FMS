@@ -1,14 +1,10 @@
 
 
-
-
-
-
-
 import Foundation
 import Supabase
 import Combine
 import SwiftData
+import Observation
 
 
 class InMemoryLocalStorage: AuthLocalStorage, @unchecked Sendable {
@@ -52,7 +48,8 @@ enum AuthError: LocalizedError {
 
 
 @MainActor
-final class SupabaseManager: ObservableObject {
+@Observable
+final class SupabaseManager {
     static let shared = SupabaseManager()
     
     
@@ -64,11 +61,11 @@ final class SupabaseManager: ObservableObject {
     let client: SupabaseClient
     
     
-    @Published var currentUser: DBUser?
+    var currentUser: DBUser?
     
-    @Published var isLoading = false
+    var isLoading = false
     
-    @Published var authError: String?
+    var authError: String?
     
     private init() {
         self.client = SupabaseClient(
@@ -106,7 +103,7 @@ final class SupabaseManager: ObservableObject {
             
             let response = try await client.auth.signUp(
                 email: email,
-                password: password.uuidString, 
+                password: password.uuidString,
                 data: [
                     "name": .string(fullName),
                     "role": .string(role.rawValue)
@@ -1183,6 +1180,50 @@ final class SupabaseManager: ObservableObject {
             print("Reconciled data synchronization error: \(error.localizedDescription)")
         }
     }
-}
+    
+    // MARK: - AI Additions
+    
+    func fetchFuelLogs() async throws -> [DBFuelLog] {
+        return try await client.from("fuel_logs")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(500)
+            .execute()
+            .value
+    }
 
+    func fetchPredictiveAlerts(onlyActive: Bool = true) async throws -> [DBPredictiveAlert] {
+        var query = client.from("predictive_alerts").select()
+        if onlyActive { query = query.is("resolved_at", value: nil) }
+        return try await query
+            .order("created_at", ascending: false)
+            .limit(50)
+            .execute()
+            .value
+    }
+
+    func fetchVehicleHealthScores() async throws -> [DBVehicleHealthScore] {
+        return try await client.from("vehicle_health_scores")
+            .select()
+            .order("health_score", ascending: true)   // worst first
+            .execute()
+            .value
+    }
+
+    func saveVehicleHealthScore(_ score: DBVehicleHealthScore) async throws {
+        try await client.from("vehicle_health_scores")
+            .upsert(score, onConflict: "vehicle_id")
+            .execute()
+    }
+
+    func fetchLatestAIReport() async throws -> AIAnalyticsReport? {
+        let reports: [AIAnalyticsReport] = try await client.from("ai_analytics_reports")
+            .select()
+            .order("generated_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return reports.first
+    }
+}
 

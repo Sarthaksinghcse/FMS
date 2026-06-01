@@ -14,22 +14,28 @@ final class FleetDashboardViewModel {
             label: "Chat"
         ),
         DashboardQuickAction(
+            icon: "location.fill",
+            iconColor: Color(red: 0.13, green: 0.69, blue: 0.45),
+            bgColor: Color(red: 0.13, green: 0.69, blue: 0.45).opacity(0.12),
+            label: "Tracking"
+        ),
+        DashboardQuickAction(
             icon: "person.badge.plus",
             iconColor: AppTheme.Brand.violet,
             bgColor: AppTheme.IconBg.violet,
             label: "Assign Driver"
         ),
         DashboardQuickAction(
-            icon: "exclamationmark.octagon.fill",
-            iconColor: AppTheme.Status.danger,
-            bgColor: AppTheme.IconBg.red,
-            label: "Alerts"
-        ),
-        DashboardQuickAction(
             icon: "wrench.and.screwdriver.fill",
             iconColor: AppTheme.Brand.amber,
             bgColor: AppTheme.IconBg.amber,
             label: "Maintenance"
+        ),
+        DashboardQuickAction(
+            icon: "chart.bar.doc.horizontal.fill",
+            iconColor: AppTheme.Status.purple,
+            bgColor: AppTheme.IconBg.purple,
+            label: "AI Report"
         )
     ]
 
