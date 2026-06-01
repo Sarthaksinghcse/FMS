@@ -1342,6 +1342,7 @@ struct TripListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Trip.scheduledStartTime, order: .reverse) private var allTrips: [Trip]
     @Query(sort: \User.fullName) private var allUsers: [User]
+    @Query private var vehicles: [Vehicle]
 
     private var filteredTrips: [Trip] {
         var trips = allTrips
@@ -1382,6 +1383,13 @@ struct TripListView: View {
 
     private func driverName(for driverId: UUID) -> String? {
         allUsers.first(where: { $0.id == driverId && $0.role == UserRole.driver })?.fullName
+    }
+
+    private func vehicleName(for vehicleId: UUID) -> String? {
+        if let vehicle = vehicles.first(where: { $0.id == vehicleId }) {
+            return "\(vehicle.make) \(vehicle.model) · \(vehicle.registrationNumber)"
+        }
+        return nil
     }
 
     var body: some View {
@@ -1494,6 +1502,7 @@ struct TripListView: View {
                         TripCardView(
                             trip: trip,
                             driverName: driverName(for: trip.driverId),
+                            vehicleName: vehicleName(for: trip.vehicleId),
                             accentColor: trip.tripStatus.badgeColor,
                             onEdit: (trip.tripStatus == .completed || trip.tripStatus == .cancelled) ? nil : {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -1562,6 +1571,7 @@ struct TripListView: View {
 struct TripCardView: View {
     let trip: Trip
     let driverName: String?
+    let vehicleName: String?
     let accentColor: Color
     var onEdit: (() -> Void)? = nil
 
@@ -1624,14 +1634,27 @@ struct TripCardView: View {
             
             if let name = driverName {
                 Divider().background(AppTheme.Glass.border)
-                HStack(spacing: 10) {
-                    Image(systemName: "person.circle.fill").font(.system(size: 18)).foregroundColor(accentColor.opacity(0.7))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("ASSIGNED DRIVER")
-                            .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
-                        Text(name).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                HStack(spacing: 16) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "person.circle.fill").font(.system(size: 18)).foregroundColor(accentColor.opacity(0.7))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("ASSIGNED DRIVER")
+                                .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                            Text(name).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                        }
                     }
-                    Spacer()
+                    
+                    if let carName = vehicleName {
+                        Spacer()
+                        HStack(spacing: 10) {
+                            Image(systemName: "car.fill").font(.system(size: 16)).foregroundColor(accentColor.opacity(0.7))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("ASSIGNED VEHICLE")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                                Text(carName).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                            }
+                        }
+                    }
                 }
             }
 

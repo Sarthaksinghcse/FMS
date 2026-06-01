@@ -54,8 +54,8 @@ final class SupabaseManager {
     
     
     
-    private static let supabaseURL = URL(string: "https://trkurrtlyzfsssnptdsc.supabase.co")!
-    private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRya3VycnRseXpmc3NzbnB0ZHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTI0NTgsImV4cCI6MjA5NDkyODQ1OH0.380Es9QbO6ppO9bFUiFV3qmNKpgWzf3fzBKR9S9Ajuo"
+    private static let supabaseURL = URL(string: "https://coybhztpseusfcbckcqg.supabase.co/")!
+    private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNveWJoenRwc2V1c2ZjYmNrY3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDYzNzQsImV4cCI6MjA5NTg4MjM3NH0.eYXYqfXQL9drk-6bGezvkc5f3B0UyS6z9pTkL2KWO7Q"
     
     
     let client: SupabaseClient
