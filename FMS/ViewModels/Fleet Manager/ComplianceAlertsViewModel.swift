@@ -72,8 +72,6 @@ class ComplianceAlertsViewModel {
     ) -> [ComplianceAlertItem] {
         let now = Date()
         let calendar = Calendar.current
-        let alertWindow: TimeInterval = 86400 * 30 // 30 days for insurance/permit
-        let serviceWindow: TimeInterval = 86400 * 14 // 14 days for servicing
 
         var items: [ComplianceAlertItem] = []
 
@@ -228,7 +226,7 @@ class ComplianceAlertsViewModel {
         context: ModelContext
     ) {
         // Check if persisted alert already exists
-        if let existingId = item.persistedAlertId {
+        if item.persistedAlertId != nil {
             // Already resolved — do nothing
             return
         }

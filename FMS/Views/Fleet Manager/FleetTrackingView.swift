@@ -81,13 +81,9 @@ struct FleetTrackingView: View {
                 Button {
                     dismiss()
                 } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Dashboard")
-                            .font(.system(size: 16, weight: .medium))
-                    }
-                    .foregroundColor(AppTheme.Brand.primary)
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AppTheme.Brand.primary)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {

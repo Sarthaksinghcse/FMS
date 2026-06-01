@@ -956,6 +956,7 @@ struct InspectionFormSheet: View {
     // ── Defect photos (remarks section) ───────────────────────────────────────
     @State private var defectPhotos: [UIImage] = []
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var vehicleNumber: String = "TN-07-AB-1234"
 
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
@@ -987,7 +988,7 @@ struct InspectionFormSheet: View {
                                 .font(.system(size: 16, weight: .bold))
                         }
                         Text(title).font(.system(size: 15, weight: .semibold))
-                        Text("Vehicle \(isPreTrip ? "TN-07-AB-1234" : "TN-07-AB-1234")")
+                        Text("Vehicle \(vehicleNumber)")
                             .font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
@@ -1241,6 +1242,18 @@ struct InspectionFormSheet: View {
                 }
             }
         }
+        .task {
+            let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+            if let trips = try? await SupabaseManager.shared.fetchTrips(),
+               let activeTrip = trips.first(where: { $0.driverId == driverId && ($0.status == .started || $0.status == .assigned) }),
+               let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+               let matched = vehicles.first(where: { $0.id == activeTrip.vehicleId }) {
+                self.vehicleNumber = matched.vehicleNumber
+            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+                      let assigned = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                self.vehicleNumber = assigned.vehicleNumber
+            }
+        }
     }
 
     @MainActor
@@ -1250,11 +1263,17 @@ struct InspectionFormSheet: View {
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
         var vehicleId = UUID()
         
-        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
-            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-                vehicleId = assignedVehicle.id
-            } else if let firstVehicle = vehicles.first {
-                vehicleId = firstVehicle.id
+        if let trips = try? await SupabaseManager.shared.fetchTrips() {
+            if let activeTrip = trips.first(where: { $0.driverId == driverId && $0.status == .started }) {
+                vehicleId = activeTrip.vehicleId
+            } else if let assignedTrip = trips.first(where: { $0.driverId == driverId && $0.status == .assigned }) {
+                vehicleId = assignedTrip.vehicleId
+            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+                if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                    vehicleId = assignedVehicle.id
+                } else if let firstVehicle = vehicles.first {
+                    vehicleId = firstVehicle.id
+                }
             }
         }
         
@@ -1279,7 +1298,7 @@ struct InspectionFormSheet: View {
                     id: UUID(),
                     userId: driverId,
                     title: "Defect Flagged: " + (isPreTrip ? "Pre-Trip" : "Post-Trip"),
-                    message: "Inspection for Vehicle \(vehicleId.uuidString.prefix(4)) flagged remarks: \(remarks)",
+                    message: "Inspection for Vehicle \(vehicleNumber) flagged remarks: \(remarks)",
                     type: .warning,
                     isRead: false,
                     createdAt: Date()
@@ -1469,13 +1488,27 @@ struct DefectReportSheet: View {
         
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
         var vehicleId = UUID()
+        var vehicleNo = ""
         
-        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
-            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-                vehicleId = assignedVehicle.id
-            } else if let firstVehicle = vehicles.first {
-                vehicleId = firstVehicle.id
+        if let trips = try? await SupabaseManager.shared.fetchTrips() {
+            if let activeTrip = trips.first(where: { $0.driverId == driverId && $0.status == .started }) {
+                vehicleId = activeTrip.vehicleId
+            } else if let assignedTrip = trips.first(where: { $0.driverId == driverId && $0.status == .assigned }) {
+                vehicleId = assignedTrip.vehicleId
+            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+                if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                    vehicleId = assignedVehicle.id
+                } else if let firstVehicle = vehicles.first {
+                    vehicleId = firstVehicle.id
+                }
             }
+        }
+        
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+           let matched = vehicles.first(where: { $0.id == vehicleId }) {
+            vehicleNo = matched.vehicleNumber
+        } else {
+            vehicleNo = vehicleId.uuidString.prefix(4).description
         }
         
         let severity: DefectSeverity
@@ -1503,7 +1536,7 @@ struct DefectReportSheet: View {
             
             // Notify Fleet Managers
             let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
-            let msg = "Driver \(driverName) reported a defect on Vehicle \(vehicleId.uuidString.prefix(4)): \(desc)"
+            let msg = "Driver \(driverName) reported a defect on Vehicle \(vehicleNo): \(desc)"
             await SupabaseManager.shared.notifyFleetManagers(
                 title: "⚠️ Mid-Trip Defect: \(titleStr)",
                 message: msg,

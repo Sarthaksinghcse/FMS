@@ -18,7 +18,7 @@ struct FleetContentView: View {
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
-                FleetDashboardView()
+                FleetDashboardView(selectedTab: $selectedTab)
                     .tabItem {
                         Label("Dashboard", systemImage: "square.grid.2x2.fill")
                     }

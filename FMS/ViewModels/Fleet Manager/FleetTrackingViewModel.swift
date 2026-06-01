@@ -7,6 +7,7 @@ import Foundation
 import MapKit
 import SwiftUI
 import Combine
+import Supabase
 
 
 @MainActor
@@ -22,23 +23,39 @@ final class FleetTrackingViewModel {
     private let supabaseManager = SupabaseManager.shared
     
     private var isLiveTracking = false
-    private var trackingTask: Task<Void, Never>?
+    private var realtimeChannel: RealtimeChannelV2? = nil
     
     func startLiveTracking() {
         guard !isLiveTracking else { return }
         isLiveTracking = true
-        trackingTask = Task {
-            while isLiveTracking {
+        
+        Task {
+            await loadVehicles(isBackgroundRefresh: true)
+        }
+        
+        let client = supabaseManager.client
+        let channel = client.channel("fleet_tracking_realtime")
+        let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicle_locations")
+        
+        Task {
+            try? await channel.subscribeWithError()
+            self.realtimeChannel = channel
+            
+            for await _ in changes {
                 await loadVehicles(isBackgroundRefresh: true)
-                try? await Task.sleep(for: .seconds(10))
             }
         }
     }
     
     func stopLiveTracking() {
         isLiveTracking = false
-        trackingTask?.cancel()
-        trackingTask = nil
+        if let active = realtimeChannel {
+            let client = supabaseManager.client
+            Task {
+                await client.removeChannel(active)
+            }
+            realtimeChannel = nil
+        }
     }
     
     func loadVehicles(isBackgroundRefresh: Bool = false) async {

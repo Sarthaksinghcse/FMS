@@ -85,5 +85,59 @@ final class AlertsFeedViewModel: ObservableObject {
             return false
         }
     }
+    
+    func assignDefect(defectId: UUID, mechanicId: UUID, priority: WorkOrderPriority, notes: String, context: ModelContext, defects: [DefectReport]) async -> Bool {
+        errorMessage = nil
+        guard let defect = defects.first(where: { $0.id == defectId }) else {
+            errorMessage = "Defect report not found."
+            return false
+        }
+        
+        defect.status = .inProgress
+        
+        let workOrder = WorkOrder(
+            id: UUID(),
+            vehicleId: defect.vehicleId,
+            defectReportId: defect.id,
+            assignedTo: mechanicId,
+            title: defect.title,
+            workDescription: defect.defectDescription + (notes.isEmpty ? "" : "\nNotes: \(notes)"),
+            priority: priority,
+            status: .open,
+            createdAt: Date()
+        )
+        
+        context.insert(workOrder)
+        
+        do {
+            try context.save()
+            
+            let dbDefect = defect.asDBDefectReport
+            let dbWorkOrder = workOrder.asDBWorkOrder
+            
+            let notif = DBNotification(
+                id: UUID(),
+                userId: mechanicId,
+                title: "New Work Order Assigned",
+                message: "You have been assigned to repair defect on Vehicle \(defect.vehicleId.uuidString.prefix(4)): \(defect.title)",
+                type: .maintenance,
+                isRead: false,
+                createdAt: Date()
+            )
+            
+            try await SupabaseManager.shared.updateDefectReport(dbDefect)
+            try await SupabaseManager.shared.createWorkOrder(dbWorkOrder)
+            try await SupabaseManager.shared.createNotification(notif)
+            
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+            return true
+        } catch {
+            errorMessage = "Failed to assign defect: \(error.localizedDescription)"
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.error)
+            return false
+        }
+    }
 }
 
