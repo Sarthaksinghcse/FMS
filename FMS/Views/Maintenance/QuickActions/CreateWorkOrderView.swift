@@ -267,7 +267,7 @@ struct CreateWorkOrderView: View {
             defectReportId: nil,
             assignedTo: selectedMechanicId!,
             title: title,
-            workDescription: "\(issueType) - \(notes)",
+            workDescription: "[PENDING_APPROVAL] \(issueType) - \(notes)",
             priority: selectedPriority,
             status: .open,
             estimatedCost: cost > 0 ? cost : nil
@@ -275,6 +275,16 @@ struct CreateWorkOrderView: View {
         
         modelContext.insert(newOrder)
         try? modelContext.save()
+        
+        // Push to Supabase so Fleet Manager can approve it
+        let dbWO = newOrder.asDBWorkOrder
+        Task {
+            do {
+                try await SupabaseManager.shared.createWorkOrder(dbWO)
+            } catch {
+                print("⚠️ Failed to sync new work order to Supabase: \(error.localizedDescription)")
+            }
+        }
         
         // Show success and dismiss
         withAnimation(.spring()) {

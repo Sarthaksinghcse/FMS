@@ -377,8 +377,10 @@ struct FuelLogSheet: View {
 
         let driverId  = SupabaseManager.shared.currentUser?.id ?? UUID()
         let vehicleId = vm.assignedVehicle?.id
+        let logId     = UUID()
 
         let log = FuelLog(
+            id: logId,
             driverId: driverId,
             vehicleId: vehicleId,
             tripId: vm.currentTrip?.id,
@@ -392,15 +394,44 @@ struct FuelLogSheet: View {
         modelContext.insert(log)
         try? modelContext.save()
 
-        withAnimation {
-            saving = false
-            saved  = true
-        }
+        Task {
+            var receiptUrl: String? = nil
+            if let imageData = log.receiptImageData {
+                do {
+                    receiptUrl = try await SupabaseManager.shared.uploadReceiptImage(logId: logId, imageData: imageData)
+                } catch {
+                    print("⚠️ Failed to upload receipt to Supabase: \(error.localizedDescription)")
+                }
+            }
 
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+            var dbLog = log.asDBLog
+            dbLog.receiptUrl = receiptUrl
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            dismiss()
+            do {
+                try await SupabaseManager.shared.createFuelLog(dbLog)
+                
+                await MainActor.run {
+                    withAnimation {
+                        saving = false
+                        saved  = true
+                    }
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        dismiss()
+                    }
+                }
+            } catch {
+                print("⚠️ Failed to create fuel log on Supabase: \(error.localizedDescription)")
+                await MainActor.run {
+                    validationError = "Saved locally. Sync with server pending."
+                    saving = false
+                    saved = true
+                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
