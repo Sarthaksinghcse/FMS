@@ -69,9 +69,7 @@ struct PredictiveAlertDetailView: View {
         return maintenanceRecords.filter { $0.vehicleId == vehicleId }.first
     }
     
-    private func vehicle(for alert: DBPredictiveAlert) -> Vehicle? {
-        return vehicles.first(where: { $0.id == alert.vehicleId })
-    }
+
     
     private func isSelected(_ alert: DBPredictiveAlert) -> Bool {
         return activeAlert?.id == alert.id
