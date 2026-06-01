@@ -1252,7 +1252,7 @@ extension DBSOSAlert {
         SOSAlert(
             id: id,
             driverId: driverId,
-            vehicleId: vehicleId ?? UUID(),
+            vehicleId: vehicleId,
             tripId: tripId,
             latitude: latitude,
             longitude: longitude,
@@ -1757,7 +1757,7 @@ final class MaintenanceRecord {
 final class SOSAlert {
     @Attribute(.unique) var id: UUID
     var driverId: UUID
-    var vehicleId: UUID
+    var vehicleId: UUID?
     var tripId: UUID?
     var latitude: Double
     var longitude: Double
@@ -1768,7 +1768,7 @@ final class SOSAlert {
     init(
         id: UUID = UUID(),
         driverId: UUID,
-        vehicleId: UUID,
+        vehicleId: UUID? = nil,
         tripId: UUID? = nil,
         latitude: Double,
         longitude: Double,
@@ -2047,4 +2047,65 @@ extension ComplianceAlert {
         )
     }
 }
+
+// MARK: - AI Feature Models
+
+struct DBPredictiveAlert: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var riskLevel: String           // "low" | "medium" | "high" | "critical"
+    var riskScore: Double
+    var triggeredReasons: [String]?
+    var suggestedAction: String?
+    var llmExplanation: String?
+    var createdAt: Date
+    var resolvedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId       = "vehicle_id"
+        case riskLevel       = "risk_level"
+        case riskScore       = "risk_score"
+        case triggeredReasons = "triggered_reasons"
+        case suggestedAction = "suggested_action"
+        case llmExplanation  = "llm_explanation"
+        case createdAt       = "created_at"
+        case resolvedAt      = "resolved_at"
+    }
+}
+
+struct DBVehicleHealthScore: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var healthScore: Int
+    var healthGrade: String          // "excellent" | "good" | "fair" | "poor" | "critical"
+    var issueFlags: [String]?
+    var suggestedTasks: [String]?
+    var llmSummary: String?
+    var analyzedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId       = "vehicle_id"
+        case healthScore     = "health_score"
+        case healthGrade     = "health_grade"
+        case issueFlags      = "issue_flags"
+        case suggestedTasks  = "suggested_tasks"
+        case llmSummary      = "llm_summary"
+        case analyzedAt      = "analyzed_at"
+    }
+}
+
+struct AIAnalyticsReport: Codable, Identifiable {
+    let id: UUID
+    let reportText: String
+    let generatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case reportText  = "report_text"
+        case generatedAt = "generated_at"
+    }
+}
+
 

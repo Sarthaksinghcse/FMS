@@ -30,59 +30,53 @@ struct MaintenanceNotificationsSheet: View {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    // Header Bar
-                    HStack {
-                        Text("Notifications")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
-                        
+                if filteredNotifications.isEmpty {
+                    VStack(spacing: 12) {
                         Spacer()
-                        
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(AppTheme.Text.tertiary)
-                        }
+                        Image(systemName: "bell.slash.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text("All Caught Up!")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
+                        Text("No notifications at the moment.")
+                            .font(.system(size: 13))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .multilineTextAlignment(.center)
+                        Spacer()
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 10)
-                    
-                    if filteredNotifications.isEmpty {
-                        VStack(spacing: 12) {
-                            Spacer()
-                            Image(systemName: "bell.slash.fill")
-                                .font(.system(size: 48))
-                                .foregroundColor(AppTheme.Text.tertiary)
-                            Text("All Caught Up!")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Text.primary)
-                            Text("No notifications at the moment.")
-                                .font(.system(size: 13))
-                                .foregroundColor(AppTheme.Text.secondary)
-                                .multilineTextAlignment(.center)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 40)
-                    } else {
-                        List {
+                    .padding(.horizontal, 40)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 14) {
                             ForEach(filteredNotifications) { notification in
                                 Button {
                                     handleNotificationTap(notification)
                                 } label: {
                                     NotificationRow(notification: notification)
                                 }
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
-                        .listStyle(.plain)
-                        .background(Color.clear)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                        .padding(.bottom, 32)
                     }
+                }
+            }
+            .navigationTitle("Notifications")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
             // Navigate to detailed WorkOrder view when tapped
@@ -158,55 +152,167 @@ private struct NotificationRow: View {
         iconColor.opacity(0.1)
     }
     
+    private var categoryLabel: String {
+        switch notification.type {
+        case .defectAlert: return "Defect Alert"
+        case .maintenanceAlert: return "Maintenance"
+        case .tripAssigned: return "Trip Assigned"
+        case .sosAlert: return "SOS Emergency"
+        case .general: return "General"
+        }
+    }
+    
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            // Icon badge
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(iconBgColor)
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(iconColor)
-            }
+        VStack(alignment: .leading, spacing: 14) {
             
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .top) {
-                    Text(notification.title)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
-                        .lineLimit(1)
+            // Header Row
+            HStack {
+                HStack(spacing: 8) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(iconBgColor)
+                            .frame(width: 32, height: 32)
+                        
+                        Image(systemName: icon)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(iconColor)
+                    }
+                    .frame(width: 32, height: 32)
                     
-                    Spacer()
-                    
-                    if !notification.isRead {
-                        Circle()
-                            .fill(AppTheme.Brand.royalBlue)
-                            .frame(width: 8, height: 8)
-                            .padding(.top, 4)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(categoryLabel.uppercased())
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundColor(iconColor)
+                            .tracking(0.5)
+                        
+                        Text(notification.isRead ? "READ" : "UNREAD")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(notification.isRead ? AppTheme.Text.secondary : AppTheme.Brand.royalBlue)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(notification.isRead ? Color.black.opacity(0.06) : AppTheme.Brand.royalBlue.opacity(0.12))
+                            .clipShape(Capsule())
                     }
                 }
                 
-                Text(notification.message)
-                    .font(.system(size: 12))
-                    .foregroundColor(AppTheme.Text.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+                Spacer()
                 
-                Text(notification.createdAt.formatted(.relative(presentation: .numeric)))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(AppTheme.Text.tertiary)
-                    .padding(.top, 2)
+                // Status/New Badge
+                Text(!notification.isRead ? "NEW" : "READ")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        !notification.isRead
+                            ? LinearGradient(colors: [AppTheme.Brand.primary, AppTheme.Brand.teal], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(colors: [.gray, .gray.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .clipShape(Capsule())
+                    .shadow(color: !notification.isRead ? AppTheme.Brand.primary.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
             }
+            
+            // Content
+            VStack(alignment: .leading, spacing: 6) {
+                Text(notification.title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
+                
+                Text(notification.message)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundColor(AppTheme.Text.secondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+            }
+            
+            Divider().background(Color.black.opacity(0.06))
+            
+            // Details Grid
+            HStack(spacing: 16) {
+                // Category Detail Pill
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.black.opacity(0.04))
+                            .frame(width: 28, height: 28)
+                        Image(systemName: "tag.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("TYPE")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text(categoryLabel)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.primary)
+                    }
+                }
+                .padding(.trailing, 4)
+                
+                // Action Detail Pill
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.black.opacity(0.04))
+                            .frame(width: 28, height: 28)
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Brand.primary)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("ACTION")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text("VIEW DETAILS")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Brand.primary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Time Detail Pill
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("RECEIVED")
+                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Text(notification.createdAt.formatted(.relative(presentation: .numeric)))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.primary)
+                }
+            }
+            .padding(.vertical, 2)
         }
-        .padding(14)
-        .background(notification.isRead ? AppTheme.Background.card : AppTheme.Brand.royalBlue.opacity(0.04))
+        .padding(18)
+        .background(
+            !notification.isRead
+                ? LinearGradient(
+                    colors: [AppTheme.Brand.primary.opacity(0.08), AppTheme.Brand.teal.opacity(0.02)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                  )
+                : LinearGradient(
+                    colors: [AppTheme.Background.card, AppTheme.Background.card],
+                    startPoint: .top,
+                    endPoint: .bottom
+                  )
+        )
         .cornerRadius(AppTheme.Radius.card)
-        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+        .shadow(
+            color: !notification.isRead
+                ? AppTheme.Brand.primary.opacity(0.08)
+                : AppTheme.Shadow.card,
+            radius: 12, x: 0, y: 6
+        )
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                .stroke(notification.isRead ? AppTheme.Glass.border : AppTheme.Brand.royalBlue.opacity(0.15), lineWidth: 1)
+                .stroke(
+                    !notification.isRead
+                        ? AppTheme.Brand.primary.opacity(0.35)
+                        : AppTheme.Glass.border.opacity(0.2),
+                    lineWidth: !notification.isRead ? 1.5 : 1.0
+                )
         )
     }
 }

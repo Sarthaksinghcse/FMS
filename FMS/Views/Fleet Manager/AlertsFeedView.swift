@@ -33,7 +33,8 @@ struct AlertsFeedView: View {
         users.first(where: { $0.id == id })?.fullName ?? "Unknown Driver"
     }
     
-    private func vehicleName(for id: UUID) -> String {
+    private func vehicleName(for id: UUID?) -> String {
+        guard let id = id else { return "No Assigned Vehicle" }
         if let vehicle = vehicles.first(where: { $0.id == id }) {
             return "\(vehicle.registrationNumber) (\(vehicle.make) \(vehicle.model))"
         }
@@ -241,6 +242,33 @@ struct AlertsFeedView: View {
                             }
                         }
                         .padding(16)
+                    }
+                }
+            }
+            .navigationTitle("Alerts")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        PredictiveAlertsView()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 13, weight: .bold))
+                            Text("Predictive")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                        }
+                        .foregroundColor(.purple)
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Close")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.red)
                     }
                 }
             }

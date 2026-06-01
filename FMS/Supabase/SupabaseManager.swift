@@ -1096,7 +1096,7 @@ final class SupabaseManager {
                 for rs in remoteSOS {
                     if let local = localSOS.first(where: { $0.id == rs.id }) {
                         local.driverId = rs.driverId
-                        local.vehicleId = rs.vehicleId ?? UUID()
+                        local.vehicleId = rs.vehicleId
                         local.tripId = rs.tripId
                         local.latitude = rs.latitude
                         local.longitude = rs.longitude
@@ -1180,4 +1180,84 @@ final class SupabaseManager {
             print("Reconciled data synchronization error: \(error.localizedDescription)")
         }
     }
+    
+    // MARK: - AI Additions
+    
+    func fetchFuelLogs() async throws -> [DBFuelLog] {
+        return try await client.from("fuel_logs")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(500)
+            .execute()
+            .value
+    }
+
+    func fetchPredictiveAlerts(onlyActive: Bool = true) async throws -> [DBPredictiveAlert] {
+        var query = client.from("predictive_alerts").select()
+        if onlyActive { query = query.is("resolved_at", value: nil) }
+        return try await query
+            .order("created_at", ascending: false)
+            .limit(50)
+            .execute()
+            .value
+    }
+
+    func fetchVehicleHealthScores() async throws -> [DBVehicleHealthScore] {
+        return try await client.from("vehicle_health_scores")
+            .select()
+            .order("health_score", ascending: true)   // worst first
+            .execute()
+            .value
+    }
+
+    func saveVehicleHealthScore(_ score: DBVehicleHealthScore) async throws {
+        try await client.from("vehicle_health_scores")
+            .upsert(score, onConflict: "vehicle_id")
+            .execute()
+    }
+
+    func fetchLatestAIReport() async throws -> AIAnalyticsReport? {
+        let reports: [AIAnalyticsReport] = try await client.from("ai_analytics_reports")
+            .select()
+            .order("generated_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return reports.first
+    }
+    
+    // Fuel Logs
+    func createFuelLog(_ log: DBFuelLog) async throws {
+        try await client
+            .from("fuel_logs")
+            .insert(log)
+            .execute()
+    }
+    
+    func uploadReceiptImage(logId: UUID, imageData: Data) async throws -> String {
+        let path = "\(logId.uuidString).jpg"
+        
+        _ = try await client.storage
+            .from("receipts")
+            .upload(
+                path,
+                data: imageData,
+                options: FileOptions(contentType: "image/jpeg", upsert: true)
+            )
+        
+        let url = try client.storage
+            .from("receipts")
+            .getPublicURL(path: path)
+        
+        return url.absoluteString
+    }
+    
+    // Chat Broadcast
+    func sendBroadcastMessages(_ messages: [DBMessage]) async throws {
+        try await client
+            .from("messages")
+            .insert(messages)
+            .execute()
+    }
 }
+

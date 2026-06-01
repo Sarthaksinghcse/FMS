@@ -58,6 +58,15 @@ struct FleetTrackingView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AppTheme.Brand.primary)
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
                     Task { await viewModel.loadVehicles() }
