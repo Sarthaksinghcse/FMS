@@ -385,12 +385,18 @@ private struct RecordDirectMaintenanceSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
+    // Query actual spare parts inventory from SwiftData
+    @Query private var allInventory: [InventoryItem]
+
+    private var inStockInventory: [InventoryItem] {
+        allInventory.filter { $0.quantityInStock > 0 }
+    }
+
     @State private var selectedVehicleId: UUID? = nil
     @State private var serviceType: String = ""
     @State private var serviceDate: Date = Date()
     @State private var costInput: String = ""
     @State private var notesInput: String = ""
-    @State private var currentPart: String = ""
     @State private var partsList: [String] = []
 
     var body: some View {
@@ -465,22 +471,9 @@ private struct RecordDirectMaintenanceSheet: View {
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
 
-                            HStack {
-                                TextField("Add part e.g. Battery, Oil Filter", text: $currentPart)
-                                    .padding(12)
-                                    .background(Color.black.opacity(0.04))
-                                    .cornerRadius(8)
-                                
-                                Button {
-                                    if !currentPart.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                        partsList.append(currentPart)
-                                        currentPart = ""
-                                    }
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(AppTheme.Brand.amber)
-                                }
+                            // Premium in-stock parts selector (displays live spare parts catalog dropdown)
+                            if !inStockInventory.isEmpty {
+                                SparePartsSelectorView(inStockInventory: inStockInventory, partsList: $partsList)
                             }
 
                             if !partsList.isEmpty {
@@ -497,6 +490,7 @@ private struct RecordDirectMaintenanceSheet: View {
                                             Image(systemName: "xmark.circle.fill")
                                                 .foregroundColor(.red.opacity(0.7))
                                         }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                     .padding(.vertical, 6)
                                 }
@@ -538,22 +532,78 @@ private struct RecordDirectMaintenanceSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         guard let vId = selectedVehicleId else { return }
+                        
+                        // Append parts list to notes if added
+                        let finalNotes: String
+                        if !partsList.isEmpty {
+                            finalNotes = notesInput + "\nParts used: \(partsList.joined(separator: ", "))"
+                            
+                            // ── Automated Stock Deduction (Criterion 3 & 4) ─────────────
+                            for partName in partsList {
+                                if let matchedItem = allInventory.first(where: { $0.partName.localizedCaseInsensitiveCompare(partName) == .orderedSame }) {
+                                    if matchedItem.quantityInStock > 0 {
+                                        matchedItem.quantityInStock -= 1
+                                        
+                                        // Sync stock deduction to database
+                                        let dbItem = matchedItem.asDBItem
+                                        Task {
+                                            try? await SupabaseManager.shared.updateInventoryItem(dbItem)
+                                        }
+                                        
+                                        // Trigger Alert Notification if stock becomes low (Criterion 4)
+                                        if matchedItem.quantityInStock <= matchedItem.reorderThreshold {
+                                            let alertNotification = AppNotification(
+                                                id: UUID(),
+                                                userId: currentUser.id,
+                                                title: "Low Stock Alert: \(matchedItem.partName)",
+                                                message: "Inventory for \(matchedItem.partName) is critically low: \(matchedItem.quantityInStock) units left (threshold: \(matchedItem.reorderThreshold)).",
+                                                type: .maintenanceAlert,
+                                                isRead: false,
+                                                createdAt: Date()
+                                            )
+                                            modelContext.insert(alertNotification)
+                                            
+                                            // Sync notification to database
+                                            let dbNotif = alertNotification.asDBNotification
+                                            Task {
+                                                try? await SupabaseManager.shared.createNotification(dbNotif)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            finalNotes = notesInput
+                        }
+
                         let record = MaintenanceRecord(
                             vehicleId: vId,
                             workOrderId: nil,
                             serviceType: serviceType,
                             serviceDate: serviceDate,
                             cost: Double(costInput) ?? 0.0,
-                            notes: notesInput,
+                            notes: finalNotes,
                             replacedParts: partsList,
                             performedBy: currentUser.id
                         )
                         modelContext.insert(record)
                         
+                        // Sync maintenance record to database
+                        let dbRecord = record.asDBRecord
+                        Task {
+                            try? await SupabaseManager.shared.createMaintenanceRecord(dbRecord)
+                        }
+                        
                         if let vehicle = allVehicles.first(where: { $0.id == vId }) {
                             vehicle.status = .active
                             vehicle.lastServiceDate = serviceDate
                             vehicle.nextServiceDate = Calendar.current.date(byAdding: .month, value: 3, to: serviceDate)
+                            
+                            // Sync vehicle update to database
+                            let dbVehicle = vehicle.asDBVehicle
+                            Task {
+                                try? await SupabaseManager.shared.updateVehicle(dbVehicle)
+                            }
                         }
                         
                         try? modelContext.save()
