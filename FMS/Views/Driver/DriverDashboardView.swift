@@ -127,6 +127,11 @@ struct DriverDashboardView: View {
         } message: {
             Text("Emergency alert has been sent to your fleet manager. Help is on the way.")
         }
+        .alert("Geofence Restriction", isPresented: $vm.showGeofenceAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(vm.geofenceAlertMessage)
+        }
     }
 
     private func startRealtimeTripsListener() {

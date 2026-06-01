@@ -398,8 +398,9 @@ private struct LiveTripCard: View {
                         }
 
                         Button {
-                            vm.showPostTripOnEnd = true
-                            vm.showPostTrip = true
+                            Task {
+                                await vm.requestEndTrip()
+                            }
                         } label: {
                             Label("End Trip", systemImage: "stop.fill")
                                 .font(.system(size: 14, weight: .bold))

@@ -907,6 +907,10 @@ struct TripNavigationView: View {
 
     // ── Computed ─────────────────────────────────────────────────────────────
     private var isActiveTrip: Bool { vm.isTripActive && vm.activeTrip?.id == trip.id }
+    
+    // ── Local Geofence Alert ─────────────────────────────────────────────────
+    @State private var localShowGeofenceAlert = false
+    @State private var localGeofenceAlertMessage = ""
 
     // ─────────────────────────────────────────────────────────────────────────
     var body: some View {
@@ -1017,11 +1021,22 @@ struct TripNavigationView: View {
                     ActiveNavigationOverlay(
                         nav: nav,
                         onEndTrip: {
-                            nav.endNavigation()
-                            dismiss()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                vm.showPostTripOnEnd = true
-                                vm.showPostTrip = true
+                            Task {
+                                let validation = await vm.validateCanEndTrip(vm.activeTrip ?? vm.currentTrip, endCoord: nav.destinationCoordinate, userLocation: nav.userLocation)
+                                if !validation.isValid {
+                                    await MainActor.run {
+                                        localGeofenceAlertMessage = validation.message ?? "Cannot end trip."
+                                        localShowGeofenceAlert = true
+                                    }
+                                } else {
+                                    await MainActor.run {
+                                        nav.endNavigation()
+                                        dismiss()
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                            Task { await vm.requestEndTrip(endCoord: nav.destinationCoordinate) }
+                                        }
+                                    }
+                                }
                             }
                         },
                         onSOS: { vm.showSOSCountdown = true }
@@ -1091,6 +1106,11 @@ struct TripNavigationView: View {
                 InspectionFormSheet(isPreTrip: true) { passed, _, _ in
                     preTripPassed = passed
                 }
+            }
+            .alert("Geofence Restriction", isPresented: $localShowGeofenceAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(localGeofenceAlertMessage)
             }
         }
         .alert("🚨 SOS Triggered", isPresented: $vm.sosSentAlert) {
@@ -1217,9 +1237,20 @@ struct TripNavigationView: View {
             // START NOW
             Button {
                 guard preTripPassed else { showPreTripNav = true; return }
-                vm.beginTrip(trip: trip)
-                withAnimation(.spring(response: 0.5)) {
-                    nav.beginNavigation()
+                Task {
+                    let result = await vm.beginTrip(trip: trip, startCoord: nav.sourceCoordinate, userLocation: nav.userLocation, triggerGlobalAlert: false)
+                    if result.success {
+                        await MainActor.run {
+                            withAnimation(.spring(response: 0.5)) {
+                                nav.beginNavigation()
+                            }
+                        }
+                    } else {
+                        await MainActor.run {
+                            localGeofenceAlertMessage = result.message ?? "Cannot start trip."
+                            localShowGeofenceAlert = true
+                        }
+                    }
                 }
             } label: {
                 HStack(spacing: 8) {
