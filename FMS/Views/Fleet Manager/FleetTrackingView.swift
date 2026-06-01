@@ -4,7 +4,7 @@ import MapKit
 struct FleetTrackingView: View {
     @State private var viewModel = FleetTrackingViewModel()
     @State private var selectedVehicle: MappedVehicle?
-    
+    @Environment(\.dismiss)private var dismiss
     @State private var cameraPosition: MapCameraPosition = .automatic
     
     var body: some View {
