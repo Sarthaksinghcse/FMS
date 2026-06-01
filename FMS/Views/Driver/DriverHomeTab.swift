@@ -498,6 +498,7 @@ private struct AssignedTripCard: View {
 
     // ── State for collapsible vehicle details ─────────────────────────────────
     @State private var showVehicleDetails = false
+    @State private var isAccepted = false
 
     /// The actual vehicle assigned to this specific trip
     private var tripVehicle: DBVehicle? {
@@ -797,27 +798,36 @@ private struct AssignedTripCard: View {
 
             // ── 7. Confirm CTA ─────────────────────────────────────────────
             Button {
-                vm.showRaiseQuery = false
-                vm.queryTrip = nil
-                vm.mapActiveTrip = trip
+                if !isAccepted {
+                    withAnimation(.spring(response: 0.4)) { isAccepted = true }
+                } else {
+                    vm.showRaiseQuery = false
+                    vm.queryTrip = nil
+                    vm.mapActiveTrip = trip
+                }
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
+                    Image(systemName: isAccepted ? "play.fill" : "checkmark.circle.fill")
                         .font(.system(size: 16, weight: .bold))
-                    Text("Confirm")
+                    Text(isAccepted ? "Start Trip" : "Confirm Trip")
                         .font(.system(size: 16, weight: .bold))
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(
+                    isAccepted ?
+                    LinearGradient(
+                        colors: [Color.green, Color(red: 0.1, green: 0.8, blue: 0.2)],
+                        startPoint: .leading, endPoint: .trailing
+                    ) :
                     LinearGradient(
                         colors: [Color.fmsIndigo, Color(red: 0.25, green: 0.35, blue: 0.85)],
                         startPoint: .leading, endPoint: .trailing
                     )
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: Color.fmsIndigo.opacity(0.28), radius: 10, y: 4)
+                .shadow(color: isAccepted ? Color.green.opacity(0.3) : Color.fmsIndigo.opacity(0.28), radius: 10, y: 4)
             }
             .padding(.horizontal, 20)
             .padding(.top, 10)
