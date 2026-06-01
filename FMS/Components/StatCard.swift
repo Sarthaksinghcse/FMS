@@ -8,36 +8,84 @@ import SwiftUI
 struct DashboardStatCard: View {
     let stat: DashboardStat
 
+    private var cardDescription: String {
+        switch stat.label {
+        case "Total Vehicles":
+            return "All vehicles in your fleet"
+        case "Ready Vehicles":
+            return "Vehicles ready to assign"
+        case "Drivers Online":
+            return "Active drivers right now"
+        case "Live Trips":
+            return "Trips in progress"
+        default:
+            return ""
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(stat.iconBgColor)
-                    .frame(width: 36, height: 36)
-                Image(systemName: stat.icon)
-                    .font(.system(size: 16, weight: .semibold))
+            HStack(spacing: 8) {
+                // Icon circle
+                ZStack {
+                    Circle()
+                        .fill(stat.iconBgColor)
+                        .frame(width: 44, height: 44)
+                    
+                    if stat.icon == "checkmark.circle.fill" {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 18, height: 18)
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(stat.iconColor)
+                        }
+                    } else {
+                        Image(systemName: stat.icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(stat.iconColor)
+                    }
+                }
+                
+                // Text columns
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stat.label)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(AppTheme.Text.primary.opacity(0.85))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    
+                    Text(stat.value)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(stat.iconColor)
+                        .lineLimit(1)
+                }
+                
+                Spacer(minLength: 4)
+                
+                // Chevron icon
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(stat.iconColor)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(stat.value)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.primary)
-                
-                Text(stat.label)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
+            // Description subtitle (Full width, no divider line)
+            Text(cardDescription)
+                .font(.system(size: 11.5, weight: .regular))
+                .foregroundColor(AppTheme.Text.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 14)
         .background(AppTheme.Background.card)
-        .cornerRadius(AppTheme.Radius.card)
-        .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
+        .contentShape(Rectangle())
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.015), radius: 6, x: 0, y: 3)
         .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.black.opacity(0.05), lineWidth: 0.8)
         )
     }

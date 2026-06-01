@@ -352,15 +352,19 @@ struct FleetDashboardView: View {
                 case .totalVehicles:
                     VehicleListView(initialFilter: .all)
                         .environment(\.modelContext, modelContext)
+                        .toolbar(.hidden, for: .tabBar)
                 case .activeNow:
                     VehicleListView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
+                        .toolbar(.hidden, for: .tabBar)
                 case .driversOnline:
                     DriverListView(initialFilter: .online)
                         .environment(\.modelContext, modelContext)
+                        .toolbar(.hidden, for: .tabBar)
                 case .liveTrips:
                     TripListView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
+                        .toolbar(.hidden, for: .tabBar)
                 }
             }
             // Tracking navigation push
@@ -526,7 +530,7 @@ struct FleetDashboardView: View {
     private func destinationFor(stat: DashboardStat) -> DashboardNavigationDestination {
         switch stat.label {
         case "Total Vehicles": return .totalVehicles
-        case "Available Now":  return .activeNow
+        case "Ready Vehicles":  return .activeNow
         case "Drivers Online": return .driversOnline
         case "Live Trips":     return .liveTrips
         default:               return .totalVehicles
