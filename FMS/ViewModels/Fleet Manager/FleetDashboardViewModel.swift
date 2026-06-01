@@ -114,7 +114,8 @@ final class FleetDashboardViewModel {
         func driverName(for id: UUID) -> String {
             users.first(where: { $0.id == id })?.fullName ?? "Unknown Driver"
         }
-        func vehicleLabel(for id: UUID) -> String {
+        func vehicleLabel(for id: UUID?) -> String {
+            guard let id = id else { return "No Assigned Vehicle" }
             guard let v = vehicles.first(where: { $0.id == id }) else { return "Unknown Vehicle" }
             return "\(v.make) \(v.model)"
         }

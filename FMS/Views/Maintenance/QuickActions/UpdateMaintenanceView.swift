@@ -182,17 +182,21 @@ private struct UpdateOrderCard: View {
 
             HStack {
                 // Status indicator
+                let isPending = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+                let statText = isPending ? "Approval Pending" : order.status.displayLabel
+                let statColor = isPending ? AppTheme.Brand.amber : order.status.color
+                
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(order.status.color)
+                        .fill(statColor)
                         .frame(width: 8, height: 8)
-                    Text(order.status.displayLabel)
+                    Text(statText)
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(order.status.color)
+                        .foregroundColor(statColor)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(order.status.color.opacity(0.08))
+                .background(statColor.opacity(0.08))
                 .cornerRadius(8)
 
                 Spacer()
