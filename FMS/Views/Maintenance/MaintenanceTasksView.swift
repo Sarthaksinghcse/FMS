@@ -23,7 +23,12 @@ struct MaintenanceTaskDetailView: View {
     @State private var showSuccessAlert: Bool = false
     @State private var uploadError: String? = nil
 
-    private var statusColor: Color { order.status.color }
+    private var statusColor: Color {
+        if order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]") {
+            return AppTheme.Brand.amber
+        }
+        return order.status.color
+    }
 
     private var mechanicDisplayId: String {
         "TECH-" + order.assignedTo.uuidString.prefix(8).uppercased()
@@ -83,7 +88,9 @@ struct MaintenanceTaskDetailView: View {
                             Divider().padding(.leading, 52)
                             DetailInfoRow(label: "Priority", value: order.priority.rawValue.capitalized, icon: "flag.fill", color: order.priority.detailColor)
                             Divider().padding(.leading, 52)
-                            DetailInfoRow(label: "Status", value: order.status.displayLabel, icon: "circle.fill", color: statusColor)
+                            let isPending = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+                            let statusLabel = isPending ? "Approval Pending" : order.status.displayLabel
+                            DetailInfoRow(label: "Status", value: statusLabel, icon: "circle.fill", color: statusColor)
                         }
                     }
 
@@ -206,7 +213,32 @@ struct MaintenanceTaskDetailView: View {
                     // ── Task Execution / Actions Section ─────────────────────
                     DetailSection(title: "Task Execution", icon: "play.circle.fill", accentColor: AppTheme.Brand.primaryDeep) {
                         VStack(alignment: .leading, spacing: 16) {
-                            if order.status == .open {
+                            let isPending = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+                            if isPending {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "clock.fill")
+                                        .foregroundColor(AppTheme.Brand.amber)
+                                        .font(.system(size: 20))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Approval Pending")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(AppTheme.Text.primary)
+                                        Text("This work order requires approval from the Fleet Manager before work can start.")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                    }
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(AppTheme.Brand.amber.opacity(0.08))
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(AppTheme.Brand.amber.opacity(0.2), lineWidth: 1)
+                                )
+                                .padding(.horizontal)
+                                .padding(.vertical, 12)
+                            } else if order.status == .open {
                                 Button {
                                     startTask()
                                 } label: {
@@ -421,6 +453,10 @@ private struct DetailHeroCard: View {
     let order: WorkOrder
 
     var gradientColors: [Color] {
+        let isPending = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+        if isPending {
+            return [AppTheme.Brand.amber.opacity(0.08), Color.clear]
+        }
         switch order.status {
         case .completed: return [AppTheme.Status.success.opacity(0.08), Color.clear]
         case .inProgress: return [AppTheme.Brand.primary.opacity(0.08), Color.clear]
@@ -430,15 +466,20 @@ private struct DetailHeroCard: View {
     }
 
     var body: some View {
+        let isPending = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+        let label = isPending ? "Approval Pending" : order.status.displayLabel
+        let color = isPending ? AppTheme.Brand.amber : order.status.color
+        let icon = isPending ? "clock.fill" : order.status.detailIcon
+        
         VStack(spacing: 14) {
             // Status icon
             ZStack {
                 Circle()
-                    .fill(order.status.color.opacity(0.12))
+                    .fill(color.opacity(0.12))
                     .frame(width: 70, height: 70)
-                Image(systemName: order.status.detailIcon)
+                Image(systemName: icon)
                     .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(order.status.color)
+                    .foregroundColor(color)
             }
 
             VStack(spacing: 6) {
@@ -448,9 +489,9 @@ private struct DetailHeroCard: View {
                     .multilineTextAlignment(.center)
 
                 TaskStatusBadge(
-                    label: order.status.displayLabel,
-                    color: order.status.color,
-                    icon: order.status.detailIcon
+                    label: label,
+                    color: color,
+                    icon: icon
                 )
             }
         }

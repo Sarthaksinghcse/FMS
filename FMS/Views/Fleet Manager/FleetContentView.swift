@@ -150,64 +150,108 @@ struct FleetContentView: View {
     private func startRealtimeSOSListener() {
         guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
-        let channel = client.channel("fleet_manager_notifications")
+        let channel = client.channel("fleet_manager_sos_alerts_realtime")
         
         Task {
             let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
-                table: "notifications"
+                table: "sos_alerts"
             )
             
-            try? await channel.subscribeWithError()
+            do {
+                try await channel.subscribeWithError()
+                print("🟢 [Realtime SOS] Subscribed successfully to sos_alerts channel.")
+            } catch {
+                print("❌ [Realtime SOS] Failed to subscribe to channel: \(error.localizedDescription)")
+            }
             self.realtimeChannel = channel
             
             for await change in changes {
-                guard let notif = try? change.record.decode(as: DBNotification.self) else { continue }
-                if notif.type == .emergency {
-                    triggerEmergencySOS(notif: notif)
+                do {
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .custom { decoder in
+                        let container = try decoder.singleValueContainer()
+                        let dateString = try container.decode(String.self)
+                        
+                        let formatters = [
+                            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ",
+                            "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ",
+                            "yyyy-MM-dd'T'HH:mm:ssZZZZZ",
+                            "yyyy-MM-dd HH:mm:ss.SSSSSSZZZZZ",
+                            "yyyy-MM-dd HH:mm:ss.SSSZZZZZ",
+                            "yyyy-MM-dd HH:mm:ssZZZZZ",
+                            "yyyy-MM-dd HH:mm:ss"
+                        ].map { fmt -> DateFormatter in
+                            let f = DateFormatter()
+                            f.dateFormat = fmt
+                            f.locale = Locale(identifier: "en_US_POSIX")
+                            return f
+                        }
+                        
+                        for formatter in formatters {
+                            if let date = formatter.date(from: dateString) {
+                                return date
+                            }
+                        }
+                        
+                        // Lenient ISO8601 Fallbacks
+                        let isoFormatter = ISO8601DateFormatter()
+                        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                        if let date = isoFormatter.date(from: dateString) {
+                            return date
+                        }
+                        
+                        isoFormatter.formatOptions = [.withInternetDateTime]
+                        if let date = isoFormatter.date(from: dateString) {
+                            return date
+                        }
+                        
+                        print("⚠️ [Realtime SOS] Lenient date parsing fallback to now for date: \(dateString)")
+                        return Date()
+                    }
+                    
+                    let data = try JSONEncoder().encode(change.record)
+                    let alert = try decoder.decode(DBSOSAlert.self, from: data)
+                    
+                    if alert.status == .active {
+                        triggerEmergencySOS(alert: alert)
+                    }
+                } catch {
+                    print("❌ Failed to decode DBSOSAlert in Realtime SOS listener: \(error.localizedDescription)")
                 }
             }
         }
     }
     
     @MainActor
-    private func triggerEmergencySOS(notif: DBNotification) {
-        
+    private func triggerEmergencySOS(alert: DBSOSAlert) {
         let feedbackGenerator = UINotificationFeedbackGenerator()
         feedbackGenerator.notificationOccurred(.error)
         
-        sosMessage = notif.message
+        let descriptor = FetchDescriptor<User>()
+        let localUsers = (try? modelContext.fetch(descriptor)) ?? []
+        let driverName = localUsers.first(where: { $0.id == alert.driverId })?.fullName ?? "Driver"
         
+        sosMessage = alert.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately."
         
-        let localNotif = notif.asLocalNotification
-        modelContext.insert(localNotif)
-        
-        let localSOS = SOSAlert(
-            id: notif.id,
-            driverId: notif.userId,
-            vehicleId: UUID(), 
-            tripId: UUID(), 
-            latitude: 28.5450, 
-            longitude: 77.2600, 
-            message: notif.message,
-            status: .active,
-            createdAt: notif.createdAt
-        )
+        let localSOS = alert.asLocalSOS
         modelContext.insert(localSOS)
+        
+        let localNotif = AppNotification(
+            id: alert.id,
+            userId: SupabaseManager.shared.currentUser?.id ?? UUID(),
+            title: "🚨 EMERGENCY SOS SIGNAL",
+            message: sosMessage,
+            type: .sosAlert,
+            isRead: false,
+            createdAt: alert.createdAt
+        )
+        modelContext.insert(localNotif)
         try? modelContext.save()
         
         withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
             showRedSplash = true
-        }
-        
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                if showRedSplash && sosMessage == notif.message {
-                    showRedSplash = false
-                }
-            }
         }
     }
     

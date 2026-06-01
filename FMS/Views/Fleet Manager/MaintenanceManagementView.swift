@@ -211,21 +211,28 @@ struct MaintenanceManagementView: View {
             priBg = AppTheme.IconBg.red
         }
         
+        let isPendingApproval = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+        
         let statColor: Color
         let statText: String
-        switch order.status {
-        case .open:
-            statColor = AppTheme.Status.danger
-            statText = "Open"
-        case .inProgress:
-            statColor = AppTheme.Status.warning
-            statText = "In Progress"
-        case .completed:
-            statColor = AppTheme.Status.success
-            statText = "Completed"
-        case .cancelled:
-            statColor = .gray
-            statText = "Cancelled"
+        if isPendingApproval {
+            statColor = AppTheme.Brand.amber
+            statText = "Approval Pending"
+        } else {
+            switch order.status {
+            case .open:
+                statColor = AppTheme.Status.danger
+                statText = "Open"
+            case .inProgress:
+                statColor = AppTheme.Status.warning
+                statText = "In Progress"
+            case .completed:
+                statColor = AppTheme.Status.success
+                statText = "Completed"
+            case .cancelled:
+                statColor = .gray
+                statText = "Cancelled"
+            }
         }
         
         return VStack(alignment: .leading, spacing: 12) {
@@ -310,7 +317,25 @@ struct MaintenanceManagementView: View {
             }
             
             
-            if order.status == .open {
+            if isPendingApproval {
+                Button {
+                    approveWorkOrder(order)
+                } label: {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "checkmark.shield.fill")
+                        Text("Approve Work Order")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                        Spacer()
+                    }
+                    .padding(.vertical, 10)
+                    .foregroundColor(.white)
+                    .background(AppTheme.Status.success)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.top, 4)
+            } else if order.status == .open {
                 Button {
                     _ = viewModel.startWork(workOrderId: order.id, context: modelContext, workOrders: workOrders)
                 } label: {
@@ -397,6 +422,34 @@ struct MaintenanceManagementView: View {
             RoundedRectangle(cornerRadius: AppTheme.Radius.medium)
                 .stroke(AppTheme.Status.danger.opacity(0.2), lineWidth: 1)
         )
+    }
+    
+    private func approveWorkOrder(_ order: WorkOrder) {
+        order.workDescription = order.workDescription
+            .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
+            .replacingOccurrences(of: "[PENDING_APPROVAL]", with: "")
+        try? modelContext.save()
+        
+        let dbWO = order.asDBWorkOrder
+        Task {
+            do {
+                try await SupabaseManager.shared.updateWorkOrder(dbWO)
+                
+                // Add a notification for the mechanic
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: order.assignedTo,
+                    title: "✅ Work Order Approved",
+                    message: "Fleet Manager has approved work order \"\(order.title)\". You can now start work.",
+                    type: .maintenance,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await SupabaseManager.shared.createNotification(notif)
+            } catch {
+                print("Failed to approve work order on Supabase: \(error)")
+            }
+        }
     }
 }
 
