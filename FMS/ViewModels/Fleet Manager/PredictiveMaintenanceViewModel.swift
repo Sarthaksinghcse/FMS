@@ -23,17 +23,7 @@ final class PredictiveMaintenanceViewModel {
     func triggerAIAnalysis() async {
         isGenerating = true
         errorMessage = nil
-        do {
-            // Trigger Deno function predict-maintenance
-            let response: [String: [DBPredictiveAlert]] = try await AIServiceManager.shared.invoke("predict-maintenance")
-            if let newAlerts = response["alerts"] {
-                self.alerts = newAlerts
-            } else {
-                await loadAlerts()
-            }
-        } catch {
-            errorMessage = "AI analysis failed: \(error.localizedDescription)"
-        }
+        await loadAlerts()
         isGenerating = false
     }
 }
