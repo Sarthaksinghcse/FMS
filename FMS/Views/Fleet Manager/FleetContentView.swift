@@ -9,6 +9,7 @@ struct FleetContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var selectedTab = 0
     
+    @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]
     
     @State private var showRedSplash = false
     @State private var sosMessage = ""
@@ -230,6 +231,13 @@ struct FleetContentView: View {
         .task {
             startRealtimeSOSListener()
             startRealtimeUsersListener()
+            
+            // Sync immediately on startup to get the latest online/offline active SOS
+            await SupabaseManager.shared.syncAllData(context: modelContext)
+            checkForActiveAlerts()
+        }
+        .onChange(of: sosAlerts) { _, _ in
+            checkForActiveAlerts()
         }
         .onDisappear {
             let client = SupabaseManager.shared.client
@@ -282,6 +290,22 @@ struct FleetContentView: View {
     }
     
     @MainActor
+    private func checkForActiveAlerts() {
+        if let active = sosAlerts.first(where: { $0.status == .active }) {
+            if !showRedSplash {
+                triggerEmergencySOS(alert: active.asDBSOSAlert)
+            }
+        } else {
+            if showRedSplash {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    showRedSplash = false
+                    activeSOSAlert = nil
+                }
+            }
+        }
+    }
+    
+    @MainActor
     private func triggerEmergencySOS(alert: DBSOSAlert) {
         let feedbackGenerator = UINotificationFeedbackGenerator()
         feedbackGenerator.notificationOccurred(.error)
@@ -293,19 +317,29 @@ struct FleetContentView: View {
         sosMessage = alert.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately."
         activeSOSAlert = alert
         
-        let localSOS = alert.asLocalSOS
-        modelContext.insert(localSOS)
+        let alertId = alert.id
+        let sosDescriptor = FetchDescriptor<SOSAlert>()
+        let localSOSs = (try? modelContext.fetch(sosDescriptor)) ?? []
+        if !localSOSs.contains(where: { $0.id == alertId }) {
+            let localSOS = alert.asLocalSOS
+            modelContext.insert(localSOS)
+        }
         
-        let localNotif = AppNotification(
-            id: alert.id,
-            userId: SupabaseManager.shared.currentUser?.id ?? UUID(),
-            title: "🚨 EMERGENCY SOS SIGNAL",
-            message: sosMessage,
-            type: .sosAlert,
-            isRead: false,
-            createdAt: alert.createdAt
-        )
-        modelContext.insert(localNotif)
+        let notifDescriptor = FetchDescriptor<AppNotification>()
+        let localNotifs = (try? modelContext.fetch(notifDescriptor)) ?? []
+        if !localNotifs.contains(where: { $0.id == alertId }) {
+            let localNotif = AppNotification(
+                id: alert.id,
+                userId: SupabaseManager.shared.currentUser?.id ?? UUID(),
+                title: "🚨 EMERGENCY SOS SIGNAL",
+                message: sosMessage,
+                type: .sosAlert,
+                isRead: false,
+                createdAt: alert.createdAt
+            )
+            modelContext.insert(localNotif)
+        }
+        
         try? modelContext.save()
         
         withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
