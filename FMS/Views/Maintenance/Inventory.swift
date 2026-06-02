@@ -324,7 +324,7 @@ struct InventoryRow: View {
             // Bottom Stock Health indicator
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Reorder Threshold: \(item.reorderThreshold)")
+                    Text("Reorder Threshold: \(item.reorderThreshold) · Cost: ₹\(String(format: "%.2f", item.unitCost))")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppTheme.Text.secondary)
                     

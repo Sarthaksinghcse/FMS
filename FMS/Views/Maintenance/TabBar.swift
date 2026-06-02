@@ -36,17 +36,11 @@ struct MaintenanceDashboardView: View {
                 }
                 .tag(1)
 
-            MaintenanceSchedulingTab(currentUser: currentUser, selectedFilter: $schedulingFilter)
-                .tabItem {
-                    Label("Schedule", systemImage: "calendar")
-                }
-                .tag(2)
-
             InventoryTabView(currentUser: currentUser, items: allInventory)
                 .tabItem {
                     Label("Inventory", systemImage: "shippingbox.fill")
                 }
-                .tag(3)
+                .tag(2)
         }
         .accentColor(AppTheme.Brand.primary)
         .task {

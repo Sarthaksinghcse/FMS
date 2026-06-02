@@ -100,45 +100,6 @@ struct MaintenanceDashboardTab: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 22) {
                         overviewSection
-                        
-                        // Recent Messages Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            SectionHeader(title: "Recent Messages")
-                            
-                            NavigationLink(destination: CommunicationView()) {
-                                HStack(spacing: 12) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(AppTheme.Brand.violet.opacity(0.12))
-                                            .frame(width: 40, height: 40)
-                                        Image(systemName: "bubble.left.and.bubble.right.fill")
-                                            .font(.system(size: 16))
-                                            .foregroundColor(AppTheme.Brand.violet)
-                                    }
-                                    
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Communication Hub")
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                                            .foregroundColor(AppTheme.Text.primary)
-                                        Text("Chat with Drivers & Fleet Managers")
-                                            .font(.system(size: 11, weight: .medium))
-                                            .foregroundColor(AppTheme.Text.secondary)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(AppTheme.Text.tertiary)
-                                }
-                                .padding(14)
-                                .background(AppTheme.Background.card)
-                                .cornerRadius(AppTheme.Radius.card)
-                                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                        .padding(.horizontal)
 
                         quickActionsSection
                         recentWorkOrdersSection
