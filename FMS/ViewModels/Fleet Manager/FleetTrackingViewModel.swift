@@ -60,7 +60,7 @@ final class FleetTrackingViewModel {
     }
     
     func loadVehicles(isBackgroundRefresh: Bool = false) async {
-        if !isBackgroundRefresh && mappedVehicles.isEmpty {
+        if !isBackgroundRefresh {
             isLoading = true
         }
         
@@ -106,8 +106,10 @@ final class FleetTrackingViewModel {
                 )
             }
             self.errorMessage = nil
+            if !isBackgroundRefresh { self.isLoading = false }
         } catch {
             self.errorMessage = "Failed to load vehicles: \(error.localizedDescription)"
+            if !isBackgroundRefresh { self.isLoading = false }
         }
         
         if !isBackgroundRefresh {

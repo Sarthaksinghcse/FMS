@@ -385,10 +385,16 @@ struct MappedVehicle: Identifiable, Hashable {
     let lastUpdated: Date?
 
     static func == (lhs: MappedVehicle, rhs: MappedVehicle) -> Bool {
-        lhs.id == rhs.id
+        lhs.id == rhs.id &&
+        lhs.lastUpdated == rhs.lastUpdated &&
+        lhs.coordinate?.latitude == rhs.coordinate?.latitude &&
+        lhs.coordinate?.longitude == rhs.coordinate?.longitude
     }
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(lastUpdated)
+        hasher.combine(coordinate?.latitude)
+        hasher.combine(coordinate?.longitude)
     }
     var statusColor: Color {
         switch vehicle.status {
