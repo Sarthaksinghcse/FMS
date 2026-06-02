@@ -20,7 +20,6 @@ struct FleetContentView: View {
     @State private var activeSOSAlert: DBSOSAlert?
     @State private var pollingTask: Task<Void, Never>?
     @State private var acknowledgedAlertIds = Set<UUID>()
-    @State private var audioPlayer: AVAudioPlayer?
     
     var body: some View {
         ZStack {
@@ -363,33 +362,7 @@ struct FleetContentView: View {
             showRedSplash = true
         }
         
-        playFireAlarm()
-    }
-    
-    private func playFireAlarm() {
-        guard let url = Bundle.main.url(forResource: "fire_alarm", withExtension: "mp3") else {
-            print("⚠️ [SOS] fire_alarm.mp3 not found in bundle.")
-            return
-        }
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            try AVAudioSession.sharedInstance().setActive(true)
-            let player = try AVAudioPlayer(contentsOf: url)
-            player.numberOfLoops = -1   // loop until acknowledged
-            player.volume = 1.0
-            player.play()
-            audioPlayer = player
-            print("🔔 [SOS] Fire alarm sound started.")
-        } catch {
-            print("❌ [SOS] Failed to play fire alarm: \(error.localizedDescription)")
-        }
-    }
-    
-    private func stopFireAlarm() {
-        audioPlayer?.stop()
-        audioPlayer = nil
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        print("🔕 [SOS] Fire alarm sound stopped.")
+        SOSSoundManager.shared.playAlarm()
     }
     
     private func activeDriver(for alert: DBSOSAlert) -> User? {
@@ -412,7 +385,7 @@ struct FleetContentView: View {
         // The status remains .active until resolved manually via the Alerts Feed detailed screen.
         acknowledgedAlertIds.insert(alert.id)
         
-        stopFireAlarm()
+        SOSSoundManager.shared.stopAlarm()
         
         withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
             showRedSplash = false
