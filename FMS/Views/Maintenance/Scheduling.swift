@@ -118,8 +118,6 @@ struct ScheduledTasksView: View {
             AppTheme.Background.page.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                CustomCenteredHeaderView(title: "Scheduling")
-
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                         Section {
@@ -163,8 +161,6 @@ struct ScheduledTasksView: View {
                 }
             }
         }
-        .navigationBarHidden(true)
-        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -305,6 +301,8 @@ struct MaintenanceSchedulingTab: View {
                 allWorkOrders: allWorkOrders,
                 selectedFilter: $selectedFilter
             )
+            .navigationTitle("Schedule")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 }

@@ -16,12 +16,17 @@ struct MaintenanceTaskDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
+    @Query private var inventoryItems: [InventoryItem]
+
     @State private var repairNotes: String = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var repairPhotos: [UIImage] = []
     @State private var isSubmitting: Bool = false
     @State private var showSuccessAlert: Bool = false
     @State private var uploadError: String? = nil
+
+    @State private var laborCostText: String = ""
+    @State private var selectedParts: [UUID: Int] = [:]
 
     private var statusColor: Color {
         if order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]") {
@@ -257,6 +262,120 @@ struct MaintenanceTaskDetailView: View {
                                 .padding(.vertical, 12)
                             } else if order.status == .inProgress {
                                 VStack(alignment: .leading, spacing: 14) {
+                                    // Labor Cost Input
+                                    VStack(alignment: .leading, spacing: 5) {
+                                        Text("Labor Cost (₹)")
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                        
+                                        TextField("e.g. 1500", text: $laborCostText)
+                                            .keyboardType(.decimalPad)
+                                            .padding(10)
+                                            .background(Color.black.opacity(0.04))
+                                            .cornerRadius(8)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.black.opacity(0.1), lineWidth: 1)
+                                            )
+                                    }
+                                    
+                                    // Parts Used Picker
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("Parts Used")
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                        
+                                        if inventoryItems.isEmpty {
+                                            Text("No inventory items found.")
+                                                .font(.system(size: 12))
+                                                .italic()
+                                                .foregroundColor(.gray)
+                                        } else {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                ForEach(inventoryItems) { item in
+                                                    let isSelected = selectedParts[item.id] != nil
+                                                    let qty = selectedParts[item.id] ?? 0
+                                                    
+                                                    HStack {
+                                                        Button {
+                                                            if isSelected {
+                                                                selectedParts.removeValue(forKey: item.id)
+                                                            } else {
+                                                                if item.quantityInStock > 0 {
+                                                                    selectedParts[item.id] = 1
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            HStack(spacing: 8) {
+                                                                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                                                                    .foregroundColor(isSelected ? AppTheme.Brand.primary : .gray)
+                                                                    .font(.system(size: 16))
+                                                                
+                                                                VStack(alignment: .leading, spacing: 2) {
+                                                                    Text(item.partName)
+                                                                        .font(.system(size: 13, weight: .semibold))
+                                                                        .foregroundColor(.black)
+                                                                    Text("In stock: \(item.quantityInStock) · Price: ₹\(Int(item.unitCost))")
+                                                                        .font(.system(size: 11))
+                                                                        .foregroundColor(.gray)
+                                                                }
+                                                            }
+                                                        }
+                                                        .buttonStyle(PlainButtonStyle())
+                                                        .disabled(item.quantityInStock <= 0 && !isSelected)
+                                                        
+                                                        Spacer()
+                                                        
+                                                        if isSelected {
+                                                            HStack(spacing: 10) {
+                                                                Button {
+                                                                    if qty > 1 {
+                                                                        selectedParts[item.id] = qty - 1
+                                                                    }
+                                                                } label: {
+                                                                    Image(systemName: "minus.circle.fill")
+                                                                        .foregroundColor(AppTheme.Brand.primary)
+                                                                        .font(.system(size: 18))
+                                                                }
+                                                                
+                                                                Text("\(qty)")
+                                                                    .font(.system(size: 13, weight: .bold))
+                                                                    .frame(width: 20)
+                                                                    .multilineTextAlignment(.center)
+                                                                
+                                                                Button {
+                                                                    if qty < item.quantityInStock {
+                                                                        selectedParts[item.id] = qty + 1
+                                                                    }
+                                                                } label: {
+                                                                    Image(systemName: "plus.circle.fill")
+                                                                        .foregroundColor(AppTheme.Brand.primary)
+                                                                        .font(.system(size: 18))
+                                                                }
+                                                            }
+                                                        } else if item.quantityInStock <= 0 {
+                                                            Text("OUT OF STOCK")
+                                                                .font(.system(size: 9, weight: .bold))
+                                                                .foregroundColor(AppTheme.Status.danger)
+                                                                .padding(.horizontal, 6)
+                                                                .padding(.vertical, 2)
+                                                                .background(AppTheme.Status.danger.opacity(0.1))
+                                                                .cornerRadius(4)
+                                                        }
+                                                    }
+                                                    .padding(.vertical, 4)
+                                                }
+                                            }
+                                            .padding(10)
+                                            .background(Color.black.opacity(0.02))
+                                            .cornerRadius(8)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                                            )
+                                        }
+                                    }
+                                    
                                     Text("Repair Notes / Evidence")
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundColor(AppTheme.Text.secondary)
@@ -316,6 +435,9 @@ struct MaintenanceTaskDetailView: View {
                                             .foregroundColor(AppTheme.Status.danger)
                                     }
                                     
+                                    let isCostValid = Double(laborCostText) != nil
+                                    let canComplete = !repairNotes.isEmpty && !laborCostText.isEmpty && isCostValid && !isSubmitting
+                                    
                                     Button {
                                         completeTask()
                                     } label: {
@@ -331,10 +453,10 @@ struct MaintenanceTaskDetailView: View {
                                         .foregroundColor(.white)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(repairNotes.isEmpty ? AppTheme.Status.success.opacity(0.3) : AppTheme.Status.success)
+                                        .background(canComplete ? AppTheme.Status.success : AppTheme.Status.success.opacity(0.3))
                                         .cornerRadius(10)
                                     }
-                                    .disabled(repairNotes.isEmpty || isSubmitting)
+                                    .disabled(!canComplete)
                                 }
                                 .padding()
                             } else if order.status == .completed {
@@ -401,14 +523,38 @@ struct MaintenanceTaskDetailView: View {
                 }
             }
             
+            let laborCost = Double(laborCostText) ?? 0.0
+            var partsCost = 0.0
+            var partsSummary: [String] = []
+            
+            for (partId, qty) in selectedParts {
+                if let part = inventoryItems.first(where: { $0.id == partId }) {
+                    partsCost += part.unitCost * Double(qty)
+                    partsSummary.append("\(part.partName) (x\(qty))")
+                    
+                    // Deduct stock levels locally & on Supabase
+                    part.quantityInStock -= qty
+                    let dbItem = part.asDBItem
+                    do {
+                        try await SupabaseManager.shared.updateInventoryItem(dbItem)
+                    } catch {
+                        print("Failed to update inventory item on Supabase: \(error.localizedDescription)")
+                    }
+                }
+            }
+            
+            let totalCost = laborCost + partsCost
+            let partsString = partsSummary.isEmpty ? "None" : partsSummary.joined(separator: ", ")
+            let finalNotes = "Labor Cost: ₹\(String(format: "%.2f", laborCost)). Parts Used: \(partsString). Notes: \(repairNotes)"
+            
             let record = DBMaintenanceRecord(
                 id: UUID(),
                 vehicleId: order.vehicleId,
                 workOrderId: order.id,
                 serviceType: order.title,
                 serviceDate: Date(),
-                cost: order.estimatedCost ?? 0.0,
-                notes: repairNotes,
+                cost: totalCost,
+                notes: finalNotes,
                 repairImages: imageUrls.isEmpty ? nil : imageUrls,
                 performedBy: mechanicId,
                 createdAt: Date()
