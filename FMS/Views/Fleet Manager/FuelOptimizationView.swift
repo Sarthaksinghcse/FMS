@@ -245,7 +245,11 @@ struct FuelOptimizationView: View {
         }
         .onAppear {
             Task {
+                // First try cache; if no insight found, do a full fetch
                 await viewModel.loadFuelInsights(forceRefresh: false, loadOnlyFromCache: true)
+                if viewModel.insight == nil {
+                    await viewModel.loadFuelInsights(forceRefresh: false, loadOnlyFromCache: false)
+                }
             }
         }
     }
