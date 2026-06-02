@@ -14,6 +14,10 @@ struct AlertsFeedView: View {
     @Query(sort: \DefectReport.createdAt, order: .reverse) private var defectReports: [DefectReport]
     @Query private var users: [User]
     @Query private var vehicles: [Vehicle]
+    @Query private var trips: [Trip]
+    
+    @Binding var showTracking: Bool
+    @Binding var selectedVehicleToTrack: UUID?
     
     @State private var routeDeviations: [DBRouteDeviationAlert] = []
     
@@ -258,7 +262,7 @@ struct AlertsFeedView: View {
                                 .padding(.vertical, 40)
                             } else {
                                 ForEach(filteredAlerts) { alert in
-                                    AlertFeedCard(alert: alert, viewModel: viewModel, context: modelContext, sosAlerts: sosAlerts, defectReports: defectReports, selectedDefectForAssignment: $selectedDefectForAssignment)
+                                    AlertFeedCard(alert: alert, viewModel: viewModel, context: modelContext, sosAlerts: sosAlerts, defectReports: defectReports, trips: trips, selectedDefectForAssignment: $selectedDefectForAssignment, showTracking: $showTracking, selectedVehicleToTrack: $selectedVehicleToTrack)
                                 }
                             }
                         }
@@ -381,7 +385,11 @@ struct AlertFeedCard: View {
     let context: ModelContext
     let sosAlerts: [SOSAlert]
     let defectReports: [DefectReport]
+    let trips: [Trip]
     @Binding var selectedDefectForAssignment: DefectReport?
+    @Binding var showTracking: Bool
+    @Binding var selectedVehicleToTrack: UUID?
+    @Environment(\.dismiss) private var dismiss
     
     @State private var isPulsing = false
     
@@ -615,6 +623,51 @@ struct AlertFeedCard: View {
                         resolvedBanner
                     }
                 }
+            } else if alert.type == .routeDeviation {
+                if let deviation = alert.rawObject as? DBRouteDeviationAlert {
+                    if isVehicleLive(vehicleId: deviation.vehicleId) {
+                        Button {
+                            dismiss()
+                            selectedVehicleToTrack = deviation.vehicleId
+                            showTracking = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Spacer()
+                                Image(systemName: "map.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                Text("View on Map")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                Spacer()
+                            }
+                            .padding(.vertical, 12)
+                            .foregroundColor(.white)
+                            .background(
+                                LinearGradient(
+                                    colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.85)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(AppTheme.Radius.small)
+                            .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 8, x: 0, y: 4)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.top, 4)
+                    } else {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(AppTheme.Text.tertiary)
+                            Text("Trip Ended")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.black.opacity(0.04))
+                        .cornerRadius(AppTheme.Radius.small)
+                        .padding(.top, 4)
+                    }
+                }
             }
         }
         .padding(18)
@@ -670,6 +723,13 @@ struct AlertFeedCard: View {
         .background(AppTheme.Status.success.opacity(0.08))
         .cornerRadius(8)
         .padding(.top, 4)
+    }
+    
+    private func isVehicleLive(vehicleId: UUID) -> Bool {
+        trips.contains { trip in
+            trip.vehicleId == vehicleId &&
+            (trip.tripStatus == .started || trip.tripStatus == .inProgress)
+        }
     }
 }
 
@@ -829,5 +889,5 @@ struct AssignTechnicianSheet: View {
 }
 
 #Preview {
-    AlertsFeedView()
+    AlertsFeedView(showTracking: .constant(false), selectedVehicleToTrack: .constant(nil))
 }
