@@ -22,6 +22,7 @@ struct FleetDashboardView: View {
     @State private var showProfile  = false
     @State private var showChat     = false
     @State private var showTracking = false
+    @State private var selectedVehicleToTrack: UUID? = nil
     @State private var showingFuelInsights = false
     @State private var showCompliance = false
     @State private var realtimeChannel: RealtimeChannelV2? = nil
@@ -68,7 +69,7 @@ struct FleetDashboardView: View {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
@@ -315,7 +316,7 @@ struct FleetDashboardView: View {
                         NavigationStack {
                             AIReportsView(isPresentedAsSheet: true)
                         }
-                    case .alerts:       AlertsFeedView()
+                    case .alerts:       AlertsFeedView(showTracking: $showTracking, selectedVehicleToTrack: $selectedVehicleToTrack)
                     case .maintenance:  MaintenanceManagementView()
                     }
                 }
@@ -375,7 +376,7 @@ struct FleetDashboardView: View {
             }
             // Tracking navigation push
             .navigationDestination(isPresented: $showTracking) {
-                FleetTrackingView()
+                FleetTrackingView(initialSelectedVehicleId: selectedVehicleToTrack)
                     .environment(\.modelContext, modelContext)
             }
             // Compliance navigation push
