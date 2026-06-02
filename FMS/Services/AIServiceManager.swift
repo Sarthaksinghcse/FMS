@@ -11,17 +11,11 @@ final class AIServiceManager {
 
     /// Invoke a Supabase Edge Function and decode the result
     func invoke<T: Decodable>(_ functionName: String) async throws -> T {
-        let data: Data = try await SupabaseManager.shared.client.functions.invoke(functionName)
         do {
-            return try JSONDecoder.fmsDirectDecoder.decode(T.self, from: data)
-        } catch let directError {
-            print("⚠️ AIServiceManager: fmsDirectDecoder failed to decode: \(directError)")
-            do {
-                return try JSONDecoder.fmsDecoder.decode(T.self, from: data)
-            } catch let snakeError {
-                print("⚠️ AIServiceManager: fmsDecoder failed to decode: \(snakeError)")
-                throw snakeError
-            }
+            return try await SupabaseManager.shared.client.functions.invoke(functionName)
+        } catch {
+            print("⚠️ AIServiceManager: Supabase client functions.invoke failed natively for \(functionName): \(error)")
+            throw error
         }
     }
 
@@ -52,7 +46,22 @@ extension JSONDecoder {
     
     private static let fmsDateDecoderClosure: @Sendable (any Decoder) throws -> Date = { decoder in
         let container = try decoder.singleValueContainer()
-        let dateStr = try container.decode(String.self)
+        let rawDateStr = try container.decode(String.self)
+        
+        // Normalize microseconds (more than 3 fractional digits) to milliseconds (3 digits)
+        // so that ISO8601DateFormatter can natively parse it across all iOS versions.
+        var dateStr = rawDateStr
+        if let dotIndex = dateStr.firstIndex(of: ".") {
+            var endIndex = dateStr.index(after: dotIndex)
+            while endIndex < dateStr.endIndex, dateStr[endIndex].isNumber {
+                endIndex = dateStr.index(after: endIndex)
+            }
+            let fractionCount = dateStr.distance(from: dotIndex, to: endIndex) - 1
+            if fractionCount > 3 {
+                let msEndIndex = dateStr.index(dotIndex, offsetBy: 4)
+                dateStr.replaceSubrange(msEndIndex..<endIndex, with: "")
+            }
+        }
         
         // 1. Try ISO8601DateFormatter
         let isoFormatter = ISO8601DateFormatter()
@@ -90,6 +99,6 @@ extension JSONDecoder {
             }
         }
         
-        throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateStr)")
+        throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(rawDateStr)")
     }
 }

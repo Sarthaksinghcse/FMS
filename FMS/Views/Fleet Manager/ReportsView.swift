@@ -216,7 +216,7 @@ struct ReportsView: View {
                             Text("Executive AI Report")
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundColor(.black)
-                            Text("Drafted by Gemini-2.0-Flash analyst")
+                            Text("Drafted by AI analyst")
                                 .font(.system(size: 11, weight: .medium, design: .rounded))
                                 .foregroundColor(.gray)
                         }

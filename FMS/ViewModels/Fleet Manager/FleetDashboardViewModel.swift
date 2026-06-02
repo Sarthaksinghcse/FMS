@@ -27,8 +27,8 @@ final class FleetDashboardViewModel {
         ),
         DashboardQuickAction(
             icon: "wrench.and.screwdriver.fill",
-            iconColor: AppTheme.Brand.amber,
-            bgColor: AppTheme.IconBg.amber,
+            iconColor: AppTheme.Brand.primary,
+            bgColor: AppTheme.IconBg.blue,
             label: "Maintenance"
         ),
         DashboardQuickAction(
@@ -86,17 +86,17 @@ final class FleetDashboardViewModel {
         let liveTrips      = trips.filter { $0.tripStatus == .inProgress || $0.tripStatus == .started }.count
 
         return [
-            DashboardStat(icon: "car.fill",           iconColor: AppTheme.Brand.primary,
-                          iconBgColor: AppTheme.IconBg.blue,   value: "\(totalVehicles)",
+            DashboardStat(icon: "car.fill",           iconColor: Color.blue,
+                          iconBgColor: Color.blue.opacity(0.12),   value: "\(totalVehicles)",
                           label: "Total Vehicles",    trend: "", isTrendPositive: true,  graphData: []),
-            DashboardStat(icon: "checkmark.circle.fill", iconColor: AppTheme.Status.success,
-                          iconBgColor: AppTheme.IconBg.green,  value: "\(activeVehicles)",
+            DashboardStat(icon: "checkmark.circle.fill", iconColor: Color.green,
+                          iconBgColor: Color.green.opacity(0.12),  value: "\(activeVehicles)",
                           label: "Ready Vehicles",    trend: "", isTrendPositive: true,  graphData: []),
-            DashboardStat(icon: "person.2.fill",      iconColor: AppTheme.Brand.violet,
-                          iconBgColor: AppTheme.IconBg.violet, value: "\(driversOnline)",
+            DashboardStat(icon: "person.2.fill",      iconColor: Color.orange,
+                          iconBgColor: Color.orange.opacity(0.12), value: "\(driversOnline)",
                           label: "Drivers Online",   trend: "", isTrendPositive: true,  graphData: []),
-            DashboardStat(icon: "arrow.up.arrow.down",iconColor: AppTheme.Brand.teal,
-                          iconBgColor: AppTheme.IconBg.teal,   value: "\(liveTrips)",
+            DashboardStat(icon: "arrow.up.arrow.down",iconColor: Color.indigo,
+                          iconBgColor: Color.indigo.opacity(0.12),   value: "\(liveTrips)",
                           label: "Live Trips",        trend: "", isTrendPositive: false, graphData: [])
         ]
     }
