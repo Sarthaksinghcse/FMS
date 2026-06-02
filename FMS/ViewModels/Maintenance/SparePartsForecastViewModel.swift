@@ -46,7 +46,7 @@ final class SparePartsForecastViewModel {
                 struct DBCachedForecast: Codable {
                     let id: UUID
                     let forecasts: [PartForecast]
-                    let generated_at: Date
+                    let generated_at: String
                 }
                 
                 let cached: [DBCachedForecast] = try await SupabaseManager.shared.client.from("spare_parts_forecasts")
