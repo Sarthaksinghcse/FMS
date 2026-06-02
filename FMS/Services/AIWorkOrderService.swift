@@ -48,8 +48,8 @@ final class AIWorkOrderService {
         defects: [DBDefectReport],
         vehicles: [DBVehicle]
     ) -> [DBWorkOrder] {
-        let defectMap  = Dictionary(uniqueKeysWithValues: defects.map { ($0.vehicleId, $0) })
-        let vehicleMap = Dictionary(uniqueKeysWithValues: vehicles.map { ($0.id, $0) })
+        let defectMap  = Dictionary(defects.map { ($0.vehicleId, $0) }, uniquingKeysWith: { first, _ in first })
+        let vehicleMap = Dictionary(vehicles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         return workOrders.sorted {
             computePriorityScore(
@@ -128,8 +128,8 @@ final class AIWorkOrderService {
         defects: [DefectReport],
         vehicles: [Vehicle]
     ) -> [WorkOrder] {
-        let defectMap  = Dictionary(uniqueKeysWithValues: defects.map { ($0.vehicleId, $0) })
-        let vehicleMap = Dictionary(uniqueKeysWithValues: vehicles.map { ($0.id, $0) })
+        let defectMap  = Dictionary(defects.map { ($0.vehicleId, $0) }, uniquingKeysWith: { first, _ in first })
+        let vehicleMap = Dictionary(vehicles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         return workOrders.sorted {
             computePriorityScore(
