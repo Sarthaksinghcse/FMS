@@ -30,12 +30,23 @@ struct MaintenanceDashboardView: View {
                 }
                 .tag(0)
 
-            InventoryTabView(currentUser: currentUser, items: allInventory)
+            MaintenanceWorkOrdersTab(currentUser: currentUser)
                 .tabItem {
-                    Label("Inventory", systemImage: "shippingbox")
+                    Label("Work Orders", systemImage: "wrench.and.screwdriver.fill")
                 }
                 .tag(1)
 
+            MaintenanceSchedulingTab(currentUser: currentUser, selectedFilter: $schedulingFilter)
+                .tabItem {
+                    Label("Schedule", systemImage: "calendar")
+                }
+                .tag(2)
+
+            InventoryTabView(currentUser: currentUser, items: allInventory)
+                .tabItem {
+                    Label("Inventory", systemImage: "shippingbox.fill")
+                }
+                .tag(3)
         }
         .accentColor(AppTheme.Brand.primary)
         .task {

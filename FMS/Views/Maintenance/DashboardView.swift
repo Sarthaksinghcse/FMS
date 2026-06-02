@@ -93,50 +93,107 @@ struct MaintenanceDashboardTab: View {
     }
 
     var body: some View {
-        // ── NavigationStack for smooth push transitions ───────────────────────
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Premium header
-                        MaintenanceHeaderView(
-                            title: personnelFirstName,
-                            subtitle: "",
-                            greeting: getGreetingTime() + ",",
-                            initials: initials,
-                            avatarColor: AppTheme.Brand.primaryDeep,
-                            notificationCount: unreadNotifications.count,
-                            onNotificationTap: { showingNotifications = true },
-                            onProfileTap: { showingProfile = true },
-                            showChat: false,
-                            onChatTap: { showChat = true }
-                        )
-                        .padding(.top, 8)
-
+                    VStack(alignment: .leading, spacing: 22) {
                         overviewSection
+                        
+                        // Recent Messages Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            SectionHeader(title: "Recent Messages")
+                            
+                            NavigationLink(destination: CommunicationView()) {
+                                HStack(spacing: 12) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(AppTheme.Brand.violet.opacity(0.12))
+                                            .frame(width: 40, height: 40)
+                                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                                            .font(.system(size: 16))
+                                            .foregroundColor(AppTheme.Brand.violet)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Communication Hub")
+                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                            .foregroundColor(AppTheme.Text.primary)
+                                        Text("Chat with Drivers & Fleet Managers")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(AppTheme.Text.tertiary)
+                                }
+                                .padding(14)
+                                .background(AppTheme.Background.card)
+                                .cornerRadius(AppTheme.Radius.card)
+                                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                        .padding(.horizontal)
+
                         quickActionsSection
                         recentWorkOrdersSection
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 12)
                     .padding(.bottom, 32)
                 }
-                .safeAreaPadding(.top)
                 .scrollBounceBehavior(.basedOnSize, axes: .vertical)
                 .refreshable {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Dashboard")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showingNotifications = true
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(AppTheme.Brand.primary)
+                                .frame(width: 32, height: 32)
+                                .background(Color(.systemGray6))
+                                .clipShape(Circle())
+                            
+                            if unreadNotifications.count > 0 {
+                                Circle()
+                                    .fill(AppTheme.Status.danger)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 2, y: -2)
+                            }
+                        }
+                    }
+                    
+                    Button {
+                        showingProfile = true
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(AppTheme.Brand.primaryDeep.gradient)
+                                .frame(width: 32, height: 32)
+                            Text(initials)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+            }
             .sheet(isPresented: $showingProfile) {
                 MaintenanceProfileView()
             }
             .sheet(isPresented: $showingNotifications) {
                 MaintenanceNotificationsSheet(currentUser: currentUser)
-            }
-            .navigationDestination(isPresented: $showChat) {
-                CommunicationView()
             }
         }
     }

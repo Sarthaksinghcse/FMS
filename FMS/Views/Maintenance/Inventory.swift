@@ -59,10 +59,53 @@ struct InventoryTabView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack(alignment: .bottomTrailing) {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 12) {
+                        // AI Spare Parts Forecast Report Banner
+                        NavigationLink {
+                            SparePartsForecastView()
+                        } label: {
+                            HStack {
+                                HStack(spacing: 10) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(AppTheme.Brand.primary.opacity(0.12))
+                                            .frame(width: 36, height: 36)
+                                        Image(systemName: "sparkles")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(AppTheme.Brand.primary)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("AI Spare Parts Forecast")
+                                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                                            .foregroundColor(.black)
+                                        Text("Predictive stock demand & reorder intelligence")
+                                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(12)
+                            .background(AppTheme.Brand.primary.opacity(0.04))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(AppTheme.Brand.primary.opacity(0.12), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+
                         // Stats Dashboard Bar
                         HStack(spacing: 12) {
                             // Total Parts
@@ -215,7 +258,6 @@ struct InventoryTabView: View {
                 InventoryDetailView(item: item)
             }
         }
-        .navigationViewStyle(.stack)
     }
 }
 

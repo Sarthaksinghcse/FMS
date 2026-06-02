@@ -94,8 +94,6 @@ struct InProgressTasksView: View {
             AppTheme.Background.page.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                CustomCenteredHeaderView(title: "In Progress")
-                
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                         Section {
@@ -139,8 +137,6 @@ struct InProgressTasksView: View {
                     }
                 }
             }
-            .navigationBarHidden(true)
-            .navigationBarBackButtonHidden(true)
         }
     }
     
