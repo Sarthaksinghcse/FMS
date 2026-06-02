@@ -39,11 +39,8 @@ final class VehicleHealthViewModel {
             }.sorted { $0.score < $1.score } // worst first
 
             if forceRefresh || dbScores.isEmpty {
-                // Call Deno vehicle health analysis
+                // Reload DB scores directly from database
                 isGenerating = true
-                let _: Data = try await SupabaseManager.shared.client.functions.invoke("vehicle-health-analysis")
-                
-                // Reload DB scores after running AI analysis
                 let freshDBScores = try await SupabaseManager.shared.fetchVehicleHealthScores()
                 let freshScoreMap = Dictionary(uniqueKeysWithValues: freshDBScores.map { ($0.vehicleId, $0) })
                 
