@@ -68,7 +68,7 @@ struct VehicleHealthAnalysisView: View {
                     }
                     Spacer()
                 } else {
-                    ScrollView {
+                    ScrollView(.vertical, showsIndicators: false) {
                         LazyVStack(spacing: 16) {
                             ForEach(viewModel.healthScores) { score in
                                 vehicleHealthCard(score)

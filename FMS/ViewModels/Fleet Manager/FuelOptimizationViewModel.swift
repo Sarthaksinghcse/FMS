@@ -40,10 +40,18 @@ final class FuelOptimizationViewModel {
                 return
             }
 
-            // Call Edge function to generate AI insights
+            // Fetch latest AI insights directly from database
             isGenerating = true
-            let response: Data = try await SupabaseManager.shared.client.functions.invoke("fuel-optimization-insights")
-            self.insight = try JSONDecoder.fmsDecoder.decode(FuelInsight.self, from: response)
+            let cached: [FuelInsight] = try await SupabaseManager.shared.client.from("ai_fuel_insights")
+                .select()
+                .order("generated_at", ascending: false)
+                .limit(1)
+                .execute()
+                .value
+            
+            if let report = cached.first {
+                self.insight = report
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

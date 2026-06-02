@@ -57,7 +57,7 @@ struct DashboardStatCard: View {
                         .minimumScaleFactor(0.7)
                     
                     Text(stat.value)
-                        .font(.system(size: 32, weight: .bold))
+                        .font(.system(size: 26, weight: .bold))
                         .foregroundColor(stat.iconColor)
                         .lineLimit(1)
                 }
