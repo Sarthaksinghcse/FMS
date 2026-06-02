@@ -23,7 +23,10 @@ struct FleetDashboardView: View {
     @State private var showChat     = false
     @State private var showTracking = false
     @State private var showingFuelInsights = false
+    @State private var showCompliance = false
     @State private var realtimeChannel: RealtimeChannelV2? = nil
+    @State private var activeGeofenceAlertsCount = 0
+    @AppStorage("lastGeofenceAlertViewTime") private var lastGeofenceAlertViewTime: Double = 0
 
     // Compute the full activity list once per body eval
     private var recentActivities: [DashboardActivity] {
@@ -84,6 +87,8 @@ struct FleetDashboardView: View {
                             HStack(spacing: 16) {
 
                                 Button {
+                                    lastGeofenceAlertViewTime = Date().timeIntervalSince1970
+                                    activeGeofenceAlertsCount = 0
                                     viewModel.activeQuickAction = .alerts
                                 } label: {
                                     ZStack(alignment: .topTrailing) {
@@ -94,7 +99,7 @@ struct FleetDashboardView: View {
                                             .background(Color(UIColor.secondarySystemGroupedBackground))
                                             .clipShape(Circle())
                                         
-                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty {
+                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
                                             Circle()
                                                 .fill(AppTheme.Status.danger)
                                                 .frame(width: 10, height: 10)
@@ -192,6 +197,7 @@ struct FleetDashboardView: View {
                                             case "Reports", "AI Report": viewModel.activeQuickAction = .reports
                                             case "Tracking":       showTracking = true
                                             case "Chat":           showChat = true
+                                            case "Compliance":     showCompliance = true
                                             default: break
                                             }
                                         }
@@ -204,11 +210,8 @@ struct FleetDashboardView: View {
 
 
 
-                        // ── Compliance & Renewal Alerts ───────────
-                        complianceAlertsSummary
-                        
-                        // ── Fuel Insights Summary ─────────────────
-                        fuelInsightsSummary
+                        // ── AI Insights ───────────────────────────
+                        aiInsightsSection
 
                         // ── Recent Activity ───────────────────────
                         VStack(alignment: .leading, spacing: 14) {
@@ -336,6 +339,9 @@ struct FleetDashboardView: View {
             }
             .task {
                 await SupabaseManager.shared.syncAllData(context: modelContext)
+            }
+            .onAppear {
+                fetchActiveGeofenceAlerts()
                 startRealtimeListener()
             }
             .onDisappear {
@@ -372,6 +378,11 @@ struct FleetDashboardView: View {
                 FleetTrackingView()
                     .environment(\.modelContext, modelContext)
             }
+            // Compliance navigation push
+            .navigationDestination(isPresented: $showCompliance) {
+                ComplianceAlertsView()
+                    .environment(\.modelContext, modelContext)
+            }
 
         }
     }
@@ -383,56 +394,224 @@ struct FleetDashboardView: View {
 //        return String(vm.driverName.prefix(2)).uppercased()
 //    }
 
-    // MARK: - Fuel Insights Summary Card
-
-    private var fuelInsightsSummary: some View {
-        Button {
-            showingFuelInsights = true
-        } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
+    // MARK: - AI Insights
+    private var aiInsightsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("AI Insights")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.black)
+                .padding(.horizontal, 16)
+            
+            // 1. Predictive Maintenance Alert
+            NavigationLink(destination: PredictiveAlertDetailView()) {
+                HStack(spacing: 14) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color.green.opacity(0.1))
-                            .frame(width: 40, height: 40)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppTheme.Brand.royalBlue)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("Predictive Maintenance Alert")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("SMART")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(AppTheme.Brand.royalBlue)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Identify telemetry risks, vehicle alerts, and wear trends...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
+            
+            // 2. AI Parts Demand Forecasting
+            NavigationLink(destination: SparePartsForecastView()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.purple.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "box.truck.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.purple)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("AI Parts Demand Forecasting")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("PREDICT")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.purple)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Calculate upcoming parts consumption & reorder recommendations...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
+            
+            // 3. Fuel Insights & Optimization
+            Button {
+                showingFuelInsights = true
+            } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.green.opacity(0.08))
+                            .frame(width: 44, height: 44)
                         Image(systemName: "fuelpump.fill")
                             .font(.system(size: 18))
                             .foregroundColor(.green)
                     }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Fuel Insights & Optimization")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(AppTheme.Text.primary)
-
-                        Text("Uncover cost savings and consumption anomalies")
-                            .font(.system(size: 12))
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("Fuel Insights & Optimization")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("OPTIMIZE")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.green)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Uncover cost savings, efficiency grades, and consumption anomalies...")
+                            .font(.system(size: 11))
                             .foregroundColor(AppTheme.Text.secondary)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
                     }
-
+                    
                     Spacer()
-
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.purple)
-
+                    
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
             }
-            .padding(14)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                    .stroke(AppTheme.Glass.border, lineWidth: 1)
-            )
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
+            
+            // 4. AI Vehicle Health Analytics
+            NavigationLink(destination: VehicleHealthAnalysisView()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.teal.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "heart.text.square.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.teal)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("AI Vehicle Health Analytics")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("HEALTH")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.teal)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Assess fleet vehicle health grades, issue flags and repair tasks...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
         .sheet(isPresented: $showingFuelInsights) {
             NavigationStack {
                 FuelOptimizationView()
@@ -440,92 +619,7 @@ struct FleetDashboardView: View {
         }
     }
 
-    // MARK: - Compliance Summary Card
 
-    private var complianceAlertsSummary: some View {
-        let allItems = complianceVM.generateAlerts(vehicles: vehicles, persistedAlerts: complianceAlerts)
-        let overdueCount = complianceVM.overdueCount(from: allItems)
-        let upcomingCount = complianceVM.upcomingCount(from: allItems)
-        let totalActive = overdueCount + upcomingCount
-
-        return NavigationLink(destination: ComplianceAlertsView()) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(
-                                overdueCount > 0
-                                    ? ComplianceAlertStatus.overdue.color.opacity(0.12)
-                                    : AppTheme.Brand.primary.opacity(0.08)
-                            )
-                            .frame(width: 40, height: 40)
-                        Image(systemName: "shield.checkered")
-                            .font(.system(size: 18))
-                            .foregroundColor(
-                                overdueCount > 0
-                                    ? ComplianceAlertStatus.overdue.color
-                                    : AppTheme.Brand.primary
-                            )
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Compliance & Renewals")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(AppTheme.Text.primary)
-
-                        Text(complianceSummaryText(overdue: overdueCount, upcoming: upcomingCount))
-                            .font(.system(size: 12))
-                            .foregroundColor(AppTheme.Text.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    if totalActive > 0 {
-                        Text("\(totalActive)")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(minWidth: 18, minHeight: 18)
-                            .background(
-                                overdueCount > 0
-                                    ? ComplianceAlertStatus.overdue.color
-                                    : ComplianceAlertStatus.upcoming.color
-                            )
-                            .clipShape(Circle())
-                    }
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
-                }
-            }
-            .padding(14)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                    .stroke(
-                        overdueCount > 0
-                            ? ComplianceAlertStatus.overdue.color.opacity(0.25)
-                            : AppTheme.Glass.border,
-                        lineWidth: 1
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-    }
-
-    private func complianceSummaryText(overdue: Int, upcoming: Int) -> String {
-        if overdue == 0 && upcoming == 0 {
-            return "All vehicles within compliance limits"
-        } else if overdue > 0 {
-            return "\(overdue) alert\(overdue == 1 ? "" : "s") require immediate attention"
-        } else {
-            return "\(upcoming) renewal\(upcoming == 1 ? "" : "s") due soon"
-        }
-    }
 
     private func destinationFor(stat: DashboardStat) -> DashboardNavigationDestination {
         switch stat.label {
@@ -547,6 +641,25 @@ struct FleetDashboardView: View {
         }
     }
 
+    private func fetchActiveGeofenceAlerts() {
+        Task {
+            do {
+                let alerts = try await SupabaseManager.shared.fetchRouteDeviationAlerts()
+                await MainActor.run {
+                    let activeAlerts = alerts.filter { $0.status == .active }
+                    let latestTime = activeAlerts.map { $0.createdAt.timeIntervalSince1970 }.max() ?? 0
+                    if latestTime > self.lastGeofenceAlertViewTime {
+                        self.activeGeofenceAlertsCount = activeAlerts.count
+                    } else {
+                        self.activeGeofenceAlertsCount = 0
+                    }
+                }
+            } catch {
+                print("Failed to fetch geofence alerts for badge: \(error)")
+            }
+        }
+    }
+
     private func startRealtimeListener() {
         guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
@@ -563,6 +676,7 @@ struct FleetDashboardView: View {
             let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
             let fuelStream = channel.postgresChange(AnyAction.self, schema: "public", table: "fuel_logs")
             let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+            let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
             
             try? await channel.subscribeWithError()
             
@@ -575,6 +689,17 @@ struct FleetDashboardView: View {
             async let _ : () = handleStream(vehicleStream)
             async let _ : () = handleStream(fuelStream)
             async let _ : () = handleStream(complianceStream)
+            async let _ : () = handleRouteDevStream(routeDevStream)
+        }
+    }
+    
+    private func handleRouteDevStream<S: AsyncSequence>(_ stream: S) async {
+        do {
+            for try await _ in stream {
+                fetchActiveGeofenceAlerts()
+            }
+        } catch {
+            print("Route dev stream error: \(error)")
         }
     }
     

@@ -170,7 +170,7 @@ private struct DashboardInlineHeader: View {
                     let unread = vm.notificationsList.filter { !$0.isRead }.count
                     if unread > 0 {
                         Circle()
-                            .fill(Color.red)
+                            .fill(AppTheme.Status.danger)
                             .frame(width: 10, height: 10)
                             .offset(x: 1, y: 1)
                     }
@@ -266,10 +266,10 @@ private struct LiveTripCard: View {
                         Spacer()
                         Text("IN PROGRESS")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(AppTheme.Status.danger)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color.red.opacity(0.10))
+                            .background(AppTheme.Status.danger.opacity(0.10))
                             .cornerRadius(6)
                     }
                     if let notes = trip.notes, !notes.isEmpty {
@@ -279,9 +279,9 @@ private struct LiveTripCard: View {
                             Text(notes)
                                 .font(.system(size: 11, weight: .semibold))
                         }
-                        .foregroundStyle(.red)
+                        .foregroundStyle(AppTheme.Status.danger)
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.red.opacity(0.08))
+                        .background(AppTheme.Status.danger.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }
@@ -398,15 +398,16 @@ private struct LiveTripCard: View {
                         }
 
                         Button {
-                            vm.showPostTripOnEnd = true
-                            vm.showPostTrip = true
+                            Task {
+                                await vm.requestEndTrip()
+                            }
                         } label: {
                             Label("End Trip", systemImage: "stop.fill")
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 48)
-                                .background(Color.red.gradient)
+                                .background(AppTheme.Brand.accent.gradient)
                                 .cornerRadius(12)
                         }
                     }
@@ -818,16 +819,16 @@ private struct AssignedTripCard: View {
                 .background(
                     isAccepted ?
                     LinearGradient(
-                        colors: [Color.green, Color(red: 0.1, green: 0.8, blue: 0.2)],
+                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
                         startPoint: .leading, endPoint: .trailing
                     ) :
                     LinearGradient(
-                        colors: [Color.fmsIndigo, Color(red: 0.25, green: 0.35, blue: 0.85)],
+                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.7)],
                         startPoint: .leading, endPoint: .trailing
                     )
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: isAccepted ? Color.green.opacity(0.3) : Color.fmsIndigo.opacity(0.28), radius: 10, y: 4)
+                .shadow(color: isAccepted ? AppTheme.Status.success.opacity(0.3) : AppTheme.Brand.primary.opacity(0.28), radius: 10, y: 4)
             }
             .padding(.horizontal, 20)
             .padding(.top, 10)

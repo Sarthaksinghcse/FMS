@@ -10,6 +10,7 @@ Icon?
 # ─── Xcode ────────────────────────────────────────────────────────────────────
 build/
 DerivedData/
+build_temp/
 *.pbxuser
 *.xcuserstate
 UserInterfaceState.xcuserstate

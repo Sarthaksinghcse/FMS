@@ -184,14 +184,14 @@ struct VehicleMaintenanceHistoryView: View {
                         HStack(spacing: 4) {
                             Text("\(months[selectedMonth - 1]) \(String(selectedYear))")
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundColor(.blue)
+                                .foregroundColor(Theme.royalBlue)
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.blue)
+                                .foregroundColor(Theme.royalBlue)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .background(Color.blue.opacity(0.1))
+                        .background(Theme.royalBlue.opacity(0.1))
                         .cornerRadius(8)
                         
                         Spacer()

@@ -56,7 +56,7 @@ struct AddTripFormView: View {
                                           isEditable: false)
                         }
                         
-                        formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
+                        formSection(title: "Locations", icon: "location.fill", iconColor: Theme.royalBlue) {
                             LocationSelectionRow(label: "Start Location", placeholder: "Select on map", locationText: startLocation) {
                                 showingStartPicker = true
                             }
@@ -71,7 +71,7 @@ struct AddTripFormView: View {
                             if scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
                                 Text("⚠️ Start time must be at least 2 hours from now.")
                                     .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    .foregroundColor(.red)
+                                    .foregroundColor(Theme.darkOrange)
                                     .padding(.horizontal, 16)
                                     .padding(.bottom, 8)
                             }
@@ -109,7 +109,7 @@ struct AddTripFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.darkOrange)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -431,7 +431,7 @@ struct EditTripFormView: View {
                             TripStatusPickerRow(selection: $tripStatus)
                         }
                         
-                        formSection(title: "Locations", icon: "location.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
+                        formSection(title: "Locations", icon: "location.fill", iconColor: Theme.royalBlue) {
                             LocationSelectionRow(label: "Start Location", placeholder: "Select on map", locationText: startLocation) {
                                 showingStartPicker = true
                             }
@@ -446,7 +446,7 @@ struct EditTripFormView: View {
                             if scheduledStartTime != trip.scheduledStartTime && scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
                                 Text("⚠️ New start time must be at least 2 hours from now.")
                                     .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    .foregroundColor(.red)
+                                    .foregroundColor(Theme.darkOrange)
                                     .padding(.horizontal, 16)
                                     .padding(.bottom, 8)
                             }
@@ -487,7 +487,7 @@ struct EditTripFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.darkOrange)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -624,18 +624,18 @@ struct EditTripFormView: View {
             HStack(spacing: 8) {
                 if isDeleting {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                        .progressViewStyle(CircularProgressViewStyle(tint: Theme.darkOrange))
                 } else {
                     Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
                 }
                 Text(isDeleting ? "Deleting..." : "Delete Trip").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
+            .foregroundColor(Theme.darkOrange)
             .frame(maxWidth: .infinity).frame(height: 50)
-            .background(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.08))
+            .background(Theme.darkOrange.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
+                .stroke(Theme.darkOrange.opacity(0.25), lineWidth: 1))
         }
         .disabled(isSaving || isDeleting)
     }
@@ -1164,11 +1164,11 @@ struct TripStatusPickerRow: View {
     @Binding var selection: TripStatus
     
     private let options: [(TripStatus, String, Color)] = [
-        (.assigned,    "Assigned",    Color(red: 0.15, green: 0.38, blue: 0.90)),
-        (.started,     "Started",     Color(red: 0.30, green: 0.70, blue: 0.46)),
-        (.inProgress,  "In Progress", Color(red: 0.30, green: 0.70, blue: 0.46)),
-        (.completed,   "Completed",   Color(red: 0.55, green: 0.58, blue: 0.62)),
-        (.cancelled,   "Cancelled",   Color(red: 0.85, green: 0.25, blue: 0.25))
+        (.assigned,    "Assigned",    Theme.royalBlue),
+        (.started,     "Started",     Theme.royalBlue),
+        (.inProgress,  "In Progress", Theme.royalBlue),
+        (.completed,   "Completed",   Theme.royalBlue.opacity(0.5)),
+        (.cancelled,   "Cancelled",   Theme.darkOrange)
     ]
     
     var body: some View {

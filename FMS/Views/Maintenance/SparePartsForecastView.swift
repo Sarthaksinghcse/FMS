@@ -97,7 +97,7 @@ struct SparePartsForecastView: View {
                         .foregroundColor(.black)
                     Text("Stockout risk: " + (part.stockoutRisk ? "YES" : "NO"))
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(part.stockoutRisk ? .red : .green)
+                        .foregroundColor(part.stockoutRisk ? AppTheme.Status.danger : AppTheme.Status.success)
                 }
                 
                 Spacer()
@@ -137,10 +137,10 @@ struct SparePartsForecastView: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("REORDER REC")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundColor(.purple)
+                            .foregroundColor(AppTheme.Brand.primary)
                         Text("+\(part.recommendedReorder) units")
                             .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundColor(.purple)
+                            .foregroundColor(AppTheme.Brand.primary)
                     }
                 }
             }
@@ -150,7 +150,7 @@ struct SparePartsForecastView: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(part.stockoutRisk ? Color.red.opacity(0.15) : AppTheme.Glass.border, lineWidth: 1)
+                .stroke(part.stockoutRisk ? AppTheme.Status.danger.opacity(0.15) : AppTheme.Glass.border, lineWidth: 1)
         )
         .padding(.horizontal, 16)
     }

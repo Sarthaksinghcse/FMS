@@ -183,7 +183,7 @@ struct MaintenanceEditSheet: View {
                                             partsList.removeAll(where: { $0 == part })
                                         } label: {
                                             Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(.red.opacity(0.7))
+                                                .foregroundColor(AppTheme.Status.danger)
                                         }
                                         .buttonStyle(PlainButtonStyle())
                                     }

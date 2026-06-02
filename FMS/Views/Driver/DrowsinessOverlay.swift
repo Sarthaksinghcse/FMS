@@ -61,11 +61,11 @@ struct DrowsinessStatusPill: View {
 
     private var pillColor: Color {
         switch state {
-        case .inactive:      return Color(UIColor.systemGray3)
-        case .monitoring:    return Color(red: 0.2, green: 0.78, blue: 0.35)
-        case .eyesClosed:    return Color(red: 0.95, green: 0.50, blue: 0.15)
-        case .noFace:        return Color(UIColor.systemGray2)
-        case .alarm:         return .red
+        case .inactive:      return Color.fmsIndigo.opacity(0.4)
+        case .monitoring:    return AppTheme.Status.success
+        case .eyesClosed:    return AppTheme.Status.warning
+        case .noFace:        return Color.fmsIndigo.opacity(0.2)
+        case .alarm:         return AppTheme.Status.danger
         }
     }
 
@@ -111,7 +111,7 @@ struct DrowsinessAlarmView: View {
             Color.black.ignoresSafeArea()
 
             Rectangle()
-                .fill(Color.red.opacity(flashOn ? 0.55 : 0.25))
+                .fill(AppTheme.Status.danger.opacity(flashOn ? 0.55 : 0.25))
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.35).repeatForever(autoreverses: true), value: flashOn)
 
@@ -122,7 +122,7 @@ struct DrowsinessAlarmView: View {
                 ZStack {
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
-                            .stroke(Color.red.opacity(0.2 - Double(i) * 0.06), lineWidth: 2)
+                            .stroke(AppTheme.Status.danger.opacity(0.2 - Double(i) * 0.06), lineWidth: 2)
                             .frame(width: 130 + CGFloat(i) * 32,
                                    height: 130 + CGFloat(i) * 32)
                             .scaleEffect(eyeScale)
@@ -130,7 +130,7 @@ struct DrowsinessAlarmView: View {
                     Circle()
                         .fill(
                             RadialGradient(
-                                colors: [Color.red.opacity(0.6), Color.red.opacity(0.15)],
+                                colors: [AppTheme.Status.danger.opacity(0.6), AppTheme.Status.danger.opacity(0.15)],
                                 center: .center,
                                 startRadius: 10, endRadius: 65
                             )
@@ -176,7 +176,7 @@ struct DrowsinessAlarmView: View {
                         Text("I'm Awake — Resume")
                             .font(.system(size: 17, weight: .bold))
                     }
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(AppTheme.Status.danger)
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)
                     .background(.white)
@@ -250,10 +250,10 @@ struct DrowsinessMonitorHUD: View {
 
     private var borderColor: Color {
         switch detector.state {
-        case .monitoring:   return Color(red: 0.2, green: 0.78, blue: 0.35)
-        case .eyesClosed:   return Color(red: 0.95, green: 0.50, blue: 0.15)
-        case .alarm:        return .red
-        default:            return Color(UIColor.systemGray3)
+        case .monitoring:   return AppTheme.Status.success
+        case .eyesClosed:   return AppTheme.Status.warning
+        case .alarm:        return AppTheme.Status.danger
+        default:            return Color.fmsIndigo.opacity(0.4)
         }
     }
 

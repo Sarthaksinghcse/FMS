@@ -205,11 +205,11 @@ struct ReportsView: View {
                     HStack(spacing: 10) {
                         ZStack {
                             Circle()
-                                .fill(Color.purple.opacity(0.12))
+                                .fill(Theme.darkOrange.opacity(0.12))
                                 .frame(width: 36, height: 36)
                             Image(systemName: "sparkles")
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.purple)
+                                .foregroundColor(Theme.darkOrange)
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
@@ -229,11 +229,11 @@ struct ReportsView: View {
                         .foregroundColor(.gray)
                 }
                 .padding(12)
-                .background(Color.purple.opacity(0.04))
+                .background(Theme.darkOrange.opacity(0.04))
                 .cornerRadius(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.purple.opacity(0.12), lineWidth: 1)
+                        .stroke(Theme.darkOrange.opacity(0.12), lineWidth: 1)
                 )
             }
             .buttonStyle(PlainButtonStyle())

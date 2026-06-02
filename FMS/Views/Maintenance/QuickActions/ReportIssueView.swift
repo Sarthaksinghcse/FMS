@@ -166,7 +166,7 @@ struct ReportIssueView: View {
                                         Spacer()
                                         if isImageAttached {
                                             Image(systemName: "trash.fill")
-                                                .foregroundColor(.red.opacity(0.7))
+                                                .foregroundColor(AppTheme.Status.danger)
                                         }
                                     }
                                     .padding(14)
@@ -223,7 +223,7 @@ struct ReportIssueView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            isFormValid ? AppTheme.Brand.accent : Color.gray.opacity(0.5)
+                            isFormValid ? AppTheme.Brand.accent : AppTheme.Brand.accent.opacity(0.2)
                         )
                         .cornerRadius(12)
                         .shadow(color: isFormValid ? AppTheme.Brand.accent.opacity(0.3) : Color.clear, radius: 8, y: 3)
