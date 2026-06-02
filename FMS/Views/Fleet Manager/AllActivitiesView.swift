@@ -4,6 +4,7 @@ import SwiftData
 struct AllActivitiesView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    var onActivityTap: ((DashboardActivity) -> Void)? = nil
 
     // Live SwiftData queries
     @Query(sort: \Trip.createdAt,          order: .reverse) private var trips: [Trip]
@@ -99,7 +100,13 @@ struct AllActivitiesView: View {
                         ScrollView {
                             LazyVStack(spacing: 0) {
                                 ForEach(Array(filteredActivities.enumerated()), id: \.element.id) { index, activity in
-                                    DashboardActivityRow(activity: activity)
+                                    Button {
+                                        dismiss()
+                                        onActivityTap?(activity)
+                                    } label: {
+                                        DashboardActivityRow(activity: activity)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
 
                                     if index < filteredActivities.count - 1 {
                                         Divider().padding(.leading, 66)
@@ -178,5 +185,5 @@ struct AllActivitiesView: View {
 }
 
 #Preview {
-    AllActivitiesView()
+    AllActivitiesView(onActivityTap: nil)
 }

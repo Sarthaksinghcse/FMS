@@ -30,7 +30,7 @@ struct SOSCountdownOverlay: View {
                     
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
-                            .stroke(Color.red.opacity(0.15 - Double(i) * 0.04), lineWidth: 2)
+                            .stroke(AppTheme.Status.danger.opacity(0.15 - Double(i) * 0.04), lineWidth: 2)
                             .frame(width: 200 + CGFloat(i) * 40, height: 200 + CGFloat(i) * 40)
                             .scaleEffect(pulseScale)
                     }
@@ -44,7 +44,7 @@ struct SOSCountdownOverlay: View {
                     Circle()
                         .trim(from: 0, to: progress)
                         .stroke(
-                            Color.red,
+                            AppTheme.Status.danger,
                             style: StrokeStyle(lineWidth: 10, lineCap: .round)
                         )
                         .frame(width: 180, height: 180)
@@ -55,7 +55,7 @@ struct SOSCountdownOverlay: View {
                     Circle()
                         .fill(
                             RadialGradient(
-                                colors: [Color.red.opacity(0.6), Color.red.opacity(0.2)],
+                                colors: [AppTheme.Status.danger.opacity(0.6), AppTheme.Status.danger.opacity(0.2)],
                                 center: .center,
                                 startRadius: 20,
                                 endRadius: 80
@@ -138,7 +138,7 @@ struct SOSCountdownOverlay: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(Color.red.gradient)
+                            .background(AppTheme.Status.danger.gradient)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                     .padding(.horizontal, 40)

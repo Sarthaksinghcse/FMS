@@ -187,14 +187,56 @@ struct ReportsView: View {
     
     @ViewBuilder
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Maintenance Reports")
-                .font(.system(size: 26, weight: .bold, design: .rounded))
-                .foregroundColor(AppTheme.Text.primary)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Maintenance Reports")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
+                
+                Text("Real-time fleet maintenance analytics and fleet performance insights.")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(AppTheme.Text.secondary)
+            }
             
-            Text("Real-time fleet maintenance analytics and fleet performance insights.")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundColor(AppTheme.Text.secondary)
+            NavigationLink {
+                AIReportsView()
+            } label: {
+                HStack {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.darkOrange.opacity(0.12))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(Theme.darkOrange)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Executive AI Report")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(.black)
+                            Text("Drafted by Gemini-2.0-Flash analyst")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.gray)
+                }
+                .padding(12)
+                .background(Theme.darkOrange.opacity(0.04))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Theme.darkOrange.opacity(0.12), lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)

@@ -187,6 +187,13 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showPostTrip  = false
     @Published var showDefect    = false
     @Published var showMessaging = false
+    @Published var selectedMessageIndex: Int?
+    
+    // Geofencing Properties
+    @Published var showGeofenceAlert: Bool = false
+    @Published var geofenceAlertMessage: String = ""
+    
+    @Published var tripStartDate: Date?
     @Published var showRaiseQuery = false
     @Published var queryTrip: DBTrip?
     @Published var showProfile   = false
@@ -213,14 +220,10 @@ final class DriverDashboardViewModel: ObservableObject {
 
     private var modelContext: ModelContext?
     private var tripTimer: Timer?
-    private var tripStartDate: Date?
     private let db = DriverDashboardDataStore.shared
     private var cancellables = Set<AnyCancellable>()
 
     init() { 
-        if SupabaseManager.shared.currentUser == nil {
-            seedMock()
-        }
         setupAuthListener()
         startAutoRefresh()
     }
@@ -267,6 +270,63 @@ final class DriverDashboardViewModel: ObservableObject {
     }
 
     
+    // MARK: - Geofencing Validation
+    private func geocodeAddress(_ address: String) async -> CLLocationCoordinate2D? {
+        let req = MKLocalSearch.Request()
+        req.naturalLanguageQuery = address
+        let item = try? await MKLocalSearch(request: req).start()
+        return item?.mapItems.first?.placemark.coordinate
+    }
+
+    func validateCanStartTrip(_ trip: DBTrip?, startCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil) async -> (isValid: Bool, message: String?) {
+        guard let trip = trip ?? upcomingTrips.first else { return (false, "No upcoming trip selected.") }
+        guard let currentLocation = userLocation ?? LocationService.shared.lastLocation else {
+            return (false, "Acquiring GPS location, please wait a moment...")
+        }
+        
+        var coord = startCoord
+        if coord == nil {
+            coord = await geocodeAddress(trip.source)
+        }
+        guard let coord = coord else {
+            return (false, "Could not determine starting location coordinates.")
+        }
+        
+        let startLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+        let distance = currentLocation.distance(from: startLocation)
+        
+        if distance <= 2000 {
+            return (true, nil)
+        } else {
+            let distanceStr = String(format: "%.1f", distance / 1000.0)
+            return (false, "You must be within 2km of the starting location to begin the trip. (Currently \(distanceStr)km away)")
+        }
+    }
+
+    func validateCanEndTrip(_ trip: DBTrip?, endCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil) async -> (isValid: Bool, message: String?) {
+        guard let trip = trip ?? activeTrip ?? currentTrip else { return (false, "No active trip to end.") }
+        guard let currentLocation = userLocation ?? LocationService.shared.lastLocation else {
+            return (false, "Acquiring GPS location, please wait a moment...")
+        }
+        
+        var coord = endCoord
+        if coord == nil {
+            coord = await geocodeAddress(trip.destination)
+        }
+        guard let coord = coord else {
+            return (false, "Could not determine destination coordinates.")
+        }
+        
+        let endLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+        let distance = currentLocation.distance(from: endLocation)
+        
+        if distance <= 2000 {
+            return (true, nil)
+        } else {
+            let distanceStr = String(format: "%.1f", distance / 1000.0)
+            return (false, "You must be within 2km of the destination to end the trip. (Currently \(distanceStr)km away)")
+        }
+    }
 
     func load(context: ModelContext? = nil) async {
         if let context = context {
@@ -359,89 +419,32 @@ final class DriverDashboardViewModel: ObservableObject {
                     )
                 }.sorted(by: { $0.completedAt > $1.completedAt })
             } catch {
-                print("Failed to fetch live driver data, using local fallback/mock: \(error.localizedDescription)")
-                do {
-                    let trips    = try await db.fetchTrips()
-                    let vehicles = try await db.fetchVehicles()
-                    let mine = trips.filter { $0.driverId == uid }
-                    currentTrip   = mine.first(where: { $0.status == DBTripStatus.started })
-                    if let current = currentTrip {
-                        activeTrip = current
-                    } else if let prevActive = activeTrip {
-                        let stillExists = mine.contains { $0.id == prevActive.id && ($0.status == .assigned || $0.status == .started) }
-                        if !stillExists {
-                            activeTrip = nil
-                        }
-                    }
-                    upcomingTrips = mine.filter { $0.status == DBTripStatus.assigned }
-                    isTripActive  = currentTrip != nil
-                    updateLocalDriverStatusState()
-                    let vid = currentTrip?.vehicleId ?? mine.first?.vehicleId
-                    assignedVehicle = vehicles.first(where: { $0.id == vid })
-                    allVehicles = vehicles
-                    
-                    
-                    let completed = mine.filter { $0.status == .completed }
-                    self.completedTrips = completed.map { trip in
-                        let elapsed = Int(trip.endTime?.timeIntervalSince(trip.startTime ?? Date()) ?? 0)
-                        return CompletedTripRecord(
-                            id: trip.id,
-                            trip: trip,
-                            completedAt: trip.endTime ?? trip.createdAt,
-                            elapsedSeconds: elapsed > 0 ? elapsed : 0,
-                            distanceKm: trip.distance,
-                            inspectionPassed: true,
-                            issuesFound: 0,
-                            inspectionRemarks: "System logged"
-                        )
-                    }.sorted(by: { $0.completedAt > $1.completedAt })
-                } catch {
-                    
-                }
+                print("Failed to fetch live driver data: \(error.localizedDescription)")
             }
         }
 
-        
-        if SupabaseManager.shared.currentUser == nil && upcomingTrips.isEmpty && currentTrip == nil {
-            upcomingTrips = [
-                DBTrip(id: UUID(uuidString: "A8802000-0000-0000-0000-000000000000")!,
-                       vehicleId: assignedVehicle?.id ?? UUID(),
-                       driverId: uid,
-                       source: "San Francisco Dock C",
-                       destination: "Los Angeles Warehouse 4",
-                       startTime: Calendar.current.date(byAdding: .hour, value: 1, to: .now),
-                       endTime:   Calendar.current.date(byAdding: .hour, value: 4, to: .now),
-                       distance: 612.0, status: .assigned, notes: "Dry Van Food Grd", createdAt: .now)
-            ]
-        }
-        
-        
         await loadMessages()
         await loadNotifications()
-        
-        if assignedVehicle == nil {
-            assignedVehicle = DBVehicle(
-                id: UUID(),
-                vehicleNumber: "TN-07-AB-1234",
-                model: "Swift Dzire",
-                manufacturer: "Maruti Suzuki",
-                year: 2023,
-                vin: "FMSMOCKVIN000101",
-                licensePlate: "TN-07-AB-1234",
-                status: .inUse,
-                assignedDriverId: uid,
-                lastServiceDate: nil,
-                createdAt: .now
-            )
-        }
     }
 
     
 
-    func beginTrip(trip: DBTrip? = nil) {
-        let selectedTrip = trip ?? upcomingTrips.first
-        activeTrip = selectedTrip
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+    func beginTrip(trip: DBTrip? = nil, startCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil, triggerGlobalAlert: Bool = true) async -> (success: Bool, message: String?) {
+        let validation = await validateCanStartTrip(trip, startCoord: startCoord, userLocation: userLocation)
+        if !validation.isValid {
+            if triggerGlobalAlert {
+                await MainActor.run {
+                    self.geofenceAlertMessage = validation.message ?? "Cannot start trip."
+                    self.showGeofenceAlert = true
+                }
+            }
+            return (false, validation.message)
+        }
+        
+        await MainActor.run {
+            let selectedTrip = trip ?? upcomingTrips.first
+            activeTrip = selectedTrip
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
             isTripActive = true; driverStatus = .active; tripElapsed = 0
         }
         showMaps = true
@@ -455,20 +458,44 @@ final class DriverDashboardViewModel: ObservableObject {
             LocationService.shared.startTracking(vehicleId: dbTrip.vehicleId)
             Task {
                 try? await SupabaseManager.shared.updateTrip(dbTrip)
+                await updateDriverActiveStatus(isActive: true)
             }
         }
         
-        tripTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.tripElapsed += 1
+            tripTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.tripElapsed += 1
+                }
             }
         }
+        return (true, nil)
+    }
+
+    func requestEndTrip(endCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil, triggerGlobalAlert: Bool = true) async -> (success: Bool, message: String?) {
+        let endingTrip = activeTrip ?? currentTrip
+        let validation = await validateCanEndTrip(endingTrip, endCoord: endCoord, userLocation: userLocation)
+        if !validation.isValid {
+            if triggerGlobalAlert {
+                await MainActor.run {
+                    self.geofenceAlertMessage = validation.message ?? "Cannot end trip."
+                    self.showGeofenceAlert = true
+                }
+            }
+            return (false, validation.message)
+        }
+        
+        await MainActor.run {
+            self.showPostTripOnEnd = true
+            self.showPostTrip = true
+        }
+        return (true, nil)
     }
 
     func finishTrip() {
-        tripTimer?.invalidate(); tripTimer = nil
-        let endingId  = activeTrip?.id ?? currentTrip?.id
         let endingTrip = activeTrip ?? currentTrip
+        
+        tripTimer?.invalidate(); tripTimer = nil
+        let endingId  = endingTrip?.id
 
         
         let elapsed: Int
@@ -510,6 +537,7 @@ final class DriverDashboardViewModel: ObservableObject {
             showPostTripOnEnd = false
             tripElapsed = 0
         }
+        updateLocalDriverStatusState()
         
         if let id = endingId {
             upcomingTrips.removeAll { $0.id == id }
@@ -676,6 +704,53 @@ final class DriverDashboardViewModel: ObservableObject {
             await loadMessages()
         } catch {
             print("⚠️ Failed to send message to Supabase: \(error.localizedDescription)")
+        }
+    }
+    
+    func triggerSOS(context: ModelContext) {
+        sosSentAlert = true
+        let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+        let notif = DBNotification(
+            id: UUID(),
+            userId: driverId,
+            title: "🚨 EMERGENCY SOS SIGNAL TRIGGERED",
+            message: "Driver \(SupabaseManager.shared.currentUser?.name ?? "Naman Yadav") has triggered a panic alarm. Assistance is required immediately.",
+            type: .emergency,
+            isRead: false,
+            createdAt: Date()
+        )
+        Task {
+            do {
+                try await SupabaseManager.shared.createNotification(notif)
+                print("✅ [Supabase] SOS Notification inserted successfully.")
+            } catch {
+                print("❌ [Supabase] Failed to insert SOS Notification: \(error.localizedDescription)")
+            }
+            
+            let localSOS = SOSAlert(
+                id: notif.id,
+                driverId: driverId,
+                vehicleId: assignedVehicle?.id,
+                tripId: activeTrip?.id,
+                latitude: 28.5450,
+                longitude: 77.2600,
+                message: notif.message,
+                status: .active,
+                createdAt: notif.createdAt
+            )
+            
+            do {
+                try await SupabaseManager.shared.createSOSAlert(localSOS.asDBSOSAlert)
+                print("✅ [Supabase] SOS Alert inserted successfully.")
+            } catch {
+                print("❌ [Supabase] Failed to insert SOS Alert: \(error.localizedDescription)")
+            }
+            
+            await MainActor.run {
+                context.insert(notif.asLocalNotification)
+                context.insert(localSOS)
+                try? context.save()
+            }
         }
     }
     

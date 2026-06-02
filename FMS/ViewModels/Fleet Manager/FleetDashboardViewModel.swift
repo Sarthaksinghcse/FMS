@@ -15,8 +15,8 @@ final class FleetDashboardViewModel {
         ),
         DashboardQuickAction(
             icon: "location.fill",
-            iconColor: Color(red: 0.13, green: 0.69, blue: 0.45),
-            bgColor: Color(red: 0.13, green: 0.69, blue: 0.45).opacity(0.12),
+            iconColor: Theme.royalBlue,
+            bgColor: Theme.royalBlue.opacity(0.12),
             label: "Tracking"
         ),
         DashboardQuickAction(
@@ -26,16 +26,22 @@ final class FleetDashboardViewModel {
             label: "Assign Driver"
         ),
         DashboardQuickAction(
-            icon: "exclamationmark.octagon.fill",
-            iconColor: AppTheme.Status.danger,
-            bgColor: AppTheme.IconBg.red,
-            label: "Alerts"
-        ),
-        DashboardQuickAction(
             icon: "wrench.and.screwdriver.fill",
             iconColor: AppTheme.Brand.amber,
             bgColor: AppTheme.IconBg.amber,
             label: "Maintenance"
+        ),
+        DashboardQuickAction(
+            icon: "chart.bar.doc.horizontal.fill",
+            iconColor: AppTheme.Status.purple,
+            bgColor: AppTheme.IconBg.purple,
+            label: "AI Report"
+        ),
+        DashboardQuickAction(
+            icon: "shield.checkered",
+            iconColor: AppTheme.Brand.primary,
+            bgColor: AppTheme.IconBg.blue,
+            label: "Compliance"
         )
     ]
 
@@ -72,16 +78,20 @@ final class FleetDashboardViewModel {
     func getDynamicStats(vehicles: [Vehicle], allUsers: [User], trips: [Trip]) -> [DashboardStat] {
         let totalVehicles  = vehicles.count
         let activeVehicles = vehicles.filter { $0.status == .active }.count
-        let driversOnline  = allUsers.filter { $0.role == .driver && $0.isActive }.count
+        let driversOnline  = allUsers.filter { user in
+            guard user.role == .driver else { return false }
+            let hasLiveTrip = trips.contains { $0.driverId == user.id && ($0.tripStatus == .started || $0.tripStatus == .inProgress) }
+            return user.isActive || hasLiveTrip
+        }.count
         let liveTrips      = trips.filter { $0.tripStatus == .inProgress || $0.tripStatus == .started }.count
 
         return [
             DashboardStat(icon: "car.fill",           iconColor: AppTheme.Brand.primary,
                           iconBgColor: AppTheme.IconBg.blue,   value: "\(totalVehicles)",
                           label: "Total Vehicles",    trend: "", isTrendPositive: true,  graphData: []),
-            DashboardStat(icon: "location.fill",      iconColor: AppTheme.Status.success,
+            DashboardStat(icon: "checkmark.circle.fill", iconColor: AppTheme.Status.success,
                           iconBgColor: AppTheme.IconBg.green,  value: "\(activeVehicles)",
-                          label: "Available Now",     trend: "", isTrendPositive: true,  graphData: []),
+                          label: "Ready Vehicles",    trend: "", isTrendPositive: true,  graphData: []),
             DashboardStat(icon: "person.2.fill",      iconColor: AppTheme.Brand.violet,
                           iconBgColor: AppTheme.IconBg.violet, value: "\(driversOnline)",
                           label: "Drivers Online",   trend: "", isTrendPositive: true,  graphData: []),
@@ -114,7 +124,8 @@ final class FleetDashboardViewModel {
         func driverName(for id: UUID) -> String {
             users.first(where: { $0.id == id })?.fullName ?? "Unknown Driver"
         }
-        func vehicleLabel(for id: UUID) -> String {
+        func vehicleLabel(for id: UUID?) -> String {
+            guard let id = id else { return "No Assigned Vehicle" }
             guard let v = vehicles.first(where: { $0.id == id }) else { return "Unknown Vehicle" }
             return "\(v.make) \(v.model)"
         }

@@ -15,14 +15,17 @@ struct AlertsFeedView: View {
     @Query private var users: [User]
     @Query private var vehicles: [Vehicle]
     
+    @State private var routeDeviations: [DBRouteDeviationAlert] = []
     
     @State private var selectedFilter: AlertFilterType = .all
     @State private var searchQuery: String = ""
+    @State private var selectedDefectForAssignment: DefectReport? = nil
     
     enum AlertFilterType: String, CaseIterable, Identifiable {
         case all = "All"
         case sos = "SOS"
         case defects = "Defects"
+        case geofence = "Geofence"
         
         var id: String { self.rawValue }
     }
@@ -32,7 +35,8 @@ struct AlertsFeedView: View {
         users.first(where: { $0.id == id })?.fullName ?? "Unknown Driver"
     }
     
-    private func vehicleName(for id: UUID) -> String {
+    private func vehicleName(for id: UUID?) -> String {
+        guard let id = id else { return "No Assigned Vehicle" }
         if let vehicle = vehicles.first(where: { $0.id == id }) {
             return "\(vehicle.registrationNumber) (\(vehicle.make) \(vehicle.model))"
         }
@@ -58,6 +62,7 @@ struct AlertsFeedView: View {
         enum AlertType {
             case sos
             case defect
+            case routeDeviation
         }
     }
     
@@ -83,6 +88,23 @@ struct AlertsFeedView: View {
             ))
         }
         
+        for deviation in routeDeviations {
+            list.append(DisplayAlert(
+                id: deviation.id,
+                type: .routeDeviation,
+                title: "ROUTE DEVIATION",
+                description: "Driver drifted \(Int(deviation.deviationDistanceMeters)) meters off the planned route.",
+                severityText: "WARNING",
+                severityColor: .white,
+                severityBgColor: AppTheme.Status.warning,
+                date: deviation.createdAt,
+                statusText: deviation.status == .active ? "Active" : "Resolved",
+                statusColor: deviation.status == .active ? AppTheme.Status.warning : AppTheme.Status.success,
+                driverName: driverName(for: deviation.driverId),
+                vehicleName: vehicleName(for: deviation.vehicleId),
+                rawObject: deviation
+            ))
+        }
         
         for defect in defectReports {
             let sevColor: Color
@@ -134,17 +156,18 @@ struct AlertsFeedView: View {
     private var filteredAlerts: [DisplayAlert] {
         let alerts = allDisplayAlerts
         
-        
-        let typedAlerts: [DisplayAlert]
-        switch selectedFilter {
-        case .all:
-            typedAlerts = alerts
-        case .sos:
-            typedAlerts = alerts.filter { $0.type == .sos }
-        case .defects:
-            typedAlerts = alerts.filter { $0.type == .defect }
+        let typedAlerts = alerts.filter { alert in
+            switch selectedFilter {
+            case .all:
+                return true
+            case .sos:
+                return alert.type == .sos
+            case .defects:
+                return alert.type == .defect
+            case .geofence:
+                return alert.type == .routeDeviation
+            }
         }
-        
         
         if searchQuery.isEmpty {
             return typedAlerts
@@ -235,7 +258,7 @@ struct AlertsFeedView: View {
                                 .padding(.vertical, 40)
                             } else {
                                 ForEach(filteredAlerts) { alert in
-                                    AlertFeedCard(alert: alert, viewModel: viewModel, context: modelContext, sosAlerts: sosAlerts, defectReports: defectReports)
+                                    AlertFeedCard(alert: alert, viewModel: viewModel, context: modelContext, sosAlerts: sosAlerts, defectReports: defectReports, selectedDefectForAssignment: $selectedDefectForAssignment)
                                 }
                             }
                         }
@@ -243,15 +266,38 @@ struct AlertsFeedView: View {
                     }
                 }
             }
-            .navigationTitle("Alerts Feed")
+            .navigationTitle("Alerts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Text("Close")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.red)
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
-                    .font(.system(.body, design: .rounded))
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        PredictiveAlertsView()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 13, weight: .bold))
+                            Text("Predictive")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                        }
+                        .foregroundColor(.purple)
+                    }
+                }
+            }
+            .task {
+                do {
+                    routeDeviations = try await SupabaseManager.shared.fetchRouteDeviationAlerts()
+                } catch {
+                    print("Failed to fetch route deviations: \(error)")
                 }
             }
         }
@@ -347,6 +393,7 @@ struct AlertFeedCard: View {
     let context: ModelContext
     let sosAlerts: [SOSAlert]
     let defectReports: [DefectReport]
+    @Binding var selectedDefectForAssignment: DefectReport?
     
     @State private var isPulsing = false
     
@@ -364,14 +411,38 @@ struct AlertFeedCard: View {
                                 .scaleEffect(isPulsing ? 1.25 : 0.95)
                         }
                         
-                        Image(systemName: alert.type == .sos ? "exclamationmark.shield.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Brand.amber)
+                        let headerIcon: String = {
+                            switch alert.type {
+                            case .sos: return "exclamationmark.shield.fill"
+                            case .routeDeviation: return "map.fill"
+                            case .defect: return "exclamationmark.triangle.fill"
+                            }
+                        }()
+                        
+                        let headerColor: Color = {
+                            switch alert.type {
+                            case .sos: return AppTheme.Status.danger
+                            case .routeDeviation: return AppTheme.Brand.amber
+                            case .defect: return AppTheme.Brand.amber
+                            }
+                        }()
+                        
+                        Image(systemName: headerIcon)
+                            .foregroundColor(headerColor)
                             .font(.system(size: alert.type == .sos ? 16 : 14, weight: .bold))
                     }
                     .frame(width: 32, height: 32)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(alert.type == .sos ? "SOS EMERGENCY ALERT" : "DEFECT REPORT")
+                        let headerTitle: String = {
+                            switch alert.type {
+                            case .sos: return "SOS EMERGENCY ALERT"
+                            case .routeDeviation: return "GEOFENCE ALERT"
+                            case .defect: return "DEFECT REPORT"
+                            }
+                        }()
+                        
+                        Text(headerTitle)
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Text.secondary)
                             .tracking(0.5)
@@ -514,13 +585,13 @@ struct AlertFeedCard: View {
                         HStack(spacing: 10) {
                             if defect.status == .open {
                                 Button {
-                                    _ = viewModel.updateDefectStatus(defectId: defect.id, newStatus: .inProgress, context: context, defects: defectReports)
+                                    selectedDefectForAssignment = defect
                                 } label: {
                                     HStack(spacing: 4) {
                                         Spacer()
-                                        Image(systemName: "play.fill")
+                                        Image(systemName: "person.badge.plus")
                                             .font(.caption)
-                                        Text("Start Work")
+                                        Text("Assign Technician")
                                             .font(.system(size: 12, weight: .bold, design: .rounded))
                                         Spacer()
                                     }
@@ -611,6 +682,161 @@ struct AlertFeedCard: View {
         .background(AppTheme.Status.success.opacity(0.08))
         .cornerRadius(8)
         .padding(.top, 4)
+    }
+}
+
+struct AssignTechnicianSheet: View {
+    let defect: DefectReport
+    let users: [User]
+    let viewModel: AlertsFeedViewModel
+    let context: ModelContext
+    let defectReports: [DefectReport]
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedMechanicId: UUID? = nil
+    @State private var priority: WorkOrderPriority = .medium
+    @State private var notes: String = ""
+    @State private var isSubmitting = false
+    
+    private var mechanics: [User] {
+        users.filter { $0.role == .maintenance }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Background.page.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        
+                        // Header info
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Defect details")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.secondary)
+                                .textCase(.uppercase)
+                            
+                            Text(defect.title)
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text(defect.defectDescription)
+                                .font(.system(size: 14))
+                                .foregroundColor(AppTheme.Text.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                        
+                        // Form
+                        VStack(alignment: .leading, spacing: 20) {
+                            
+                            // Mechanic Selector
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Assign Technician")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                                
+                                Picker("Technician", selection: $selectedMechanicId) {
+                                    Text("Select technician...").tag(UUID?.none)
+                                    ForEach(mechanics) { mechanic in
+                                        Text(mechanic.fullName).tag(UUID?.some(mechanic.id))
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.black.opacity(0.04))
+                                .cornerRadius(8)
+                            }
+                            
+                            // Priority
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Priority Level")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                                
+                                Picker("Priority", selection: $priority) {
+                                    Text("Low").tag(WorkOrderPriority.low)
+                                    Text("Medium").tag(WorkOrderPriority.medium)
+                                    Text("High").tag(WorkOrderPriority.high)
+                                    Text("Urgent").tag(WorkOrderPriority.urgent)
+                                }
+                                .pickerStyle(.segmented)
+                            }
+                            
+                            // Additional notes
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Assignment Notes")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                                
+                                TextField("e.g. Please check engine sensor first...", text: $notes, axis: .vertical)
+                                    .font(.system(size: 14))
+                                    .lineLimit(3...6)
+                                    .padding(12)
+                                    .background(Color.black.opacity(0.04))
+                                    .cornerRadius(8)
+                            }
+                        }
+                        .padding(20)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(AppTheme.Radius.card)
+                        .shadow(color: AppTheme.Shadow.card, radius: 10, y: 5)
+                        .padding(.horizontal)
+                        
+                        Button {
+                            guard let mechanicId = selectedMechanicId else { return }
+                            isSubmitting = true
+                            Task {
+                                let success = await viewModel.assignDefect(
+                                    defectId: defect.id,
+                                    mechanicId: mechanicId,
+                                    priority: priority,
+                                    notes: notes,
+                                    context: context,
+                                    defects: defectReports
+                                )
+                                isSubmitting = false
+                                if success {
+                                    dismiss()
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                if isSubmitting {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Image(systemName: "wrench.and.screwdriver.fill")
+                                    Text("Create Work Assignment")
+                                        .fontWeight(.bold)
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(selectedMechanicId != nil ? AppTheme.Brand.primary : Color.gray.opacity(0.5))
+                            .cornerRadius(12)
+                        }
+                        .disabled(selectedMechanicId == nil || isSubmitting)
+                        .padding(.horizontal)
+                        .padding(.bottom, 32)
+                    }
+                }
+            }
+            .navigationTitle("Assign Defect to Maintenance")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(AppTheme.Brand.primary)
+                }
+            }
+        }
     }
 }
 

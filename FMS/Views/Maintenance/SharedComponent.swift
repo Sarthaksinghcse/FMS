@@ -51,11 +51,11 @@ struct MaintenanceHeaderView: View {
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.primary)
                 
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(AppTheme.Text.secondary)
-                }
+//                if !subtitle.isEmpty {
+//                    Text(subtitle)
+//                        .font(.system(size: 13, weight: .medium, design: .rounded))
+//                        .foregroundColor(AppTheme.Text.secondary)
+//                }
             }
             
             Spacer()
@@ -371,7 +371,11 @@ struct WorkOrderRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 8) {
-                WorkOrderStatusBadge(status: order.status)
+                let isPending = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+                WorkOrderStatusBadge(
+                    statusLabel: isPending ? "Approval Pending" : order.status.displayLabel,
+                    statusColor: isPending ? AppTheme.Brand.amber : order.status.color
+                )
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .bold))
@@ -398,16 +402,17 @@ struct WorkOrderRow: View {
 // MARK: - Status Badge
 
 struct WorkOrderStatusBadge: View {
-    let status: WorkOrderStatus
+    let statusLabel: String
+    let statusColor: Color
 
     var body: some View {
-        Text(status.displayLabel)
+        Text(statusLabel)
             .font(.system(size: 11, weight: .bold, design: .rounded))
-            .foregroundColor(status.color)
+            .foregroundColor(statusColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Capsule().fill(status.color.opacity(0.12)))
-            .overlay(Capsule().stroke(status.color.opacity(0.25), lineWidth: 1))
+            .background(Capsule().fill(statusColor.opacity(0.12)))
+            .overlay(Capsule().stroke(statusColor.opacity(0.25), lineWidth: 1))
     }
 }
 
@@ -452,8 +457,8 @@ extension WorkOrderStatus {
         switch self {
         case .open:       return AppTheme.Brand.accent // Cohesive Amber/Accent
         case .inProgress: return AppTheme.Brand.primary // Cohesive Brand Blue
-        case .completed:  return AppTheme.Status.success // Soft clean Green
-        case .cancelled:  return .gray
+        case .completed:  return AppTheme.Status.success // Soft clean success (royal blue)
+        case .cancelled:  return AppTheme.Brand.primary.opacity(0.4)
         }
     }
 }
@@ -461,7 +466,7 @@ extension WorkOrderStatus {
 extension WorkOrderPriority {
     var color: Color {
         switch self {
-        case .low:    return .gray
+        case .low:    return AppTheme.Brand.primary.opacity(0.5)
         case .medium: return AppTheme.Brand.primary
         case .high:   return AppTheme.Brand.primaryDeep
         case .urgent: return AppTheme.Brand.accent

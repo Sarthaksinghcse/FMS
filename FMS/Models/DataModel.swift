@@ -46,10 +46,10 @@ enum VehicleType: String, Codable, CaseIterable {
     }
     var iconColor: Color {
         switch self {
-        case .truck: return AppTheme.Brand.royalBlue
-        case .van:   return Color(red: 0.58, green: 0.39, blue: 0.87)
-        case .car:   return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .bike:  return AppTheme.Brand.accent
+        case .truck: return Theme.royalBlue
+        case .van:   return Theme.royalBlue.opacity(0.70)
+        case .car:   return Theme.royalBlue.opacity(0.85)
+        case .bike:  return Theme.darkOrange
         }
     }
 }
@@ -95,9 +95,9 @@ enum VehicleStatus: String, Codable {
     }
     var statusColor: Color {
         switch self {
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .active:        return Theme.royalBlue
+        case .inactive:      return Theme.darkOrange
+        case .inMaintenance: return Theme.darkOrange.opacity(0.80)
         }
     }
     var statusIcon: String {
@@ -128,11 +128,11 @@ enum TripStatus: String, Codable {
     }
     var badgeColor: Color {
         switch self {
-        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90) 
-        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46) 
-        case .inProgress: return Color(red: 0.30, green: 0.70, blue: 0.46) 
-        case .completed:  return Color(red: 0.55, green: 0.58, blue: 0.62) 
-        case .cancelled:  return Color(red: 0.85, green: 0.25, blue: 0.25) 
+        case .assigned:   return Theme.royalBlue.opacity(0.60)
+        case .started:    return Theme.royalBlue.opacity(0.85)
+        case .inProgress: return Theme.royalBlue
+        case .completed:  return Theme.royalBlue.opacity(0.75)
+        case .cancelled:  return Theme.darkOrange
         }
     }
     var badgeIcon: String {
@@ -230,9 +230,9 @@ enum ComplianceAlertType: String, Codable, CaseIterable {
 
     var color: Color {
         switch self {
-        case .insurance: return Color(red: 0.15, green: 0.38, blue: 0.90)
-        case .permit:    return Color(red: 0.58, green: 0.39, blue: 0.87)
-        case .servicing: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        case .insurance: return Theme.royalBlue
+        case .permit:    return Theme.royalBlue.opacity(0.70)
+        case .servicing: return Theme.darkOrange
         }
     }
 }
@@ -253,9 +253,9 @@ enum ComplianceAlertStatus: String, Codable {
 
     var color: Color {
         switch self {
-        case .upcoming: return Color(red: 0.90, green: 0.65, blue: 0.15)
-        case .overdue:  return Color(red: 0.85, green: 0.25, blue: 0.25)
-        case .resolved: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        case .upcoming: return Theme.darkOrange.opacity(0.70)
+        case .overdue:  return Theme.darkOrange
+        case .resolved: return Theme.royalBlue
         }
     }
 }
@@ -283,10 +283,10 @@ enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     }
     var chipColor: Color {
         switch self {
-        case .all:           return AppTheme.Brand.accent
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .all:           return Theme.darkOrange
+        case .active:        return Theme.royalBlue
+        case .inactive:      return Theme.darkOrange.opacity(0.80)
+        case .inMaintenance: return Theme.darkOrange
         }
     }
 }
@@ -379,9 +379,10 @@ struct DashboardActivity: Identifiable {
 import MapKit
 
 struct MappedVehicle: Identifiable, Hashable {
-    let id = UUID()
+    var id: UUID { vehicle.id }
     let vehicle: DBVehicle
-    let coordinate: CLLocationCoordinate2D
+    let coordinate: CLLocationCoordinate2D?
+    let lastUpdated: Date?
 
     static func == (lhs: MappedVehicle, rhs: MappedVehicle) -> Bool {
         lhs.id == rhs.id
@@ -508,20 +509,32 @@ struct DBVehicle: Codable, Identifiable {
     var status: DBVehicleStatus
     var assignedDriverId: UUID?
     var lastServiceDate: Date?
+    var vehicleType: String?
+    var fuelType: String?
+    var odometerReading: Double?
+    var insuranceExpiryDate: Date?
+    var permitExpiryDate: Date?
+    var nextServiceDate: Date?
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id
-        case vehicleNumber    = "vehicle_number"
+        case vehicleNumber       = "vehicle_number"
         case model
         case manufacturer
         case year
         case vin
-        case licensePlate     = "license_plate"
+        case licensePlate        = "license_plate"
         case status
-        case assignedDriverId = "assigned_driver_id"
-        case lastServiceDate  = "last_service_date"
-        case createdAt        = "created_at"
+        case assignedDriverId    = "assigned_driver_id"
+        case lastServiceDate     = "last_service_date"
+        case vehicleType         = "vehicle_type"
+        case fuelType            = "fuel_type"
+        case odometerReading     = "odometer_reading"
+        case insuranceExpiryDate = "insurance_expiry_date"
+        case permitExpiryDate    = "permit_expiry_date"
+        case nextServiceDate     = "next_service_date"
+        case createdAt           = "created_at"
     }
 }
 
@@ -555,12 +568,15 @@ extension DBVehicle {
             make: manufacturer,
             model: model,
             year: year,
-            vehicleType: .truck, 
-            fuelType: .petrol, 
-            odometerReading: 0.0,
+            vehicleType: VehicleType(rawValue: vehicleType ?? "") ?? .car, 
+            fuelType: FuelType(rawValue: fuelType ?? "") ?? .petrol, 
+            odometerReading: odometerReading ?? 0.0,
             status: status.toLocalStatus,
             assignedDriverId: assignedDriverId,
             lastServiceDate: lastServiceDate,
+            nextServiceDate: nextServiceDate,
+            insuranceExpiryDate: insuranceExpiryDate,
+            permitExpiryDate: permitExpiryDate,
             createdAt: createdAt,
             updatedAt: Date()
         )
@@ -580,6 +596,12 @@ extension Vehicle {
             status: status.toDBStatus,
             assignedDriverId: assignedDriverId,
             lastServiceDate: lastServiceDate,
+            vehicleType: vehicleType.rawValue,
+            fuelType: fuelType.rawValue,
+            odometerReading: odometerReading,
+            insuranceExpiryDate: insuranceExpiryDate,
+            permitExpiryDate: permitExpiryDate,
+            nextServiceDate: nextServiceDate,
             createdAt: createdAt
         )
     }
@@ -783,6 +805,77 @@ struct DBVehicleInspection: Codable, Identifiable {
     }
 }
 
+extension DBVehicleInspection {
+    var asLocalInspection: VehicleInspection {
+        var brake = true
+        var tire = true
+        var engine = true
+        var lights = true
+        var oil = true
+        
+        for item in checklist {
+            let parts = item.components(separatedBy: ": ")
+            guard parts.count == 2 else { continue }
+            let label = parts[0]
+            let passed = parts[1] == "passed"
+            
+            if label.contains("Brakes") {
+                brake = passed
+            } else if label.contains("Tyres") {
+                tire = passed
+            } else if label.contains("Engine") {
+                engine = passed
+            } else if label.contains("Headlights") || label.contains("Indicators") {
+                lights = passed
+            } else if label.contains("Windshield") || label.contains("Wipers") {
+                oil = passed
+            }
+        }
+        
+        return VehicleInspection(
+            id: id,
+            vehicleId: vehicleId,
+            driverId: driverId,
+            tripId: nil,
+            inspectionType: .preTrip,
+            brakeCondition: brake,
+            tireCondition: tire,
+            engineCondition: engine,
+            lightsCondition: lights,
+            oilLevelOk: oil,
+            remarks: defects,
+            defectReported: status == .failed,
+            createdAt: inspectionDate
+        )
+    }
+}
+
+extension VehicleInspection {
+    var asDBInspection: DBVehicleInspection {
+        var checklistArray: [String] = []
+        checklistArray.append("Brakes & Brake Lights: \(brakeCondition ? "passed" : "failed")")
+        checklistArray.append("Tyres & Tyre Pressure: \(tireCondition ? "passed" : "failed")")
+        checklistArray.append("Engine & Oil Level: \(engineCondition ? "passed" : "failed")")
+        checklistArray.append("Headlights & Indicators: \(lightsCondition ? "passed" : "failed")")
+        checklistArray.append("Windshield & Wipers: \(oilLevelOk ? "passed" : "failed")")
+        checklistArray.append("Seat Belts: passed")
+        checklistArray.append("Mirrors: passed")
+        checklistArray.append("Horn: passed")
+        checklistArray.append("First Aid Kit: passed")
+        checklistArray.append("Documents & Permits: passed")
+        
+        return DBVehicleInspection(
+            id: id,
+            vehicleId: vehicleId,
+            driverId: driverId,
+            checklist: checklistArray,
+            defects: remarks,
+            inspectionDate: createdAt,
+            status: defectReported ? .failed : .passed
+        )
+    }
+}
+
 
 enum DBMaintenanceStatus: String, Codable {
     case pending
@@ -925,19 +1018,17 @@ struct DBDefectReport: Codable, Identifiable {
 }
 
 
-struct DBVehicleLocation: Codable, Identifiable {
+struct DBVehicleLocation: Codable, Identifiable, Hashable {
     let id: UUID
-    var vehicleId: UUID
-    var latitude: Double
-    var longitude: Double
-    var timestamp: Date
+    let vehicleId: UUID
+    let latitude: Double
+    let longitude: Double
+    let timestamp: Date
 
     enum CodingKeys: String, CodingKey {
         case id
         case vehicleId = "vehicle_id"
-        case latitude
-        case longitude
-        case timestamp
+        case latitude, longitude, timestamp
     }
 }
 
@@ -1160,7 +1251,7 @@ extension DBSOSAlert {
         SOSAlert(
             id: id,
             driverId: driverId,
-            vehicleId: vehicleId ?? UUID(),
+            vehicleId: vehicleId,
             tripId: tripId,
             latitude: latitude,
             longitude: longitude,
@@ -1665,7 +1756,7 @@ final class MaintenanceRecord {
 final class SOSAlert {
     @Attribute(.unique) var id: UUID
     var driverId: UUID
-    var vehicleId: UUID
+    var vehicleId: UUID?
     var tripId: UUID?
     var latitude: Double
     var longitude: Double
@@ -1676,7 +1767,7 @@ final class SOSAlert {
     init(
         id: UUID = UUID(),
         driverId: UUID,
-        vehicleId: UUID,
+        vehicleId: UUID? = nil,
         tripId: UUID? = nil,
         latitude: Double,
         longitude: Double,
@@ -1839,4 +1930,181 @@ final class ComplianceAlert {
         self.createdAt = createdAt
     }
 }
+
+
+// MARK: - Fuel Log DB Mappings
+struct DBFuelLog: Codable, Identifiable {
+    let id: UUID
+    var driverId: UUID
+    var vehicleId: UUID?
+    var tripId: UUID?
+    var fuelType: String
+    var litres: Double
+    var amountPaid: Double
+    var odometer: Double?
+    var receiptUrl: String?
+    var notes: String?
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case driverId   = "driver_id"
+        case vehicleId  = "vehicle_id"
+        case tripId     = "trip_id"
+        case fuelType   = "fuel_type"
+        case litres
+        case amountPaid = "amount_paid"
+        case odometer
+        case receiptUrl = "receipt_url"
+        case notes
+        case createdAt  = "created_at"
+    }
+
+    var asLocalLog: FuelLog {
+        FuelLog(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId,
+            tripId: tripId,
+            fuelType: fuelType,
+            litres: litres,
+            amountPaid: amountPaid,
+            odometer: odometer,
+            receiptImageData: nil,
+            notes: notes,
+            loggedAt: createdAt
+        )
+    }
+}
+
+extension FuelLog {
+    var asDBLog: DBFuelLog {
+        DBFuelLog(
+            id: id,
+            driverId: driverId,
+            vehicleId: vehicleId,
+            tripId: tripId,
+            fuelType: fuelType,
+            litres: litres,
+            amountPaid: amountPaid,
+            odometer: odometer,
+            receiptUrl: nil,
+            notes: notes,
+            createdAt: loggedAt
+        )
+    }
+}
+
+
+// MARK: - Compliance Alert DB Mappings
+struct DBComplianceAlert: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var alertType: String
+    var status: String
+    var deadlineDate: Date
+    var resolvedAt: Date?
+    var notes: String?
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case alertType = "alert_type"
+        case status
+        case deadlineDate = "deadline_date"
+        case resolvedAt = "resolved_at"
+        case notes
+        case createdAt = "created_at"
+    }
+
+    var asLocalAlert: ComplianceAlert {
+        ComplianceAlert(
+            id: id,
+            vehicleId: vehicleId,
+            alertType: ComplianceAlertType(rawValue: alertType) ?? .insurance,
+            status: ComplianceAlertStatus(rawValue: status) ?? .upcoming,
+            deadlineDate: deadlineDate,
+            resolvedAt: resolvedAt,
+            notes: notes,
+            createdAt: createdAt
+        )
+    }
+}
+
+extension ComplianceAlert {
+    var asDBAlert: DBComplianceAlert {
+        DBComplianceAlert(
+            id: id,
+            vehicleId: vehicleId,
+            alertType: alertType.rawValue,
+            status: status.rawValue,
+            deadlineDate: deadlineDate,
+            resolvedAt: resolvedAt,
+            notes: notes,
+            createdAt: createdAt
+        )
+    }
+}
+
+// MARK: - AI Feature Models
+
+struct DBPredictiveAlert: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var riskLevel: String           // "low" | "medium" | "high" | "critical"
+    var riskScore: Double
+    var triggeredReasons: [String]?
+    var suggestedAction: String?
+    var llmExplanation: String?
+    var createdAt: Date
+    var resolvedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId       = "vehicle_id"
+        case riskLevel       = "risk_level"
+        case riskScore       = "risk_score"
+        case triggeredReasons = "triggered_reasons"
+        case suggestedAction = "suggested_action"
+        case llmExplanation  = "llm_explanation"
+        case createdAt       = "created_at"
+        case resolvedAt      = "resolved_at"
+    }
+}
+
+struct DBVehicleHealthScore: Codable, Identifiable {
+    let id: UUID
+    var vehicleId: UUID
+    var healthScore: Int
+    var healthGrade: String          // "excellent" | "good" | "fair" | "poor" | "critical"
+    var issueFlags: [String]?
+    var suggestedTasks: [String]?
+    var llmSummary: String?
+    var analyzedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId       = "vehicle_id"
+        case healthScore     = "health_score"
+        case healthGrade     = "health_grade"
+        case issueFlags      = "issue_flags"
+        case suggestedTasks  = "suggested_tasks"
+        case llmSummary      = "llm_summary"
+        case analyzedAt      = "analyzed_at"
+    }
+}
+
+struct AIAnalyticsReport: Codable, Identifiable {
+    let id: UUID
+    let reportText: String
+    let generatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case reportText  = "report_text"
+        case generatedAt = "generated_at"
+    }
+}
+
 

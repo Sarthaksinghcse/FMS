@@ -68,7 +68,7 @@ struct AddVehicleFormView: View {
                             }
                         }
 
-                        formSection(title: "Odometer", icon: "gauge.with.needle.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
+                        formSection(title: "Odometer", icon: "gauge.with.needle.fill", iconColor: Theme.royalBlue) {
                             VehicleFormField(label: "Odometer (km)", placeholder: "e.g. 45230",
                                             text: $odometerText, keyboardType: .decimalPad, focus: $focusedField, tag: .odometer)
                         }
@@ -95,7 +95,7 @@ struct AddVehicleFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.darkOrange)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -294,7 +294,7 @@ struct EditVehicleFormView: View {
                             SegmentPickerRow(label: "Fuel", options: FuelType.allCases, selection: $fuelType) { $0.displayName }
                         }
 
-                        formSection(title: "Status & Odometer", icon: "gauge.with.needle.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
+                        formSection(title: "Status & Odometer", icon: "gauge.with.needle.fill", iconColor: Theme.royalBlue) {
                             StatusPickerRow(selection: $status)
                             FormDivider()
                             VehicleFormField(label: "Odometer (km)", placeholder: "e.g. 45230",
@@ -328,7 +328,7 @@ struct EditVehicleFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.darkOrange)
                 }
             }
             .alert("Missing Information", isPresented: $showValidationAlert) {
@@ -415,18 +415,18 @@ struct EditVehicleFormView: View {
             HStack(spacing: 8) {
                 if isDeleting {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                        .progressViewStyle(CircularProgressViewStyle(tint: Theme.darkOrange))
                 } else {
                     Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
                 }
                 Text(isDeleting ? "Deleting..." : "Delete Vehicle").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
+            .foregroundColor(Theme.darkOrange)
             .frame(maxWidth: .infinity).frame(height: 50)
-            .background(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.08))
+            .background(Theme.darkOrange.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
+                .stroke(Theme.darkOrange.opacity(0.25), lineWidth: 1))
         }
         .disabled(isSaving || isDeleting)
     }
@@ -677,9 +677,9 @@ struct StatusPickerRow: View {
     @Binding var selection: VehicleStatus
 
     private let options: [(VehicleStatus, String, Color)] = [
-        (.active,        "Available",   Color(red: 0.30, green: 0.70, blue: 0.46)),
-        (.inactive,      "On Trip",     Color.orange),
-        (.inMaintenance, "Maintenance", Color(red: 0.85, green: 0.25, blue: 0.25))
+        (.active,        "Available",   Theme.royalBlue),
+        (.inactive,      "On Trip",     Theme.darkOrange),
+        (.inMaintenance, "Maintenance", Theme.darkOrange.opacity(0.8))
     ]
 
     var body: some View {

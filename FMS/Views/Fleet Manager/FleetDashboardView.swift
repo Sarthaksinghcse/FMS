@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import Supabase
 
 @available(iOS 26.0, *)
 struct FleetDashboardView: View {
@@ -15,11 +16,17 @@ struct FleetDashboardView: View {
     @Query(sort: \WorkOrder.createdAt,    order: .reverse) private var workOrders:    [WorkOrder]
     @Query private var complianceAlerts: [ComplianceAlert]
 
+    @Binding var selectedTab: Int
     @State private var viewModel    = FleetDashboardViewModel()
     @State private var complianceVM = ComplianceAlertsViewModel()
     @State private var showProfile  = false
     @State private var showChat     = false
     @State private var showTracking = false
+    @State private var showingFuelInsights = false
+    @State private var showCompliance = false
+    @State private var realtimeChannel: RealtimeChannelV2? = nil
+    @State private var activeGeofenceAlertsCount = 0
+    @AppStorage("lastGeofenceAlertViewTime") private var lastGeofenceAlertViewTime: Double = 0
 
     // Compute the full activity list once per body eval
     private var recentActivities: [DashboardActivity] {
@@ -47,6 +54,15 @@ struct FleetDashboardView: View {
         return name.components(separatedBy: " ").first ?? name
     }
 
+    private var managerInitials: String {
+        guard let name = SupabaseManager.shared.currentUser?.name, !name.isEmpty else { return "FM" }
+        let components = name.components(separatedBy: " ")
+        let first = components.first?.first.map(String.init) ?? ""
+        let last = components.count > 1 ? components.last?.first.map(String.init) ?? "" : ""
+        let combined = first + last
+        return combined.isEmpty ? "M" : combined.uppercased()
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -56,8 +72,8 @@ struct FleetDashboardView: View {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
-                        HStack(alignment: .center, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(viewModel.getGreetingTime() + ",")
                                     .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(.secondary)
@@ -71,6 +87,8 @@ struct FleetDashboardView: View {
                             HStack(spacing: 16) {
 
                                 Button {
+                                    lastGeofenceAlertViewTime = Date().timeIntervalSince1970
+                                    activeGeofenceAlertsCount = 0
                                     viewModel.activeQuickAction = .alerts
                                 } label: {
                                     ZStack(alignment: .topTrailing) {
@@ -81,7 +99,7 @@ struct FleetDashboardView: View {
                                             .background(Color(UIColor.secondarySystemGroupedBackground))
                                             .clipShape(Circle())
                                         
-                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty {
+                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
                                             Circle()
                                                 .fill(AppTheme.Status.danger)
                                                 .frame(width: 10, height: 10)
@@ -103,16 +121,25 @@ struct FleetDashboardView: View {
                                                     .resizable()
                                                     .scaledToFill()
                                             } placeholder: {
-                                                Image(systemName: "person.crop.circle.fill")
-                                                    .font(.system(size: 32))
-                                                    .foregroundColor(AppTheme.Brand.primary)
+                                                ProgressView()
                                             }
-                                            .frame(width: 32, height: 32)
+                                            .frame(width: 40, height: 40)
                                             .clipShape(Circle())
                                         } else {
-                                            Image(systemName: "person.crop.circle.fill")
-                                                .font(.system(size: 32))
-                                                .foregroundColor(AppTheme.Brand.primary)
+                                            ZStack {
+                                                Circle()
+                                                    .fill(
+                                                        LinearGradient(
+                                                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                                    .frame(width: 40, height: 40)
+                                                Text(managerInitials)
+                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                    .foregroundColor(.white)
+                                            }
                                         }
                                     }
                                 }
@@ -120,7 +147,7 @@ struct FleetDashboardView: View {
                             }
                         }
                         .padding(.horizontal, 16)
-                        .padding(.top, 16)
+                        .padding(.top, 24)
 
                         Text("Overview")
                             .font(.system(size: 18, weight: .bold))
@@ -147,38 +174,44 @@ struct FleetDashboardView: View {
                         .padding(.horizontal, 16)
 
                         // ── Quick Actions ─────────────────────────
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("Quick Actions")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 16)
 
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
+                                HStack(spacing: 14) {
                                     ForEach(viewModel.quickActions) { action in
-                                        DashboardQuickActionCard(action: action) {
+                                        FleetGridQuickActionButton(
+                                            icon: action.icon,
+                                            label: action.label,
+                                            iconColor: action.iconColor,
+                                            bgColor: action.bgColor
+                                        ) {
                                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                             switch action.label {
                                             case "Assign Driver":  viewModel.activeQuickAction = .assignDriver
                                             case "Alerts":         viewModel.activeQuickAction = .alerts
                                             case "Maintenance":    viewModel.activeQuickAction = .maintenance
+                                            case "Reports", "AI Report": viewModel.activeQuickAction = .reports
                                             case "Tracking":       showTracking = true
                                             case "Chat":           showChat = true
+                                            case "Compliance":     showCompliance = true
                                             default: break
                                             }
                                         }
-                                        .frame(width: 80)
                                     }
                                 }
                                 .padding(.horizontal, 16)
                             }
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 8)
                         }
 
 
 
-                        // ── Compliance & Renewal Alerts ───────────
-                        complianceAlertsSummary
+                        // ── AI Insights ───────────────────────────
+                        aiInsightsSection
 
                         // ── Recent Activity ───────────────────────
                         VStack(alignment: .leading, spacing: 14) {
@@ -241,7 +274,12 @@ struct FleetDashboardView: View {
                                         Array(dashboardActivities.enumerated()),
                                         id: \.element.id
                                     ) { index, activity in
-                                        DashboardActivityRow(activity: activity)
+                                        Button {
+                                            handleActivityTap(activity)
+                                        } label: {
+                                            DashboardActivityRow(activity: activity)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
 
                                         if index < dashboardActivities.count - 1 {
                                             Divider().padding(.leading, 66)
@@ -259,6 +297,8 @@ struct FleetDashboardView: View {
                     }
                 }
                 .scrollIndicators(.hidden)
+                .safeAreaPadding(.top)
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
                 .refreshable {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -271,7 +311,10 @@ struct FleetDashboardView: View {
                     switch action {
                     case .addVehicle:   AddVehicleFormView()
                     case .assignDriver: AddTripFormView()
-                    case .reports:      ReportsView()
+                    case .reports:
+                        NavigationStack {
+                            AIReportsView(isPresentedAsSheet: true)
+                        }
                     case .alerts:       AlertsFeedView()
                     case .maintenance:  MaintenanceManagementView()
                     }
@@ -280,8 +323,10 @@ struct FleetDashboardView: View {
             }
             // See All sheet
             .sheet(isPresented: $viewModel.showAllActivities) {
-                AllActivitiesView()
-                    .environment(\.modelContext, modelContext)
+                AllActivitiesView { activity in
+                    handleActivityTap(activity)
+                }
+                .environment(\.modelContext, modelContext)
             }
             // Profile sheet
             .sheet(isPresented: $showProfile) {
@@ -293,11 +338,19 @@ struct FleetDashboardView: View {
                 FleetManagerChatListView()
             }
             .task {
-                DatabaseSeeder.seedIfEmpty(context: modelContext)
                 await SupabaseManager.shared.syncAllData(context: modelContext)
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(15))
-                    await SupabaseManager.shared.syncAllData(context: modelContext)
+            }
+            .onAppear {
+                fetchActiveGeofenceAlerts()
+                startRealtimeListener()
+            }
+            .onDisappear {
+                if let activeChannel = realtimeChannel {
+                    let client = SupabaseManager.shared.client
+                    Task {
+                        await client.removeChannel(activeChannel)
+                    }
+                    realtimeChannel = nil
                 }
             }
             .navigationDestination(for: DashboardNavigationDestination.self) { destination in
@@ -305,20 +358,29 @@ struct FleetDashboardView: View {
                 case .totalVehicles:
                     VehicleListView(initialFilter: .all)
                         .environment(\.modelContext, modelContext)
+                        .toolbar(.hidden, for: .tabBar)
                 case .activeNow:
                     VehicleListView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
+                        .toolbar(.hidden, for: .tabBar)
                 case .driversOnline:
                     DriverListView(initialFilter: .online)
                         .environment(\.modelContext, modelContext)
+                        .toolbar(.hidden, for: .tabBar)
                 case .liveTrips:
                     TripListView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
+                        .toolbar(.hidden, for: .tabBar)
                 }
             }
             // Tracking navigation push
             .navigationDestination(isPresented: $showTracking) {
                 FleetTrackingView()
+                    .environment(\.modelContext, modelContext)
+            }
+            // Compliance navigation push
+            .navigationDestination(isPresented: $showCompliance) {
+                ComplianceAlertsView()
                     .environment(\.modelContext, modelContext)
             }
 
@@ -332,100 +394,322 @@ struct FleetDashboardView: View {
 //        return String(vm.driverName.prefix(2)).uppercased()
 //    }
 
-    // MARK: - Compliance Summary Card
-
-    private var complianceAlertsSummary: some View {
-        let allItems = complianceVM.generateAlerts(vehicles: vehicles, persistedAlerts: complianceAlerts)
-        let overdueCount = complianceVM.overdueCount(from: allItems)
-        let upcomingCount = complianceVM.upcomingCount(from: allItems)
-        let totalActive = overdueCount + upcomingCount
-
-        return NavigationLink(destination: ComplianceAlertsView()) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
+    // MARK: - AI Insights
+    private var aiInsightsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("AI Insights")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.black)
+                .padding(.horizontal, 16)
+            
+            // 1. Predictive Maintenance Alert
+            NavigationLink(destination: PredictiveAlertDetailView()) {
+                HStack(spacing: 14) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(
-                                overdueCount > 0
-                                    ? ComplianceAlertStatus.overdue.color.opacity(0.12)
-                                    : AppTheme.Brand.primary.opacity(0.08)
-                            )
-                            .frame(width: 40, height: 40)
-                        Image(systemName: "shield.checkered")
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "chart.line.uptrend.xyaxis")
                             .font(.system(size: 18))
-                            .foregroundColor(
-                                overdueCount > 0
-                                    ? ComplianceAlertStatus.overdue.color
-                                    : AppTheme.Brand.primary
-                            )
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                     }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Compliance & Renewals")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(AppTheme.Text.primary)
-
-                        Text(complianceSummaryText(overdue: overdueCount, upcoming: upcomingCount))
-                            .font(.system(size: 12))
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("Predictive Maintenance Alert")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("SMART")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(AppTheme.Brand.royalBlue)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Identify telemetry risks, vehicle alerts, and wear trends...")
+                            .font(.system(size: 11))
                             .foregroundColor(AppTheme.Text.secondary)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
                     }
-
+                    
                     Spacer()
-
-                    if totalActive > 0 {
-                        Text("\(totalActive)")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(minWidth: 18, minHeight: 18)
-                            .background(
-                                overdueCount > 0
-                                    ? ComplianceAlertStatus.overdue.color
-                                    : ComplianceAlertStatus.upcoming.color
-                            )
-                            .clipShape(Circle())
-                    }
-
+                    
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
             }
-            .padding(14)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                    .stroke(
-                        overdueCount > 0
-                            ? ComplianceAlertStatus.overdue.color.opacity(0.25)
-                            : AppTheme.Glass.border,
-                        lineWidth: 1
-                    )
-            )
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
+            
+            // 2. AI Parts Demand Forecasting
+            NavigationLink(destination: SparePartsForecastView()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.purple.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "box.truck.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.purple)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("AI Parts Demand Forecasting")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("PREDICT")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.purple)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Calculate upcoming parts consumption & reorder recommendations...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
+            
+            // 3. Fuel Insights & Optimization
+            Button {
+                showingFuelInsights = true
+            } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.green.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "fuelpump.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.green)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("Fuel Insights & Optimization")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("OPTIMIZE")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.green)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Uncover cost savings, efficiency grades, and consumption anomalies...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
+            
+            // 4. AI Vehicle Health Analytics
+            NavigationLink(destination: VehicleHealthAnalysisView()) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.teal.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "heart.text.square.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.teal)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("AI Vehicle Health Analytics")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                            
+                            Text("HEALTH")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.teal)
+                                .cornerRadius(4)
+                        }
+                        
+                        Text("Assess fleet vehicle health grades, issue flags and repair tasks...")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
+                }
+                .padding(14)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(AppTheme.Glass.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
+        .sheet(isPresented: $showingFuelInsights) {
+            NavigationStack {
+                FuelOptimizationView()
+            }
+        }
     }
 
-    private func complianceSummaryText(overdue: Int, upcoming: Int) -> String {
-        if overdue == 0 && upcoming == 0 {
-            return "All vehicles within compliance limits"
-        } else if overdue > 0 {
-            return "\(overdue) alert\(overdue == 1 ? "" : "s") require immediate attention"
-        } else {
-            return "\(upcoming) renewal\(upcoming == 1 ? "" : "s") due soon"
-        }
-    }
+
 
     private func destinationFor(stat: DashboardStat) -> DashboardNavigationDestination {
         switch stat.label {
         case "Total Vehicles": return .totalVehicles
-        case "Available Now":  return .activeNow
+        case "Ready Vehicles":  return .activeNow
         case "Drivers Online": return .driversOnline
         case "Live Trips":     return .liveTrips
         default:               return .totalVehicles
+        }
+    }
+    
+    private func handleActivityTap(_ activity: DashboardActivity) {
+        if activity.title.contains("Defect") || activity.title.contains("SOS") {
+            viewModel.activeQuickAction = .alerts
+        } else if activity.title.contains("Work Order") {
+            viewModel.activeQuickAction = .maintenance
+        } else if activity.title.contains("Trip") {
+            selectedTab = 1
+        }
+    }
+
+    private func fetchActiveGeofenceAlerts() {
+        Task {
+            do {
+                let alerts = try await SupabaseManager.shared.fetchRouteDeviationAlerts()
+                await MainActor.run {
+                    let activeAlerts = alerts.filter { $0.status == .active }
+                    let latestTime = activeAlerts.map { $0.createdAt.timeIntervalSince1970 }.max() ?? 0
+                    if latestTime > self.lastGeofenceAlertViewTime {
+                        self.activeGeofenceAlertsCount = activeAlerts.count
+                    } else {
+                        self.activeGeofenceAlertsCount = 0
+                    }
+                }
+            } catch {
+                print("Failed to fetch geofence alerts for badge: \(error)")
+            }
+        }
+    }
+
+    private func startRealtimeListener() {
+        guard realtimeChannel == nil else { return }
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("fleet_manager_realtime_channel")
+        self.realtimeChannel = channel
+        
+        Task {
+            let tripsStream = channel.postgresChange(AnyAction.self, schema: "public", table: "trips")
+            let sosStream = channel.postgresChange(AnyAction.self, schema: "public", table: "sos_alerts")
+            let defectStream = channel.postgresChange(AnyAction.self, schema: "public", table: "defect_reports")
+            let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
+            let notifStream = channel.postgresChange(AnyAction.self, schema: "public", table: "notifications")
+            let taskStream = channel.postgresChange(AnyAction.self, schema: "public", table: "maintenance_tasks")
+            let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
+            let fuelStream = channel.postgresChange(AnyAction.self, schema: "public", table: "fuel_logs")
+            let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+            let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
+            
+            try? await channel.subscribeWithError()
+            
+            async let _ : () = handleStream(tripsStream)
+            async let _ : () = handleStream(sosStream)
+            async let _ : () = handleStream(defectStream)
+            async let _ : () = handleStream(workOrderStream)
+            async let _ : () = handleStream(notifStream)
+            async let _ : () = handleStream(taskStream)
+            async let _ : () = handleStream(vehicleStream)
+            async let _ : () = handleStream(fuelStream)
+            async let _ : () = handleStream(complianceStream)
+            async let _ : () = handleRouteDevStream(routeDevStream)
+        }
+    }
+    
+    private func handleRouteDevStream<S: AsyncSequence>(_ stream: S) async {
+        do {
+            for try await _ in stream {
+                fetchActiveGeofenceAlerts()
+            }
+        } catch {
+            print("Route dev stream error: \(error)")
+        }
+    }
+    
+    private func handleStream<S: AsyncSequence>(_ stream: S) async {
+        do {
+            for try await _ in stream {
+                await SupabaseManager.shared.syncAllData(context: modelContext)
+            }
+        } catch {
+            print("Stream error: \(error)")
         }
     }
 }
@@ -466,6 +750,40 @@ struct FleetCircularProgressView: View {
     }
 }
 
+// MARK: - FleetGridQuickActionButton
+struct FleetGridQuickActionButton: View {
+    let icon: String
+    let label: String
+    var iconColor: Color = AppTheme.Brand.royalBlue
+    var bgColor: Color = AppTheme.Brand.primary.opacity(0.08)
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(bgColor)
+                        .frame(width: 58, height: 58)
+                    Image(systemName: icon)
+                        .font(.system(size: 24))
+                        .foregroundColor(iconColor)
+                }
+                
+                Text(label)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(AppTheme.Text.primary)
+                    .frame(height: 32, alignment: .top)
+                    .lineLimit(2)
+            }
+            .frame(width: 82)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
 #Preview {
-    FleetDashboardView()
+    FleetDashboardView(selectedTab: .constant(0))
 }

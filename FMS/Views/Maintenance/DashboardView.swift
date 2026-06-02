@@ -10,6 +10,7 @@ import SwiftUI
 import SwiftData
 
 struct MaintenanceDashboardTab: View {
+    @Environment(\.modelContext) private var modelContext
     // Logged-in maintenance user (passed from parent/login)
     let currentUser: User
 
@@ -24,6 +25,7 @@ struct MaintenanceDashboardTab: View {
 
     @State private var showingProfile = false
     @State private var showChat = false
+    @State private var showingNotifications = false
 
     private var personnelFirstName: String {
         guard !currentUser.fullName.isEmpty else { return "Staff" }
@@ -48,24 +50,18 @@ struct MaintenanceDashboardTab: View {
     }
 
     private var scheduledToday: [WorkOrder] {
-        let today = Calendar.current.startOfDay(for: .now)
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
         return allWorkOrders.filter {
-            $0.assignedTo == currentUser.id &&
-            $0.status == .open &&
-            $0.createdAt >= today &&
-            $0.createdAt < tomorrow
+            $0.status == .open
         }
     }
 
     private var inProgressOrders: [WorkOrder] {
-        allWorkOrders.filter { $0.assignedTo == currentUser.id && $0.status == .inProgress }
+        allWorkOrders.filter { $0.status == .inProgress }
     }
 
     private var completedToday: [WorkOrder] {
         let startOfDay = Calendar.current.startOfDay(for: .now)
         return allWorkOrders.filter {
-            $0.assignedTo == currentUser.id &&
             $0.status == .completed &&
             ($0.completedAt ?? .distantPast) >= startOfDay
         }
@@ -112,7 +108,7 @@ struct MaintenanceDashboardTab: View {
                             initials: initials,
                             avatarColor: AppTheme.Brand.primaryDeep,
                             notificationCount: unreadNotifications.count,
-                            onNotificationTap: {},
+                            onNotificationTap: { showingNotifications = true },
                             onProfileTap: { showingProfile = true },
                             showChat: false,
                             onChatTap: { showChat = true }
@@ -121,18 +117,23 @@ struct MaintenanceDashboardTab: View {
 
                         overviewSection
                         quickActionsSection
-                        aiInsightsSection
                         recentWorkOrdersSection
                     }
-                    .frame(width: UIScreen.main.bounds.width, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 32)
                 }
                 .safeAreaPadding(.top)
                 .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .refreshable {
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
+                }
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showingProfile) {
                 MaintenanceProfileView()
+            }
+            .sheet(isPresented: $showingNotifications) {
+                MaintenanceNotificationsSheet(currentUser: currentUser)
             }
             .navigationDestination(isPresented: $showChat) {
                 CommunicationView()
@@ -248,7 +249,7 @@ struct MaintenanceDashboardTab: View {
                 
                 GridQuickActionButton(
                     icon: "camera.fill",
-                    label: "Upload Repair Notes",
+                    label: "Report an issue",
                     destination: ReportIssueView()
                 )
                 
@@ -263,64 +264,7 @@ struct MaintenanceDashboardTab: View {
         }
     }
 
-    // MARK: - AI Insights
 
-    private var aiInsightsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "AI Insights")
-            
-            NavigationLink(destination: PredictiveAlertDetailView()) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppTheme.Brand.royalBlue)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text("Predictive Maintenance Alert")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Text.primary)
-                            
-                            Text("SMART")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(AppTheme.Brand.royalBlue)
-                                .cornerRadius(4)
-                        }
-                        
-                        Text("Brake pads on Truck 12 may run below safety threshold levels within 7 days. Tap to inspect...")
-                            .font(.system(size: 11))
-                            .foregroundColor(AppTheme.Text.secondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
-                }
-                .padding(14)
-                .background(AppTheme.Background.card)
-                .cornerRadius(AppTheme.Radius.card)
-                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                        .stroke(AppTheme.Glass.border, lineWidth: 1)
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.horizontal)
-        }
-    }
 
     // MARK: - Recent Work Orders
 
@@ -442,20 +386,20 @@ struct GridQuickActionButton<Destination: View>: View {
         NavigationLink(destination: destination) {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(AppTheme.Brand.primary.opacity(0.08))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 56, height: 56)
                     Image(systemName: icon)
-                        .font(.system(size: 20))
+                        .font(.system(size: 24))
                         .foregroundColor(AppTheme.Brand.royalBlue)
                 }
                 
                 Text(label)
-                    .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.75)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.Text.primary)
-                    .frame(height: 28, alignment: .top)
+                    .frame(height: 32, alignment: .top)
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity)

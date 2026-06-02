@@ -44,47 +44,10 @@ struct DriverDashboardView: View {
 
             DriverBottomTabBar(selectedTab: $selectedTab)
                 .padding(.bottom, 16)
-        }
-        
-        .overlay {
+
             if vm.showSOSCountdown {
                 SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
-                    vm.sosSentAlert = true
-                    
-                    
-                    let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
-                    let notif = DBNotification(
-                        id: UUID(),
-                        userId: driverId,
-                        title: "🚨 EMERGENCY SOS SIGNAL TRIGGERED",
-                        message: "Driver \(SupabaseManager.shared.currentUser?.name ?? "Naman Yadav") has triggered a panic alarm. Assistance is required immediately.",
-                        type: .emergency,
-                        isRead: false,
-                        createdAt: Date()
-                    )
-                    Task {
-                        try? await SupabaseManager.shared.createNotification(notif)
-                        
-                        let localSOS = SOSAlert(
-                            id: notif.id,
-                            driverId: driverId,
-                            vehicleId: vm.assignedVehicle?.id ?? UUID(),
-                            tripId: vm.activeTrip?.id ?? UUID(),
-                            latitude: 28.5450,
-                            longitude: 77.2600,
-                            message: notif.message,
-                            status: .active,
-                            createdAt: notif.createdAt
-                        )
-                        
-                        try? await SupabaseManager.shared.createSOSAlert(localSOS.asDBSOSAlert)
-                        
-                        await MainActor.run {
-                            modelContext.insert(notif.asLocalNotification)
-                            modelContext.insert(localSOS)
-                            try? modelContext.save()
-                        }
-                    }
+                    vm.triggerSOS(context: modelContext)
                 }
                 .transition(.opacity)
                 .zIndex(999)
@@ -163,6 +126,11 @@ struct DriverDashboardView: View {
             Button("OK") {}
         } message: {
             Text("Emergency alert has been sent to your fleet manager. Help is on the way.")
+        }
+        .alert("Geofence Restriction", isPresented: $vm.showGeofenceAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(vm.geofenceAlertMessage)
         }
     }
 
@@ -516,10 +484,10 @@ struct VoiceLogSheet: View {
                         Button(action: toggleRec) {
                             ZStack {
                                 Circle()
-                                    .fill(voiceLogger.isRecording ? Color.red.gradient : Color.fmsIndigo.gradient)
+                                    .fill(voiceLogger.isRecording ? AppTheme.Brand.accent.gradient : Color.fmsIndigo.gradient)
                                     .frame(width: 88, height: 88)
                                     .shadow(
-                                        color: voiceLogger.isRecording ? Color.red.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
+                                        color: voiceLogger.isRecording ? AppTheme.Brand.accent.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
                                         radius: 20, y: 6
                                     )
                                 Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
@@ -538,7 +506,7 @@ struct VoiceLogSheet: View {
                             : "Tap to Record"
                         )
                         .font(.system(size: 30, weight: .bold, design: .monospaced))
-                        .foregroundStyle(voiceLogger.isRecording ? Color.red : Color.fmsIndigo)
+                        .foregroundStyle(voiceLogger.isRecording ? AppTheme.Brand.accent : Color.fmsIndigo)
                         .contentTransition(.numericText())
 
                         Text(
@@ -555,7 +523,7 @@ struct VoiceLogSheet: View {
                     if let err = voiceLogger.errorMessage {
                         Text(err)
                             .font(.system(size: 13))
-                            .foregroundStyle(Color.red)
+                            .foregroundStyle(AppTheme.Status.danger)
                             .padding(.horizontal, 40)
                             .multilineTextAlignment(.center)
                     }
@@ -799,11 +767,11 @@ struct RaiseQuerySheet: View {
                     VStack(spacing: 10) {
                         ZStack {
                             Circle()
-                                .fill(Color.orange.opacity(0.12))
+                                .fill(AppTheme.Brand.accent.opacity(0.12))
                                 .frame(width: 72, height: 72)
                             Image(systemName: "questionmark.bubble.fill")
                                 .font(.system(size: 32))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(AppTheme.Brand.accent)
                         }
                         Text("Raise a Query")
                             .font(.system(size: 18, weight: .bold))
@@ -816,7 +784,7 @@ struct RaiseQuerySheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
-                    .background(Color.orange.opacity(0.06))
+                    .background(AppTheme.Brand.accent.opacity(0.06))
                     .clipShape(RoundedRectangle(cornerRadius: 18))
 
                     // Reason picker
@@ -838,7 +806,7 @@ struct RaiseQuerySheet: View {
                                     HStack(spacing: 14) {
                                         Image(systemName: selectedReason == idx
                                               ? "checkmark.circle.fill" : "circle")
-                                            .foregroundStyle(selectedReason == idx ? Color.orange : .secondary)
+                                            .foregroundStyle(selectedReason == idx ? AppTheme.Brand.accent : .secondary)
                                             .font(.system(size: 18))
                                         Text(reason)
                                             .font(.system(size: 14))
@@ -892,9 +860,9 @@ struct RaiseQuerySheet: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(submitted ? AppTheme.Status.success.gradient : Color.orange.gradient)
+                        .background(submitted ? AppTheme.Status.success.gradient : AppTheme.Brand.accent.gradient)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: Color.orange.opacity(0.28), radius: 10, y: 4)
+                        .shadow(color: AppTheme.Brand.accent.opacity(0.28), radius: 10, y: 4)
                         .animation(.spring(response: 0.35), value: submitted)
                     }
                     .disabled(submitted)
@@ -956,6 +924,7 @@ struct InspectionFormSheet: View {
     // ── Defect photos (remarks section) ───────────────────────────────────────
     @State private var defectPhotos: [UIImage] = []
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var vehicleNumber: String = "TN-07-AB-1234"
 
     private var title: String { isPreTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection" }
     private var allPass: Bool { items.allSatisfy(\.passed) }
@@ -987,7 +956,7 @@ struct InspectionFormSheet: View {
                                 .font(.system(size: 16, weight: .bold))
                         }
                         Text(title).font(.system(size: 15, weight: .semibold))
-                        Text("Vehicle \(isPreTrip ? "TN-07-AB-1234" : "TN-07-AB-1234")")
+                        Text("Vehicle \(vehicleNumber)")
                             .font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
@@ -1241,6 +1210,18 @@ struct InspectionFormSheet: View {
                 }
             }
         }
+        .task {
+            let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+            if let trips = try? await SupabaseManager.shared.fetchTrips(),
+               let activeTrip = trips.first(where: { $0.driverId == driverId && ($0.status == .started || $0.status == .assigned) }),
+               let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+               let matched = vehicles.first(where: { $0.id == activeTrip.vehicleId }) {
+                self.vehicleNumber = matched.vehicleNumber
+            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+                      let assigned = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                self.vehicleNumber = assigned.vehicleNumber
+            }
+        }
     }
 
     @MainActor
@@ -1250,11 +1231,17 @@ struct InspectionFormSheet: View {
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
         var vehicleId = UUID()
         
-        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
-            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-                vehicleId = assignedVehicle.id
-            } else if let firstVehicle = vehicles.first {
-                vehicleId = firstVehicle.id
+        if let trips = try? await SupabaseManager.shared.fetchTrips() {
+            if let activeTrip = trips.first(where: { $0.driverId == driverId && $0.status == .started }) {
+                vehicleId = activeTrip.vehicleId
+            } else if let assignedTrip = trips.first(where: { $0.driverId == driverId && $0.status == .assigned }) {
+                vehicleId = assignedTrip.vehicleId
+            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+                if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                    vehicleId = assignedVehicle.id
+                } else if let firstVehicle = vehicles.first {
+                    vehicleId = firstVehicle.id
+                }
             }
         }
         
@@ -1279,7 +1266,7 @@ struct InspectionFormSheet: View {
                     id: UUID(),
                     userId: driverId,
                     title: "Defect Flagged: " + (isPreTrip ? "Pre-Trip" : "Post-Trip"),
-                    message: "Inspection for Vehicle \(vehicleId.uuidString.prefix(4)) flagged remarks: \(remarks)",
+                    message: "Inspection for Vehicle \(vehicleNumber) flagged remarks: \(remarks)",
                     type: .warning,
                     isRead: false,
                     createdAt: Date()
@@ -1469,13 +1456,27 @@ struct DefectReportSheet: View {
         
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
         var vehicleId = UUID()
+        var vehicleNo = ""
         
-        if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
-            if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-                vehicleId = assignedVehicle.id
-            } else if let firstVehicle = vehicles.first {
-                vehicleId = firstVehicle.id
+        if let trips = try? await SupabaseManager.shared.fetchTrips() {
+            if let activeTrip = trips.first(where: { $0.driverId == driverId && $0.status == .started }) {
+                vehicleId = activeTrip.vehicleId
+            } else if let assignedTrip = trips.first(where: { $0.driverId == driverId && $0.status == .assigned }) {
+                vehicleId = assignedTrip.vehicleId
+            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+                if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                    vehicleId = assignedVehicle.id
+                } else if let firstVehicle = vehicles.first {
+                    vehicleId = firstVehicle.id
+                }
             }
+        }
+        
+        if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+           let matched = vehicles.first(where: { $0.id == vehicleId }) {
+            vehicleNo = matched.vehicleNumber
+        } else {
+            vehicleNo = vehicleId.uuidString.prefix(4).description
         }
         
         let severity: DefectSeverity
@@ -1503,7 +1504,7 @@ struct DefectReportSheet: View {
             
             // Notify Fleet Managers
             let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
-            let msg = "Driver \(driverName) reported a defect on Vehicle \(vehicleId.uuidString.prefix(4)): \(desc)"
+            let msg = "Driver \(driverName) reported a defect on Vehicle \(vehicleNo): \(desc)"
             await SupabaseManager.shared.notifyFleetManagers(
                 title: "⚠️ Mid-Trip Defect: \(titleStr)",
                 message: msg,
@@ -1630,7 +1631,7 @@ struct ChatSheet: View {
                             .font(.system(size: 18))
                             .foregroundColor(Color.white)
                             .padding(10)
-                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : AppTheme.Brand.primary)
+                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
                             .clipShape(Circle())
                     }
                     .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -1726,7 +1727,7 @@ struct ChatHubSheet: View {
                                         .font(.system(size: 10, weight: .semibold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 8).padding(.vertical, 3)
-                                        .background(Color(UIColor.systemGray3))
+                                        .background(AppTheme.Brand.primary.opacity(0.15))
                                         .clipShape(Capsule())
                                 }
                             }
@@ -1909,7 +1910,7 @@ struct RecordingRing: View {
     
     var body: some View {
         Circle()
-            .stroke(isRecording ? Color.red.opacity(0.12) : Color.clear, lineWidth: 1.5)
+            .stroke(isRecording ? Theme.darkOrange.opacity(0.12) : Color.clear, lineWidth: 1.5)
             .frame(width: CGFloat(100 + index * 36), height: CGFloat(100 + index * 36))
             .scaleEffect(isRecording ? 1.0 : 0.85)
             .animation(

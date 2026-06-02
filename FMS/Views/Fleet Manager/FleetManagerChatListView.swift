@@ -18,6 +18,7 @@ struct FleetManagerChatListView: View {
     @State private var messages: [DBMessage] = []
     @State private var isLoading = false
     @State private var realtimeChannel: RealtimeChannelV2?
+    @State private var showBroadcastSheet = false
     
     enum RoleFilter: String, CaseIterable, Identifiable {
         case all = "All"
@@ -177,6 +178,22 @@ struct FleetManagerChatListView: View {
                     .foregroundColor(AppTheme.Brand.primary)
                     .bold()
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showBroadcastSheet = true
+                    } label: {
+                        Image(systemName: "megaphone.fill")
+                            .foregroundColor(AppTheme.Brand.primary)
+                    }
+                }
+            }
+            .sheet(isPresented: $showBroadcastSheet) {
+                FleetManagerBroadcastSheet(
+                    drivers: drivers,
+                    maintenance: maintenancePersonnel,
+                    currentUser: currentUser
+                )
             }
             .task {
                 await loadData()
@@ -210,7 +227,7 @@ struct FleetManagerChatListView: View {
                 
                 // Status dot indicator
                 Circle()
-                    .fill(user.isActive ? Color.green : Color.gray)
+                    .fill(user.isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
                     .frame(width: 12, height: 12)
                     .overlay(Circle().stroke(Color.white, lineWidth: 2))
                     .offset(x: 2, y: 2)
@@ -273,9 +290,9 @@ struct FleetManagerChatListView: View {
         case .driver:
             return AppTheme.Brand.royalBlue
         case .maintenance:
-            return Color(red: 236/255, green: 110/255, blue: 37/255) // Orange/Amber
+            return AppTheme.Brand.accent
         case .fleetManager:
-            return .purple
+            return AppTheme.Brand.primaryDeep
         }
     }
     
@@ -317,6 +334,147 @@ struct FleetManagerChatListView: View {
                     Task {
                         self.messages = (try? await supabase.fetchMessages()) ?? []
                     }
+                }
+            }
+        }
+    }
+}
+
+struct FleetManagerBroadcastSheet: View {
+    let drivers: [DBUser]
+    let maintenance: [DBUser]
+    let currentUser: DBUser?
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var messageText = ""
+    @State private var sending = false
+    @State private var sent = false
+    @State private var errorMsg: String?
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                // Header / Info
+                VStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Brand.accent.opacity(0.12))
+                            .frame(width: 64, height: 64)
+                        Image(systemName: "megaphone.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(AppTheme.Brand.accent)
+                    }
+                    Text("Broadcast Message")
+                        .font(.system(size: 20, weight: .bold))
+                    Text("Send a message to all drivers and maintenance personnel.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 30)
+                }
+                .padding(.top, 20)
+
+                // Input field
+                TextField("Type your broadcast message here...", text: $messageText, axis: .vertical)
+                    .font(.system(size: 15))
+                    .lineLimit(4...8)
+                    .padding(14)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(14)
+                    .padding(.horizontal, 20)
+
+                if let err = errorMsg {
+                    Text(err)
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.Status.danger)
+                        .padding(.horizontal, 20)
+                }
+
+                Spacer()
+
+                // Action buttons
+                Button {
+                    sendBroadcast()
+                } label: {
+                    Group {
+                        if sending {
+                            ProgressView().tint(.white)
+                        } else if sent {
+                            Label("Broadcast Sent!", systemImage: "checkmark.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                        } else {
+                            Label("Send Broadcast", systemImage: "paperplane.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(sent ? AppTheme.Status.success.gradient : AppTheme.Brand.primary.gradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+                }
+                .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || sending || sent)
+            }
+            .background(Color(red: 0.98, green: 0.98, blue: 0.99).ignoresSafeArea())
+            .navigationTitle("Broadcast")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func sendBroadcast() {
+        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        
+        sending = true
+        errorMsg = nil
+        
+        Task {
+            do {
+                let myId = currentUser?.id ?? UUID()
+                let allRecipients = (drivers + maintenance).filter { $0.id != myId }
+                
+                if allRecipients.isEmpty {
+                    await MainActor.run {
+                        errorMsg = "No recipients found."
+                        sending = false
+                    }
+                    return
+                }
+                
+                let messages = allRecipients.map { recipient in
+                    DBMessage(
+                        id: UUID(),
+                        senderId: myId,
+                        receiverId: recipient.id,
+                        message: text,
+                        timestamp: Date()
+                    )
+                }
+                
+                try await SupabaseManager.shared.sendBroadcastMessages(messages)
+                
+                await MainActor.run {
+                    sending = false
+                    sent = true
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        dismiss()
+                    }
+                }
+            } catch {
+                print("Failed to send manager broadcast messages: \(error.localizedDescription)")
+                await MainActor.run {
+                    errorMsg = "Failed to broadcast message: \(error.localizedDescription)"
+                    sending = false
                 }
             }
         }

@@ -258,7 +258,7 @@ struct CompletedTasksView: View {
                 Divider().padding(.horizontal, 16)
                 
                 // ── Details ──────────────────────────────────────────────────────
-                VStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 8) {
                     CompletedDetailRow(
                         icon: "wrench.and.screwdriver.fill",
                         label: "Service",
@@ -353,6 +353,7 @@ struct CompletedTasksView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(AppTheme.Text.primary)
                     .lineLimit(1)
+                Spacer()
             }
         }
     }
