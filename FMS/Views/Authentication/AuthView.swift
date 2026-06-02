@@ -41,40 +41,12 @@ struct AuthView: View {
 
                     
                     VStack(spacing: 20) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            AppTheme.Brand.royalBlue.opacity(0.8),
-                                            AppTheme.Brand.royalBlue
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 90, height: 100)
-                                .shadow(
-                                    color: AppTheme.Brand.royalBlue.opacity(0.3),
-                                    radius: 12, x: 0, y: 8
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(AppTheme.Text.onDark.opacity(0.2), lineWidth: 1)
-                                )
-
-                            Image(systemName: "truck.box.fill")
-                                .font(.system(size: 34, weight: .semibold))
-                                .foregroundColor(AppTheme.Text.onDark)
-                                .symbolEffect(.bounce, value: appearAnimation)
-                        }
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 320, height: 160)
 
                         VStack(spacing: 6) {
-                            Text("Fleeto")
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Text.primary)
-                                .tracking(0.5)
-
                             Text("Sign in to your dashboard")
                                 .font(.system(.subheadline, design: .rounded))
                                 .foregroundColor(AppTheme.Text.tertiary)
@@ -149,7 +121,7 @@ struct AuthView: View {
                         .padding(.top, 8)
                     }
                     .padding(AppTheme.Spacing.lg + 4)
-                    .background(.ultraThinMaterial)
+                    .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.form, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.Radius.form, style: .continuous)
@@ -423,7 +395,7 @@ struct PremiumInputField: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
-        .background(.ultraThinMaterial)
+        .background(Color.black.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous)
@@ -474,7 +446,7 @@ struct PremiumSecureField: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
-        .background(.ultraThinMaterial)
+        .background(Color.black.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous)

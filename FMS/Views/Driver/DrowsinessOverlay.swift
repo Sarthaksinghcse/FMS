@@ -201,59 +201,177 @@ struct DrowsinessAlarmView: View {
     }
 }
 
-// MARK: - Monitoring HUD (PIP + pill, sits top-right of map)
+// MARK: - Monitoring HUD — Draggable FaceTime-style PIP
 
 @available(iOS 26.0, *)
 struct DrowsinessMonitorHUD: View {
     @ObservedObject var detector: DrowsinessDetector
-    @State private var expanded = false
+
+    // Drag state
+    @State private var position: CGPoint = CGPoint(x: UIScreen.main.bounds.width - 60, y: 120)
+    @GestureState private var dragOffset: CGSize = .zero
+    @State private var isDragging = false
+
+    // UI state
+    @State private var isCollapsed = false
+    @State private var expanded   = false
+
+    private let pipW: CGFloat = 72
+    private let pipH: CGFloat = 96
+    private let collapsedSize: CGFloat = 38
+    private let padding: CGFloat = 16
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 8) {
-            // Camera PIP thumbnail (tap to toggle expand)
-            if let layer = detector.cameraPreviewLayer {
-                Button {
-                    withAnimation(.spring(response: 0.35)) { expanded.toggle() }
-                } label: {
-                    ZStack(alignment: .bottomTrailing) {
-                        CameraPreviewPIP(previewLayer: layer)
-                            .frame(
-                                width: expanded ? 120 : 68,
-                                height: expanded ? 160 : 90
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(
-                                        borderColor,
-                                        lineWidth: detector.state == .alarm ? 3 : 1.5
+        GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                if isCollapsed {
+                    // ── Collapsed: just a small eye badge ────────────────────
+                    collapsedBadge
+                        .position(clamp(position, in: geo.size, itemSize: CGSize(width: collapsedSize, height: collapsedSize)))
+                        .offset(dragOffset)
+                        .gesture(dragGesture(in: geo.size, itemSize: CGSize(width: collapsedSize, height: collapsedSize)))
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.35)) { isCollapsed = false }
+                        }
+
+                } else {
+                    // ── Expanded: PIP + pill ──────────────────────────────────
+                    VStack(spacing: 6) {
+                        ZStack(alignment: .bottomTrailing) {
+                            if let layer = detector.cameraPreviewLayer {
+                                CameraPreviewPIP(previewLayer: layer)
+                                    .frame(width: expanded ? 120 : pipW,
+                                           height: expanded ? 160 : pipH)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(borderColor, lineWidth: detector.state == .alarm ? 3 : 1.5)
                                     )
-                            )
-                            .shadow(color: .black.opacity(0.30), radius: 8, y: 3)
+                                    .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
+                            } else {
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(Color.black.opacity(0.6))
+                                    .frame(width: pipW, height: pipH)
+                            }
 
-                        // Eye icon overlay
-                        Image(systemName: eyeOverlayIcon)
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(5)
-                            .background(borderColor, in: Circle())
-                            .offset(x: 4, y: 4)
+                            // Eye status badge
+                            Image(systemName: eyeOverlayIcon)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(4)
+                                .background(borderColor, in: Circle())
+                                .offset(x: 4, y: 4)
+                        }
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.35)) { expanded.toggle() }
+                        }
+
+                        // Status pill
+                        DrowsinessStatusPill(state: detector.state)
                     }
+                    // Drag to move
+                    .position(clamp(position, in: geo.size,
+                                    itemSize: CGSize(width: expanded ? 120 : pipW,
+                                                     height: expanded ? 190 : pipH + 30)))
+                    .offset(dragOffset)
+                    .scaleEffect(isDragging ? 1.05 : 1.0)
+                    .shadow(color: isDragging ? borderColor.opacity(0.5) : .clear, radius: 12)
+                    .gesture(
+                        dragGesture(in: geo.size,
+                                    itemSize: CGSize(width: expanded ? 120 : pipW,
+                                                     height: expanded ? 190 : pipH + 30))
+                    )
+                    .simultaneousGesture(
+                        // Long-press to collapse to badge
+                        LongPressGesture(minimumDuration: 0.6).onEnded { _ in
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            withAnimation(.spring(response: 0.35)) { isCollapsed = true }
+                        }
+                    )
+                    .animation(.spring(response: 0.35), value: expanded)
                 }
-                .buttonStyle(.plain)
             }
-
-            // Status pill
-            DrowsinessStatusPill(state: detector.state)
+            .onAppear {
+                // Default: top-right corner with padding
+                position = CGPoint(x: geo.size.width - pipW / 2 - padding,
+                                   y: 120 + pipH / 2)
+            }
         }
+        .allowsHitTesting(true)
+    }
+
+    // MARK: - Collapsed Badge
+    private var collapsedBadge: some View {
+        ZStack {
+            Circle()
+                .fill(borderColor)
+                .frame(width: collapsedSize, height: collapsedSize)
+                .shadow(color: borderColor.opacity(0.5), radius: 6)
+            Image(systemName: eyeOverlayIcon)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
+        }
+    }
+
+    // MARK: - Drag gesture with corner snapping
+    private func dragGesture(in size: CGSize, itemSize: CGSize) -> some Gesture {
+        DragGesture()
+            .updating($dragOffset) { value, state, _ in
+                state = value.translation
+            }
+            .onChanged { _ in
+                if !isDragging {
+                    withAnimation(.easeOut(duration: 0.15)) { isDragging = true }
+                }
+            }
+            .onEnded { value in
+                withAnimation(.easeOut(duration: 0.15)) { isDragging = false }
+                // Apply translation
+                let newX = position.x + value.translation.width
+                let newY = position.y + value.translation.height
+                // Snap to nearest corner
+                let corners = corners(for: size, itemSize: itemSize)
+                let nearest = corners.min(by: {
+                    dist($0, CGPoint(x: newX, y: newY)) < dist($1, CGPoint(x: newX, y: newY))
+                }) ?? corners[0]
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    position = nearest
+                }
+            }
+    }
+
+    // Four corner snap positions
+    private func corners(for screenSize: CGSize, itemSize: CGSize) -> [CGPoint] {
+        let hw = itemSize.width / 2 + padding
+        let hh = itemSize.height / 2 + padding
+        return [
+            CGPoint(x: hw,                      y: 110 + hh),           // top-left
+            CGPoint(x: screenSize.width - hw,   y: 110 + hh),           // top-right
+            CGPoint(x: hw,                      y: screenSize.height - hh - 220), // bottom-left
+            CGPoint(x: screenSize.width - hw,   y: screenSize.height - hh - 220)  // bottom-right
+        ]
+    }
+
+    // Clamp position within screen bounds
+    private func clamp(_ point: CGPoint, in size: CGSize, itemSize: CGSize) -> CGPoint {
+        let hw = itemSize.width / 2 + padding
+        let hh = itemSize.height / 2 + padding
+        return CGPoint(
+            x: max(hw, min(point.x + dragOffset.width, size.width - hw)),
+            y: max(hh + 60, min(point.y + dragOffset.height, size.height - hh - 200))
+        )
+    }
+
+    private func dist(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
+        sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2))
     }
 
     private var borderColor: Color {
         switch detector.state {
-        case .monitoring:   return AppTheme.Status.success
-        case .eyesClosed:   return AppTheme.Status.warning
-        case .alarm:        return AppTheme.Status.danger
-        default:            return Color.fmsIndigo.opacity(0.4)
+        case .monitoring:   return Color(red: 0.2, green: 0.78, blue: 0.35)
+        case .eyesClosed:   return Color(red: 0.95, green: 0.50, blue: 0.15)
+        case .alarm:        return .red
+        default:            return Color(UIColor.systemGray3)
         }
     }
 
@@ -267,5 +385,6 @@ struct DrowsinessMonitorHUD: View {
         }
     }
 }
+
 
 
