@@ -45,12 +45,10 @@ struct FleetManagerProfileView: View {
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Edit") {
-                        showEditProfile = true
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
                     }
-                    .font(.system(size: 17))
-                    .foregroundColor(AppTheme.Brand.primary)
                 }
             }
             .sheet(isPresented: $showEditProfile) {
@@ -106,71 +104,83 @@ struct FleetManagerProfileView: View {
     // MARK: - Header
 
     private var profileHeaderCard: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 90, height: 90)
-                    .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 16, y: 6)
+                        .frame(width: 90, height: 90)
+                        .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 16, y: 6)
 
-                if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
-                    CachedAsyncImage(url: imageURL) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
+                    if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
+                        CachedAsyncImage(url: imageURL) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            Text(initials)
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(
+                                    LinearGradient(
+                                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        }
+                        .frame(width: 90, height: 90)
+                        .clipShape(Circle())
+                    } else {
                         Text(initials)
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(
-                                LinearGradient(
-                                    colors: [AppTheme.Brand.primary, AppTheme.Brand.primaryDeep],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
                     }
-                    .frame(width: 90, height: 90)
-                    .clipShape(Circle())
-                } else {
-                    Text(initials)
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                }
+
+                VStack(spacing: 6) {
+                    Text(user?.name ?? "Fleet Manager")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.primary)
+
+                    Text(user?.email ?? "manager@fms.com")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppTheme.Text.secondary)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "shield.checkered")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Fleet Manager")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.primary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.Brand.primary.opacity(0.10))
+                    .clipShape(Capsule())
+                    .padding(.top, 4)
                 }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
 
-            VStack(spacing: 6) {
-                Text(user?.name ?? "Fleet Manager")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.primary)
-
-                Text(user?.email ?? "manager@fms.com")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(AppTheme.Text.secondary)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "shield.checkered")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Fleet Manager")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .foregroundColor(AppTheme.Brand.primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(AppTheme.Brand.primary.opacity(0.10))
-                .clipShape(Capsule())
-                .padding(.top, 4)
+            Button {
+                showEditProfile = true
+            } label: {
+                Image(systemName: "pencil.circle.fill")
+                    .font(.system(size: 28))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundColor(AppTheme.Brand.primary)
             }
+            .padding(12)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
         .background(AppTheme.Background.card)
         .cornerRadius(AppTheme.Radius.card)
         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
