@@ -1136,13 +1136,14 @@ struct SOSAlertDetailView: View {
                                         Text("Open in Maps")
                                             .font(.system(size: 12, weight: .bold))
                                     }
-                                    .foregroundColor(.white)
+                                    .foregroundColor(sosAlert.status == .active ? .white : AppTheme.Text.tertiary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
-                                    .background(AppTheme.Brand.primary)
+                                    .background(sosAlert.status == .active ? AppTheme.Brand.primary : Color.gray.opacity(0.15))
                                     .cornerRadius(8)
                                 }
                                 .buttonStyle(.plain)
+                                .disabled(sosAlert.status != .active)
                                 
                                 // Live Track
                                 if let vehicleId = sosAlert.vehicleId {
@@ -1157,13 +1158,18 @@ struct SOSAlertDetailView: View {
                                             Text("Track Live")
                                                 .font(.system(size: 12, weight: .bold))
                                         }
-                                        .foregroundColor(AppTheme.Status.danger)
+                                        .foregroundColor(sosAlert.status == .active ? AppTheme.Status.danger : AppTheme.Text.tertiary)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
-                                        .background(AppTheme.Status.danger.opacity(0.12))
+                                        .background(sosAlert.status == .active ? AppTheme.Status.danger.opacity(0.12) : Color.gray.opacity(0.08))
                                         .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(sosAlert.status == .active ? AppTheme.Status.danger.opacity(0.25) : Color.gray.opacity(0.15), lineWidth: 1)
+                                        )
                                     }
                                     .buttonStyle(.plain)
+                                    .disabled(sosAlert.status != .active)
                                 }
                             }
                         }
