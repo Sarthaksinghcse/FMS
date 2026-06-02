@@ -47,7 +47,8 @@ struct ComplianceAlertsView: View {
             }
         }
         .navigationTitle("Compliance & Renewals")
-        .navigationBarTitleDisplayMode(.large)
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .sheet(item: $selectedAlert) { item in
             ComplianceAlertDetailSheet(item: item) {
                 resolveFromDetail(item: item)
@@ -656,7 +657,7 @@ struct ResolveAlertSheet: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.red)
+                        .foregroundColor(AppTheme.Brand.accent)
                 }
             }
             .onAppear {

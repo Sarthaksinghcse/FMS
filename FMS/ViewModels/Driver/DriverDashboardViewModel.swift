@@ -187,6 +187,13 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showPostTrip  = false
     @Published var showDefect    = false
     @Published var showMessaging = false
+    @Published var selectedMessageIndex: Int?
+    
+    // Geofencing Properties
+    @Published var showGeofenceAlert: Bool = false
+    @Published var geofenceAlertMessage: String = ""
+    
+    @Published var tripStartDate: Date?
     @Published var showRaiseQuery = false
     @Published var queryTrip: DBTrip?
     @Published var showProfile   = false
@@ -213,7 +220,6 @@ final class DriverDashboardViewModel: ObservableObject {
 
     private var modelContext: ModelContext?
     private var tripTimer: Timer?
-    private var tripStartDate: Date?
     private let db = DriverDashboardDataStore.shared
     private var cancellables = Set<AnyCancellable>()
 
@@ -264,6 +270,63 @@ final class DriverDashboardViewModel: ObservableObject {
     }
 
     
+    // MARK: - Geofencing Validation
+    private func geocodeAddress(_ address: String) async -> CLLocationCoordinate2D? {
+        let req = MKLocalSearch.Request()
+        req.naturalLanguageQuery = address
+        let item = try? await MKLocalSearch(request: req).start()
+        return item?.mapItems.first?.placemark.coordinate
+    }
+
+    func validateCanStartTrip(_ trip: DBTrip?, startCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil) async -> (isValid: Bool, message: String?) {
+        guard let trip = trip ?? upcomingTrips.first else { return (false, "No upcoming trip selected.") }
+        guard let currentLocation = userLocation ?? LocationService.shared.lastLocation else {
+            return (false, "Acquiring GPS location, please wait a moment...")
+        }
+        
+        var coord = startCoord
+        if coord == nil {
+            coord = await geocodeAddress(trip.source)
+        }
+        guard let coord = coord else {
+            return (false, "Could not determine starting location coordinates.")
+        }
+        
+        let startLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+        let distance = currentLocation.distance(from: startLocation)
+        
+        if distance <= 2000 {
+            return (true, nil)
+        } else {
+            let distanceStr = String(format: "%.1f", distance / 1000.0)
+            return (false, "You must be within 2km of the starting location to begin the trip. (Currently \(distanceStr)km away)")
+        }
+    }
+
+    func validateCanEndTrip(_ trip: DBTrip?, endCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil) async -> (isValid: Bool, message: String?) {
+        guard let trip = trip ?? activeTrip ?? currentTrip else { return (false, "No active trip to end.") }
+        guard let currentLocation = userLocation ?? LocationService.shared.lastLocation else {
+            return (false, "Acquiring GPS location, please wait a moment...")
+        }
+        
+        var coord = endCoord
+        if coord == nil {
+            coord = await geocodeAddress(trip.destination)
+        }
+        guard let coord = coord else {
+            return (false, "Could not determine destination coordinates.")
+        }
+        
+        let endLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+        let distance = currentLocation.distance(from: endLocation)
+        
+        if distance <= 2000 {
+            return (true, nil)
+        } else {
+            let distanceStr = String(format: "%.1f", distance / 1000.0)
+            return (false, "You must be within 2km of the destination to end the trip. (Currently \(distanceStr)km away)")
+        }
+    }
 
     func load(context: ModelContext? = nil) async {
         if let context = context {
@@ -366,10 +429,22 @@ final class DriverDashboardViewModel: ObservableObject {
 
     
 
-    func beginTrip(trip: DBTrip? = nil) {
-        let selectedTrip = trip ?? upcomingTrips.first
-        activeTrip = selectedTrip
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+    func beginTrip(trip: DBTrip? = nil, startCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil, triggerGlobalAlert: Bool = true) async -> (success: Bool, message: String?) {
+        let validation = await validateCanStartTrip(trip, startCoord: startCoord, userLocation: userLocation)
+        if !validation.isValid {
+            if triggerGlobalAlert {
+                await MainActor.run {
+                    self.geofenceAlertMessage = validation.message ?? "Cannot start trip."
+                    self.showGeofenceAlert = true
+                }
+            }
+            return (false, validation.message)
+        }
+        
+        await MainActor.run {
+            let selectedTrip = trip ?? upcomingTrips.first
+            activeTrip = selectedTrip
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
             isTripActive = true; driverStatus = .active; tripElapsed = 0
         }
         showMaps = true
@@ -383,20 +458,44 @@ final class DriverDashboardViewModel: ObservableObject {
             LocationService.shared.startTracking(vehicleId: dbTrip.vehicleId)
             Task {
                 try? await SupabaseManager.shared.updateTrip(dbTrip)
+                await updateDriverActiveStatus(isActive: true)
             }
         }
         
-        tripTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.tripElapsed += 1
+            tripTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.tripElapsed += 1
+                }
             }
         }
+        return (true, nil)
+    }
+
+    func requestEndTrip(endCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil, triggerGlobalAlert: Bool = true) async -> (success: Bool, message: String?) {
+        let endingTrip = activeTrip ?? currentTrip
+        let validation = await validateCanEndTrip(endingTrip, endCoord: endCoord, userLocation: userLocation)
+        if !validation.isValid {
+            if triggerGlobalAlert {
+                await MainActor.run {
+                    self.geofenceAlertMessage = validation.message ?? "Cannot end trip."
+                    self.showGeofenceAlert = true
+                }
+            }
+            return (false, validation.message)
+        }
+        
+        await MainActor.run {
+            self.showPostTripOnEnd = true
+            self.showPostTrip = true
+        }
+        return (true, nil)
     }
 
     func finishTrip() {
-        tripTimer?.invalidate(); tripTimer = nil
-        let endingId  = activeTrip?.id ?? currentTrip?.id
         let endingTrip = activeTrip ?? currentTrip
+        
+        tripTimer?.invalidate(); tripTimer = nil
+        let endingId  = endingTrip?.id
 
         
         let elapsed: Int
@@ -438,6 +537,7 @@ final class DriverDashboardViewModel: ObservableObject {
             showPostTripOnEnd = false
             tripElapsed = 0
         }
+        updateLocalDriverStatusState()
         
         if let id = endingId {
             upcomingTrips.removeAll { $0.id == id }

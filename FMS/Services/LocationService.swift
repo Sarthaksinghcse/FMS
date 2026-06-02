@@ -31,12 +31,15 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
         manager.requestWhenInUseAuthorization()
         manager.allowsBackgroundLocationUpdates = true
         manager.showsBackgroundLocationIndicator = true
+        manager.startUpdatingLocation()
     }
     
     public func startTracking(vehicleId: UUID) {
         self.activeVehicleId = vehicleId
         self.isTrackingActive = true
         manager.startUpdatingLocation()
+        // Immediately fetch the current location so stationary vehicles are uploaded at the start of the trip
+        manager.requestLocation()
     }
     
     public func stopTracking() {

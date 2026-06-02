@@ -15,6 +15,7 @@ struct AlertsFeedView: View {
     @Query private var users: [User]
     @Query private var vehicles: [Vehicle]
     
+    @State private var routeDeviations: [DBRouteDeviationAlert] = []
     
     @State private var selectedFilter: AlertFilterType = .all
     @State private var searchQuery: String = ""
@@ -24,6 +25,7 @@ struct AlertsFeedView: View {
         case all = "All"
         case sos = "SOS"
         case defects = "Defects"
+        case geofence = "Geofence"
         
         var id: String { self.rawValue }
     }
@@ -60,6 +62,7 @@ struct AlertsFeedView: View {
         enum AlertType {
             case sos
             case defect
+            case routeDeviation
         }
     }
     
@@ -85,6 +88,23 @@ struct AlertsFeedView: View {
             ))
         }
         
+        for deviation in routeDeviations {
+            list.append(DisplayAlert(
+                id: deviation.id,
+                type: .routeDeviation,
+                title: "ROUTE DEVIATION",
+                description: "Driver drifted \(Int(deviation.deviationDistanceMeters)) meters off the planned route.",
+                severityText: "WARNING",
+                severityColor: .white,
+                severityBgColor: AppTheme.Status.warning,
+                date: deviation.createdAt,
+                statusText: deviation.status == .active ? "Active" : "Resolved",
+                statusColor: deviation.status == .active ? AppTheme.Status.warning : AppTheme.Status.success,
+                driverName: driverName(for: deviation.driverId),
+                vehicleName: vehicleName(for: deviation.vehicleId),
+                rawObject: deviation
+            ))
+        }
         
         for defect in defectReports {
             let sevColor: Color
@@ -136,17 +156,18 @@ struct AlertsFeedView: View {
     private var filteredAlerts: [DisplayAlert] {
         let alerts = allDisplayAlerts
         
-        
-        let typedAlerts: [DisplayAlert]
-        switch selectedFilter {
-        case .all:
-            typedAlerts = alerts
-        case .sos:
-            typedAlerts = alerts.filter { $0.type == .sos }
-        case .defects:
-            typedAlerts = alerts.filter { $0.type == .defect }
+        let typedAlerts = alerts.filter { alert in
+            switch selectedFilter {
+            case .all:
+                return true
+            case .sos:
+                return alert.type == .sos
+            case .defects:
+                return alert.type == .defect
+            case .geofence:
+                return alert.type == .routeDeviation
+            }
         }
-        
         
         if searchQuery.isEmpty {
             return typedAlerts
@@ -249,6 +270,16 @@ struct AlertsFeedView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Close")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.red)
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         PredictiveAlertsView()
                     } label: {
@@ -261,19 +292,13 @@ struct AlertsFeedView: View {
                         .foregroundColor(.purple)
                     }
                 }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Close")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(.red)
-                    }
-                }
             }
-            .sheet(item: $selectedDefectForAssignment) { defect in
-                AssignTechnicianSheet(defect: defect, users: users, viewModel: viewModel, context: modelContext, defectReports: defectReports)
+            .task {
+                do {
+                    routeDeviations = try await SupabaseManager.shared.fetchRouteDeviationAlerts()
+                } catch {
+                    print("Failed to fetch route deviations: \(error)")
+                }
             }
         }
     }
@@ -386,14 +411,38 @@ struct AlertFeedCard: View {
                                 .scaleEffect(isPulsing ? 1.25 : 0.95)
                         }
                         
-                        Image(systemName: alert.type == .sos ? "exclamationmark.shield.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Brand.amber)
+                        let headerIcon: String = {
+                            switch alert.type {
+                            case .sos: return "exclamationmark.shield.fill"
+                            case .routeDeviation: return "map.fill"
+                            case .defect: return "exclamationmark.triangle.fill"
+                            }
+                        }()
+                        
+                        let headerColor: Color = {
+                            switch alert.type {
+                            case .sos: return AppTheme.Status.danger
+                            case .routeDeviation: return AppTheme.Brand.amber
+                            case .defect: return AppTheme.Brand.amber
+                            }
+                        }()
+                        
+                        Image(systemName: headerIcon)
+                            .foregroundColor(headerColor)
                             .font(.system(size: alert.type == .sos ? 16 : 14, weight: .bold))
                     }
                     .frame(width: 32, height: 32)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(alert.type == .sos ? "SOS EMERGENCY ALERT" : "DEFECT REPORT")
+                        let headerTitle: String = {
+                            switch alert.type {
+                            case .sos: return "SOS EMERGENCY ALERT"
+                            case .routeDeviation: return "GEOFENCE ALERT"
+                            case .defect: return "DEFECT REPORT"
+                            }
+                        }()
+                        
+                        Text(headerTitle)
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Text.secondary)
                             .tracking(0.5)

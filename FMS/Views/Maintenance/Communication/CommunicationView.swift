@@ -291,7 +291,7 @@ private struct CommunicationRow: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(Color.red.opacity(0.85))
+                            .background(AppTheme.Status.danger)
                             .clipShape(Circle())
                     }
                 }

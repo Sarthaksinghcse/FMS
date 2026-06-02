@@ -51,11 +51,11 @@ struct MaintenanceHeaderView: View {
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.primary)
                 
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(AppTheme.Text.secondary)
-                }
+//                if !subtitle.isEmpty {
+//                    Text(subtitle)
+//                        .font(.system(size: 13, weight: .medium, design: .rounded))
+//                        .foregroundColor(AppTheme.Text.secondary)
+//                }
             }
             
             Spacer()
@@ -457,8 +457,8 @@ extension WorkOrderStatus {
         switch self {
         case .open:       return AppTheme.Brand.accent // Cohesive Amber/Accent
         case .inProgress: return AppTheme.Brand.primary // Cohesive Brand Blue
-        case .completed:  return AppTheme.Status.success // Soft clean Green
-        case .cancelled:  return .gray
+        case .completed:  return AppTheme.Status.success // Soft clean success (royal blue)
+        case .cancelled:  return AppTheme.Brand.primary.opacity(0.4)
         }
     }
 }
@@ -466,7 +466,7 @@ extension WorkOrderStatus {
 extension WorkOrderPriority {
     var color: Color {
         switch self {
-        case .low:    return .gray
+        case .low:    return AppTheme.Brand.primary.opacity(0.5)
         case .medium: return AppTheme.Brand.primary
         case .high:   return AppTheme.Brand.primaryDeep
         case .urgent: return AppTheme.Brand.accent

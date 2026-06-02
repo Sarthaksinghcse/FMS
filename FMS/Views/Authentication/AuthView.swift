@@ -26,6 +26,11 @@ struct AuthView: View {
     @State private var showErrorAlert = false
     @State private var errorAlertMessage = ""
 
+    @State private var showForgotPasswordAlert = false
+    @State private var forgotPasswordEmail = ""
+    @State private var showForgotPasswordSuccess = false
+    @State private var isSendingResetLink = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -103,6 +108,19 @@ struct AuthView: View {
                                 isFocused: focusedField == .password
                             )
                             .focused($focusedField, equals: .password)
+
+                            HStack {
+                                Spacer()
+                                Button {
+                                    handleForgotPassword()
+                                } label: {
+                                    Text("Forgot Password?")
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundColor(AppTheme.Brand.royalBlue)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                            .padding(.top, -4)
                         }
 
                         
@@ -171,6 +189,43 @@ struct AuthView: View {
                     ))
                     .zIndex(10)
                 }
+
+                if showForgotPasswordAlert {
+                    GlassForgotPasswordAlert(
+                        email: $forgotPasswordEmail,
+                        onCancel: {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                showForgotPasswordAlert = false
+                            }
+                        },
+                        onSend: {
+                            sendForgotPasswordEmail()
+                        },
+                        isLoading: isSendingResetLink
+                    )
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.85).combined(with: .opacity),
+                        removal: .scale(scale: 0.95).combined(with: .opacity)
+                    ))
+                    .zIndex(10)
+                }
+
+                if showForgotPasswordSuccess {
+                    GlassSuccessAlert(
+                        title: "Email Sent",
+                        message: "We've sent a password reset link to \(forgotPasswordEmail). Please check your inbox.",
+                        onDismiss: {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                showForgotPasswordSuccess = false
+                            }
+                        }
+                    )
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.85).combined(with: .opacity),
+                        removal: .scale(scale: 0.95).combined(with: .opacity)
+                    ))
+                    .zIndex(10)
+                }
             }
             .onAppear {
                 withAnimation(.easeOut(duration: 0.6)) {
@@ -184,6 +239,55 @@ struct AuthView: View {
     }
 
     
+    private func handleForgotPassword() {
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        impact.impactOccurred()
+        forgotPasswordEmail = email
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+            showForgotPasswordAlert = true
+        }
+    }
+    
+    private func sendForgotPasswordEmail() {
+        let trimmedEmail = forgotPasswordEmail.trimmingCharacters(in: .whitespaces)
+        guard trimmedEmail.isValidEmail else {
+            errorAlertMessage = "Please enter a valid email address."
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                showForgotPasswordAlert = false
+                showErrorAlert = true
+            }
+            return
+        }
+        
+        isSendingResetLink = true
+        Task {
+            do {
+                try await supabaseManager.client.auth
+                    .resetPasswordForEmail(trimmedEmail)
+                await MainActor.run {
+                    isSendingResetLink = false
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        showForgotPasswordAlert = false
+                        showForgotPasswordSuccess = true
+                    }
+                    let notif = UINotificationFeedbackGenerator()
+                    notif.notificationOccurred(.success)
+                }
+            } catch {
+                await MainActor.run {
+                    isSendingResetLink = false
+                    errorAlertMessage = error.localizedDescription
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        showForgotPasswordAlert = false
+                        showErrorAlert = true
+                    }
+                    let notif = UINotificationFeedbackGenerator()
+                    notif.notificationOccurred(.error)
+                }
+            }
+        }
+    }
+
     private func handleAuthentication() {
         let impactHeavy = UIImpactFeedbackGenerator(style: .medium)
         impactHeavy.impactOccurred()
@@ -231,7 +335,7 @@ struct GlassErrorAlert: View {
 
     var body: some View {
         ZStack {
-            Color.clear
+            Color.black.opacity(0.2)
                 .ignoresSafeArea()
                 .onTapGesture { onCancel() }
 
@@ -249,11 +353,11 @@ struct GlassErrorAlert: View {
 
                     Text("Wrong Credentials")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.primary)
+                        .foregroundColor(Color.black)
 
                     Text(message)
                         .font(.system(.subheadline, design: .rounded))
-                        .foregroundColor(AppTheme.Text.secondary)
+                        .foregroundColor(Color.black)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, AppTheme.Spacing.md)
@@ -265,8 +369,8 @@ struct GlassErrorAlert: View {
                 HStack(spacing: 0) {
                     Button(action: onCancel) {
                         Text("Cancel")
-                            .font(.system(.body, design: .rounded, weight: .medium))
-                            .foregroundColor(AppTheme.Text.secondary)
+                            .font(.system(.body, design: .rounded, weight: .bold))
+                            .foregroundColor(Color.black)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                     }
@@ -284,11 +388,11 @@ struct GlassErrorAlert: View {
                     .buttonStyle(PlainButtonStyle())
                 }
             }
-            .background(.ultraThinMaterial)
+            .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous)
-                    .stroke(AppTheme.Text.onDark.opacity(0.25), lineWidth: 1)
+                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
             )
             .shadow(color: AppTheme.Shadow.modal, radius: 40, x: 0, y: 20)
             .padding(.horizontal, AppTheme.Spacing.xl)
@@ -337,6 +441,7 @@ struct PremiumSecureField: View {
     let placeholder: String
     @Binding var text: String
     let isFocused: Bool
+    @State private var isPasswordVisible = false
 
     var body: some View {
         HStack(spacing: 16) {
@@ -345,10 +450,27 @@ struct PremiumSecureField: View {
                 .foregroundColor(isFocused ? AppTheme.Brand.royalBlue : AppTheme.Text.tertiary.opacity(0.8))
                 .frame(width: 24)
 
-            SecureField(placeholder, text: $text)
-                .font(.system(.body, design: .rounded))
-                .foregroundColor(AppTheme.Text.primary)
-                .textInputAutocapitalization(.never)
+            if isPasswordVisible {
+                TextField(placeholder, text: $text)
+                    .font(.system(.body, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+            } else {
+                SecureField(placeholder, text: $text)
+                    .font(.system(.body, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
+                    .textInputAutocapitalization(.never)
+            }
+            
+            Button {
+                isPasswordVisible.toggle()
+            } label: {
+                Image(systemName: isPasswordVisible ? "eye.fill" : "eye.slash.fill")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(AppTheme.Text.tertiary.opacity(0.8))
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
@@ -362,6 +484,166 @@ struct PremiumSecureField: View {
                 )
         )
         .animation(.easeInOut(duration: 0.2), value: isFocused)
+    }
+}
+
+
+struct GlassForgotPasswordAlert: View {
+    @Binding var email: String
+    let onCancel: () -> Void
+    let onSend: () -> Void
+    let isLoading: Bool
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.2)
+                .ignoresSafeArea()
+                .onTapGesture { onCancel() }
+
+            VStack(spacing: 0) {
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.12))
+                            .frame(width: 64, height: 64)
+                        Image(systemName: "envelope.badge.shield.half.filled")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(AppTheme.Brand.royalBlue)
+                    }
+                    .padding(.top, 24)
+
+                    Text("Reset Password")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.black)
+
+                    Text("Enter your email address below. We'll send you a secure link to reset your password.")
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundColor(Color.black)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, AppTheme.Spacing.md)
+
+                    HStack(spacing: 12) {
+                        Image(systemName: "envelope.fill")
+                            .foregroundColor(Color.black.opacity(0.6))
+                        TextField("Email Address", text: $email)
+                            .font(.system(.body, design: .rounded))
+                            .foregroundColor(Color.black)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .disableAutocorrection(true)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(Color.black.opacity(0.03))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                    )
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                    .padding(.bottom, AppTheme.Spacing.md)
+                }
+
+                Divider()
+
+                HStack(spacing: 0) {
+                    Button(action: onCancel) {
+                        Text("Cancel")
+                            .font(.system(.body, design: .rounded, weight: .bold))
+                            .foregroundColor(Color.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(isLoading)
+
+                    Divider().frame(height: 52)
+
+                    Button(action: onSend) {
+                        HStack {
+                            if isLoading {
+                                ProgressView()
+                                    .padding(.trailing, 4)
+                            }
+                            Text("Send Link")
+                                .font(.system(.body, design: .rounded, weight: .bold))
+                                .foregroundColor(AppTheme.Brand.royalBlue)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(isLoading)
+                }
+            }
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous)
+                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+            )
+            .shadow(color: AppTheme.Shadow.modal, radius: 40, x: 0, y: 20)
+            .padding(.horizontal, AppTheme.Spacing.xl)
+        }
+    }
+}
+
+
+struct GlassSuccessAlert: View {
+    let title: String
+    let message: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.2)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+
+            VStack(spacing: 0) {
+                VStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Status.success.opacity(0.12))
+                            .frame(width: 64, height: 64)
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(AppTheme.Status.success)
+                    }
+                    .padding(.top, 28)
+
+                    Text(title)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.black)
+
+                    Text(message)
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundColor(Color.black)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                        .padding(.bottom, AppTheme.Spacing.lg)
+                }
+
+                Divider()
+
+                Button(action: onDismiss) {
+                    Text("OK")
+                        .font(.system(.body, design: .rounded, weight: .bold))
+                        .foregroundColor(AppTheme.Brand.royalBlue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous)
+                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+            )
+            .shadow(color: AppTheme.Shadow.modal, radius: 40, x: 0, y: 20)
+            .padding(.horizontal, AppTheme.Spacing.xl)
+        }
     }
 }
 
