@@ -18,6 +18,7 @@ struct FleetContentView: View {
     @State private var usersRealtimeChannel: RealtimeChannelV2?
     @State private var activeSOSAlert: DBSOSAlert?
     @State private var pollingTask: Task<Void, Never>?
+    @State private var acknowledgedAlertIds = Set<UUID>()
     
     var body: some View {
         ZStack {
@@ -306,7 +307,7 @@ struct FleetContentView: View {
     @MainActor
     private func checkForActiveAlerts() {
         if let active = sosAlerts.first(where: { $0.status == .active }) {
-            if !showRedSplash {
+            if !showRedSplash && !acknowledgedAlertIds.contains(active.id) {
                 triggerEmergencySOS(alert: active.asDBSOSAlert)
             }
         } else {
@@ -376,26 +377,10 @@ struct FleetContentView: View {
     
     @MainActor
     private func acknowledgeSOS(alert: DBSOSAlert) {
-        var resolvedAlert = alert
-        resolvedAlert.status = .resolved
-        
-        Task {
-            do {
-                try await SupabaseManager.shared.updateSOSAlert(resolvedAlert)
-                print("✅ [Supabase] SOS Alert resolved successfully.")
-            } catch {
-                print("❌ [Supabase] Failed to resolve SOS Alert: \(error.localizedDescription)")
-            }
-        }
-        
-        let alertId = alert.id
-        let descriptor = FetchDescriptor<SOSAlert>()
-        if let localSOSs = try? modelContext.fetch(descriptor),
-           let localAlert = localSOSs.first(where: { $0.id == alertId }) {
-            localAlert.status = .resolved
-            try? modelContext.save()
-            print("✅ [SwiftData] Local SOS Alert resolved.")
-        }
+        // Simply record that this alert has been acknowledged locally by the manager
+        // We do NOT change the status to resolved in Supabase or SwiftData here.
+        // The status remains .active until resolved manually via the Alerts Feed detailed screen.
+        acknowledgedAlertIds.insert(alert.id)
         
         withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
             showRedSplash = false
