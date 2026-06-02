@@ -277,6 +277,7 @@ struct MaintenanceManagementView: View {
                 }
             }
             .task {
+                await SupabaseManager.shared.syncAllData(context: modelContext)
                 await fetchAllPredictiveAlerts()
             }
             .sheet(isPresented: $showingScheduler) {
@@ -324,169 +325,233 @@ struct MaintenanceManagementView: View {
         let totalSteps = 7
         let percent = Double(step) / Double(totalSteps)
         
-        return NavigationLink(destination: WorkOrderDetailedView(order: order).environment(\.modelContext, modelContext)) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(order.priority.rawValue.uppercased())
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundColor(priColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(priBg)
-                        .cornerRadius(6)
-                    
-                    Text("WO-\(order.id.uuidString.prefix(4).uppercased())")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.secondary)
-                    
-                    Spacer()
-                    
-                    Text(currentStatusText(for: order))
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundColor(order.workDescription.contains("[PENDING_APPROVAL]") ? AppTheme.Brand.amber : priColor)
-                }
+        let isPending = order.workDescription.contains("[PENDING_APPROVAL]")
+        
+        let cardContent = VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(order.priority.rawValue.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundColor(priColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(priBg)
+                    .cornerRadius(6)
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(getVehicleName(for: order.vehicleId))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                Text("WO-\(order.id.uuidString.prefix(4).uppercased())")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.secondary)
+                
+                Spacer()
+                
+                Text(currentStatusText(for: order))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(order.workDescription.contains("[PENDING_APPROVAL]") ? AppTheme.Brand.amber : priColor)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(getVehicleName(for: order.vehicleId))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.black)
+                
+                Text(order.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.secondary)
+                    .lineLimit(1)
+            }
+            
+            HStack(alignment: .top, spacing: 10) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.orange.opacity(0.1), lineWidth: 3)
+                        .frame(width: 38, height: 38)
+                    
+                    Circle()
+                        .trim(from: 0, to: alert != nil ? CGFloat(alert!.riskScore) : 0.05)
+                        .stroke(
+                            alert?.riskLevel.localizedCaseInsensitiveCompare("critical") == .orderedSame ||
+                            alert?.riskLevel.localizedCaseInsensitiveCompare("high") == .orderedSame
+                            ? AppTheme.Status.danger
+                            : Theme.darkOrange,
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        )
+                        .frame(width: 38, height: 38)
+                        .rotationEffect(Angle(degrees: -90))
+                    
+                    Text("\(riskScorePercent)%")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
                         .foregroundColor(.black)
-                    
-                    Text(order.title)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.secondary)
-                        .lineLimit(1)
-                }
-                
-                HStack(alignment: .top, spacing: 10) {
-                    ZStack {
-                        Circle()
-                            .stroke(Color.orange.opacity(0.1), lineWidth: 3)
-                            .frame(width: 38, height: 38)
-                        
-                        Circle()
-                            .trim(from: 0, to: alert != nil ? CGFloat(alert!.riskScore) : 0.05)
-                            .stroke(
-                                alert?.riskLevel.localizedCaseInsensitiveCompare("critical") == .orderedSame ||
-                                alert?.riskLevel.localizedCaseInsensitiveCompare("high") == .orderedSame
-                                ? AppTheme.Status.danger
-                                : Theme.darkOrange,
-                                style: StrokeStyle(lineWidth: 3, lineCap: .round)
-                            )
-                            .frame(width: 38, height: 38)
-                            .rotationEffect(Angle(degrees: -90))
-                        
-                        Text("\(riskScorePercent)%")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundColor(.black)
-                    }
-                    .padding(.top, 2)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Failure Risk")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(Theme.darkOrange)
-                        
-                        Text(suggestedAction)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(AppTheme.Text.primary)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                }
-                .padding(10)
-                .background(Theme.darkOrange.opacity(0.06))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Theme.darkOrange.opacity(0.15), lineWidth: 1)
-                )
-                
-                Divider().background(Color.black.opacity(0.06))
-                
-                VStack(spacing: 8) {
-                    HStack {
-                        Label("Assigned Tech", systemImage: "person.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(AppTheme.Text.tertiary)
-                        Spacer()
-                        Text(getStaffName(for: order.assignedTo))
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundColor(.black)
-                    }
-                    
-                    HStack {
-                        Label("Downtime Tracker", systemImage: "clock.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(AppTheme.Text.tertiary)
-                        Spacer()
-                        Text(getDowntimeString(for: order))
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundColor(AppTheme.Status.danger)
-                    }
-                    
-                    HStack {
-                        Label("Cost Estimate", systemImage: "indianrupeesign.circle.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(AppTheme.Text.tertiary)
-                        Spacer()
-                        
-                        let estStr = order.estimatedCost != nil ? String(format: "₹%.2f", order.estimatedCost!) : "Awaiting"
-                        let actStr = localRecord != nil ? String(format: "₹%.2f", currentCost) : "Awaiting actual"
-                        
-                        Text("Est: \(estStr) | Act: \(actStr)")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundColor(.black)
-                    }
-                    
-                    HStack {
-                        Label("Last Updated", systemImage: "calendar")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(AppTheme.Text.tertiary)
-                        Spacer()
-                        Text(order.createdAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundColor(AppTheme.Text.secondary)
-                    }
-                }
-                
-                Divider().background(Color.black.opacity(0.06))
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Repair Progress Timeline")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(AppTheme.Text.tertiary)
-                        Spacer()
-                        Text("\(currentStatusText(for: order)) (\(step)/\(totalSteps))")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundColor(AppTheme.Brand.primary)
-                    }
-                    
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(Color.gray.opacity(0.1))
-                                .frame(height: 6)
-                            
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(AppTheme.Brand.primary)
-                                .frame(width: geo.size.width * CGFloat(percent), height: 6)
-                        }
-                    }
-                    .frame(height: 6)
                 }
                 .padding(.top, 2)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Failure Risk")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(Theme.darkOrange)
+                    
+                    Text(suggestedAction)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(AppTheme.Text.primary)
+                        .lineLimit(1)
+                }
+                Spacer()
             }
-            .padding(16)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
+            .padding(10)
+            .background(Theme.darkOrange.opacity(0.06))
+            .cornerRadius(10)
             .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                    .stroke(order.status == .inProgress ? AppTheme.Status.warning.opacity(0.3) : AppTheme.Glass.border.opacity(0.3), lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Theme.darkOrange.opacity(0.15), lineWidth: 1)
             )
+            
+            Divider().background(Color.black.opacity(0.06))
+            
+            VStack(spacing: 8) {
+                HStack {
+                    Label("Assigned Tech", systemImage: "person.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    Text(getStaffName(for: order.assignedTo))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(.black)
+                }
+                
+                HStack {
+                    Label("Downtime Tracker", systemImage: "clock.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    Text(getDowntimeString(for: order))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Status.danger)
+                }
+                
+                HStack {
+                    Label("Cost Estimate", systemImage: "indianrupeesign.circle.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    
+                    let estStr = order.estimatedCost != nil ? String(format: "₹%.2f", order.estimatedCost!) : "Awaiting"
+                    let actStr = localRecord != nil ? String(format: "₹%.2f", currentCost) : "Awaiting actual"
+                    
+                    Text("Est: \(estStr) | Act: \(actStr)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(.black)
+                }
+                
+                HStack {
+                    Label("Last Updated", systemImage: "calendar")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    Text(order.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.secondary)
+                }
+            }
+            
+            Divider().background(Color.black.opacity(0.06))
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Repair Progress Timeline")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    Text("\(currentStatusText(for: order)) (\(step)/\(totalSteps))")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Brand.primary)
+                }
+                
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.gray.opacity(0.1))
+                            .frame(height: 6)
+                        
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(AppTheme.Brand.primary)
+                            .frame(width: geo.size.width * CGFloat(percent), height: 6)
+                    }
+                }
+                .frame(height: 6)
+            }
+            .padding(.top, 2)
+            
+            if isPending {
+                HStack(spacing: 8) {
+                    Button {
+                        approveWorkOrder(order)
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Approve")
+                                .font(.system(size: 11, weight: .bold))
+                            Spacer()
+                        }
+                        .padding(.vertical, 10)
+                        .foregroundColor(.white)
+                        .background(AppTheme.Status.success)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    Button {
+                        declineWorkOrder(order)
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "xmark.circle.fill")
+                            Text("Decline")
+                                .font(.system(size: 11, weight: .bold))
+                            Spacer()
+                        }
+                        .padding(.vertical, 10)
+                        .foregroundColor(.white)
+                        .background(AppTheme.Status.danger)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    NavigationLink(destination: WorkOrderDetailedView(order: order).environment(\.modelContext, modelContext)) {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "eye.fill")
+                            Text("View")
+                                .font(.system(size: 11, weight: .bold))
+                            Spacer()
+                        }
+                        .padding(.vertical, 10)
+                        .foregroundColor(AppTheme.Brand.primary)
+                        .background(AppTheme.Brand.primary.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                .padding(.top, 4)
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(16)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                .stroke(order.status == .inProgress ? AppTheme.Status.warning.opacity(0.3) : AppTheme.Glass.border.opacity(0.3), lineWidth: 1.5)
+        )
+        
+        return Group {
+            if isPending {
+                cardContent
+            } else {
+                NavigationLink(destination: WorkOrderDetailedView(order: order).environment(\.modelContext, modelContext)) {
+                    cardContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
     }
     
     private func errorBanner(_ message: String) -> some View {
@@ -508,6 +573,91 @@ struct MaintenanceManagementView: View {
             RoundedRectangle(cornerRadius: AppTheme.Radius.medium)
                 .stroke(AppTheme.Status.danger.opacity(0.2), lineWidth: 1)
         )
+    }
+    
+    private func approveWorkOrder(_ order: WorkOrder) {
+        order.status = .open
+        order.workDescription = order.workDescription
+            .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
+            .replacingOccurrences(of: "[PENDING_APPROVAL]", with: "")
+        try? modelContext.save()
+        
+        let dbWO = order.asDBWorkOrder
+        Task {
+            do {
+                try await SupabaseManager.shared.updateWorkOrder(dbWO)
+                
+                // Add a notification for the mechanic
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: order.assignedTo,
+                    title: "✅ Work Order Approved",
+                    message: "Fleet Manager has approved work order \"\(order.title)\". It is now scheduled.",
+                    type: .maintenance,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await SupabaseManager.shared.createNotification(notif)
+            } catch {
+                print("Failed to approve work order on Supabase: \(error)")
+            }
+        }
+    }
+    
+    private func declineWorkOrder(_ order: WorkOrder) {
+        order.status = .cancelled
+        order.workDescription = order.workDescription
+            .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
+            .replacingOccurrences(of: "[PENDING_APPROVAL]", with: "")
+        if !order.workDescription.contains("[REJECTED]") {
+            order.workDescription = "[REJECTED] " + order.workDescription
+        }
+        
+        if let vehicle = vehicles.first(where: { $0.id == order.vehicleId }) {
+            vehicle.status = .active
+            vehicle.updatedAt = Date()
+            
+            // Sync vehicle status to Supabase
+            let dbVehicle = DBVehicle(
+                id: vehicle.id,
+                vehicleNumber: vehicle.registrationNumber,
+                model: vehicle.model,
+                manufacturer: vehicle.make,
+                year: vehicle.year,
+                vin: vehicle.vinNumber,
+                licensePlate: vehicle.registrationNumber,
+                status: .available,
+                assignedDriverId: vehicle.assignedDriverId,
+                lastServiceDate: vehicle.lastServiceDate,
+                createdAt: vehicle.createdAt
+            )
+            Task {
+                try? await SupabaseManager.shared.updateVehicle(dbVehicle)
+            }
+        }
+        
+        try? modelContext.save()
+        
+        let dbWO = order.asDBWorkOrder
+        Task {
+            do {
+                try await SupabaseManager.shared.updateWorkOrder(dbWO)
+                
+                // Add a notification for the technician
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: order.assignedTo,
+                    title: "❌ Work Order Declined",
+                    message: "Fleet Manager has declined work order \"\(order.title)\".",
+                    type: .maintenance,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await SupabaseManager.shared.createNotification(notif)
+            } catch {
+                print("Failed to decline work order on Supabase: \(error)")
+            }
+        }
     }
 }
 

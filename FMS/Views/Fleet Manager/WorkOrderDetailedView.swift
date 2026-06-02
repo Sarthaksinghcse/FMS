@@ -941,8 +941,8 @@ struct WorkOrderDetailedView: View {
             .replacingOccurrences(of: "[INFO_REQUESTED] ", with: "")
             .replacingOccurrences(of: "[INFO_REQUESTED]", with: "")
         
-        // Transition state to inProgress
-        order.status = .inProgress
+        // Transition state to open (Scheduled)
+        order.status = .open
         try? modelContext.save()
         
         // Sync to Supabase
@@ -956,7 +956,7 @@ struct WorkOrderDetailedView: View {
                     id: UUID(),
                     userId: order.assignedTo,
                     title: "✅ Work Order Approved",
-                    message: "Fleet Manager has approved work order \"\(order.title)\". You can now proceed with repairs.",
+                    message: "Fleet Manager has approved work order \"\(order.title)\". It is now scheduled for repairs.",
                     type: .maintenance,
                     isRead: false,
                     createdAt: Date()
@@ -970,12 +970,45 @@ struct WorkOrderDetailedView: View {
     }
     
     private func rejectCostEstimate() {
+        // Transition state to cancelled
+        order.status = .cancelled
+        
+        // Remove PENDING_APPROVAL and pending info tags
+        order.workDescription = order.workDescription
+            .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
+            .replacingOccurrences(of: "[PENDING_APPROVAL]", with: "")
+            .replacingOccurrences(of: "[INFO_REQUESTED] ", with: "")
+            .replacingOccurrences(of: "[INFO_REQUESTED]", with: "")
+        
         // Tag as rejected in description
         if !order.workDescription.contains("[REJECTED]") {
             order.workDescription = "[REJECTED] " + order.workDescription
-                .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
-                .replacingOccurrences(of: "[PENDING_APPROVAL]", with: "")
         }
+        
+        // Set vehicle back to active
+        if let vehicle = associatedVehicle {
+            vehicle.status = .active
+            vehicle.updatedAt = Date()
+            
+            // Sync vehicle status to Supabase
+            let dbVehicle = DBVehicle(
+                id: vehicle.id,
+                vehicleNumber: vehicle.registrationNumber,
+                model: vehicle.model,
+                manufacturer: vehicle.make,
+                year: vehicle.year,
+                vin: vehicle.vinNumber,
+                licensePlate: vehicle.registrationNumber,
+                status: .available,
+                assignedDriverId: vehicle.assignedDriverId,
+                lastServiceDate: vehicle.lastServiceDate,
+                createdAt: vehicle.createdAt
+            )
+            Task {
+                try? await SupabaseManager.shared.updateVehicle(dbVehicle)
+            }
+        }
+        
         try? modelContext.save()
         
         // Sync to Supabase
@@ -983,6 +1016,18 @@ struct WorkOrderDetailedView: View {
         Task {
             do {
                 try await SupabaseManager.shared.updateWorkOrder(dbWO)
+                
+                // Add a notification for the technician
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: order.assignedTo,
+                    title: "❌ Work Order Declined",
+                    message: "Fleet Manager has declined work order \"\(order.title)\".",
+                    type: .maintenance,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await SupabaseManager.shared.createNotification(notif)
                 buildApprovalHistory()
             } catch {
                 print("Failed to sync rejection to Supabase: \(error)")
