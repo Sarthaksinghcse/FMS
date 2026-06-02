@@ -1240,6 +1240,14 @@ final class SupabaseManager {
             .value
     }
 
+    func updatePredictiveAlert(_ alert: DBPredictiveAlert) async throws {
+        try await client
+            .from("predictive_alerts")
+            .update(alert)
+            .eq("id", value: alert.id.uuidString)
+            .execute()
+    }
+
     func fetchVehicleHealthScores() async throws -> [DBVehicleHealthScore] {
         return try await client.from("vehicle_health_scores")
             .select()

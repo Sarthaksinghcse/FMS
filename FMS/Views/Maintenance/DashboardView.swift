@@ -425,4 +425,3 @@ struct GridQuickActionButton<Destination: View>: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
-
