@@ -18,11 +18,23 @@ struct FuelInsight: Codable {
     let estimatedSavings: Double
     let highConsumers: [VehicleInsight]
 
+    enum CodingKeys: String, CodingKey {
+        case insightsText    = "insights_text"
+        case estimatedSavings = "estimated_savings"
+        case highConsumers   = "high_consumers"
+    }
+
     struct VehicleInsight: Codable, Identifiable {
         var id: String { vehicleId }
         let vehicleId: String
         let issue: String
         let recommendation: String
+
+        enum CodingKeys: String, CodingKey {
+            case vehicleId      = "vehicle_id"
+            case issue
+            case recommendation
+        }
     }
 }
 
