@@ -542,6 +542,108 @@ struct AlertFeedCard: View {
             }
             .padding(.vertical, 2)
             
+            // EMERGENCY DETAIL SECTION FOR SOS
+            if alert.type == .sos, let sosAlert = alert.rawObject as? SOSAlert {
+                let driverId = sosAlert.driverId
+                let descriptor = FetchDescriptor<User>()
+                let localUsers = (try? context.fetch(descriptor)) ?? []
+                let driver = localUsers.first(where: { $0.id == driverId })
+                let driverPhone = driver?.phoneNumber ?? "+91 9452404531"
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Emergency Contact & Location Details")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Status.danger)
+                        .padding(.bottom, 2)
+                    
+                    HStack(spacing: 12) {
+                        Image(systemName: "phone.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Status.danger)
+                        Text("Driver Mobile:")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.secondary)
+                        
+                        Button {
+                            let cleanPhone = driverPhone.replacingOccurrences(of: " ", with: "")
+                            if let url = URL(string: "tel:\(cleanPhone)") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text(driverPhone)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Brand.primary)
+                                .underline()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                    HStack(spacing: 12) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Status.danger)
+                        Text("Coordinates:")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.Text.secondary)
+                        Text(String(format: "%.5f, %.5f", sosAlert.latitude, sosAlert.longitude))
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(AppTheme.Text.primary)
+                    }
+                    
+                    HStack(spacing: 10) {
+                        // Open in Apple Maps Button
+                        Button {
+                            if let url = URL(string: "maps://?q=\(sosAlert.latitude),\(sosAlert.longitude)") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "map.fill")
+                                    .font(.caption)
+                                Text("Open in Maps")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                            }
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 10)
+                            .foregroundColor(.white)
+                            .background(AppTheme.Brand.primary)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        // Live Track on Map Button
+                        if let vehicleId = sosAlert.vehicleId {
+                            Button {
+                                selectedVehicleToTrack = vehicleId
+                                showTracking = true
+                                dismiss() // Close Alerts sheet to reveal dashboard tracking
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "location.fill")
+                                        .font(.caption)
+                                    Text("Track Live")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                }
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 10)
+                                .foregroundColor(AppTheme.Status.danger)
+                                .background(AppTheme.Status.danger.opacity(0.12))
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+                .padding(10)
+                .background(AppTheme.Status.danger.opacity(0.04))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(AppTheme.Status.danger.opacity(0.12), lineWidth: 1)
+                )
+            }
+            
             // Buttons block
             if alert.type == .sos {
                 if let sosAlert = alert.rawObject as? SOSAlert, sosAlert.status == .active {
