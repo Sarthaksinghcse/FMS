@@ -385,10 +385,16 @@ struct MappedVehicle: Identifiable, Hashable {
     let lastUpdated: Date?
 
     static func == (lhs: MappedVehicle, rhs: MappedVehicle) -> Bool {
-        lhs.id == rhs.id
+        lhs.id == rhs.id &&
+        lhs.lastUpdated == rhs.lastUpdated &&
+        lhs.coordinate?.latitude == rhs.coordinate?.latitude &&
+        lhs.coordinate?.longitude == rhs.coordinate?.longitude
     }
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(lastUpdated)
+        hasher.combine(coordinate?.latitude)
+        hasher.combine(coordinate?.longitude)
     }
     var statusColor: Color {
         switch vehicle.status {
@@ -972,6 +978,44 @@ enum DBNotificationType: String, Codable {
 }
 
 
+struct DateParser {
+    static func parse(_ dateStr: String) -> Date? {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: dateStr) {
+            return date
+        }
+        
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = isoFormatter.date(from: dateStr) {
+            return date
+        }
+        
+        let fallbackFormats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SZZZZZ",
+            "yyyy-MM-dd HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd HH:mm:ss.SSS",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd"
+        ]
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        for format in fallbackFormats {
+            dateFormatter.dateFormat = format
+            if let date = dateFormatter.date(from: dateStr) {
+                return date
+            }
+        }
+        return nil
+    }
+}
+
 struct DBNotification: Codable, Identifiable {
     let id: UUID
     var userId: UUID
@@ -989,6 +1033,48 @@ struct DBNotification: Codable, Identifiable {
         case type
         case isRead = "is_read"
         case createdAt = "created_at"
+    }
+
+    init(id: UUID = UUID(), userId: UUID, title: String, message: String, type: DBNotificationType, isRead: Bool, createdAt: Date = Date()) {
+        self.id = id
+        self.userId = userId
+        self.title = title
+        self.message = message
+        self.type = type
+        self.isRead = isRead
+        self.createdAt = createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.userId = try container.decode(UUID.self, forKey: .userId)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.message = try container.decode(String.self, forKey: .message)
+        self.type = try container.decode(DBNotificationType.self, forKey: .type)
+        self.isRead = try container.decode(Bool.self, forKey: .isRead)
+        
+        if let date = try? container.decode(Date.self, forKey: .createdAt) {
+            self.createdAt = date
+        } else {
+            let dateStr = try container.decode(String.self, forKey: .createdAt)
+            if let date = DateParser.parse(dateStr) {
+                self.createdAt = date
+            } else {
+                throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Invalid date format: \(dateStr)")
+            }
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(userId, forKey: .userId)
+        try container.encode(title, forKey: .title)
+        try container.encode(message, forKey: .message)
+        try container.encode(type, forKey: .type)
+        try container.encode(isRead, forKey: .isRead)
+        try container.encode(createdAt, forKey: .createdAt)
     }
 }
 

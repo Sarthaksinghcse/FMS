@@ -30,12 +30,17 @@ struct MaintenanceDashboardView: View {
                 }
                 .tag(0)
 
-            InventoryTabView(currentUser: currentUser, items: allInventory)
+            MaintenanceWorkOrdersTab(currentUser: currentUser)
                 .tabItem {
-                    Label("Inventory", systemImage: "shippingbox")
+                    Label("Work Orders", systemImage: "wrench.and.screwdriver.fill")
                 }
                 .tag(1)
 
+            InventoryTabView(currentUser: currentUser, items: allInventory)
+                .tabItem {
+                    Label("Inventory", systemImage: "shippingbox.fill")
+                }
+                .tag(2)
         }
         .accentColor(AppTheme.Brand.primary)
         .task {
