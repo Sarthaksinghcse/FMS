@@ -6,9 +6,5 @@
 	<array>
 		<string>location</string>
 	</array>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>FMS needs your location to track your trip progress and provide live updates to the fleet manager.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>FMS needs continuous background location tracking to monitor your trip status and issue route deviation alerts.</string>
 </dict>
 </plist>

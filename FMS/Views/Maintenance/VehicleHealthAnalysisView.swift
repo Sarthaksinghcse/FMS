@@ -86,6 +86,7 @@ struct VehicleHealthAnalysisView: View {
                 await viewModel.loadHealth()
             }
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var fleetHealthStatusText: String {

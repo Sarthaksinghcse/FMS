@@ -30,6 +30,7 @@ struct DriverDashboardView: View {
     @State private var selectedTab = 0
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var realtimeMessagesChannel: RealtimeChannelV2?
+    @State private var showFuelLogPrompt = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -80,7 +81,7 @@ struct DriverDashboardView: View {
         .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
         .sheet(isPresented: $vm.showPostTrip, onDismiss: {
             if vm.showPostTripOnEnd {
-                vm.finishTrip()
+                showFuelLogPrompt = true
             }
         }) {
             InspectionFormSheet(isPreTrip: false) { passed, issues, remarks in
@@ -131,6 +132,17 @@ struct DriverDashboardView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(vm.geofenceAlertMessage)
+        }
+        .alert("Log Refuel", isPresented: $showFuelLogPrompt) {
+            Button("Yes") {
+                vm.shouldEndTripAfterFuel = true
+                vm.showFuelLog = true
+            }
+            Button("Skip", role: .cancel) {
+                vm.finishTrip()
+            }
+        } message: {
+            Text("Would you like to log your fuel refuel data for this trip before completing it?")
         }
     }
 
