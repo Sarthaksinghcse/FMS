@@ -40,6 +40,10 @@ struct PredictiveAlertDetailView: View {
         return vehicles.first { $0.id == vehicleId }
     }
     
+    private func vehicle(for alert: DBPredictiveAlert) -> Vehicle? {
+        vehicles.first { $0.id == alert.vehicleId }
+    }
+    
     private var maintenanceStaff: [User] {
         allUsers.filter { $0.role == .maintenance }
     }
@@ -63,6 +67,12 @@ struct PredictiveAlertDetailView: View {
     private var lastMaintenanceRecord: MaintenanceRecord? {
         guard let vehicleId = activeAlert?.vehicleId else { return nil }
         return maintenanceRecords.filter { $0.vehicleId == vehicleId }.first
+    }
+    
+
+    
+    private func isSelected(_ alert: DBPredictiveAlert) -> Bool {
+        return activeAlert?.id == alert.id
     }
 
     var body: some View {
@@ -94,8 +104,8 @@ struct PredictiveAlertDetailView: View {
                                     ForEach(alerts) { alert in
                                         PredictionSelectorCard(
                                             alert: alert,
-                                            vehicle: vehicles.first { $0.id == alert.vehicleId },
-                                            isSelected: activeAlert?.id == alert.id,
+                                            vehicle: vehicle(for: alert),
+                                            isSelected: isSelected(alert),
                                             action: {
                                                 selectedAlertId = alert.id
                                             }

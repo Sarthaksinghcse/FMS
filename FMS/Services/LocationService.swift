@@ -31,6 +31,7 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
         manager.requestWhenInUseAuthorization()
         manager.allowsBackgroundLocationUpdates = true
         manager.showsBackgroundLocationIndicator = true
+        manager.startUpdatingLocation()
     }
     
     public func startTracking(vehicleId: UUID) {

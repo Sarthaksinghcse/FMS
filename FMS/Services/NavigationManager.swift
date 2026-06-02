@@ -436,15 +436,18 @@ final class NavigationManager: NSObject, ObservableObject {
         Task {
             do {
                 guard let user = SupabaseManager.shared.currentUser else { return }
+                guard let activeVehicleId = LocationService.shared.activeVehicleId else {
+                    print("Cannot fire deviation alert: no active vehicle ID.")
+                    return
+                }
                 
-                // Active vehicle for this driver
-                // Typically fetched from Supabase, assuming they are assigned
                 let alert = DBRouteDeviationAlert(
                     id: UUID(),
                     driverId: user.id,
-                    vehicleId: UUID(), // Placeholder: fetched from active trip or user session
+                    vehicleId: activeVehicleId,
                     latitude: location.coordinate.latitude,
                     longitude: location.coordinate.longitude,
+
                     deviationDistanceMeters: distance,
                     createdAt: Date(),
                     status: .active

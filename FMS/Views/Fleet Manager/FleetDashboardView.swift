@@ -25,6 +25,8 @@ struct FleetDashboardView: View {
     @State private var showingFuelInsights = false
     @State private var showCompliance = false
     @State private var realtimeChannel: RealtimeChannelV2? = nil
+    @State private var activeGeofenceAlertsCount = 0
+    @AppStorage("lastGeofenceAlertViewTime") private var lastGeofenceAlertViewTime: Double = 0
 
     // Compute the full activity list once per body eval
     private var recentActivities: [DashboardActivity] {
@@ -85,6 +87,8 @@ struct FleetDashboardView: View {
                             HStack(spacing: 16) {
 
                                 Button {
+                                    lastGeofenceAlertViewTime = Date().timeIntervalSince1970
+                                    activeGeofenceAlertsCount = 0
                                     viewModel.activeQuickAction = .alerts
                                 } label: {
                                     ZStack(alignment: .topTrailing) {
@@ -95,7 +99,7 @@ struct FleetDashboardView: View {
                                             .background(Color(UIColor.secondarySystemGroupedBackground))
                                             .clipShape(Circle())
                                         
-                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty {
+                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
                                             Circle()
                                                 .fill(AppTheme.Status.danger)
                                                 .frame(width: 10, height: 10)
@@ -335,6 +339,9 @@ struct FleetDashboardView: View {
             }
             .task {
                 await SupabaseManager.shared.syncAllData(context: modelContext)
+            }
+            .onAppear {
+                fetchActiveGeofenceAlerts()
                 startRealtimeListener()
             }
             .onDisappear {
@@ -634,6 +641,25 @@ struct FleetDashboardView: View {
         }
     }
 
+    private func fetchActiveGeofenceAlerts() {
+        Task {
+            do {
+                let alerts = try await SupabaseManager.shared.fetchRouteDeviationAlerts()
+                await MainActor.run {
+                    let activeAlerts = alerts.filter { $0.status == .active }
+                    let latestTime = activeAlerts.map { $0.createdAt.timeIntervalSince1970 }.max() ?? 0
+                    if latestTime > self.lastGeofenceAlertViewTime {
+                        self.activeGeofenceAlertsCount = activeAlerts.count
+                    } else {
+                        self.activeGeofenceAlertsCount = 0
+                    }
+                }
+            } catch {
+                print("Failed to fetch geofence alerts for badge: \(error)")
+            }
+        }
+    }
+
     private func startRealtimeListener() {
         guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
@@ -650,6 +676,7 @@ struct FleetDashboardView: View {
             let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
             let fuelStream = channel.postgresChange(AnyAction.self, schema: "public", table: "fuel_logs")
             let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+            let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
             
             try? await channel.subscribeWithError()
             
@@ -662,6 +689,17 @@ struct FleetDashboardView: View {
             async let _ : () = handleStream(vehicleStream)
             async let _ : () = handleStream(fuelStream)
             async let _ : () = handleStream(complianceStream)
+            async let _ : () = handleRouteDevStream(routeDevStream)
+        }
+    }
+    
+    private func handleRouteDevStream<S: AsyncSequence>(_ stream: S) async {
+        do {
+            for try await _ in stream {
+                fetchActiveGeofenceAlerts()
+            }
+        } catch {
+            print("Route dev stream error: \(error)")
         }
     }
     

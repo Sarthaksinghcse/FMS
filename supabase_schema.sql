@@ -209,6 +209,19 @@ CREATE TABLE IF NOT EXISTS public.sos_alerts (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 2.11b route_deviation_alerts (DBRouteDeviationAlert.swift)
+CREATE TABLE IF NOT EXISTS public.route_deviation_alerts (
+    id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    driver_id                 UUID        NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    vehicle_id                UUID        NOT NULL REFERENCES public.vehicles (id) ON DELETE CASCADE,
+    latitude                  DOUBLE PRECISION NOT NULL,
+    longitude                 DOUBLE PRECISION NOT NULL,
+    deviation_distance_meters DOUBLE PRECISION NOT NULL,
+    status                    TEXT NOT NULL DEFAULT 'active',
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
 -- 2.12  inventory   (InventoryItem.swift)
 CREATE TABLE IF NOT EXISTS public.inventory (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -277,6 +290,8 @@ CREATE INDEX IF NOT EXISTS idx_defect_reports_reported_by  ON public.defect_repo
 CREATE INDEX IF NOT EXISTS idx_defect_reports_status       ON public.defect_reports (status);
 
 CREATE INDEX IF NOT EXISTS idx_sos_alerts_driver           ON public.sos_alerts (driver_id);
+CREATE INDEX IF NOT EXISTS idx_route_deviation_driver      ON public.route_deviation_alerts (driver_id);
+CREATE INDEX IF NOT EXISTS idx_route_deviation_vehicle     ON public.route_deviation_alerts (vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_records_vehicle ON public.maintenance_records (vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_records_date    ON public.maintenance_records (service_date DESC);
 
@@ -297,6 +312,7 @@ ALTER TABLE public.vehicle_locations   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.defect_reports       ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.sos_alerts          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.route_deviation_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inventory           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance_records ENABLE ROW LEVEL SECURITY;
 
@@ -398,9 +414,24 @@ CREATE POLICY "locations_insert_driver"  ON public.vehicle_locations FOR INSERT 
 );
 
 -- ---- sos_alerts ----
-CREATE POLICY "sos_alerts_select_all" ON public.sos_alerts FOR SELECT USING (TRUE);
-CREATE POLICY "sos_alerts_insert_driver" ON public.sos_alerts FOR INSERT WITH CHECK (driver_id = auth.uid());
-CREATE POLICY "sos_alerts_update_all" ON public.sos_alerts FOR UPDATE USING (TRUE);
+DROP POLICY IF EXISTS "sos_select_manager" ON public.sos_alerts;
+CREATE POLICY "sos_select_manager" ON public.sos_alerts FOR SELECT USING (public.current_user_role() = 'fleet_manager');
+DROP POLICY IF EXISTS "sos_insert_driver" ON public.sos_alerts;
+CREATE POLICY "sos_insert_driver" ON public.sos_alerts FOR INSERT WITH CHECK (driver_id = auth.uid());
+DROP POLICY IF EXISTS "sos_select_driver" ON public.sos_alerts;
+CREATE POLICY "sos_select_driver" ON public.sos_alerts FOR SELECT USING (driver_id = auth.uid());
+DROP POLICY IF EXISTS "sos_update_manager" ON public.sos_alerts;
+CREATE POLICY "sos_update_manager" ON public.sos_alerts FOR UPDATE USING (public.current_user_role() = 'fleet_manager');
+
+-- ---- route_deviation_alerts ----
+DROP POLICY IF EXISTS "deviation_select_manager" ON public.route_deviation_alerts;
+CREATE POLICY "deviation_select_manager" ON public.route_deviation_alerts FOR SELECT USING (public.current_user_role() = 'fleet_manager');
+DROP POLICY IF EXISTS "deviation_insert_driver" ON public.route_deviation_alerts;
+CREATE POLICY "deviation_insert_driver" ON public.route_deviation_alerts FOR INSERT WITH CHECK (driver_id = auth.uid());
+DROP POLICY IF EXISTS "deviation_select_driver" ON public.route_deviation_alerts;
+CREATE POLICY "deviation_select_driver" ON public.route_deviation_alerts FOR SELECT USING (driver_id = auth.uid());
+DROP POLICY IF EXISTS "deviation_update_manager" ON public.route_deviation_alerts;
+CREATE POLICY "deviation_update_manager" ON public.route_deviation_alerts FOR UPDATE USING (public.current_user_role() = 'fleet_manager');
 
 -- ---- inventory ----
 CREATE POLICY "inventory_select_all" ON public.inventory FOR SELECT USING (TRUE);
@@ -426,6 +457,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.vehicle_locations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.maintenance_tasks;
 
 ALTER PUBLICATION supabase_realtime ADD TABLE public.sos_alerts;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.route_deviation_alerts;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.maintenance_records;
 
