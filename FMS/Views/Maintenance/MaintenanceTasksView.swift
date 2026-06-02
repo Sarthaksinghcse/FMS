@@ -425,6 +425,13 @@ struct MaintenanceTaskDetailView: View {
                 await MainActor.run {
                     order.status = .completed
                     order.completedAt = Date()
+                    
+                    // Set local vehicle status to active
+                    if let localVehicle = (try? modelContext.fetch(FetchDescriptor<Vehicle>()))?.first(where: { $0.id == order.vehicleId }) {
+                        localVehicle.status = .active
+                        localVehicle.updatedAt = Date()
+                    }
+                    
                     try? modelContext.save()
                     
                     let dbOrder = order.asDBWorkOrder
