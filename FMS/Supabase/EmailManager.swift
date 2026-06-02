@@ -66,7 +66,7 @@ public final class EmailManager {
     
     
     public func sendWelcomeEmail(to email: String, name: String, passwordString: String) async throws {
-        let subject = "Welcome to Fleeto!"
+        let subject = "Welcome to Carwaan!"
         let html = """
         <!DOCTYPE html>
         <html>
@@ -83,10 +83,10 @@ public final class EmailManager {
         </head>
         <body>
           <div class="card">
-            <div class="header">Welcome to Fleeto! </div>
+            <div class="header">Welcome to Carwaan! </div>
             <div class="content">
               <p>Hello <strong>\(name)</strong>,</p>
-              <p>Your driver account has been successfully created by the Fleet Manager. You can now log in to the Fleeto app using the following credentials:</p>
+              <p>Your driver account has been successfully created by the Fleet Manager. You can now log in to the Carwaan app using the following credentials:</p>
               <div class="credentials">
                 <strong>Email ID:</strong> \(email)<br>
                 <strong>Password:</strong> \(passwordString)
@@ -94,7 +94,7 @@ public final class EmailManager {
               <p>Please secure your password and log in to update your profile.</p>
             </div>
             <div class="footer">
-              This is an automated notification from Fleeto. Please do not reply to this email.
+              This is an automated notification from Carwaan. Please do not reply to this email.
             </div>
           </div>
         </body>
@@ -106,7 +106,7 @@ public final class EmailManager {
     
     
     public func sendVehicleAssignmentEmail(to email: String, name: String, vehicleReg: String, vehicleModel: String) async throws {
-        let subject = "New Vehicle Assigned - Fleeto! "
+        let subject = "New Vehicle Assigned - Carwaan! "
         let html = """
         <!DOCTYPE html>
         <html>
@@ -131,10 +131,10 @@ public final class EmailManager {
                 <strong>Registration Number:</strong> \(vehicleReg)<br>
                 <strong>Vehicle Model:</strong> \(vehicleModel)
               </div>
-              <p>Please perform the pre-trip inspection check in the Fleeto! application before beginning your shift.</p>
+              <p>Please perform the pre-trip inspection check in the Carwaan! application before beginning your shift.</p>
             </div>
             <div class="footer">
-              This is an automated notification from Fleeto. Please do not reply to this email.
+              This is an automated notification from Carwaan. Please do not reply to this email.
             </div>
           </div>
         </body>
@@ -146,7 +146,7 @@ public final class EmailManager {
     
     
     public func sendTripAssignmentEmail(to email: String, name: String, tripCode: String, source: String, destination: String, startTime: Date, distance: Double) async throws {
-        let subject = "New Trip Assigned: \(tripCode) - Fleeto!"
+        let subject = "New Trip Assigned: \(tripCode) - Carwaan!"
         
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -178,10 +178,10 @@ public final class EmailManager {
                 <strong>Departure Time:</strong> \(formatter.string(from: startTime))<br>
                 <strong>Distance:</strong> \(String(format: "%.1f km", distance))
               </div>
-              <p>Please perform the pre-trip inspection and log in to the Fleeto app to navigate your trip.</p>
+              <p>Please perform the pre-trip inspection and log in to the Carwaan app to navigate your trip.</p>
             </div>
             <div class="footer">
-              This is an automated notification from Fleeto. Please do not reply to this email.
+              This is an automated notification from Carwaan. Please do not reply to this email.
             </div>
           </div>
         </body>
