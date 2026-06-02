@@ -140,9 +140,7 @@ struct CommunicationView: View {
         ZStack(alignment: .bottomTrailing) {
             AppTheme.Background.page.ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                CustomCenteredHeaderView(title: "Communication")
-                
+            VStack(spacing: 12) {
                 // Search Bar
                 TaskSearchBar(text: $searchText, placeholder: "Search messages...")
                     .padding(.horizontal)
@@ -198,7 +196,8 @@ struct CommunicationView: View {
             }
             .padding(20)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Messages")
+        .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadMessages()
             startRealtimeListener()

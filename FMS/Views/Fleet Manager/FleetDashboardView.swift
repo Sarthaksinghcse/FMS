@@ -22,6 +22,7 @@ struct FleetDashboardView: View {
     @State private var showProfile  = false
     @State private var showChat     = false
     @State private var showTracking = false
+    @State private var selectedVehicleToTrack: UUID? = nil
     @State private var showingFuelInsights = false
     @State private var showCompliance = false
     @State private var realtimeChannel: RealtimeChannelV2? = nil
@@ -68,7 +69,7 @@ struct FleetDashboardView: View {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
@@ -315,7 +316,7 @@ struct FleetDashboardView: View {
                         NavigationStack {
                             AIReportsView(isPresentedAsSheet: true)
                         }
-                    case .alerts:       AlertsFeedView()
+                    case .alerts:       AlertsFeedView(showTracking: $showTracking, selectedVehicleToTrack: $selectedVehicleToTrack)
                     case .maintenance:  MaintenanceManagementView()
                     }
                 }
@@ -375,7 +376,7 @@ struct FleetDashboardView: View {
             }
             // Tracking navigation push
             .navigationDestination(isPresented: $showTracking) {
-                FleetTrackingView()
+                FleetTrackingView(initialSelectedVehicleId: selectedVehicleToTrack)
                     .environment(\.modelContext, modelContext)
             }
             // Compliance navigation push
@@ -459,11 +460,11 @@ struct FleetDashboardView: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.purple.opacity(0.08))
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "box.truck.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.purple)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -477,7 +478,7 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.purple)
+                                .background(AppTheme.Brand.royalBlue)
                                 .cornerRadius(4)
                         }
                         
@@ -513,11 +514,11 @@ struct FleetDashboardView: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.green.opacity(0.08))
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "fuelpump.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.green)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -531,7 +532,7 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.green)
+                                .background(AppTheme.Brand.royalBlue)
                                 .cornerRadius(4)
                         }
                         
@@ -565,11 +566,11 @@ struct FleetDashboardView: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.teal.opacity(0.08))
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "heart.text.square.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.teal)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -583,7 +584,7 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.teal)
+                                .background(AppTheme.Brand.royalBlue)
                                 .cornerRadius(4)
                         }
                         

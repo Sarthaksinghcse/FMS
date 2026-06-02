@@ -275,7 +275,7 @@ final class DriverDashboardViewModel: ObservableObject {
         let req = MKLocalSearch.Request()
         req.naturalLanguageQuery = address
         let item = try? await MKLocalSearch(request: req).start()
-        return item?.mapItems.first?.placemark.coordinate
+        return item?.mapItems.first?.location.coordinate
     }
 
     func validateCanStartTrip(_ trip: DBTrip?, startCoord: CLLocationCoordinate2D? = nil, userLocation: CLLocation? = nil) async -> (isValid: Bool, message: String?) {

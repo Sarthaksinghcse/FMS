@@ -6,6 +6,7 @@ struct FleetTrackingView: View {
     @State private var selectedVehicle: MappedVehicle?
     @Environment(\.dismiss)private var dismiss
     @State private var cameraPosition: MapCameraPosition = .automatic
+    var initialSelectedVehicleId: UUID? = nil
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -101,6 +102,25 @@ struct FleetTrackingView: View {
         }
         .onDisappear {
             viewModel.stopLiveTracking()
+        }
+        .onChange(of: viewModel.mappedVehicles) { _, newVehicles in
+            if let currentSelected = selectedVehicle {
+                if let updated = newVehicles.first(where: { $0.vehicle.id == currentSelected.vehicle.id }) {
+                    selectedVehicle = updated
+                } else {
+                    selectedVehicle = nil
+                }
+            } else if let initialId = initialSelectedVehicleId {
+                if let matched = newVehicles.first(where: { $0.vehicle.id == initialId }) {
+                    selectedVehicle = matched
+                    if let coordinate = matched.coordinate {
+                        cameraPosition = .region(MKCoordinateRegion(
+                            center: coordinate,
+                            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                        ))
+                    }
+                }
+            }
         }
         .animation(.easeInOut, value: selectedVehicle?.id)
     }

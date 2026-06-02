@@ -302,6 +302,17 @@ struct MaintenanceEditSheet: View {
                     try? await SupabaseManager.shared.updateVehicle(dbVehicle)
                 }
             }
+        } else if order.status == .cancelled {
+            // Update associated vehicle
+            if let vehicle = allVehicles.first(where: { $0.id == order.vehicleId }) {
+                vehicle.status = .active
+                
+                // Sync vehicle update to database
+                let dbVehicle = vehicle.asDBVehicle
+                Task {
+                    try? await SupabaseManager.shared.updateVehicle(dbVehicle)
+                }
+            }
         }
         
         // Sync WorkOrder update to database

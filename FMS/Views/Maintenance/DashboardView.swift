@@ -93,50 +93,68 @@ struct MaintenanceDashboardTab: View {
     }
 
     var body: some View {
-        // ── NavigationStack for smooth push transitions ───────────────────────
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Premium header
-                        MaintenanceHeaderView(
-                            title: personnelFirstName,
-                            subtitle: "",
-                            greeting: getGreetingTime() + ",",
-                            initials: initials,
-                            avatarColor: AppTheme.Brand.primaryDeep,
-                            notificationCount: unreadNotifications.count,
-                            onNotificationTap: { showingNotifications = true },
-                            onProfileTap: { showingProfile = true },
-                            showChat: false,
-                            onChatTap: { showChat = true }
-                        )
-                        .padding(.top, 8)
-
+                    VStack(alignment: .leading, spacing: 22) {
                         overviewSection
+
                         quickActionsSection
                         recentWorkOrdersSection
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 12)
                     .padding(.bottom, 32)
                 }
-                .safeAreaPadding(.top)
                 .scrollBounceBehavior(.basedOnSize, axes: .vertical)
                 .refreshable {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Dashboard")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showingNotifications = true
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(AppTheme.Brand.primary)
+                                .frame(width: 32, height: 32)
+                                .background(Color(.systemGray6))
+                                .clipShape(Circle())
+                            
+                            if unreadNotifications.count > 0 {
+                                Circle()
+                                    .fill(AppTheme.Status.danger)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 2, y: -2)
+                            }
+                        }
+                    }
+                    
+                    Button {
+                        showingProfile = true
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(AppTheme.Brand.primaryDeep.gradient)
+                                .frame(width: 32, height: 32)
+                            Text(initials)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+            }
             .sheet(isPresented: $showingProfile) {
                 MaintenanceProfileView()
             }
             .sheet(isPresented: $showingNotifications) {
                 MaintenanceNotificationsSheet(currentUser: currentUser)
-            }
-            .navigationDestination(isPresented: $showChat) {
-                CommunicationView()
             }
         }
     }
@@ -157,7 +175,7 @@ struct MaintenanceDashboardTab: View {
                     iconColor: AppTheme.Text.secondary,
                     iconBg: Color(.systemGray6),
                     gradient: [Color.clear, Color.clear],
-                    title: "Scheduling",
+                    title: "Schedule",
                     value: "\(scheduledToday.count)",
                     footnote: scheduledToday.count == 1 ? "1 open work order" : "\(scheduledToday.count) open work orders",
                     valueColor: Color(red: 0.08, green: 0.12, blue: 0.22)
@@ -407,4 +425,3 @@ struct GridQuickActionButton<Destination: View>: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
-

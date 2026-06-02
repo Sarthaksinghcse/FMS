@@ -47,12 +47,10 @@ struct MaintenanceProfileView: View {
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Edit") {
-                        showEditProfile = true
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
                     }
-                    .font(.system(size: 17))
-                    .foregroundColor(AppTheme.Brand.amber)
                 }
             }
             .sheet(isPresented: $showEditProfile) {
@@ -91,78 +89,90 @@ struct MaintenanceProfileView: View {
     // MARK: - Header
 
     private var profileHeaderCard: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [AppTheme.Brand.amber, Color(red: 0.95, green: 0.50, blue: 0.15)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.Brand.amber, Color(red: 0.95, green: 0.50, blue: 0.15)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 90, height: 90)
-                    .shadow(color: AppTheme.Brand.amber.opacity(0.35), radius: 16, y: 6)
+                        .frame(width: 90, height: 90)
+                        .shadow(color: AppTheme.Brand.amber.opacity(0.35), radius: 16, y: 6)
 
-                if let profileImage = user?.profileImage, let url = URL(string: profileImage) {
-                    AsyncImage(url: url) { phase in
-                        if let image = phase.image {
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 90, height: 90)
-                                .clipShape(Circle())
-                        } else if phase.error != nil {
-                            Text(initials)
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                        } else {
-                            ProgressView()
+                    if let profileImage = user?.profileImage, let url = URL(string: profileImage) {
+                        AsyncImage(url: url) { phase in
+                            if let image = phase.image {
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 90, height: 90)
+                                    .clipShape(Circle())
+                            } else if phase.error != nil {
+                                Text(initials)
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                            } else {
+                                ProgressView()
+                            }
                         }
+                    } else {
+                        Text(initials)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
                     }
-                } else {
-                    Text(initials)
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                }
+
+                VStack(spacing: 6) {
+                    Text(user?.name ?? "Maintenance Personnel")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.primary)
+
+                    Text(user?.email ?? "maintenance@fms.com")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppTheme.Text.secondary)
+
+                    if let phone = user?.phoneNumber, !phone.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "phone.fill")
+                                .font(.system(size: 10))
+                            Text(phone)
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(AppTheme.Text.tertiary)
+                        .padding(.top, 2)
+                    }
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "wrench.and.screwdriver.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Maintenance Personnel")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Brand.amber)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.Brand.amber.opacity(0.10))
+                    .clipShape(Capsule())
+                    .padding(.top, 4)
                 }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
 
-            VStack(spacing: 6) {
-                Text(user?.name ?? "Maintenance Personnel")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.primary)
-
-                Text(user?.email ?? "maintenance@fms.com")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(AppTheme.Text.secondary)
-
-                if let phone = user?.phoneNumber, !phone.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "phone.fill")
-                            .font(.system(size: 10))
-                        Text(phone)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundColor(AppTheme.Text.tertiary)
-                    .padding(.top, 2)
-                }
-
-                HStack(spacing: 6) {
-                    Image(systemName: "wrench.and.screwdriver.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Maintenance Personnel")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .foregroundColor(AppTheme.Brand.amber)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(AppTheme.Brand.amber.opacity(0.10))
-                .clipShape(Capsule())
-                .padding(.top, 4)
+            Button {
+                showEditProfile = true
+            } label: {
+                Image(systemName: "pencil.circle.fill")
+                    .font(.system(size: 28))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundColor(AppTheme.Brand.amber)
             }
+            .padding(12)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
         .background(AppTheme.Background.card)
         .cornerRadius(AppTheme.Radius.card)
         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)

@@ -9,6 +9,7 @@ struct FleetContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var selectedTab = 0
     
+    @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]
     
     @State private var showRedSplash = false
     @State private var sosMessage = ""
@@ -16,6 +17,8 @@ struct FleetContentView: View {
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var usersRealtimeChannel: RealtimeChannelV2?
     @State private var activeSOSAlert: DBSOSAlert?
+    @State private var pollingTask: Task<Void, Never>?
+    @State private var acknowledgedAlertIds = Set<UUID>()
     
     var body: some View {
         ZStack {
@@ -230,8 +233,28 @@ struct FleetContentView: View {
         .task {
             startRealtimeSOSListener()
             startRealtimeUsersListener()
+            
+            // Sync immediately on startup to get the latest online/offline active SOS
+            await SupabaseManager.shared.syncAllData(context: modelContext)
+            checkForActiveAlerts()
+            
+            // Start safety polling loop to fetch SOS alerts in the background every 15 seconds
+            pollingTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 15_000_000_000)
+                    if Task.isCancelled { break }
+                    print("🔄 [SOS Polling] Safety sync running...")
+                    await syncActiveSOSAlerts()
+                }
+            }
+        }
+        .onChange(of: sosAlerts) { _, _ in
+            checkForActiveAlerts()
         }
         .onDisappear {
+            pollingTask?.cancel()
+            pollingTask = nil
+            
             let client = SupabaseManager.shared.client
             if let activeChannel = realtimeChannel {
                 Task {
@@ -282,6 +305,22 @@ struct FleetContentView: View {
     }
     
     @MainActor
+    private func checkForActiveAlerts() {
+        if let active = sosAlerts.first(where: { $0.status == .active }) {
+            if !showRedSplash && !acknowledgedAlertIds.contains(active.id) {
+                triggerEmergencySOS(alert: active.asDBSOSAlert)
+            }
+        } else {
+            if showRedSplash {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    showRedSplash = false
+                    activeSOSAlert = nil
+                }
+            }
+        }
+    }
+    
+    @MainActor
     private func triggerEmergencySOS(alert: DBSOSAlert) {
         let feedbackGenerator = UINotificationFeedbackGenerator()
         feedbackGenerator.notificationOccurred(.error)
@@ -293,19 +332,29 @@ struct FleetContentView: View {
         sosMessage = alert.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately."
         activeSOSAlert = alert
         
-        let localSOS = alert.asLocalSOS
-        modelContext.insert(localSOS)
+        let alertId = alert.id
+        let sosDescriptor = FetchDescriptor<SOSAlert>()
+        let localSOSs = (try? modelContext.fetch(sosDescriptor)) ?? []
+        if !localSOSs.contains(where: { $0.id == alertId }) {
+            let localSOS = alert.asLocalSOS
+            modelContext.insert(localSOS)
+        }
         
-        let localNotif = AppNotification(
-            id: alert.id,
-            userId: SupabaseManager.shared.currentUser?.id ?? UUID(),
-            title: "🚨 EMERGENCY SOS SIGNAL",
-            message: sosMessage,
-            type: .sosAlert,
-            isRead: false,
-            createdAt: alert.createdAt
-        )
-        modelContext.insert(localNotif)
+        let notifDescriptor = FetchDescriptor<AppNotification>()
+        let localNotifs = (try? modelContext.fetch(notifDescriptor)) ?? []
+        if !localNotifs.contains(where: { $0.id == alertId }) {
+            let localNotif = AppNotification(
+                id: alert.id,
+                userId: SupabaseManager.shared.currentUser?.id ?? UUID(),
+                title: "🚨 EMERGENCY SOS SIGNAL",
+                message: sosMessage,
+                type: .sosAlert,
+                isRead: false,
+                createdAt: alert.createdAt
+            )
+            modelContext.insert(localNotif)
+        }
+        
         try? modelContext.save()
         
         withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
@@ -328,26 +377,10 @@ struct FleetContentView: View {
     
     @MainActor
     private func acknowledgeSOS(alert: DBSOSAlert) {
-        var resolvedAlert = alert
-        resolvedAlert.status = .resolved
-        
-        Task {
-            do {
-                try await SupabaseManager.shared.updateSOSAlert(resolvedAlert)
-                print("✅ [Supabase] SOS Alert resolved successfully.")
-            } catch {
-                print("❌ [Supabase] Failed to resolve SOS Alert: \(error.localizedDescription)")
-            }
-        }
-        
-        let alertId = alert.id
-        let descriptor = FetchDescriptor<SOSAlert>()
-        if let localSOSs = try? modelContext.fetch(descriptor),
-           let localAlert = localSOSs.first(where: { $0.id == alertId }) {
-            localAlert.status = .resolved
-            try? modelContext.save()
-            print("✅ [SwiftData] Local SOS Alert resolved.")
-        }
+        // Simply record that this alert has been acknowledged locally by the manager
+        // We do NOT change the status to resolved in Supabase or SwiftData here.
+        // The status remains .active until resolved manually via the Alerts Feed detailed screen.
+        acknowledgedAlertIds.insert(alert.id)
         
         withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
             showRedSplash = false
@@ -411,6 +444,49 @@ struct FleetContentView: View {
             modelContext.insert(newUser)
             try? modelContext.save()
             print("🟢 [Realtime] Added new user \(dbUser.name)")
+        }
+    }
+    
+    private func syncActiveSOSAlerts() async {
+        do {
+            let remoteSOS: [DBSOSAlert] = try await SupabaseManager.shared.client.from("sos_alerts")
+                .select()
+                .eq("status", value: DBSOSStatus.active.rawValue)
+                .execute()
+                .value
+            
+            await MainActor.run {
+                let descriptor = FetchDescriptor<SOSAlert>()
+                let localSOS = (try? modelContext.fetch(descriptor)) ?? []
+                
+                // 1. Update/insert active alerts
+                for rs in remoteSOS {
+                    if let local = localSOS.first(where: { $0.id == rs.id }) {
+                        local.driverId = rs.driverId
+                        local.vehicleId = rs.vehicleId
+                        local.tripId = rs.tripId
+                        local.latitude = rs.latitude
+                        local.longitude = rs.longitude
+                        local.message = rs.message
+                        local.status = rs.status.toLocalStatus
+                    } else {
+                        modelContext.insert(rs.asLocalSOS)
+                    }
+                }
+                
+                // 2. Resolve local alerts that are no longer active in Supabase
+                let remoteActiveIds = Set(remoteSOS.map { $0.id })
+                for localAlert in localSOS {
+                    if localAlert.status == .active && !remoteActiveIds.contains(localAlert.id) {
+                        localAlert.status = .resolved
+                        print("ℹ️ [SOS Polling] Local SOS \(localAlert.id) marked resolved because it is not active remotely.")
+                    }
+                }
+                
+                try? modelContext.save()
+            }
+        } catch {
+            print("⚠️ [SOS Polling] Failed to fetch active SOS: \(error.localizedDescription)")
         }
     }
 }

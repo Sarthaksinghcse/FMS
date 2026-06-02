@@ -94,8 +94,6 @@ struct CompletedTasksView: View {
             AppTheme.Background.page.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                CustomCenteredHeaderView(title: "Completed Today")
-                
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                         Section {
@@ -146,8 +144,6 @@ struct CompletedTasksView: View {
                     }
                 }
             }
-            .navigationBarHidden(true)
-            .navigationBarBackButtonHidden(true)
         }
     }
     
