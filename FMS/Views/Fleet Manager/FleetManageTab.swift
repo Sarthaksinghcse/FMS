@@ -1406,7 +1406,7 @@ enum TripCategoryFilter: String, CaseIterable, Identifiable {
 
 
 @available(iOS 26.0, *)
-struct TripListView: View {
+struct TripListContentView: View {
 
     @State private var searchText = ""
     @State private var selectedFilter: TripCategoryFilter = .all
@@ -1474,8 +1474,7 @@ struct TripListView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChips.padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 8)
@@ -1531,7 +1530,6 @@ struct TripListView: View {
             Task {
                 await syncTrips()
             }
-        }
         }
     }
 
@@ -1648,6 +1646,21 @@ struct TripListView: View {
             }
         } catch {
             print("Failed to sync trips: \(error)")
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+struct TripListView: View {
+    var initialFilter: TripCategoryFilter = .all
+
+    init(initialFilter: TripCategoryFilter = .all) {
+        self.initialFilter = initialFilter
+    }
+
+    var body: some View {
+        NavigationStack {
+            TripListContentView(initialFilter: initialFilter)
         }
     }
 }
@@ -1933,13 +1946,39 @@ struct TripDetailView: View {
     // MARK: - Map Card
     private var mapCard: some View {
         VStack(spacing: 0) {
-            Map(position: $position) {
-                Marker("Start", systemImage: "play.circle.fill", coordinate: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
-                    .tint(AppTheme.Status.success)
-                Marker("End", systemImage: "flag.fill", coordinate: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
-                    .tint(AppTheme.Status.danger)
+            ZStack(alignment: .bottomTrailing) {
+                Map(position: $position) {
+                    Marker("Start", systemImage: "play.circle.fill", coordinate: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
+                        .tint(AppTheme.Status.success)
+                    Marker("End", systemImage: "flag.fill", coordinate: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
+                        .tint(AppTheme.Status.danger)
+                }
+                .frame(height: 220)
+                
+                if trip.tripStatus == .started || trip.tripStatus == .inProgress {
+                    NavigationLink {
+                        LiveTripTrackingView(
+                            trip: trip,
+                            driverName: assignedDriver?.fullName ?? "Unknown Driver",
+                            driverPhone: assignedDriver?.phoneNumber,
+                            vehicleName: assignedVehicle != nil ? "\(assignedVehicle!.make) \(assignedVehicle!.model) · \(assignedVehicle!.registrationNumber)" : "Unknown Vehicle"
+                        )
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "location.fill")
+                            Text("Track Live Location")
+                        }
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(AppTheme.Brand.primary)
+                        .cornerRadius(8)
+                        .shadow(radius: 4)
+                    }
+                    .padding(12)
+                }
             }
-            .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
         }
         .background(AppTheme.Background.card)
