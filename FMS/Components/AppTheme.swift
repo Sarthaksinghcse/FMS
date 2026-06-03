@@ -12,16 +12,16 @@ enum AppTheme {
         static let primary      = Theme.royalBlue
         static let primaryDeep  = Theme.royalBlue
         static let royalBlue    = Theme.royalBlue
-        static let accent       = Theme.darkOrange
+        static let accent       = Theme.darkOrange.opacity(0.8)
         static let violet       = Theme.royalBlue.opacity(0.8)
         static let teal         = Theme.royalBlue.opacity(0.6)
         static let amber        = Theme.darkOrange
     }
 
-    // MARK: - Status Colors (Strictly Blue & Orange)
+    // MARK: - Status Colors (Blue, Red & Orange)
     enum Status {
         static let success      = Theme.royalBlue          // Success maps to Royal Blue shade
-        static let danger       = Theme.darkOrange         // Error/Danger maps to Orange
+        static let danger       = Theme.darkOrange.opacity(0.8)             // Error/Danger (Urgent) maps to Red replaced with Orange 0.8
         static let warning      = Theme.darkOrange         // Warning maps to Orange
         static let purple       = Theme.royalBlue          // Purple replaced with Royal Blue
         static let neutral      = Theme.royalBlue.opacity(0.4) // Neutral pending/inactive
