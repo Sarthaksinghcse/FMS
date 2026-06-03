@@ -27,12 +27,14 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
-        manager.distanceFilter = 10.0 
+        manager.distanceFilter = kCLDistanceFilterNone 
         manager.requestWhenInUseAuthorization()
         manager.allowsBackgroundLocationUpdates = true
         manager.showsBackgroundLocationIndicator = true
         manager.startUpdatingLocation()
     }
+    
+    private var uploadTimer: Timer?
     
     public func startTracking(vehicleId: UUID) {
         self.activeVehicleId = vehicleId
@@ -40,11 +42,17 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
         manager.startUpdatingLocation()
         // Immediately fetch the current location so stationary vehicles are uploaded at the start of the trip
         manager.requestLocation()
+        
+        uploadTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+            self?.attemptUpload()
+        }
     }
     
     public func stopTracking() {
         self.isTrackingActive = false
         self.activeVehicleId = nil
+        uploadTimer?.invalidate()
+        uploadTimer = nil
         manager.stopUpdatingLocation()
     }
     
@@ -53,9 +61,11 @@ public final class LocationService: NSObject, CLLocationManagerDelegate, Observa
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         self.lastLocation = location
-        
-        
-        guard isTrackingActive, let vehicleId = activeVehicleId else { return }
+        attemptUpload()
+    }
+    
+    private func attemptUpload() {
+        guard isTrackingActive, let vehicleId = activeVehicleId, let location = lastLocation else { return }
         let timeSinceLastUpload = Date().timeIntervalSince(lastUploadTime)
         guard timeSinceLastUpload >= 10.0 else { return }
         

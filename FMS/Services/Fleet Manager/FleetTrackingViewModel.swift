@@ -25,6 +25,7 @@ final class FleetTrackingViewModel {
     
     private var isLiveTracking = false
     private var realtimeChannel: RealtimeChannelV2? = nil
+    private var timerTask: Task<Void, Never>? = nil
     
     func startLiveTracking() {
         guard !isLiveTracking else { return }
@@ -32,6 +33,14 @@ final class FleetTrackingViewModel {
         
         Task {
             await loadVehicles(isBackgroundRefresh: true)
+        }
+        
+        timerTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+                if Task.isCancelled { break }
+                await loadVehicles(isBackgroundRefresh: true)
+            }
         }
         
         let client = supabaseManager.client
@@ -50,6 +59,9 @@ final class FleetTrackingViewModel {
     
     func stopLiveTracking() {
         isLiveTracking = false
+        timerTask?.cancel()
+        timerTask = nil
+        
         if let active = realtimeChannel {
             let client = supabaseManager.client
             Task {
@@ -73,6 +85,10 @@ final class FleetTrackingViewModel {
             let activeVehicleIds = Set(activeTrips.map { $0.vehicleId })
             
             let assignedVehicles = fetchedVehicles.filter { activeVehicleIds.contains($0.id) }
+            
+            // Fetch drivers
+            let drivers = try await supabaseManager.fetchDrivers()
+            let driversMap = Dictionary(uniqueKeysWithValues: drivers.map { ($0.id, $0) })
             
             var locationMap: [UUID: DBVehicleLocation] = [:]
             do {
@@ -99,10 +115,15 @@ final class FleetTrackingViewModel {
                     lastUpdated = nil
                 }
                 
+                let vehicleTrip = activeTrips.first { $0.vehicleId == vehicle.id }
+                let driver = vehicleTrip.flatMap { driversMap[$0.driverId] }
+                
                 return MappedVehicle(
                     vehicle: vehicle,
                     coordinate: coordinate,
-                    lastUpdated: lastUpdated
+                    lastUpdated: lastUpdated,
+                    trip: vehicleTrip,
+                    driver: driver
                 )
             }
             self.errorMessage = nil
