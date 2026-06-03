@@ -34,140 +34,109 @@ struct AuthView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Pure system background — exactly how Apple does it
-                Color(UIColor.systemGroupedBackground)
-                    .ignoresSafeArea()
+                AppTheme.Background.auth.ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
+                VStack(spacing: 0) {
+                    Spacer()
 
-                        // ── Logo block ─────────────────────────────────────────
-                        VStack(spacing: 12) {
-                            Image("AppLogo")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 300, height: 150)
-                                .padding(.top, 60)
-                                .opacity(appearAnimation ? 1 : 0)
-                                .offset(y: appearAnimation ? 0 : 16)
-                                .animation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.05), value: appearAnimation)
+                    
+                    VStack(spacing: 20) {
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 320, height: 160)
 
-                            Text("Sign in to your account")
-                                .font(.system(size: 15, weight: .regular))
-                                .foregroundStyle(Color(UIColor.secondaryLabel))
-                                .opacity(appearAnimation ? 1 : 0)
-                                .animation(.easeOut(duration: 0.4).delay(0.15), value: appearAnimation)
+                        VStack(spacing: 6) {
+                            Text("Sign in to your dashboard")
+                                .font(.system(.subheadline, design: .rounded))
+                                .foregroundColor(AppTheme.Text.tertiary)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.bottom, 36)
+                    }
+                    .padding(.bottom, 36)
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 20)
 
-                        // ── Inset grouped fields (iOS Settings style) ──────────
-                        VStack(spacing: 0) {
-                            // Email row
-                            HStack(spacing: 12) {
-                                Image(systemName: "envelope")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
-                                    .frame(width: 22)
+                    
+                    VStack(spacing: 24) {
 
-                                TextField("Email", text: $email)
-                                    .keyboardType(.emailAddress)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .focused($focusedField, equals: .email)
-                                    .font(.system(size: 17))
-                                    .foregroundStyle(Color(UIColor.label))
-                                    .submitLabel(.next)
-                                    .onSubmit { focusedField = .password }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                        
 
-                            // Hairline divider (starts after the icon column)
-                            Rectangle()
-                                .fill(Color(UIColor.separator).opacity(0.5))
-                                .frame(height: 0.5)
-                                .padding(.leading, 50)
 
-                            // Password row
-                            HStack(spacing: 12) {
-                                Image(systemName: "lock")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
-                                    .frame(width: 22)
+                        
+                        VStack(spacing: 16) {
+                            PremiumInputField(
+                                icon: "envelope.fill",
+                                placeholder: "Email Address",
+                                text: $email,
+                                isFocused: focusedField == .email
+                            )
+                            .keyboardType(.emailAddress)
+                            .focused($focusedField, equals: .email)
 
-                                AppleSecureField(text: $password, focusedField: $focusedField)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .background(Color(UIColor.secondarySystemGroupedBackground))
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .padding(.horizontal, 16)
-                        .opacity(appearAnimation ? 1 : 0)
-                        .animation(.easeOut(duration: 0.4).delay(0.1), value: appearAnimation)
+                            PremiumSecureField(
+                                icon: "key.fill",
+                                placeholder: "Password",
+                                text: $password,
+                                isFocused: focusedField == .password
+                            )
+                            .focused($focusedField, equals: .password)
 
-                        // ── Forgot Password ────────────────────────────────────
-                        HStack {
-                            Spacer()
-                            Button(action: handleForgotPassword) {
-                                Text("Forgot Password?")
-                                    .font(.system(size: 14, weight: .regular))
-                                    .foregroundStyle(AppTheme.Brand.royalBlue)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
-                        .opacity(appearAnimation ? 1 : 0)
-                        .animation(.easeOut(duration: 0.4).delay(0.15), value: appearAnimation)
-
-                        // ── Continue button ────────────────────────────────────
-                        Button(action: handleAuthentication) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(AppTheme.Brand.royalBlue)
-                                HStack(spacing: 10) {
-                                    if supabaseManager.isLoading {
-                                        ProgressView()
-                                            .progressViewStyle(.circular)
-                                            .tint(.white)
-                                            .scaleEffect(0.85)
-                                    }
-                                    Text(supabaseManager.isLoading ? "Signing In…" : "Sign In")
-                                        .font(.system(size: 17, weight: .semibold))
-                                        .foregroundStyle(.white)
+                            HStack {
+                                Spacer()
+                                Button {
+                                    handleForgotPassword()
+                                } label: {
+                                    Text("Forgot Password?")
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundColor(AppTheme.Brand.royalBlue)
                                 }
-                                .padding(.vertical, 16)
+                                .buttonStyle(PlainButtonStyle())
                             }
-                            .frame(height: 52)
+                            .padding(.top, -4)
+                        }
+
+                        
+                        Button(action: handleAuthentication) {
+                            HStack {
+                                if supabaseManager.isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Text.onDark))
+                                        .padding(.trailing, 8)
+                                }
+                                Text("Sign In")
+                                    .font(.system(.title3, design: .rounded, weight: .semibold))
+                            }
+                            .foregroundColor(AppTheme.Text.onDark)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(AppTheme.Brand.royalBlue)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.large, style: .continuous))
+                            .shadow(
+                                color: AppTheme.Brand.royalBlue.opacity(0.3),
+                                radius: 10, x: 0, y: 6
+                            )
                         }
                         .buttonStyle(ScaleButtonStyle())
-                        .disabled(supabaseManager.isLoading || email.isEmpty || password.isEmpty)
-                        .opacity((email.isEmpty || password.isEmpty) ? 0.55 : 1.0)
-                        .animation(.easeInOut(duration: 0.2), value: email.isEmpty || password.isEmpty)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 24)
-                        .opacity(appearAnimation ? 1 : 0)
-                        .animation(.easeOut(duration: 0.4).delay(0.2), value: appearAnimation)
-
-                        // ── Footer legal text ──────────────────────────────────
-                        Text("By signing in, you agree to the Terms of Service and Privacy Policy.")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color(UIColor.tertiaryLabel))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-                            .padding(.top, 20)
-                            .opacity(appearAnimation ? 1 : 0)
-                            .animation(.easeOut(duration: 0.4).delay(0.25), value: appearAnimation)
-
-                        Spacer(minLength: 40)
+                        .disabled(supabaseManager.isLoading)
+                        .padding(.top, 8)
                     }
-                }
-                .onTapGesture { focusedField = nil }
+                    .padding(AppTheme.Spacing.lg + 4)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.form, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.Radius.form, style: .continuous)
+                            .stroke(AppTheme.Glass.border, lineWidth: 1)
+                    )
+                    .shadow(color: AppTheme.Shadow.card, radius: 24, x: 0, y: 12)
+                    .padding(.horizontal, AppTheme.Spacing.lg)
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 20)
 
-                // ── Error / Forgot alerts (unchanged) ─────────────────────────
+                    Spacer()
+                    Spacer()
+                }
+
+                
                 if showErrorAlert {
                     GlassErrorAlert(
                         message: errorAlertMessage,
@@ -231,7 +200,9 @@ struct AuthView: View {
                 }
             }
             .onAppear {
-                withAnimation { appearAnimation = true }
+                withAnimation(.easeOut(duration: 0.6)) {
+                    appearAnimation = true
+                }
             }
             .onTapGesture {
                 focusedField = nil
@@ -264,7 +235,7 @@ struct AuthView: View {
         Task {
             do {
                 try await supabaseManager.client.auth
-                    .resetPasswordForEmail(trimmedEmail)
+                    .resetPasswordForEmail(trimmedEmail, redirectTo: URL(string: "carwaan://reset-password"))
                 await MainActor.run {
                     isSendingResetLink = false
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
@@ -488,40 +459,6 @@ struct PremiumSecureField: View {
     }
 }
 
-// MARK: - Native Apple-style secure field (no border, clean)
-struct AppleSecureField: View {
-    @Binding var text: String
-    @FocusState.Binding var focusedField: FocusField?
-    @State private var isVisible = false
-
-    var body: some View {
-        HStack {
-            Group {
-                if isVisible {
-                    TextField("Password", text: $text)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .submitLabel(.go)
-                } else {
-                    SecureField("Password", text: $text)
-                        .submitLabel(.go)
-                }
-            }
-            .focused($focusedField, equals: .password)
-            .font(.system(size: 17))
-            .foregroundStyle(Color(UIColor.label))
-
-            Button {
-                isVisible.toggle()
-            } label: {
-                Image(systemName: isVisible ? "eye.fill" : "eye.slash.fill")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color(UIColor.tertiaryLabel))
-            }
-            .buttonStyle(.plain)
-        }
-    }
-}
 
 struct GlassForgotPasswordAlert: View {
     @Binding var email: String

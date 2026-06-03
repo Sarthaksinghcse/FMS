@@ -169,7 +169,7 @@ struct DrowsinessMonitorHUD: View {
     @ObservedObject var detector: DrowsinessDetector
 
     // Drag state
-    @State private var position: CGPoint = CGPoint(x: UIScreen.main.bounds.width - 60, y: 120)
+    @State private var position: CGPoint = CGPoint(x: 300, y: 120)
     @GestureState private var dragOffset: CGSize = .zero
     @State private var isDragging = false
 

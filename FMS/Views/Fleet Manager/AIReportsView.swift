@@ -150,7 +150,7 @@ struct AIReportsView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
+                    .foregroundColor(Theme.fmsRed)
                     .font(.system(.body, design: .rounded))
                 }
             }

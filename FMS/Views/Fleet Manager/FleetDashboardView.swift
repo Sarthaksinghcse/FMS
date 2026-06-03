@@ -372,7 +372,7 @@ struct FleetDashboardView: View {
                         .environment(\.modelContext, modelContext)
                         .toolbar(.hidden, for: .tabBar)
                 case .liveTrips:
-                    TripListView(initialFilter: .active)
+                    TripListContentView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
                         .toolbar(.hidden, for: .tabBar)
                 }

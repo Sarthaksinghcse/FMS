@@ -56,14 +56,14 @@ struct ManagementHubView: View {
                 title: "Vehicle Management",
                 subtitle: "Manage all fleet vehicles",
                 icon: "truck.box.fill",
-                accentColor: AppTheme.Brand.royalBlue,
+                accentColor: Theme.royalBlue,
                 metrics: [
                     CardMetric(label: "Total",   value: "\(vehicles.count)",
-                               systemIcon: "car.fill",                       iconColor: AppTheme.Brand.royalBlue),
+                               systemIcon: "car.fill",                       iconColor: Theme.royalBlue),
                     CardMetric(label: "Available", value: "\(vehicles.filter { $0.status == .active }.count)",
-                               systemIcon: "checkmark.circle.fill",          iconColor: AppTheme.Status.success),
+                               systemIcon: "checkmark.circle.fill",          iconColor: Theme.royalBlue),
                     CardMetric(label: "Maintenance",  value: "\(vehicles.filter { $0.status == .inMaintenance }.count)",
-                               systemIcon: "exclamationmark.triangle.fill",  iconColor: AppTheme.Brand.accent)
+                               systemIcon: "exclamationmark.triangle.fill",  iconColor: Theme.darkOrange.opacity(0.8))
                 ],
                 destination: .vehicleList
             ),
@@ -71,14 +71,14 @@ struct ManagementHubView: View {
                 title: "Driver Management",
                 subtitle: "Manage drivers & assignments",
                 icon: "person.fill",
-                accentColor: AppTheme.Brand.primary,
+                accentColor: Color(red: 0.12, green: 0.60, blue: 0.35),
                 metrics: [
                     CardMetric(label: "Total",   value: "\(driverCount)",
-                               systemIcon: "person.2.fill",  iconColor: AppTheme.Brand.primary),
+                               systemIcon: "person.2.fill",  iconColor: Color(red: 0.12, green: 0.60, blue: 0.35)),
                     CardMetric(label: "Active",  value: "\(users.filter { $0.role == .driver && $0.isActive }.count)",
-                               systemIcon: "checkmark.circle.fill",    iconColor: AppTheme.Status.success),
+                               systemIcon: "checkmark.circle.fill",    iconColor: Color(red: 0.12, green: 0.60, blue: 0.35)),
                     CardMetric(label: "Inactive", value: "\(users.filter { $0.role == .driver && !$0.isActive }.count)",
-                               systemIcon: "xmark.circle.fill",    iconColor: AppTheme.Brand.primary.opacity(0.4))
+                               systemIcon: "xmark.circle.fill",    iconColor: Color(red: 0.12, green: 0.60, blue: 0.35).opacity(0.6))
                 ],
                 destination: .driverList
             ),
@@ -86,14 +86,14 @@ struct ManagementHubView: View {
                 title: "Maintenance Team",
                 subtitle: "Manage technicians & tasks",
                 icon: "wrench.and.screwdriver.fill",
-                accentColor: AppTheme.Brand.accent,
+                accentColor: Theme.darkOrange,
                 metrics: [
                     CardMetric(label: "Staff",        value: "\(maintenanceCount)",
-                               systemIcon: "person.3.fill",      iconColor: AppTheme.Brand.accent),
+                               systemIcon: "person.3.fill",      iconColor: Theme.darkOrange),
                     CardMetric(label: "Active Orders", value: "\(workOrders.filter { $0.status == .open || $0.status == .inProgress }.count)",
-                               systemIcon: "doc.text.fill",      iconColor: AppTheme.Brand.accent),
+                               systemIcon: "doc.text.fill",      iconColor: Theme.darkOrange),
                     CardMetric(label: "Done Orders",  value: "\(workOrders.filter { $0.status == .completed }.count)",
-                               systemIcon: "checkmark.seal.fill", iconColor: AppTheme.Status.success)
+                               systemIcon: "checkmark.seal.fill", iconColor: Theme.darkOrange)
                 ],
                 destination: .maintenanceStaff
             )
@@ -232,22 +232,13 @@ struct ManagementCardView: View {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(.ultraThinMaterial)
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(LinearGradient(
-                            colors: [card.accentColor.opacity(0.08), card.accentColor.opacity(0.01)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ))
+                        .fill(card.accentColor.opacity(0.08))
                 }
             )
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [card.accentColor.opacity(0.25), card.accentColor.opacity(0.05), Color.white.opacity(0.1)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.5
-                    )
+                    .stroke(card.accentColor.opacity(0.2), lineWidth: 1.5)
             )
             .shadow(color: Color.black.opacity(0.03), radius: 12, x: 0, y: 6)
         }
@@ -1406,7 +1397,7 @@ enum TripCategoryFilter: String, CaseIterable, Identifiable {
 
 
 @available(iOS 26.0, *)
-struct TripListView: View {
+struct TripListContentView: View {
 
     @State private var searchText = ""
     @State private var selectedFilter: TripCategoryFilter = .all
@@ -1474,8 +1465,7 @@ struct TripListView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChips.padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 8)
@@ -1532,7 +1522,6 @@ struct TripListView: View {
                 await syncTrips()
             }
         }
-        }
     }
 
     private var filterChips: some View {
@@ -1542,9 +1531,9 @@ struct TripListView: View {
                     let isSelected = selectedFilter == filter
                     let chipColor: Color = {
                         switch filter {
-                        case .all:      return AppTheme.Brand.accent 
+                        case .all:      return Color.gray 
                         case .active:   return AppTheme.Brand.primary 
-                        case .upcoming: return AppTheme.Brand.accent 
+                        case .upcoming: return Theme.darkOrange 
                         case .completed: return Theme.royalBlue.opacity(0.5) 
                         }
                     }()
@@ -1648,6 +1637,21 @@ struct TripListView: View {
             }
         } catch {
             print("Failed to sync trips: \(error)")
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+struct TripListView: View {
+    var initialFilter: TripCategoryFilter = .all
+
+    init(initialFilter: TripCategoryFilter = .all) {
+        self.initialFilter = initialFilter
+    }
+
+    var body: some View {
+        NavigationStack {
+            TripListContentView(initialFilter: initialFilter)
         }
     }
 }
@@ -1933,13 +1937,39 @@ struct TripDetailView: View {
     // MARK: - Map Card
     private var mapCard: some View {
         VStack(spacing: 0) {
-            Map(position: $position) {
-                Marker("Start", systemImage: "play.circle.fill", coordinate: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
-                    .tint(AppTheme.Status.success)
-                Marker("End", systemImage: "flag.fill", coordinate: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
-                    .tint(AppTheme.Status.danger)
+            ZStack(alignment: .bottomTrailing) {
+                Map(position: $position) {
+                    Marker("Start", systemImage: "play.circle.fill", coordinate: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
+                        .tint(AppTheme.Status.success)
+                    Marker("End", systemImage: "flag.fill", coordinate: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
+                        .tint(AppTheme.Status.danger)
+                }
+                .frame(height: 220)
+                
+                if trip.tripStatus == .started || trip.tripStatus == .inProgress {
+                    NavigationLink {
+                        LiveTripTrackingView(
+                            trip: trip,
+                            driverName: assignedDriver?.fullName ?? "Unknown Driver",
+                            driverPhone: assignedDriver?.phoneNumber,
+                            vehicleName: assignedVehicle != nil ? "\(assignedVehicle!.make) \(assignedVehicle!.model) · \(assignedVehicle!.registrationNumber)" : "Unknown Vehicle"
+                        )
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "location.fill")
+                            Text("Track Live Location")
+                        }
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(AppTheme.Brand.primary)
+                        .cornerRadius(8)
+                        .shadow(radius: 4)
+                    }
+                    .padding(12)
+                }
             }
-            .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
         }
         .background(AppTheme.Background.card)
