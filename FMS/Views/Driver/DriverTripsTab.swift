@@ -1039,7 +1039,8 @@ struct TripNavigationView: View {
                                 }
                             }
                         },
-                        onSOS: { vm.showSOSCountdown = true }
+                        onSOS: { vm.showSOSCountdown = true },
+                        onVoiceLog: { vm.showVoiceLog = true }
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.spring(response: 0.45), value: nav.isNavigating)
@@ -1106,6 +1107,9 @@ struct TripNavigationView: View {
                 InspectionFormSheet(isPreTrip: true) { passed, _, _ in
                     preTripPassed = passed
                 }
+            }
+            .sheet(isPresented: $vm.showVoiceLog) {
+                VoiceLogSheet(tripId: vm.activeTrip?.id)
             }
             .alert("Geofence Restriction", isPresented: $localShowGeofenceAlert) {
                 Button("OK", role: .cancel) { }

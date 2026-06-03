@@ -383,18 +383,32 @@ private struct LiveTripCard: View {
                         .foregroundStyle(.primary)
                         .contentTransition(.numericText())
 
-                    HStack(spacing: 10) {
-                        Button {
-                            vm.mapActiveTrip = vm.activeTrip
-                            vm.showMaps = true
-                        } label: {
-                            Label("Navigate", systemImage: "location.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color.fmsIndigo)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 48)
-                                .background(Color.fmsIndigo.opacity(0.10))
-                                .cornerRadius(12)
+                    VStack(spacing: 10) {
+                        HStack(spacing: 10) {
+                            Button {
+                                vm.mapActiveTrip = vm.activeTrip
+                                vm.showMaps = true
+                            } label: {
+                                Label("Navigate", systemImage: "location.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 48)
+                                    .background(Color.fmsIndigo.opacity(0.10))
+                                    .cornerRadius(12)
+                            }
+
+                            Button {
+                                vm.showVoiceLog = true
+                            } label: {
+                                Label("Voice Log", systemImage: "mic.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 48)
+                                    .background(Color.fmsIndigo.opacity(0.10))
+                                    .cornerRadius(12)
+                            }
                         }
 
                         Button {

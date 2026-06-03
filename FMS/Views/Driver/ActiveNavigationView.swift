@@ -10,6 +10,7 @@ struct ActiveNavigationOverlay: View {
     @ObservedObject var nav: NavigationManager
     let onEndTrip: () -> Void
     let onSOS: () -> Void
+    let onVoiceLog: () -> Void
 
     // Collapsed / expanded turn list
     @State private var showStepList = false
@@ -206,6 +207,9 @@ struct ActiveNavigationOverlay: View {
 
     private var actionButtonsRow: some View {
         HStack(spacing: 10) {
+            MapActionButton(label: "Voice Log", icon: "mic.fill", style: .glass) {
+                onVoiceLog()
+            }
             MapActionButton(label: "Defect", icon: "wrench.and.screwdriver.fill", style: .warning) {}
             MapActionButton(label: "SOS",    icon: "sos",                          style: .destructive) {
                 onSOS()

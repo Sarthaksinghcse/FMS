@@ -2188,6 +2188,8 @@ struct DBVehicleHealthScore: Codable, Identifiable {
     }
 }
 
+
+
 struct AIAnalyticsReport: Codable, Identifiable {
     let id: UUID
     let reportText: String
@@ -2201,3 +2203,30 @@ struct AIAnalyticsReport: Codable, Identifiable {
 }
 
 
+// MARK: - Trip Log (Voice Log Persistence)
+
+struct DBTripLog: Codable, Identifiable {
+    let id: UUID
+    var driverId: UUID
+    var tripId: UUID?
+    var transcript: String
+    var startLocation: String?
+    var endLocation: String?
+    var startTime: String?
+    var endTime: String?
+    var mileage: Double?
+    var createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case driverId       = "driver_id"
+        case tripId         = "trip_id"
+        case transcript
+        case startLocation  = "start_location"
+        case endLocation    = "end_location"
+        case startTime      = "start_time"
+        case endTime        = "end_time"
+        case mileage
+        case createdAt      = "created_at"
+    }
+}
