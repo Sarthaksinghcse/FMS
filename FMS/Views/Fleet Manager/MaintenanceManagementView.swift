@@ -282,6 +282,7 @@ struct MaintenanceManagementView: View {
             }
             .sheet(isPresented: $showingScheduler) {
                 ScheduleWorkOrderSheet(viewModel: viewModel, vehicles: vehicles, staff: maintenanceStaff, isPresented: $showingScheduler)
+                    .interactiveDismissDisabled()
             }
             .sheet(isPresented: $showingCompletionDialog) {
                 if let wo = selectedWorkOrderForCompletion {
@@ -291,6 +292,7 @@ struct MaintenanceManagementView: View {
                             selectedWorkOrderForCompletion = nil
                         }
                     }
+                    .interactiveDismissDisabled()
                 }
             }
         }
