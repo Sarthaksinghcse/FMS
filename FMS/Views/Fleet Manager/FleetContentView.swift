@@ -65,7 +65,7 @@ struct FleetContentView: View {
                     Color.black.opacity(0.92)
                         .ignoresSafeArea()
                     
-                    // Outer red warning glowing border shadow
+                    // Outer orange warning glowing border shadow
                     RoundedRectangle(cornerRadius: 0)
                         .stroke(Theme.darkOrange.opacity(0.35), lineWidth: 20)
                         .blur(radius: 12)
