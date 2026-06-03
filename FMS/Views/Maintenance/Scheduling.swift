@@ -76,15 +76,17 @@ extension WorkOrderPriority {
 
 struct ScheduledTasksView: View {
     let currentUser: User
+    let hidesTabBar: Bool
     @StateObject private var vm: ScheduledTasksViewModel
     @Environment(\.dismiss) private var dismiss
     private var externalFilter: Binding<Int>?
 
     @Query private var allNotifications: [AppNotification]
 
-    init(currentUser: User, allWorkOrders: [WorkOrder], selectedFilter: Binding<Int>? = nil) {
+    init(currentUser: User, allWorkOrders: [WorkOrder], selectedFilter: Binding<Int>? = nil, hidesTabBar: Bool = false) {
         self.currentUser = currentUser
         self.externalFilter = selectedFilter
+        self.hidesTabBar = hidesTabBar
         _vm = StateObject(wrappedValue: ScheduledTasksViewModel(
             currentUserId: currentUser.id,
             allWorkOrders: allWorkOrders
@@ -161,6 +163,7 @@ struct ScheduledTasksView: View {
                 }
             }
         }
+        .toolbar(hidesTabBar ? .hidden : .automatic, for: .tabBar)
     }
 }
 

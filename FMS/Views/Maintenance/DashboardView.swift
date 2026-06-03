@@ -18,6 +18,7 @@ struct MaintenanceDashboardTab: View {
     @Query private var allWorkOrders: [WorkOrder]
     @Query private var allInventory: [InventoryItem]
     @Query private var allNotifications: [AppNotification]
+    @Query private var allUsers: [User]
 
     // Navigation trigger or tab switching binding if needed
     @Binding var selectedTab: Int
@@ -92,6 +93,30 @@ struct MaintenanceDashboardTab: View {
             .map { $0 }
     }
 
+    private var managerChannel: CommunicationChannel? {
+        guard let manager = allUsers.first(where: { $0.role == .fleetManager }) else { return nil }
+        
+        let parts = manager.fullName.split(separator: " ")
+        let initials: String
+        if parts.count >= 2 {
+            initials = String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        } else {
+            initials = String(manager.fullName.prefix(2)).uppercased()
+        }
+        
+        return CommunicationChannel(
+            id: manager.id,
+            senderName: manager.fullName,
+            textPreview: "Chat with Manager",
+            timestamp: "",
+            unreadCount: 0,
+            initials: initials,
+            avatarColor: AppTheme.Brand.violet,
+            category: .managers,
+            autoReplies: []
+        )
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -99,6 +124,83 @@ struct MaintenanceDashboardTab: View {
 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 22) {
+                        // ── Greeting Header ────────────────────────
+                        HStack(alignment: .center, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(getGreetingTime() + ",")
+                                    .font(.system(size: 17, weight: .regular))
+                                    .foregroundStyle(.secondary)
+                                Text(personnelFirstName)
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(.primary)
+                            }
+
+                            Spacer()
+
+                            // Bell Button
+                            Button {
+                                showingNotifications = true
+                            } label: {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Color(UIColor.label))
+                                        .frame(width: 40, height: 40)
+                                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                                        .clipShape(Circle())
+                                    
+                                    if unreadNotifications.count > 0 {
+                                        Circle()
+                                            .fill(AppTheme.Status.danger)
+                                            .frame(width: 10, height: 10)
+                                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                            .offset(x: 2, y: -2)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+
+                            Spacer().frame(width: 12)
+
+                            // Avatar Button
+                            Button {
+                                showingProfile = true
+                            } label: {
+                                ZStack {
+                                    if let imageURLString = currentUser.profileImageURL,
+                                       let imageURL = URL(string: imageURLString) {
+                                        CachedAsyncImage(url: imageURL) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                    } else {
+                                        ZStack {
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                                .frame(width: 40, height: 40)
+                                            Text(initials)
+                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+
                         overviewSection
 
                         quickActionsSection
@@ -112,49 +214,21 @@ struct MaintenanceDashboardTab: View {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
             }
-            .navigationTitle("Dashboard")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        showingNotifications = true
-                    } label: {
-                        ZStack(alignment: .topTrailing) {
-                            Image(systemName: "bell.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(AppTheme.Brand.primary)
-                                .frame(width: 32, height: 32)
-                                .background(Color(.systemGray6))
-                                .clipShape(Circle())
-                            
-                            if unreadNotifications.count > 0 {
-                                Circle()
-                                    .fill(AppTheme.Status.danger)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: 2, y: -2)
-                            }
-                        }
-                    }
-                    
-                    Button {
-                        showingProfile = true
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(AppTheme.Brand.primaryDeep.gradient)
-                                .frame(width: 32, height: 32)
-                            Text(initials)
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                        }
-                    }
-                }
-            }
+            .navigationBarHidden(true)
             .sheet(isPresented: $showingProfile) {
                 MaintenanceProfileView()
             }
             .sheet(isPresented: $showingNotifications) {
                 MaintenanceNotificationsSheet(currentUser: currentUser)
+            }
+            .sheet(isPresented: $showChat) {
+                NavigationStack {
+                    if let channel = managerChannel {
+                        ChatDetailView(channel: channel)
+                    } else {
+                        CommunicationView()
+                    }
+                }
             }
         }
     }
@@ -182,7 +256,8 @@ struct MaintenanceDashboardTab: View {
                 ) {
                     ScheduledTasksView(
                         currentUser: currentUser,
-                        allWorkOrders: allWorkOrders
+                        allWorkOrders: allWorkOrders,
+                        hidesTabBar: true
                     )
                 }
 
@@ -199,7 +274,8 @@ struct MaintenanceDashboardTab: View {
                 ) {
                     CompletedTasksView(
                         currentUserId: currentUser.id,
-                        allWorkOrders: allWorkOrders
+                        allWorkOrders: allWorkOrders,
+                        hidesTabBar: true
                     )
                 }
 
@@ -216,7 +292,8 @@ struct MaintenanceDashboardTab: View {
                 ) {
                     InProgressTasksView(
                         currentUserId: currentUser.id,
-                        allWorkOrders: allWorkOrders
+                        allWorkOrders: allWorkOrders,
+                        hidesTabBar: true
                     )
                 }
 
@@ -271,11 +348,30 @@ struct MaintenanceDashboardTab: View {
                     destination: ReportIssueView()
                 )
                 
-                GridQuickActionButton(
-                    icon: "bubble.left.and.bubble.right.fill",
-                    label: "Chat",
-                    destination: CommunicationView()
-                )
+                Button {
+                    showChat = true
+                } label: {
+                    VStack(spacing: 8) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(AppTheme.Brand.primary.opacity(0.08))
+                                .frame(width: 56, height: 56)
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(AppTheme.Brand.royalBlue)
+                        }
+                        
+                        Text("Chat")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .minimumScaleFactor(0.8)
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(AppTheme.Text.primary)
+                            .frame(height: 32, alignment: .top)
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -292,7 +388,7 @@ struct MaintenanceDashboardTab: View {
                 SectionHeader(title: "Recent Work Orders")
                 Spacer()
                 Button("See All") {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { selectedTab = 2 }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { selectedTab = 1 }
                 }
                 .font(.subheadline).foregroundColor(AppTheme.Brand.primary)
             }

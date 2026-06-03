@@ -79,10 +79,11 @@ final class CompletedTasksViewModel: ObservableObject {
 // ─────────────────────────────────────────────────────────────────────────────
 
 struct CompletedTasksView: View {
-    
+    let hidesTabBar: Bool
     @StateObject private var vm: CompletedTasksViewModel
     
-    init(currentUserId: UUID, allWorkOrders: [WorkOrder]) {
+    init(currentUserId: UUID, allWorkOrders: [WorkOrder], hidesTabBar: Bool = false) {
+        self.hidesTabBar = hidesTabBar
         _vm = StateObject(wrappedValue: CompletedTasksViewModel(
             currentUserId: currentUserId,
             allWorkOrders: allWorkOrders
@@ -145,6 +146,7 @@ struct CompletedTasksView: View {
                 }
             }
         }
+        .toolbar(hidesTabBar ? .hidden : .automatic, for: .tabBar)
     }
     
     // ─────────────────────────────────────────────────────────────────────────────

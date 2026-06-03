@@ -79,10 +79,11 @@ final class InProgressTasksViewModel: ObservableObject {
 // ─────────────────────────────────────────────────────────────────────────────
 
 struct InProgressTasksView: View {
-    
+    let hidesTabBar: Bool
     @StateObject private var vm: InProgressTasksViewModel
     
-    init(currentUserId: UUID, allWorkOrders: [WorkOrder]) {
+    init(currentUserId: UUID, allWorkOrders: [WorkOrder], hidesTabBar: Bool = false) {
+        self.hidesTabBar = hidesTabBar
         _vm = StateObject(wrappedValue: InProgressTasksViewModel(
             currentUserId: currentUserId,
             allWorkOrders: allWorkOrders
@@ -138,6 +139,7 @@ struct InProgressTasksView: View {
                 }
             }
         }
+        .toolbar(hidesTabBar ? .hidden : .automatic, for: .tabBar)
     }
     
     // ─────────────────────────────────────────────────────────────────────────────

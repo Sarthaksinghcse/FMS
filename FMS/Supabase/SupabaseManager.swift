@@ -919,6 +919,21 @@ final class SupabaseManager {
         
         return url.absoluteString
     }
+
+    func uploadChatImage(messageId: UUID, imageData: Data) async throws -> String {
+        let path = "chat_\(messageId.uuidString).jpg"
+        _ = try await client.storage
+            .from("maintenance-images")
+            .upload(
+                path,
+                data: imageData,
+                options: FileOptions(contentType: "image/jpeg", upsert: true)
+            )
+        let url = try client.storage
+            .from("maintenance-images")
+            .getPublicURL(path: path)
+        return url.absoluteString
+    }
     
     
     
@@ -1004,6 +1019,32 @@ final class SupabaseManager {
                     for localStaff in localMaintenance {
                         if !remoteIds.contains(localStaff.id) {
                             context.delete(localStaff)
+                        }
+                    }
+                }
+            }
+            
+            if let remoteManagers = try? await fetchFleetManagers() {
+                let descriptor = FetchDescriptor<User>()
+                let localUsers = (try? context.fetch(descriptor)) ?? []
+                for rm in remoteManagers {
+                    if let local = localUsers.first(where: { $0.id == rm.id }) {
+                        local.fullName = rm.name
+                        local.email = rm.email
+                        local.phoneNumber = rm.phoneNumber ?? ""
+                        local.role = rm.role.asLocalRole
+                        local.isActive = rm.isActive
+                    } else {
+                        context.insert(rm.asLocalUser)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteManagers.map { $0.id })
+                    let localManagers = localUsers.filter { $0.role == .fleetManager }
+                    for localManager in localManagers {
+                        if !remoteIds.contains(localManager.id) {
+                            context.delete(localManager)
                         }
                     }
                 }

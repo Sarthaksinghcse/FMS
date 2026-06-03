@@ -89,6 +89,7 @@ struct SparePartsForecastView: View {
         }
         .navigationTitle("AI Parts Forecast")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {

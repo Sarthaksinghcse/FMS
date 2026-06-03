@@ -1,53 +1,69 @@
-//
-//  MessageInputView.swift
-//  FMS
-//
-//  Created by Gauri Verma on 26/05/26.
-//
-
-
 import SwiftUI
+import PhotosUI
 
 struct MessageInputView: View {
     @Binding var textMessage: String
+    @Binding var selectedImageData: Data?
     var onSend: () -> Void
-    var onAttachPhoto: () -> Void = {}
     var onAttachWorkOrder: () -> Void = {}
+    
+    @State private var selectedItem: PhotosPickerItem? = nil
 
     var body: some View {
         VStack(spacing: 0) {
+            if let imgData = selectedImageData, let uiImage = UIImage(data: imgData) {
+                HStack {
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 60, height: 60)
+                            .cornerRadius(8)
+                            .clipped()
+                        
+                        Button {
+                            selectedImageData = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(AppTheme.Status.danger)
+                                .background(Circle().fill(Color.white))
+                        }
+                        .offset(x: 6, y: -6)
+                    }
+                    .padding(.leading, 16)
+                    .padding(.vertical, 8)
+                    
+                    Spacer()
+                }
+                .background(AppTheme.Background.card)
+            }
+            
             Divider()
             
             HStack(spacing: 12) {
-                // Attach File / Work Order
-                Button(action: onAttachWorkOrder) {
-                    Image(systemName: "paperclip")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(AppTheme.Text.secondary)
+                // Text Input Area with Photo Picker inside it
+                HStack(spacing: 10) {
+                    PhotosPicker(selection: $selectedItem, matching: .images) {
+                        Image(systemName: "photo.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppTheme.Brand.primary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    TextField("Type a message...", text: $textMessage)
+                        .font(.system(size: 14))
                 }
-                .buttonStyle(ScaleButtonStyle())
-
-                // Attach Camera / Emergency Photo
-                Button(action: onAttachPhoto) {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(AppTheme.Text.secondary)
-                }
-                .buttonStyle(ScaleButtonStyle())
-
-                // Text Input
-                TextField("Type a message...", text: $textMessage)
-                    .font(.system(size: 14))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.04))
-                    .cornerRadius(20)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.black.opacity(0.04))
+                .cornerRadius(20)
 
                 // Send Button
                 Button(action: onSend) {
                     ZStack {
                         Circle()
-                            .fill(textMessage.isEmpty ? AppTheme.Brand.primary.opacity(0.15) : AppTheme.Brand.primary)
+                            .fill((textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil) ? AppTheme.Brand.primary.opacity(0.15) : AppTheme.Brand.primary)
                             .frame(width: 34, height: 34)
                         
                         Image(systemName: "arrow.up")
@@ -55,16 +71,26 @@ struct MessageInputView: View {
                             .foregroundColor(.white)
                     }
                 }
-                .disabled(textMessage.isEmpty)
+                .disabled(textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil)
                 .buttonStyle(ScaleButtonStyle())
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
             .background(AppTheme.Background.card)
         }
+        .onChange(of: selectedItem) { _, newValue in
+            Task {
+                if let data = try? await newValue?.loadTransferable(type: Data.self) {
+                    await MainActor.run {
+                        self.selectedImageData = data
+                        self.selectedItem = nil
+                    }
+                }
+            }
+        }
     }
 }
 
 #Preview {
-    MessageInputView(textMessage: .constant("Hello World"), onSend: {})
+    MessageInputView(textMessage: .constant("Hello World"), selectedImageData: .constant(nil), onSend: {})
 }
