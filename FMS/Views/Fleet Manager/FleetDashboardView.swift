@@ -72,79 +72,80 @@ struct FleetDashboardView: View {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .center, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(viewModel.getGreetingTime() + ",")
                                     .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(.secondary)
-                                Text(managerFirstName)
+                                Text(SupabaseManager.shared.currentUser?.name ?? managerFirstName)
                                     .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(.primary)
                             }
 
                             Spacer()
 
-                            HStack(spacing: 16) {
-
-                                Button {
-                                    lastGeofenceAlertViewTime = Date().timeIntervalSince1970
-                                    activeGeofenceAlertsCount = 0
-                                    viewModel.activeQuickAction = .alerts
-                                } label: {
-                                    ZStack(alignment: .topTrailing) {
-                                        Image(systemName: "bell.fill")
-                                            .font(.system(size: 18))
-                                            .foregroundStyle(Color(UIColor.label))
-                                            .frame(width: 40, height: 40)
-                                            .background(Color(UIColor.secondarySystemGroupedBackground))
-                                            .clipShape(Circle())
-                                        
-                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
-                                            Circle()
-                                                .fill(AppTheme.Status.danger)
-                                                .frame(width: 10, height: 10)
-                                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                                .offset(x: 2, y: -2)
-                                        }
+                            // Bell Button
+                            Button {
+                                lastGeofenceAlertViewTime = Date().timeIntervalSince1970
+                                activeGeofenceAlertsCount = 0
+                                viewModel.activeQuickAction = .alerts
+                            } label: {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Color(UIColor.label))
+                                        .frame(width: 40, height: 40)
+                                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                                        .clipShape(Circle())
+                                    
+                                    if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
+                                        Circle()
+                                            .fill(AppTheme.Status.danger)
+                                            .frame(width: 10, height: 10)
+                                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                            .offset(x: 2, y: -2)
                                     }
                                 }
-                                .buttonStyle(.plain)
-
-                                Button {
-                                    showProfile = true
-                                } label: {
-                                    ZStack {
-                                        if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
-                                           let imageURL = URL(string: imageURLString) {
-                                            CachedAsyncImage(url: imageURL) { image in
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                            } placeholder: {
-                                                ProgressView()
-                                            }
-                                            .frame(width: 40, height: 40)
-                                            .clipShape(Circle())
-                                        } else {
-                                            ZStack {
-                                                Circle()
-                                                    .fill(
-                                                        LinearGradient(
-                                                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
-                                                            startPoint: .topLeading,
-                                                            endPoint: .bottomTrailing
-                                                        )
-                                                    )
-                                                    .frame(width: 40, height: 40)
-                                                Text(managerInitials)
-                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                                    .foregroundColor(.white)
-                                            }
-                                        }
-                                    }
-                                }
-                                .buttonStyle(.plain)
                             }
+                            .buttonStyle(.plain)
+
+                            Spacer().frame(width: 12)
+
+                            // Avatar Button
+                            Button {
+                                showProfile = true
+                            } label: {
+                                ZStack {
+                                    if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                                       let imageURL = URL(string: imageURLString) {
+                                        CachedAsyncImage(url: imageURL) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                    } else {
+                                        ZStack {
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                                .frame(width: 40, height: 40)
+                                            Text(managerInitials)
+                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 24)
@@ -320,6 +321,7 @@ struct FleetDashboardView: View {
                     }
                 }
                 .environment(\.modelContext, modelContext)
+                .interactiveDismissDisabled()
             }
             // See All sheet
             .sheet(isPresented: $viewModel.showAllActivities) {
@@ -327,15 +329,18 @@ struct FleetDashboardView: View {
                     handleActivityTap(activity)
                 }
                 .environment(\.modelContext, modelContext)
+                .interactiveDismissDisabled()
             }
             // Profile sheet
             .sheet(isPresented: $showProfile) {
                 FleetManagerProfileView()
                     .environment(\.modelContext, modelContext)
+                    .interactiveDismissDisabled()
             }
             // Chat sheet
             .sheet(isPresented: $showChat) {
                 FleetManagerChatListView()
+                    .interactiveDismissDisabled()
             }
             .task {
                 await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -368,7 +373,7 @@ struct FleetDashboardView: View {
                         .environment(\.modelContext, modelContext)
                         .toolbar(.hidden, for: .tabBar)
                 case .liveTrips:
-                    TripListView(initialFilter: .active)
+                    TripListContentView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
                         .toolbar(.hidden, for: .tabBar)
                 }

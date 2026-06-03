@@ -92,7 +92,7 @@ struct DriverDashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
-        .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
+        .sheet(isPresented: $vm.showMessaging) { ChatSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
         .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
             vm.showRaiseQuery = false
@@ -1542,6 +1542,8 @@ struct ChatSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var messageText = ""
+    @State private var selectedImageData: Data? = nil
+    @State private var selectedItem: PhotosPickerItem? = nil
 
     var body: some View {
         NavigationStack {
@@ -1570,13 +1572,7 @@ struct ChatSheet: View {
                                         if message.isMe {
                                             Spacer()
                                             VStack(alignment: .trailing, spacing: 4) {
-                                                Text(message.preview)
-                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                    .foregroundColor(.white)
-                                                    .padding(.horizontal, 14)
-                                                    .padding(.vertical, 10)
-                                                    .background(AppTheme.Brand.primary)
-                                                    .cornerRadius(16)
+                                                messageBubbleContent(text: message.preview, isMe: true)
                                                 Text(message.time)
                                                     .font(.system(size: 9))
                                                     .foregroundColor(.gray)
@@ -1584,13 +1580,7 @@ struct ChatSheet: View {
                                             }
                                         } else {
                                             VStack(alignment: .leading, spacing: 4) {
-                                                Text(message.preview)
-                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                    .foregroundColor(.black)
-                                                    .padding(.horizontal, 14)
-                                                    .padding(.vertical, 10)
-                                                    .background(Color(.systemGray6))
-                                                    .cornerRadius(16)
+                                                messageBubbleContent(text: message.preview, isMe: false)
                                                 Text(message.time)
                                                     .font(.system(size: 9))
                                                     .foregroundColor(.gray)
@@ -1620,50 +1610,170 @@ struct ChatSheet: View {
                     }
                 }
                 
-                // Bottom Input Bar
-                HStack(spacing: 12) {
-                    TextField("Type a message...", text: $messageText)
-                        .font(.system(size: 15))
-                        .padding(10)
+                // Bottom Input Bar with Photos Picker & Preview
+                VStack(spacing: 0) {
+                    if let imgData = selectedImageData, let uiImage = UIImage(data: imgData) {
+                        HStack {
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 60, height: 60)
+                                    .cornerRadius(8)
+                                    .clipped()
+                                
+                                Button {
+                                    selectedImageData = nil
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(AppTheme.Status.danger)
+                                        .background(Circle().fill(Color.white))
+                                }
+                                .offset(x: 6, y: -6)
+                            }
+                            .padding(.leading, 16)
+                            .padding(.vertical, 8)
+                            
+                            Spacer()
+                        }
+                        .background(Color.white)
+                    }
+                    
+                    Divider()
+                    
+                    HStack(spacing: 12) {
+                        // Text Input Area with Photo Picker
+                        HStack(spacing: 10) {
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
+                                Image(systemName: "photo.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(AppTheme.Brand.primary)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            TextField("Type a message...", text: $messageText)
+                                .font(.system(size: 15))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                         .background(Color(.systemGray6))
                         .cornerRadius(20)
-                    
-                    Button(action: {
-                        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !text.isEmpty {
+                        
+                        Button(action: {
+                            let sentText = messageText
+                            let imgData = selectedImageData
+                            selectedImageData = nil
+                            messageText = ""
+                            
                             Task {
-                                await vm.sendMessage(text: text)
-                                await MainActor.run {
-                                    messageText = ""
+                                if let data = imgData {
+                                    let msgId = UUID()
+                                    do {
+                                        let urlString = try await SupabaseManager.shared.uploadChatImage(messageId: msgId, imageData: data)
+                                        await vm.sendMessage(text: "[IMAGE: \(urlString)]")
+                                    } catch {
+                                        let base64 = data.base64EncodedString()
+                                        await vm.sendMessage(text: "[IMAGE_BASE64: \(base64)]")
+                                    }
+                                }
+                                
+                                let textTrimmed = sentText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !textTrimmed.isEmpty {
+                                    await vm.sendMessage(text: textTrimmed)
                                 }
                             }
+                        }) {
+                            Image(systemName: "paperplane.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(Color.white)
+                                .padding(10)
+                                .background((messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil) ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
+                                .clipShape(Circle())
                         }
-                    }) {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(Color.white)
-                            .padding(10)
-                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
-                            .clipShape(Circle())
+                        .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil)
                     }
-                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .padding()
+                    .background(Color.white)
+                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
                 }
-                .padding()
-                .background(Color.white)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
             }
             .navigationTitle("Chat with Manager")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.primary)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
-                    .bold()
+                }
+            }
+            .onChange(of: selectedItem) { _, newValue in
+                Task {
+                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            self.selectedImageData = data
+                            self.selectedItem = nil
+                        }
+                    }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func messageBubbleContent(text: String, isMe: Bool) -> some View {
+        if text.hasPrefix("[IMAGE:"), text.hasSuffix("]") {
+            let urlString = String(text.dropFirst(7).dropLast())
+            if let url = URL(string: urlString) {
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 220, maxHeight: 220)
+                        .cornerRadius(12)
+                } placeholder: {
+                    ProgressView().tint(isMe ? .white : AppTheme.Brand.primary)
+                }
+                .padding(4)
+                .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+                .cornerRadius(16)
+            } else {
+                fallbackText(text, isMe: isMe)
+            }
+        } else if text.hasPrefix("[IMAGE_BASE64:"), text.hasSuffix("]") {
+            let base64String = String(text.dropFirst(14).dropLast())
+            if let data = Data(base64Encoded: base64String), let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .cornerRadius(12)
+                    .padding(4)
+                    .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+                    .cornerRadius(16)
+            } else {
+                fallbackText(text, isMe: isMe)
+            }
+        } else {
+            fallbackText(text, isMe: isMe)
+        }
+    }
+
+    private func fallbackText(_ text: String, isMe: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundColor(isMe ? .white : .black)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+            .cornerRadius(16)
     }
 }
 

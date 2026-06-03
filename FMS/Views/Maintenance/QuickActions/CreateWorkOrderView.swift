@@ -249,6 +249,7 @@ struct CreateWorkOrderView: View {
             }
         } // end ZStack
         .navigationBarHidden(true)
+        .toolbar(.hidden, for: .tabBar)
     } // end body
 
     // Validation

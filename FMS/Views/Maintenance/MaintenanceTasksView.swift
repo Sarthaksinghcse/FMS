@@ -486,6 +486,7 @@ struct MaintenanceTaskDetailView: View {
         }
         .navigationTitle(order.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .alert("Repair Logged", isPresented: $showSuccessAlert) {
             Button("OK") {}
         } message: {

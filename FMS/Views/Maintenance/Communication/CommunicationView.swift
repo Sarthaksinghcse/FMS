@@ -32,6 +32,7 @@ struct CommunicationChannel: Identifiable, Hashable {
 
 struct CommunicationView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Query private var allUsers: [User]
     
     @Environment(SupabaseManager.self) private var supabase
@@ -44,7 +45,12 @@ struct CommunicationView: View {
     private var computedChannels: [CommunicationChannel] {
         guard let currentUserId = supabase.currentUser?.id else { return [] }
         
-        let otherUsers = allUsers.filter { $0.id != currentUserId }
+        let otherUsers: [User]
+        if supabase.currentUser?.role == .fleetManager {
+            otherUsers = allUsers.filter { $0.id != currentUserId }
+        } else {
+            otherUsers = allUsers.filter { $0.id != currentUserId && $0.role == .fleetManager }
+        }
         var list: [CommunicationChannel] = []
         
         for user in otherUsers {
@@ -146,8 +152,10 @@ struct CommunicationView: View {
                     .padding(.horizontal)
 
                 // Category filters
-                MessageFilterView(selectedCategory: $selectedCategory)
-                    .padding(.bottom, 8)
+                if supabase.currentUser?.role == .fleetManager {
+                    MessageFilterView(selectedCategory: $selectedCategory)
+                        .padding(.bottom, 8)
+                }
 
                 if filteredChannels.isEmpty {
                     Spacer()
@@ -182,22 +190,37 @@ struct CommunicationView: View {
                 }
             }
             
-            // New Chat Floating Action Button
-            Button(action: {
-                // Start new chat action
-            }) {
-                Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-                    .background(AppTheme.Brand.primary)
-                    .clipShape(Circle())
-                    .shadow(color: AppTheme.Brand.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+            if supabase.currentUser?.role == .fleetManager {
+                // New Chat Floating Action Button
+                Button(action: {
+                    // Start new chat action
+                }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(AppTheme.Brand.primary)
+                        .clipShape(Circle())
+                        .shadow(color: AppTheme.Brand.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+                }
+                .padding(20)
             }
-            .padding(20)
         }
         .navigationTitle("Messages")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(AppTheme.Brand.primary)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+            }
+        }
         .task {
             await loadMessages()
             startRealtimeListener()

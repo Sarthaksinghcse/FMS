@@ -81,6 +81,7 @@ struct VehicleHealthAnalysisView: View {
         }
         .navigationTitle("Vehicle Health")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .onAppear {
             Task {
                 await viewModel.loadHealth()

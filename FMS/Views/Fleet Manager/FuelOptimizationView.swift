@@ -122,7 +122,7 @@ struct FuelOptimizationView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             // AI High Consumers
-                            if let insight = viewModel.insight, !insight.highConsumers.isEmpty {
+                            if !viewModel.activeInsights.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
                                     HStack(spacing: 6) {
                                         Image(systemName: "sparkles")
@@ -132,10 +132,10 @@ struct FuelOptimizationView: View {
                                             .foregroundColor(.black)
                                     }
                                     
-                                    ForEach(insight.highConsumers) { vehicle in
+                                    ForEach(viewModel.activeInsights) { target in
                                         VStack(alignment: .leading, spacing: 8) {
                                             HStack {
-                                                Text("Vehicle: " + vehicle.vehicleId.prefix(8).uppercased())
+                                                Text("Vehicle: " + target.vehicle.vehicleNumber)
                                                     .font(.system(size: 13, weight: .bold, design: .rounded))
                                                     .foregroundColor(.black)
                                                 Spacer()
@@ -148,11 +148,11 @@ struct FuelOptimizationView: View {
                                                     .cornerRadius(6)
                                             }
                                             
-                                            Text("Issue: " + vehicle.issue)
+                                            Text("Issue: " + target.insight.issue)
                                                 .font(.system(size: 12, weight: .medium, design: .rounded))
                                                 .foregroundColor(AppTheme.Text.secondary)
                                             
-                                            Text("Advice: " + vehicle.recommendation)
+                                            Text("Advice: " + target.insight.recommendation)
                                                 .font(.system(size: 11, design: .rounded))
                                                 .foregroundColor(Theme.darkOrange)
                                                 .padding(8)

@@ -267,6 +267,7 @@ struct UploadRepairNotesView: View {
                 }
             }
             .navigationBarHidden(true)
+            .toolbar(.hidden, for: .tabBar)
             .alert("Upload Error", isPresented: $showErrorAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
