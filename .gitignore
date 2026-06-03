@@ -67,3 +67,7 @@ TestResults/
 *~
 .idea/
 .vscode/
+
+# Logs
+*.log
+

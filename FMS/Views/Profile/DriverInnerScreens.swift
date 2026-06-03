@@ -630,9 +630,13 @@ struct DriverSecuritySettingsView: View {
                 }
             }
             .alert("Password Updated", isPresented: $showSaved) {
-                Button("OK") { dismiss() }
+                Button("OK") {
+                    Task {
+                        try? await supabaseManager.signOut()
+                    }
+                }
             } message: {
-                Text("Your password has been changed successfully.")
+                Text("Your password has been changed successfully. Please log in again with your new password.")
             }
             .alert("Error", isPresented: $showErrorAlert) {
                 Button("OK", role: .cancel) {}
