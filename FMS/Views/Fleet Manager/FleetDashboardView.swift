@@ -320,6 +320,7 @@ struct FleetDashboardView: View {
                     }
                 }
                 .environment(\.modelContext, modelContext)
+                .interactiveDismissDisabled()
             }
             // See All sheet
             .sheet(isPresented: $viewModel.showAllActivities) {
@@ -327,15 +328,18 @@ struct FleetDashboardView: View {
                     handleActivityTap(activity)
                 }
                 .environment(\.modelContext, modelContext)
+                .interactiveDismissDisabled()
             }
             // Profile sheet
             .sheet(isPresented: $showProfile) {
                 FleetManagerProfileView()
                     .environment(\.modelContext, modelContext)
+                    .interactiveDismissDisabled()
             }
             // Chat sheet
             .sheet(isPresented: $showChat) {
                 FleetManagerChatListView()
+                    .interactiveDismissDisabled()
             }
             .task {
                 await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -368,7 +372,7 @@ struct FleetDashboardView: View {
                         .environment(\.modelContext, modelContext)
                         .toolbar(.hidden, for: .tabBar)
                 case .liveTrips:
-                    TripListView(initialFilter: .active)
+                    TripListContentView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
                         .toolbar(.hidden, for: .tabBar)
                 }

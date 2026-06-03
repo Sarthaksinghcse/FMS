@@ -92,7 +92,7 @@ struct DriverDashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
-        .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
+        .sheet(isPresented: $vm.showMessaging) { ChatSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
         .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
             vm.showRaiseQuery = false
@@ -1659,7 +1659,7 @@ struct ChatSheet: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
+                    .foregroundColor(Theme.fmsRed)
                     .bold()
                 }
             }

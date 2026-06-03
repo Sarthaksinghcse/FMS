@@ -194,7 +194,7 @@ struct InventoryDetailView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
+                    .foregroundColor(Theme.fmsRed)
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Edit") {

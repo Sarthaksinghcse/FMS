@@ -757,81 +757,62 @@ private struct AssignedTripCard: View {
 
             Divider()
 
-            // ── 6. Secondary buttons: Raise a Query  |  Message ──────────────
-            HStack(spacing: 10) {
+            // ── 6. Actions: Raise Query & Confirm Trip adjacent ──────────────
+            HStack(spacing: 12) {
                 // Raise a Query
                 Button {
                     vm.queryTrip = trip
                     vm.showRaiseQuery = true
                 } label: {
                     Label("Raise Query", systemImage: "questionmark.bubble.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
+                        .frame(height: 52)
                         .background(Color.orange.opacity(0.09))
-                        .clipShape(RoundedRectangle(cornerRadius: 11))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 11)
+                            RoundedRectangle(cornerRadius: 14)
                                 .stroke(Color.orange.opacity(0.25), lineWidth: 1)
                         )
                 }
 
-                // Message
+                // Confirm CTA / Start Trip
                 Button {
-                    vm.showMessaging = true
+                    if !isAccepted {
+                        withAnimation(.spring(response: 0.4)) { isAccepted = true }
+                    } else {
+                        vm.showRaiseQuery = false
+                        vm.queryTrip = nil
+                        vm.mapActiveTrip = trip
+                    }
                 } label: {
-                    Label("Message", systemImage: "bubble.left.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.fmsIndigo)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.fmsIndigo.opacity(0.07))
-                        .clipShape(RoundedRectangle(cornerRadius: 11))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 11)
-                                .stroke(Color.fmsIndigo.opacity(0.22), lineWidth: 1)
+                    HStack(spacing: 8) {
+                        Image(systemName: isAccepted ? "play.fill" : "checkmark.circle.fill")
+                            .font(.system(size: 15, weight: .bold))
+                        Text(isAccepted ? "Start Trip" : "Confirm Trip")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(
+                        isAccepted ?
+                        LinearGradient(
+                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                            startPoint: .leading, endPoint: .trailing
+                        ) :
+                        LinearGradient(
+                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.7)],
+                            startPoint: .leading, endPoint: .trailing
                         )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: isAccepted ? AppTheme.Status.success.opacity(0.3) : AppTheme.Brand.primary.opacity(0.28), radius: 10, y: 4)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 14)
-
-            // ── 7. Confirm CTA ─────────────────────────────────────────────
-            Button {
-                if !isAccepted {
-                    withAnimation(.spring(response: 0.4)) { isAccepted = true }
-                } else {
-                    vm.showRaiseQuery = false
-                    vm.queryTrip = nil
-                    vm.mapActiveTrip = trip
-                }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: isAccepted ? "play.fill" : "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .bold))
-                    Text(isAccepted ? "Start Trip" : "Confirm Trip")
-                        .font(.system(size: 16, weight: .bold))
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(
-                    isAccepted ?
-                    LinearGradient(
-                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
-                        startPoint: .leading, endPoint: .trailing
-                    ) :
-                    LinearGradient(
-                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.7)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: isAccepted ? AppTheme.Status.success.opacity(0.3) : AppTheme.Brand.primary.opacity(0.28), radius: 10, y: 4)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 10)
             .padding(.bottom, 18)
         }
         .background(Color(UIColor.systemBackground))

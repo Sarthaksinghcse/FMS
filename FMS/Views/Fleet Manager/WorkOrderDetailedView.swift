@@ -3,6 +3,58 @@ import SwiftUI
 import SwiftData
 import Supabase
 
+// MARK: - AI Cost Estimation Response Model
+struct WorkOrderCostEstimate: Codable {
+    let suggestedParts: [SuggestedPart]
+    let laborHours: Double
+    let laborReason: String
+    let laborRatePerHour: Double
+    let laborCost: Double
+    let additionalCosts: Double
+    let additionalReason: String
+    let partsCost: Double
+    let totalEstimate: Double
+    
+    struct SuggestedPart: Codable, Identifiable {
+        let inventoryId: UUID
+        let partName: String
+        let partNumber: String
+        let unitCost: Double
+        let inStock: Int
+        var quantity: Int
+        let reason: String
+        
+        var id: UUID { inventoryId }
+        var totalCost: Double { unitCost * Double(quantity) }
+        
+        // Flexible decoder: handles both String and UUID for inventoryId
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            partName = try c.decode(String.self, forKey: .partName)
+            partNumber = try c.decode(String.self, forKey: .partNumber)
+            unitCost = try c.decode(Double.self, forKey: .unitCost)
+            inStock = try c.decode(Int.self, forKey: .inStock)
+            quantity = try c.decode(Int.self, forKey: .quantity)
+            reason = (try? c.decode(String.self, forKey: .reason)) ?? ""
+            
+            if let uuid = try? c.decode(UUID.self, forKey: .inventoryId) {
+                inventoryId = uuid
+            } else if let str = try? c.decode(String.self, forKey: .inventoryId),
+                      let uuid = UUID(uuidString: str) {
+                inventoryId = uuid
+            } else {
+                inventoryId = UUID()
+            }
+        }
+    }
+}
+
+private struct CostEstimateRequest: Codable {
+    let issueDescription: String
+    let vehicleId: String
+    let vehicleInfo: String
+}
+
 struct WorkOrderDetailedView: View {
     let order: WorkOrder
     
@@ -13,6 +65,7 @@ struct WorkOrderDetailedView: View {
     @Query private var vehicles: [Vehicle]
     @Query private var allUsers: [User]
     @Query(sort: \MaintenanceRecord.serviceDate, order: .reverse) private var maintenanceRecords: [MaintenanceRecord]
+    @Query private var inventoryItems: [InventoryItem]
     
     @State private var selectedTab = 0
     @State private var predictiveAlert: DBPredictiveAlert? = nil
@@ -23,6 +76,12 @@ struct WorkOrderDetailedView: View {
     
     // Navigation / Chat
     @State private var showChat = false
+    
+    // Cost Estimation State
+    @State private var costEstimate: WorkOrderCostEstimate?
+    @State private var selectedPartQuantities: [UUID: Int] = [:] // inventoryId -> quantity
+    @State private var isLoadingCostEstimate = false
+    @State private var costEstimateError: String?
     
     // MARK: - Derived Properties (Real Data Only)
     
@@ -91,25 +150,25 @@ struct WorkOrderDetailedView: View {
         }
     }
     
-    // Dynamic Cost calculations
-    private var estimatedCost: Double {
-        order.estimatedCost ?? 0.0
+    // Dynamic Cost calculations — from AI estimate + selected parts
+    private var computedPartsCost: Double {
+        guard let est = costEstimate else { return 0 }
+        return est.suggestedParts.reduce(0) { sum, part in
+            let qty = selectedPartQuantities[part.inventoryId] ?? part.quantity
+            return sum + part.unitCost * Double(qty)
+        }
     }
     
-    private var actualCost: Double {
-        matchingMaintenanceRecord?.cost ?? estimatedCost
+    private var computedLaborCost: Double {
+        costEstimate?.laborCost ?? 0
     }
     
-    private var partsCost: Double {
-        actualCost * 0.65
+    private var computedAdditionalCost: Double {
+        costEstimate?.additionalCosts ?? 0
     }
     
-    private var laborCost: Double {
-        actualCost * 0.25
-    }
-    
-    private var additionalCost: Double {
-        actualCost * 0.10
+    private var computedTotalCost: Double {
+        computedPartsCost + computedLaborCost + computedAdditionalCost
     }
     
     var body: some View {
@@ -153,9 +212,11 @@ struct WorkOrderDetailedView: View {
         .task {
             await fetchGeminiPredictiveAlert()
             buildApprovalHistory()
+            await loadAICostEstimate()
         }
         .sheet(isPresented: $showingInfoPrompt) {
             infoRequestSheet
+                .interactiveDismissDisabled()
         }
     }
     
@@ -554,122 +615,382 @@ struct WorkOrderDetailedView: View {
     // MARK: - Tab: Costs & Approval Tab Content
     private var costsTabContent: some View {
         VStack(spacing: 16) {
-            // Cost Summary Breakdown
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Cost Summary")
-                    .font(.system(size: 14, weight: .bold))
-                Divider()
-                
-                costBreakdownRow(label: "Estimated Cost", amount: estimatedCost)
-                costBreakdownRow(label: "Parts Cost", amount: partsCost)
-                costBreakdownRow(label: "Labor Cost", amount: laborCost)
-                costBreakdownRow(label: "Additional Cost", amount: additionalCost)
-                
-                Divider()
-                
-                HStack {
-                    Text("Current Cost")
-                        .font(.system(size: 14, weight: .bold))
-                    Spacer()
-                    Text("₹" + String(format: "%.2f", actualCost))
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Brand.primary)
-                }
-                
-                HStack {
-                    Text("Approval Status")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(AppTheme.Text.secondary)
-                    Spacer()
-                    
-                    Text(currentStatusText.uppercased())
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(statusColor(for: currentStatusText))
-                        .cornerRadius(6)
-                }
-                .padding(.top, 4)
-            }
-            .padding(16)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 4)
-            
-            // Approval History List
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Approval History")
-                    .font(.system(size: 14, weight: .bold))
-                Divider()
-                
-                ForEach(approvalHistory, id: \.self) { entry in
-                    HStack(alignment: .top, spacing: 8) {
-                        Circle()
-                            .fill(AppTheme.Brand.royalBlue)
-                            .frame(width: 6, height: 6)
-                            .padding(.top, 5)
-                        
-                        Text(entry)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(AppTheme.Text.primary)
-                    }
-                }
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 4)
-            
-            // Fleet Manager Action Buttons
-            if order.workDescription.contains("[PENDING_APPROVAL]") || order.workDescription.contains("[INFO_REQUESTED]") {
+            if isLoadingCostEstimate {
                 VStack(spacing: 12) {
+                    ProgressView()
+                        .tint(AppTheme.Brand.royalBlue)
+                    Text("AI is estimating repair costs...")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppTheme.Text.secondary)
+                }
+                .padding(.vertical, 32)
+                .frame(maxWidth: .infinity)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4)
+            } else if let errorMsg = costEstimateError {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(AppTheme.Status.danger)
+                        .font(.system(size: 32))
+                    Text(errorMsg)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppTheme.Text.secondary)
+                        .multilineTextAlignment(.center)
                     Button {
-                        approveCostEstimate()
+                        Task {
+                            await loadAICostEstimate()
+                        }
                     } label: {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                            Text("Approve Cost")
-                        }
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(AppTheme.Status.success)
-                        .cornerRadius(10)
-                    }
-                    
-                    HStack(spacing: 12) {
-                        Button {
-                            rejectCostEstimate()
-                        } label: {
-                            Text("Reject")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(AppTheme.Status.danger)
-                                .cornerRadius(8)
-                        }
-                        
-                        Button {
-                            showingInfoPrompt = true
-                        } label: {
-                            Text("Request More Details")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(AppTheme.Brand.primary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(AppTheme.Brand.primary, lineWidth: 1.5)
-                                )
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                        Text("Retry Estimation")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(AppTheme.Brand.royalBlue)
+                            .cornerRadius(8)
                     }
                 }
-                .padding(.top, 8)
+                .padding(24)
+                .frame(maxWidth: .infinity)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4)
+            } else if let estimate = costEstimate {
+                // 1. Suggested Parts Card
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Image(systemName: "wrench.and.screwdriver.fill")
+                            .foregroundColor(AppTheme.Brand.royalBlue)
+                        Text("Required Spare Parts (AI Matches)")
+                            .font(.system(size: 14, weight: .bold))
+                        Spacer()
+                    }
+                    Divider()
+                    
+                    if estimate.suggestedParts.isEmpty {
+                        Text("No spare parts are required for this repair.")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                            .italic()
+                            .padding(.vertical, 8)
+                    } else {
+                        ForEach(estimate.suggestedParts) { part in
+                            let isSelected = selectedPartQuantities[part.inventoryId] != nil
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(alignment: .top) {
+                                    Button {
+                                        if isSelected {
+                                            selectedPartQuantities.removeValue(forKey: part.inventoryId)
+                                        } else {
+                                            selectedPartQuantities[part.inventoryId] = part.quantity
+                                        }
+                                    } label: {
+                                        Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                                            .foregroundColor(isSelected ? AppTheme.Brand.royalBlue : .gray)
+                                            .font(.system(size: 18))
+                                    }
+                                    .padding(.top, 2)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(part.partName)
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(AppTheme.Text.primary)
+                                        Text("Part #: \(part.partNumber) • In Stock: \(part.inStock)")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(AppTheme.Text.tertiary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Text("₹" + String(format: "%.2f", part.unitCost))
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundColor(AppTheme.Text.primary)
+                                }
+                                
+                                if isSelected {
+                                    HStack {
+                                        Text("Reason: \(part.reason)")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                            .lineLimit(2)
+                                        
+                                        Spacer()
+                                        
+                                        // Quantity selector
+                                        HStack(spacing: 8) {
+                                            Button {
+                                                let current = selectedPartQuantities[part.inventoryId] ?? part.quantity
+                                                if current > 1 {
+                                                    selectedPartQuantities[part.inventoryId] = current - 1
+                                                }
+                                            } label: {
+                                                Image(systemName: "minus.circle.fill")
+                                                    .foregroundColor(AppTheme.Brand.royalBlue)
+                                            }
+                                            
+                                            Text("\(selectedPartQuantities[part.inventoryId] ?? part.quantity)")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .frame(width: 20)
+                                                .multilineTextAlignment(.center)
+                                            
+                                            Button {
+                                                let current = selectedPartQuantities[part.inventoryId] ?? part.quantity
+                                                if current < part.inStock {
+                                                    selectedPartQuantities[part.inventoryId] = current + 1
+                                                }
+                                            } label: {
+                                                Image(systemName: "plus.circle.fill")
+                                                    .foregroundColor(AppTheme.Brand.royalBlue)
+                                            }
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.gray.opacity(0.1))
+                                        .cornerRadius(6)
+                                    }
+                                    .padding(.leading, 26)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            Divider()
+                        }
+                    }
+                }
+                .padding(16)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4)
+                
+                // 2. Labor & Additional Cost Cards
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Labor & Miscellaneous Estimate")
+                        .font(.system(size: 14, weight: .bold))
+                    Divider()
+                    
+                    // Labor row
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Estimated Labor")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(AppTheme.Text.primary)
+                            Spacer()
+                            Text(String(format: "%.1f Hrs @ ₹%.0f/Hr", estimate.laborHours, estimate.laborRatePerHour))
+                                .font(.system(size: 11))
+                                .foregroundColor(AppTheme.Text.secondary)
+                            Text("₹" + String(format: "%.2f", estimate.laborCost))
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                        }
+                        if !estimate.laborReason.isEmpty {
+                            Text(estimate.laborReason)
+                                .font(.system(size: 11))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    // Additional costs row
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Additional Costs (Supplies, Disposal)")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(AppTheme.Text.primary)
+                            Spacer()
+                            Text("₹" + String(format: "%.2f", estimate.additionalCosts))
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                        }
+                        if !estimate.additionalReason.isEmpty {
+                            Text(estimate.additionalReason)
+                                .font(.system(size: 11))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                        }
+                    }
+                }
+                .padding(16)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4)
+                
+                // 3. Overall Cost Summary Breakdown
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Total Summary")
+                        .font(.system(size: 14, weight: .bold))
+                    Divider()
+                    
+                    costBreakdownRow(label: "Parts Subtotal", amount: computedPartsCost)
+                    costBreakdownRow(label: "Labor Subtotal", amount: computedLaborCost)
+                    costBreakdownRow(label: "Additional Subtotal", amount: computedAdditionalCost)
+                    
+                    Divider()
+                    
+                    HStack {
+                        Text("Total Estimated Cost")
+                            .font(.system(size: 14, weight: .bold))
+                        Spacer()
+                        Text("₹" + String(format: "%.2f", computedTotalCost))
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Brand.primary)
+                    }
+                    
+                    HStack {
+                        Text("Approval Status")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(AppTheme.Text.secondary)
+                        Spacer()
+                        
+                        Text(currentStatusText.uppercased())
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(statusColor(for: currentStatusText))
+                            .cornerRadius(6)
+                    }
+                    .padding(.top, 4)
+                }
+                .padding(16)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4)
+                
+                // 4. Approval History List
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Approval History")
+                        .font(.system(size: 14, weight: .bold))
+                    Divider()
+                    
+                    ForEach(approvalHistory, id: \.self) { entry in
+                        HStack(alignment: .top, spacing: 8) {
+                            Circle()
+                                .fill(AppTheme.Brand.royalBlue)
+                                .frame(width: 6, height: 6)
+                                .padding(.top, 5)
+                            
+                            Text(entry)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(AppTheme.Text.primary)
+                        }
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4)
+                
+                // Fleet Manager Action Buttons
+                if order.workDescription.contains("[PENDING_APPROVAL]") || order.workDescription.contains("[INFO_REQUESTED]") {
+                    VStack(spacing: 12) {
+                        Button {
+                            approveCostEstimate()
+                        } label: {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                Text("Approve Cost & Deduct Inventory")
+                            }
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(AppTheme.Status.success)
+                            .cornerRadius(10)
+                        }
+                        
+                        HStack(spacing: 12) {
+                            Button {
+                                rejectCostEstimate()
+                            } label: {
+                                Text("Reject")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(AppTheme.Status.danger)
+                                    .cornerRadius(8)
+                            }
+                            
+                            Button {
+                                showingInfoPrompt = true
+                            } label: {
+                                Text("Request More Details")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(AppTheme.Brand.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(AppTheme.Brand.primary, lineWidth: 1.5)
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding(.top, 8)
+                }
+            } else {
+                // Show approved summary/fallback
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Approved Cost Summary")
+                        .font(.system(size: 14, weight: .bold))
+                    Divider()
+                    
+                    let approvedTotal = order.estimatedCost ?? 0.0
+                    costBreakdownRow(label: "Approved Parts Cost (Est)", amount: approvedTotal * 0.65)
+                    costBreakdownRow(label: "Approved Labor Cost (Est)", amount: approvedTotal * 0.25)
+                    costBreakdownRow(label: "Approved Additional Cost (Est)", amount: approvedTotal * 0.10)
+                    
+                    Divider()
+                    
+                    HStack {
+                        Text("Total Approved Cost")
+                            .font(.system(size: 14, weight: .bold))
+                        Spacer()
+                        Text("₹" + String(format: "%.2f", approvedTotal))
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.Status.success)
+                    }
+                    
+                    HStack {
+                        Text("Approval Status")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(AppTheme.Text.secondary)
+                        Spacer()
+                        
+                        Text(currentStatusText.uppercased())
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(statusColor(for: currentStatusText))
+                            .cornerRadius(6)
+                    }
+                    .padding(.top, 4)
+                }
+                .padding(16)
+                .background(AppTheme.Background.card)
+                .cornerRadius(AppTheme.Radius.card)
+                .shadow(color: AppTheme.Shadow.card, radius: 4)
+                
+                if order.workDescription.contains("[PENDING_APPROVAL]") || order.workDescription.contains("[INFO_REQUESTED]") {
+                    Button {
+                        Task {
+                            await loadAICostEstimate()
+                        }
+                    } label: {
+                        Text("Generate Cost Estimate via Gemini")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(AppTheme.Brand.royalBlue)
+                            .cornerRadius(8)
+                    }
+                    .padding(.top, 8)
+                }
             }
         }
     }
@@ -932,6 +1253,47 @@ struct WorkOrderDetailedView: View {
     }
     
     private func approveCostEstimate() {
+        // Set estimated cost to the computed total
+        order.estimatedCost = computedTotalCost
+        
+        // Deduct from inventory
+        if let estimate = costEstimate {
+            for part in estimate.suggestedParts {
+                // Only deduct if the part is selected by fleet manager
+                guard let qtyToDeduct = selectedPartQuantities[part.inventoryId] else { continue }
+                
+                // 1. Update local SwiftData
+                if let localItem = inventoryItems.first(where: { $0.id == part.inventoryId }) {
+                    localItem.quantityInStock = max(0, localItem.quantityInStock - qtyToDeduct)
+                    localItem.updatedAt = Date()
+                    
+                    // 2. Sync to Supabase
+                    let dbItem = localItem.asDBItem
+                    Task {
+                        do {
+                            try await SupabaseManager.shared.updateInventoryItem(dbItem)
+                            
+                            // 3. Create low stock alert if it falls below threshold
+                            if localItem.quantityInStock <= localItem.reorderThreshold {
+                                let lowStockNotif = DBNotification(
+                                    id: UUID(),
+                                    userId: order.assignedTo,
+                                    title: "⚠️ Low Stock Alert: \(localItem.partName)",
+                                    message: "The stock level of \(localItem.partName) (\(localItem.partNumber)) has dropped to \(localItem.quantityInStock), which is below the reorder threshold of \(localItem.reorderThreshold).",
+                                    type: .maintenance,
+                                    isRead: false,
+                                    createdAt: Date()
+                                )
+                                try? await SupabaseManager.shared.createNotification(lowStockNotif)
+                            }
+                        } catch {
+                            print("Failed to update inventory or create notification in Supabase: \(error)")
+                        }
+                    }
+                }
+            }
+        }
+        
         // Remove PENDING_APPROVAL and pending info tags
         order.workDescription = order.workDescription
             .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
@@ -965,6 +1327,50 @@ struct WorkOrderDetailedView: View {
                 buildApprovalHistory()
             } catch {
                 print("Failed to sync cost approval to Supabase: \(error)")
+            }
+        }
+    }
+    
+    private func loadAICostEstimate() async {
+        guard !isLoadingCostEstimate else { return }
+        // Only fetch if order is still pending approval and does not have an approved cost yet
+        guard order.workDescription.contains("[PENDING_APPROVAL]") || order.workDescription.contains("[INFO_REQUESTED]") else {
+            return
+        }
+        
+        isLoadingCostEstimate = true
+        costEstimateError = nil
+        
+        do {
+            let vehicleInfo = associatedVehicle.map { "\($0.make) \($0.model) (\($0.year))" } ?? ""
+            let payload = CostEstimateRequest(
+                issueDescription: order.workDescription,
+                vehicleId: order.vehicleId.uuidString,
+                vehicleInfo: vehicleInfo
+            )
+            let options = FunctionInvokeOptions(method: .post, body: payload)
+            
+            let decoded: WorkOrderCostEstimate = try await SupabaseManager.shared.client.functions
+                .invoke("estimate-work-order-cost", options: options) { data, _ in
+                    let rawString = String(data: data, encoding: .utf8) ?? "(non-utf8)"
+                    print("[CostAI] Raw response: \(rawString)")
+                    return try JSONDecoder().decode(WorkOrderCostEstimate.self, from: data)
+                }
+            
+            await MainActor.run {
+                self.costEstimate = decoded
+                // Pre-populate quantities to selectedPartQuantities
+                self.selectedPartQuantities = [:]
+                for part in decoded.suggestedParts {
+                    self.selectedPartQuantities[part.inventoryId] = part.quantity
+                }
+                self.isLoadingCostEstimate = false
+            }
+        } catch {
+            print("[CostAI] Error loading cost estimate: \(error)")
+            await MainActor.run {
+                self.costEstimateError = "Failed to load cost estimate: \(error.localizedDescription)"
+                self.isLoadingCostEstimate = false
             }
         }
     }

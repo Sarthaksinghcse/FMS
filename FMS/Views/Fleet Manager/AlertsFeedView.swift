@@ -287,7 +287,7 @@ struct AlertsFeedView: View {
                     } label: {
                         Text("Close")
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(.red)
+                            .foregroundColor(Theme.fmsRed)
                     }
                 }
 
@@ -940,14 +940,14 @@ struct SOSAlertDetailView: View {
                         VStack(spacing: 12) {
                             ZStack {
                                 Circle()
-                                    .fill(AppTheme.Status.danger.opacity(isPulsing ? 0.25 : 0.12))
+                                    .fill(Theme.darkOrange.opacity(isPulsing ? 0.25 : 0.12))
                                     .frame(width: 80, height: 80)
                                     .scaleEffect(isPulsing ? 1.15 : 0.95)
                                 
                                 Circle()
-                                    .fill(AppTheme.Status.danger.gradient)
+                                    .fill(Theme.darkOrange.gradient)
                                     .frame(width: 56, height: 56)
-                                    .shadow(color: AppTheme.Status.danger.opacity(0.4), radius: 8, x: 0, y: 4)
+                                    .shadow(color: Theme.darkOrange.opacity(0.4), radius: 8, x: 0, y: 4)
                                 
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.system(size: 24, weight: .bold))
@@ -958,15 +958,15 @@ struct SOSAlertDetailView: View {
                             VStack(spacing: 4) {
                                 Text("SOS EMERGENCY ALERT")
                                     .font(.system(size: 11, weight: .black, design: .rounded))
-                                    .foregroundColor(AppTheme.Status.danger)
+                                    .foregroundColor(Theme.darkOrange)
                                     .tracking(2.0)
                                 
                                 Text(sosAlert.status == .active ? "CRITICAL ACTIVE STATUS" : "RESOLVED")
                                     .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(sosAlert.status == .active ? AppTheme.Status.danger : AppTheme.Status.success)
+                                    .foregroundColor(sosAlert.status == .active ? Theme.darkOrange : AppTheme.Status.success)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
-                                    .background((sosAlert.status == .active ? AppTheme.Status.danger : AppTheme.Status.success).opacity(0.1))
+                                    .background((sosAlert.status == .active ? Theme.darkOrange : AppTheme.Status.success).opacity(0.1))
                                     .cornerRadius(6)
                             }
                         }
@@ -1092,12 +1092,12 @@ struct SOSAlertDetailView: View {
                             
                             HStack {
                                 Image(systemName: "mappin.and.ellipse")
-                                    .foregroundColor(AppTheme.Status.danger)
+                                    .foregroundColor(Theme.darkOrange)
                                 Text(String(format: "%.5f, %.5f", sosAlert.latitude, sosAlert.longitude))
                                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                                     .foregroundColor(AppTheme.Text.primary)
                                 Spacer()
-                            }
+                             }
                             
                             Map(initialPosition: .region(MKCoordinateRegion(
                                 center: centerCoord,
@@ -1106,13 +1106,13 @@ struct SOSAlertDetailView: View {
                                 Annotation(driverName, coordinate: centerCoord) {
                                     ZStack {
                                         Circle()
-                                            .fill(AppTheme.Status.danger.opacity(0.25))
+                                            .fill(Theme.darkOrange.opacity(0.25))
                                             .frame(width: 40, height: 40)
                                         
                                         Circle()
-                                            .fill(AppTheme.Status.danger)
+                                            .fill(Theme.darkOrange)
                                             .frame(width: 22, height: 22)
-                                            .shadow(color: AppTheme.Status.danger.opacity(0.4), radius: 5, x: 0, y: 2)
+                                            .shadow(color: Theme.darkOrange.opacity(0.4), radius: 5, x: 0, y: 2)
                                             .overlay(
                                                 Image(systemName: "exclamationmark.triangle.fill")
                                                     .font(.system(size: 10, weight: .bold))
@@ -1158,14 +1158,14 @@ struct SOSAlertDetailView: View {
                                             Text("Track Live")
                                                 .font(.system(size: 12, weight: .bold))
                                         }
-                                        .foregroundColor(sosAlert.status == .active ? AppTheme.Status.danger : AppTheme.Text.tertiary)
+                                        .foregroundColor(sosAlert.status == .active ? Theme.darkOrange : AppTheme.Text.tertiary)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
-                                        .background(sosAlert.status == .active ? AppTheme.Status.danger.opacity(0.12) : Color.gray.opacity(0.08))
+                                        .background(sosAlert.status == .active ? Theme.darkOrange.opacity(0.12) : Color.gray.opacity(0.08))
                                         .cornerRadius(8)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(sosAlert.status == .active ? AppTheme.Status.danger.opacity(0.25) : Color.gray.opacity(0.15), lineWidth: 1)
+                                                .stroke(sosAlert.status == .active ? Theme.darkOrange.opacity(0.25) : Color.gray.opacity(0.15), lineWidth: 1)
                                         )
                                     }
                                     .buttonStyle(.plain)
@@ -1238,7 +1238,7 @@ struct SOSAlertDetailView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
+                    .foregroundColor(Theme.fmsRed)
                 }
             }
             .onAppear {

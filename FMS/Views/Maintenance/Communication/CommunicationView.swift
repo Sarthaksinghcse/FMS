@@ -44,7 +44,12 @@ struct CommunicationView: View {
     private var computedChannels: [CommunicationChannel] {
         guard let currentUserId = supabase.currentUser?.id else { return [] }
         
-        let otherUsers = allUsers.filter { $0.id != currentUserId }
+        let otherUsers: [User]
+        if supabase.currentUser?.role == .fleetManager {
+            otherUsers = allUsers.filter { $0.id != currentUserId }
+        } else {
+            otherUsers = allUsers.filter { $0.id != currentUserId && $0.role == .fleetManager }
+        }
         var list: [CommunicationChannel] = []
         
         for user in otherUsers {
@@ -146,8 +151,10 @@ struct CommunicationView: View {
                     .padding(.horizontal)
 
                 // Category filters
-                MessageFilterView(selectedCategory: $selectedCategory)
-                    .padding(.bottom, 8)
+                if supabase.currentUser?.role == .fleetManager {
+                    MessageFilterView(selectedCategory: $selectedCategory)
+                        .padding(.bottom, 8)
+                }
 
                 if filteredChannels.isEmpty {
                     Spacer()

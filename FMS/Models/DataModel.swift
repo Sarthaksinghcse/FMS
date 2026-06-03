@@ -383,6 +383,8 @@ struct MappedVehicle: Identifiable, Hashable {
     let vehicle: DBVehicle
     let coordinate: CLLocationCoordinate2D?
     let lastUpdated: Date?
+    var trip: DBTrip?
+    var driver: DBUser?
 
     static func == (lhs: MappedVehicle, rhs: MappedVehicle) -> Bool {
         lhs.id == rhs.id &&
@@ -975,6 +977,11 @@ enum DBNotificationType: String, Codable {
     case maintenance
     case trip
     case emergency
+    case general
+    case defectAlert
+    case maintenanceAlert
+    case tripAssigned
+    case sosAlert
 }
 
 
@@ -1201,11 +1208,11 @@ extension DBWorkOrder {
 extension DBNotificationType {
     var toLocalType: NotificationType {
         switch self {
-        case .info: return .general
-        case .warning: return .defectAlert
-        case .maintenance: return .maintenanceAlert
-        case .trip: return .tripAssigned
-        case .emergency: return .sosAlert
+        case .info, .general: return .general
+        case .warning, .defectAlert: return .defectAlert
+        case .maintenance, .maintenanceAlert: return .maintenanceAlert
+        case .trip, .tripAssigned: return .tripAssigned
+        case .emergency, .sosAlert: return .sosAlert
         }
     }
 }
