@@ -380,11 +380,13 @@ struct VehicleListView: View {
         .sheet(isPresented: $showAddVehicle) {
             if #available(iOS 26.0, *) {
                 AddVehicleFormView()
+                    .interactiveDismissDisabled()
             }
         }
         .sheet(item: $editingVehicle) { v in
             if #available(iOS 26.0, *) {
                 EditVehicleFormView(vehicle: v)
+                    .interactiveDismissDisabled()
             }
         }
     }
@@ -719,8 +721,14 @@ struct DriverListView: View {
                 } label: { Image(systemName: "plus") }
             }
         }
-        .sheet(isPresented: $showAddDriver) { AddDriverFormView() }
-        .sheet(item: $selectedDriverForEdit) { d in EditDriverFormView(driver: d) }
+        .sheet(isPresented: $showAddDriver) {
+            AddDriverFormView()
+                .interactiveDismissDisabled()
+        }
+        .sheet(item: $selectedDriverForEdit) { d in
+            EditDriverFormView(driver: d)
+                .interactiveDismissDisabled()
+        }
         .task {
             triggerCardAnimations()
             while !Task.isCancelled {
@@ -1146,8 +1154,14 @@ struct MaintenanceStaffListView: View {
                 } label: { Image(systemName: "plus") }
             }
         }
-        .sheet(isPresented: $showAddStaffSheet) { AddMaintenanceFormView() }
-        .sheet(item: $selectedStaffForEdit) { s in EditMaintenanceFormView(staff: s) }
+        .sheet(isPresented: $showAddStaffSheet) {
+            AddMaintenanceFormView()
+                .interactiveDismissDisabled()
+        }
+        .sheet(item: $selectedStaffForEdit) { s in
+            EditMaintenanceFormView(staff: s)
+                .interactiveDismissDisabled()
+        }
         .onAppear {
             triggerCardAnimations()
             Task {
@@ -1504,8 +1518,14 @@ struct TripListView: View {
                 } label: { Image(systemName: "plus") }
             }
         }
-        .sheet(isPresented: $showAddTrip) { AddTripFormView() }
-        .sheet(item: $editingTrip) { t in EditTripFormView(trip: t) }
+        .sheet(isPresented: $showAddTrip) {
+            AddTripFormView()
+                .interactiveDismissDisabled()
+        }
+        .sheet(item: $editingTrip) { t in
+            EditTripFormView(trip: t)
+                .interactiveDismissDisabled()
+        }
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) { appearAnimation = true }
             Task {

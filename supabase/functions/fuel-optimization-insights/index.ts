@@ -143,8 +143,8 @@ ${JSON.stringify(vehicleStats, null, 2)}
 Fleet average monthly fuel spend per vehicle: ${fleetAvgSpend.toFixed(2)}
 
 Tasks:
-1. Identify top 3 vehicles with highest fuel consumption and explain likely causes (driver behavior, vehicle age, route type).
-2. Give 3 specific, actionable fuel-saving recommendations for the fleet manager.
+1. Identify vehicles with the highest fuel consumption from the provided fleet fuel data list (up to 3). Only include real vehicles that exist in the provided list. Do NOT invent or make up any vehicle IDs, and do NOT output generic placeholders like 'N/A'. If there are fewer than 3 vehicles in the list, only return the ones that actually exist. If no vehicles have high consumption, return an empty array.
+2. Give specific, actionable fuel-saving recommendations for the fleet manager.
 3. Estimate potential monthly cost savings (as a number) if high-consuming vehicles improve efficiency by 15%.
 
 Return JSON:
@@ -152,7 +152,7 @@ Return JSON:
   "insights": "<3–4 sentence narrative summary>",
   "estimatedSavings": <number>,
   "vehicles": [
-    { "vehicleId": "<id>", "issue": "<cause of high consumption>", "recommendation": "<specific action>" }
+    { "vehicleId": "<id from the fleet data list>", "issue": "<cause of high consumption>", "recommendation": "<specific action>" }
   ]
 }
 `;
