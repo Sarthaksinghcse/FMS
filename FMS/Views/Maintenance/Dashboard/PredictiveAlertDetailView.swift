@@ -467,6 +467,7 @@ struct PredictionSelectorCard: View {
                     Text(regNo)
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(isSelected ? .white : AppTheme.Text.primary)
+                        .lineLimit(1)
                     
                     Spacer()
                     
@@ -490,7 +491,7 @@ struct PredictionSelectorCard: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .frame(width: 140)
+            .frame(width: 140, height: 78)
             .background(
                 isSelected
                     ? AnyView(LinearGradient(colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.royalBlue.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))

@@ -175,7 +175,7 @@ struct FleetManagerChatListView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
+                    .foregroundColor(Theme.fmsRed)
                     .bold()
                 }
                 

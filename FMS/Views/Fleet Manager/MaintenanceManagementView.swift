@@ -261,7 +261,7 @@ struct MaintenanceManagementView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(.red)
+                    .foregroundColor(Theme.fmsRed)
                     .font(.system(.body, design: .rounded))
                 }
                 
