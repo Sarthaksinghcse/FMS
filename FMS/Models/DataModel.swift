@@ -975,6 +975,11 @@ enum DBNotificationType: String, Codable {
     case maintenance
     case trip
     case emergency
+    case general
+    case defectAlert
+    case maintenanceAlert
+    case tripAssigned
+    case sosAlert
 }
 
 
@@ -1201,11 +1206,11 @@ extension DBWorkOrder {
 extension DBNotificationType {
     var toLocalType: NotificationType {
         switch self {
-        case .info: return .general
-        case .warning: return .defectAlert
-        case .maintenance: return .maintenanceAlert
-        case .trip: return .tripAssigned
-        case .emergency: return .sosAlert
+        case .info, .general: return .general
+        case .warning, .defectAlert: return .defectAlert
+        case .maintenance, .maintenanceAlert: return .maintenanceAlert
+        case .trip, .tripAssigned: return .tripAssigned
+        case .emergency, .sosAlert: return .sosAlert
         }
     }
 }

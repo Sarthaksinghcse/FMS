@@ -6,6 +6,19 @@
 	<string>Carwaan</string>
 	<key>CFBundleName</key>
 	<string>Carwaan</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.fms.carwaan</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>carwaan</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

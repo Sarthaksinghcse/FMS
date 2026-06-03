@@ -644,6 +644,7 @@ struct MaintenanceNotificationSettingsView: View {
 
 @available(iOS 26.0, *)
 struct MaintenanceSecuritySettingsView: View {
+    @Environment(SupabaseManager.self) private var supabaseManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var currentPassword = ""
@@ -652,6 +653,8 @@ struct MaintenanceSecuritySettingsView: View {
     @State private var biometricEnabled = true
     @State private var isSaving = false
     @State private var showSaved = false
+    @State private var showErrorAlert = false
+    @State private var errorAlertMessage = ""
 
     var body: some View {
         NavigationStack {
@@ -677,11 +680,11 @@ struct MaintenanceSecuritySettingsView: View {
                                 .padding(.bottom, 8)
 
                             VStack(spacing: 0) {
-                                MaintSecureField(label: "Current Password", text: $currentPassword)
+                                ProfileSecureFormField(icon: "lock.fill", label: "Current Password", text: $currentPassword, placeholder: "Your current password")
                                 Divider().padding(.leading, 16)
-                                MaintSecureField(label: "New Password", text: $newPassword)
+                                ProfileSecureFormField(icon: "key.fill", label: "New Password", text: $newPassword, placeholder: "At least 6 characters")
                                 Divider().padding(.leading, 16)
-                                MaintSecureField(label: "Confirm New Password", text: $confirmPassword)
+                                ProfileSecureFormField(icon: "key.fill", label: "Confirm New Password", text: $confirmPassword, placeholder: "Confirm new password")
                             }
                             .background(AppTheme.Background.card)
                             .cornerRadius(AppTheme.Radius.card)
@@ -713,8 +716,7 @@ struct MaintenanceSecuritySettingsView: View {
 
                         // Update Password button
                         Button {
-                            isSaving = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { isSaving = false; showSaved = true }
+                            updatePassword()
                         } label: {
                             HStack(spacing: 8) {
                                 if isSaving { ProgressView().tint(.white) }
@@ -747,6 +749,54 @@ struct MaintenanceSecuritySettingsView: View {
                 Button("OK") { dismiss() }
             } message: {
                 Text("Your password has been changed successfully.")
+            }
+            .alert("Error", isPresented: $showErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorAlertMessage)
+            }
+        }
+    }
+
+    private func updatePassword() {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+
+        let trimmedPassword = newPassword.trimmingCharacters(in: .whitespaces)
+        guard trimmedPassword.count >= 6 else {
+            errorAlertMessage = "Password must be at least 6 characters long."
+            showErrorAlert = true
+            let notif = UINotificationFeedbackGenerator()
+            notif.notificationOccurred(.error)
+            return
+        }
+
+        guard trimmedPassword == confirmPassword else {
+            errorAlertMessage = "Passwords do not match."
+            showErrorAlert = true
+            let notif = UINotificationFeedbackGenerator()
+            notif.notificationOccurred(.error)
+            return
+        }
+
+        isSaving = true
+        Task {
+            do {
+                try await supabaseManager.updatePassword(newPassword: trimmedPassword)
+                await MainActor.run {
+                    isSaving = false
+                    showSaved = true
+                    let notif = UINotificationFeedbackGenerator()
+                    notif.notificationOccurred(.success)
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    errorAlertMessage = error.localizedDescription
+                    showErrorAlert = true
+                    let notif = UINotificationFeedbackGenerator()
+                    notif.notificationOccurred(.error)
+                }
             }
         }
     }

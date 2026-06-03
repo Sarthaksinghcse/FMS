@@ -27,6 +27,26 @@ struct ContentView: View {
                 AuthView()
             }
         }
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
+        .sheet(isPresented: Bindable(supabaseManager).showResetPasswordSheet) {
+            ResetPasswordView()
+                .environment(supabaseManager)
+        }
+    }
+    
+    private func handleDeepLink(_ url: URL) {
+        print("🔗 App opened with URL: \(url.absoluteString)")
+        if url.scheme == "carwaan" && (url.host == "reset-password" || url.absoluteString.contains("type=recovery")) {
+            Task {
+                do {
+                    try await supabaseManager.handleRecoveryLink(url)
+                } catch {
+                    print("❌ Error restoring session from recovery link: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 }
 

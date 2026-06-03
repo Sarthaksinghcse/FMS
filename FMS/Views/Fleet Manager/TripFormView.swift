@@ -66,7 +66,7 @@ struct AddTripFormView: View {
                             }
                         }
                         
-                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
+                        formSection(title: "Scheduled", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             if scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
                                 Text("⚠️ Start time must be at least 2 hours from now.")
@@ -441,7 +441,7 @@ struct EditTripFormView: View {
                             }
                         }
                         
-                        formSection(title: "Schedule", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
+                        formSection(title: "Scheduled", icon: "calendar", iconColor: AppTheme.Brand.royalBlue) {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             if scheduledStartTime != trip.scheduledStartTime && scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
                                 Text("⚠️ New start time must be at least 2 hours from now.")

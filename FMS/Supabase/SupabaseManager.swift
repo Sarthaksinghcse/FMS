@@ -67,6 +67,8 @@ final class SupabaseManager {
     
     var authError: String?
     
+    var showResetPasswordSheet = false
+    
     private init() {
         self.client = SupabaseClient(
             supabaseURL: Self.supabaseURL,
@@ -1304,6 +1306,18 @@ final class SupabaseManager {
             .from("messages")
             .insert(messages)
             .execute()
+    }
+    
+    func updatePassword(newPassword: String) async throws {
+        try await client.auth.update(user: UserAttributes(password: newPassword))
+    }
+    
+    func handleRecoveryLink(_ url: URL) async throws {
+        let session = try await client.auth.session(from: url)
+        await fetchProfile(userId: session.user.id)
+        await MainActor.run {
+            self.showResetPasswordSheet = true
+        }
     }
 }
 

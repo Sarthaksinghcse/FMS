@@ -235,7 +235,7 @@ struct AuthView: View {
         Task {
             do {
                 try await supabaseManager.client.auth
-                    .resetPasswordForEmail(trimmedEmail)
+                    .resetPasswordForEmail(trimmedEmail, redirectTo: URL(string: "carwaan://reset-password"))
                 await MainActor.run {
                     isSendingResetLink = false
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
