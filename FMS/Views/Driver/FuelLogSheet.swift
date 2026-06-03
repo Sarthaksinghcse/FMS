@@ -30,6 +30,8 @@ struct FuelSectionCard: View {
     private var lastLog: FuelLog? { fuelLogs.first }
 
     var body: some View {
+        let isDisabled = vm.assignedVehicle == nil && vm.currentTrip == nil
+        
         Button {
             vm.showFuelLog = true
         } label: {
@@ -37,24 +39,24 @@ struct FuelSectionCard: View {
                 // Fuel pump icon
                 ZStack {
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(Color(hue: 0.58, saturation: 0.70, brightness: 0.55).opacity(0.15))
+                        .fill(Color(hue: 0.58, saturation: 0.70, brightness: 0.55).opacity(isDisabled ? 0.05 : 0.15))
                         .frame(width: 52, height: 52)
                     Image(systemName: "fuelpump.fill")
                         .font(.system(size: 22))
-                        .foregroundStyle(Color(hue: 0.58, saturation: 0.80, brightness: 0.75))
+                        .foregroundStyle(Color(hue: 0.58, saturation: 0.80, brightness: 0.75).opacity(isDisabled ? 0.4 : 1.0))
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Log Refuel")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(isDisabled ? .secondary : .primary)
 
                     if let log = lastLog {
                         HStack(spacing: 4) {
                             Text("Last:")
                                 .foregroundStyle(.secondary)
                             Text(String(format: "%.1fL · ₹%.0f", log.litres, log.amountPaid))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(isDisabled ? .secondary : .primary)
                             Text("·")
                                 .foregroundStyle(.secondary)
                             Text(log.loggedAt, style: .relative)
@@ -64,7 +66,7 @@ struct FuelSectionCard: View {
                         }
                         .font(.system(size: 12))
                     } else {
-                        Text("No refuel logged yet")
+                        Text(isDisabled ? "No assigned vehicle or active trip" : "No refuel logged yet")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                     }
@@ -78,8 +80,10 @@ struct FuelSectionCard: View {
             }
             .padding(16)
             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
+            .opacity(isDisabled ? 0.6 : 1.0)
         }
         .buttonStyle(.plain)
+        .disabled(isDisabled)
     }
 }
 
@@ -109,17 +113,21 @@ struct FuelLogSheet: View {
     private var litres: Double?  { Double(litresText)  }
     private var amount: Double?  { Double(amountText)  }
 
+    // Active vehicle which the driver is currently driving or assigned to
+    private var activeVehicle: Vehicle? {
+        let vehicleId = vm.currentTrip?.vehicleId ?? vm.activeTrip?.vehicleId ?? vm.assignedVehicle?.id
+        guard let vid = vehicleId else { return nil }
+        return vm.allLocalVehicles.first(where: { $0.id == vid })
+    }
+
     // Fuel type read from the local SwiftData Vehicle record, fallback to petrol
     private var vehicleFuelType: FuelType {
-        if let vid = vm.assignedVehicle?.id,
-           let local = vm.allLocalVehicles.first(where: { $0.id == vid }) {
-            return local.fuelType
-        }
-        return .petrol
+        activeVehicle?.fuelType ?? .petrol
     }
 
     private var canSave: Bool {
-        (litres ?? 0) > 0 && (amount ?? 0) > 0
+        let hasVehicle = (vm.currentTrip?.vehicleId ?? vm.activeTrip?.vehicleId ?? vm.assignedVehicle?.id) != nil
+        return (litres ?? 0) > 0 && (amount ?? 0) > 0 && hasVehicle
     }
 
     var body: some View {
@@ -159,8 +167,8 @@ struct FuelLogSheet: View {
                                 .font(.system(size: 15, weight: .medium))
                         }
                         Spacer()
-                        if let v = vm.assignedVehicle {
-                            Text(v.vehicleNumber)
+                        if let v = activeVehicle {
+                            Text(v.registrationNumber)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 10)
@@ -376,7 +384,7 @@ struct FuelLogSheet: View {
         saving = true
 
         let driverId  = SupabaseManager.shared.currentUser?.id ?? UUID()
-        let vehicleId = vm.assignedVehicle?.id
+        let vehicleId = vm.currentTrip?.vehicleId ?? vm.activeTrip?.vehicleId ?? vm.assignedVehicle?.id
         let logId     = UUID()
 
         let log = FuelLog(
@@ -418,6 +426,10 @@ struct FuelLogSheet: View {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                         dismiss()
+                        if vm.shouldEndTripAfterFuel {
+                            vm.finishTrip()
+                            vm.shouldEndTripAfterFuel = false
+                        }
                     }
                 }
             } catch {
@@ -429,6 +441,10 @@ struct FuelLogSheet: View {
                     UINotificationFeedbackGenerator().notificationOccurred(.warning)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         dismiss()
+                        if vm.shouldEndTripAfterFuel {
+                            vm.finishTrip()
+                            vm.shouldEndTripAfterFuel = false
+                        }
                     }
                 }
             }

@@ -4,6 +4,7 @@ import SwiftUI
 import SwiftData
 import Supabase
 import MapKit
+import AVFoundation
 
 struct FleetContentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -360,6 +361,8 @@ struct FleetContentView: View {
         withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
             showRedSplash = true
         }
+        
+        SOSSoundManager.shared.playAlarm()
     }
     
     private func activeDriver(for alert: DBSOSAlert) -> User? {
@@ -381,6 +384,8 @@ struct FleetContentView: View {
         // We do NOT change the status to resolved in Supabase or SwiftData here.
         // The status remains .active until resolved manually via the Alerts Feed detailed screen.
         acknowledgedAlertIds.insert(alert.id)
+        
+        SOSSoundManager.shared.stopAlarm()
         
         withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
             showRedSplash = false

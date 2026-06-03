@@ -19,6 +19,82 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Read POST body if present
+    let body = {};
+    if (req.method === "POST") {
+      try {
+        body = await req.json();
+      } catch (e) {
+        // No body or invalid json
+      }
+    }
+    const { vehicleId } = body;
+
+    // Single Vehicle Optimization flow
+    if (vehicleId) {
+      const [{ data: fuelLogs }, { data: vehicle }, { data: trips }] = await Promise.all([
+        supabase.from("fuel_logs").select("*").eq("vehicle_id", vehicleId).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("*").eq("id", vehicleId).single(),
+        supabase.from("trips").select("*").eq("vehicle_id", vehicleId).order("created_at", { ascending: false }).limit(10)
+      ]);
+
+      if (!vehicle) {
+        return new Response(JSON.stringify({ error: "Vehicle not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const prompt = `
+You are an expert fuel efficiency and commercial fleet optimization AI.
+Analyze the following fuel and trip data for vehicle ${vehicle.vehicle_number} (${vehicle.make} ${vehicle.model}):
+
+Vehicle Specs:
+- Type: ${vehicle.vehicle_type || "Commercial Truck"}
+- Fuel Type: ${vehicle.fuel_type || "diesel"}
+- Current Odometer: ${vehicle.odometer_reading || 0} km
+
+Fuel Logs (Last Refuels):
+${JSON.stringify(fuelLogs, null, 2)}
+
+Recent Trips (Patterns & Distances):
+${JSON.stringify(trips?.map(t => ({ source: t.source, destination: t.destination, distance: t.distance, status: t.status })), null, 2)}
+
+Tasks:
+1. Analyze the vehicle's fuel consumption pattern (litres refueled, spend, frequency).
+2. Identify likely issues causing inefficiency (e.g. idle times, sudden driving behaviors, potential mechanical maintenance required like fuel filter, tire pressure).
+3. Provide 3 highly personalized, specific, and actionable optimization strategies for this vehicle.
+4. Estimate potential monthly savings specifically for this vehicle.
+
+Return a JSON object in this format:
+{
+  "vehicleNumber": "${vehicle.vehicle_number}",
+  "totalSpend": ${fuelLogs?.reduce((sum, l) => sum + (l.amount_paid || 0), 0) || 0},
+  "totalLitres": ${fuelLogs?.reduce((sum, l) => sum + (l.litres || 0), 0) || 0},
+  "avgCostPerLitre": ${fuelLogs?.length ? (fuelLogs.reduce((sum, l) => sum + (l.amount_paid || 0), 0) / fuelLogs.reduce((sum, l) => sum + (l.litres || 0), 0)) : 0},
+  "insights": "<3-4 sentence comprehensive and user-friendly explanation of usage patterns and current efficiency status>",
+  "issues": [
+    "<issue 1 description>",
+    "<issue 2 description>"
+  ],
+  "recommendations": [
+    "<specific actionable recommendation 1>",
+    "<specific actionable recommendation 2>",
+    "<specific actionable recommendation 3>"
+  ],
+  "estimatedSavings": <number of monthly savings in Rupees>
+}
+`;
+
+      const text = await callGemini(prompt, true);
+      const insight = JSON.parse(text);
+
+      return new Response(JSON.stringify(insight), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Fleet-wide optimization flow (original logic)
     // Check cache (6-hour window)
     const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
     const { data: cached } = await supabase

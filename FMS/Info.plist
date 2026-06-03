@@ -2,13 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDisplayName</key>
+	<string>Carwaan</string>
+	<key>CFBundleName</key>
+	<string>Carwaan</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
 	</array>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>FMS needs your location to track your trip progress and provide live updates to the fleet manager.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>FMS needs continuous background location tracking to monitor your trip status and issue route deviation alerts.</string>
 </dict>
 </plist>
