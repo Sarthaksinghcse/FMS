@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import AVFoundation
 
 struct CardMetric: Identifiable {
     var id: String { label }
@@ -1877,6 +1878,7 @@ struct TripDetailView: View {
 
     @Query private var vehicles: [Vehicle]
     @Query private var users: [User]
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     private var assignedVehicle: Vehicle? {
         vehicles.first(where: { $0.id == trip.vehicleId })
@@ -2239,6 +2241,15 @@ struct TripDetailView: View {
         }
         return String(name.prefix(2)).uppercased()
     }
+    
+    private func speak(_ text: String) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        // Check if rate property is available or just let it use default
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        let synthesizer = AVSpeechSynthesizer()
+        synthesizer.speak(utterance)
+    }
 
     // MARK: - Voice Logs Card
     private var voiceLogsCard: some View {
@@ -2302,6 +2313,20 @@ struct TripDetailView: View {
                                         .foregroundColor(AppTheme.Text.tertiary)
                                 }
                                 Spacer()
+                                
+                                if accessibility.fleetSpeakLogs {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "speaker.wave.2.fill")
+                                            .font(.system(size: 10))
+                                        Text("Tap to Listen")
+                                            .font(.system(size: 9, weight: .bold))
+                                    }
+                                    .foregroundColor(AppTheme.Brand.primary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(AppTheme.Brand.primary.opacity(0.1))
+                                    .clipShape(Capsule())
+                                }
                             }
                             
                             // Transcript block
@@ -2313,6 +2338,11 @@ struct TripDetailView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color(UIColor.secondarySystemFill))
                                 .cornerRadius(8)
+                                .onTapGesture {
+                                    if accessibility.fleetSpeakLogs {
+                                        speak(log.transcript)
+                                    }
+                                }
                             
                             // Parsed Metadata if present
                             let hasMetadata = (log.mileage != nil) || (log.startLocation != nil) || (log.endLocation != nil) || (log.startTime != nil) || (log.endTime != nil)

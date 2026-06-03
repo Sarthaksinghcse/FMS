@@ -846,14 +846,16 @@ private struct TripActionButton: View {
     let icon: String
     let style: TripActionStyle
     let action: () -> Void
+    
+    @ObservedObject var manager = AccessibilityManager.shared
 
     var body: some View {
         Button(action: action) {
             Label(label, systemImage: icon)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: manager.driverLargeTapTargets ? 16 : 13, weight: .semibold))
                 .foregroundStyle(foregroundColor)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .frame(height: manager.driverLargeTapTargets ? 64 : 44)
                 .background(backgroundContent)
                 .clipShape(RoundedRectangle(cornerRadius: 11))
         }
@@ -1396,6 +1398,8 @@ struct MapActionButton: View {
     let icon: String
     let style: MapActionStyle
     let action: () -> Void
+    
+    @ObservedObject var manager = AccessibilityManager.shared
 
     private var color: Color {
         switch style {
@@ -1410,9 +1414,9 @@ struct MapActionButton: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: manager.driverLargeTapTargets ? 22 : 18, weight: .medium))
                     .foregroundStyle((style == .primary || style == .destructive) ? .white : color)
-                    .frame(width: 46, height: 46)
+                    .frame(width: manager.driverLargeTapTargets ? 58 : 46, height: manager.driverLargeTapTargets ? 58 : 46)
                     .background(
                         (style == .primary || style == .destructive)
                         ? AnyShapeStyle(color.gradient)
@@ -1420,7 +1424,7 @@ struct MapActionButton: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: manager.driverLargeTapTargets ? 12 : 10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)

@@ -12,6 +12,7 @@ struct DriverProfileSheet: View {
     @State private var showLicenseDetails = false
     @State private var showNotificationSettings = false
     @State private var showSecuritySettings = false
+    @State private var showAccessibilitySettings = false
     @State private var showHelpSupport = false
     @State private var showPerformanceStats = false
     @State private var showSignOutConfirm = false
@@ -93,6 +94,9 @@ struct DriverProfileSheet: View {
             }
             .sheet(isPresented: $showSecuritySettings) {
                 DriverSecuritySettingsView()
+            }
+            .sheet(isPresented: $showAccessibilitySettings) {
+                AccessibilitySettingsView(role: .driver)
             }
             .sheet(isPresented: $showHelpSupport) {
                 DriverHelpSupportView()
@@ -332,6 +336,18 @@ struct DriverProfileSheet: View {
                     subtitle: "Password & authentication"
                 ) {
                     showSecuritySettings = true
+                }
+
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "accessibility.fill",
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.Brand.primary.opacity(0.12),
+                    title: "Accessibility",
+                    subtitle: "Speech, Contrast, Layout settings"
+                ) {
+                    showAccessibilitySettings = true
                 }
 
                 Divider().padding(.leading, 66)

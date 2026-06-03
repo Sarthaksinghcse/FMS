@@ -5,6 +5,7 @@ struct DriverHomeTab: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTab: Int
     @State private var selectedTripForAddress: DBTrip?
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     var body: some View {
         NavigationStack {
@@ -230,6 +231,7 @@ private struct VerticalDashedLine: View {
 private struct LiveTripCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTripForAddress: DBTrip?
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     private func formatTime(_ date: Date) -> String {
         let f = DateFormatter()
@@ -384,16 +386,20 @@ private struct LiveTripCard: View {
                         .contentTransition(.numericText())
 
                     VStack(spacing: 10) {
+                        let largeTap = accessibility.driverLargeTapTargets
+                        let btnHeight: CGFloat = largeTap ? 64 : 48
+                        let btnFontSize: CGFloat = largeTap ? 17 : 14
+                        
                         HStack(spacing: 10) {
                             Button {
                                 vm.mapActiveTrip = vm.activeTrip
                                 vm.showMaps = true
                             } label: {
                                 Label("Navigate", systemImage: "location.fill")
-                                    .font(.system(size: 14, weight: .bold))
+                                    .font(.system(size: btnFontSize, weight: .bold))
                                     .foregroundStyle(Color.fmsIndigo)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 48)
+                                    .frame(height: btnHeight)
                                     .background(Color.fmsIndigo.opacity(0.10))
                                     .cornerRadius(12)
                             }
@@ -402,10 +408,10 @@ private struct LiveTripCard: View {
                                 vm.showVoiceLog = true
                             } label: {
                                 Label("Voice Log", systemImage: "mic.fill")
-                                    .font(.system(size: 14, weight: .bold))
+                                    .font(.system(size: btnFontSize, weight: .bold))
                                     .foregroundStyle(Color.fmsIndigo)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 48)
+                                    .frame(height: btnHeight)
                                     .background(Color.fmsIndigo.opacity(0.10))
                                     .cornerRadius(12)
                             }
@@ -417,10 +423,10 @@ private struct LiveTripCard: View {
                             }
                         } label: {
                             Label("End Trip", systemImage: "stop.fill")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: btnFontSize, weight: .bold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 48)
+                                .frame(height: btnHeight)
                                 .background(AppTheme.Brand.accent.gradient)
                                 .cornerRadius(12)
                         }

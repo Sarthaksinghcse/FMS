@@ -25,6 +25,7 @@ extension Color {
 @available(iOS 26.0, *)
 struct DriverDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     @StateObject private var vm = DriverDashboardViewModel()
     @State private var selectedTab = 0
