@@ -203,6 +203,7 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var showNotifications = false
     @Published var notificationsList: [DBNotification] = []
     @Published var showFuelLog   = false   // Fuel refuel sheet
+    @Published var shouldEndTripAfterFuel = false
     private var autoRefreshTimer: AnyCancellable?
 
     @Published var confirmEnd    = false
@@ -295,7 +296,7 @@ final class DriverDashboardViewModel: ObservableObject {
         let startLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
         let distance = currentLocation.distance(from: startLocation)
         
-        if distance <= 2000 {
+        if distance <= 8000 {
             return (true, nil)
         } else {
             let distanceStr = String(format: "%.1f", distance / 1000.0)
@@ -320,7 +321,7 @@ final class DriverDashboardViewModel: ObservableObject {
         let endLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
         let distance = currentLocation.distance(from: endLocation)
         
-        if distance <= 2000 {
+        if distance <= 8000 {
             return (true, nil)
         } else {
             let distanceStr = String(format: "%.1f", distance / 1000.0)

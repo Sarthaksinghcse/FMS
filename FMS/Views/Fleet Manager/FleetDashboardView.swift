@@ -23,7 +23,6 @@ struct FleetDashboardView: View {
     @State private var showChat     = false
     @State private var showTracking = false
     @State private var selectedVehicleToTrack: UUID? = nil
-    @State private var showingFuelInsights = false
     @State private var showCompliance = false
     @State private var realtimeChannel: RealtimeChannelV2? = nil
     @State private var activeGeofenceAlertsCount = 0
@@ -508,9 +507,7 @@ struct FleetDashboardView: View {
             .padding(.horizontal, 16)
             
             // 3. Fuel Insights & Optimization
-            Button {
-                showingFuelInsights = true
-            } label: {
+            NavigationLink(destination: FuelOptimizationView()) {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -612,11 +609,6 @@ struct FleetDashboardView: View {
             }
             .buttonStyle(PlainButtonStyle())
             .padding(.horizontal, 16)
-        }
-        .sheet(isPresented: $showingFuelInsights) {
-            NavigationStack {
-                FuelOptimizationView()
-            }
         }
     }
 

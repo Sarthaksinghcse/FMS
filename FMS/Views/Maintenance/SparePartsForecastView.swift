@@ -113,6 +113,7 @@ struct SparePartsForecastView: View {
                 await viewModel.loadForecast(forceRefresh: false)
             }
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private func partCard(_ part: PartForecast) -> some View {
