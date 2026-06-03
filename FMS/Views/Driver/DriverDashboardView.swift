@@ -25,6 +25,7 @@ extension Color {
 @available(iOS 26.0, *)
 struct DriverDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     @StateObject private var vm = DriverDashboardViewModel()
     @State private var selectedTab = 0
@@ -76,7 +77,7 @@ struct DriverDashboardView: View {
             }
         }
         
-        .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet() }
+        .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet(tripId: vm.activeTrip?.id) }
         .sheet(isPresented: $vm.showIssue)     { IssueReportSheet() }
         .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
         .sheet(isPresented: $vm.showPostTrip, onDismiss: {
@@ -472,11 +473,14 @@ struct ActionTile: View {
 
 
 struct VoiceLogSheet: View {
+    let tripId: UUID?
     @Environment(\.dismiss) private var dismiss
     @State private var voiceLogger = VoiceTripLogger()
     @State private var elapsed    = 0
     @State private var timer: Timer?
     @State private var saved      = false
+    @State private var isSaving   = false
+    @State private var saveError: String?
 
     var body: some View {
         NavigationStack {
@@ -576,16 +580,24 @@ struct VoiceLogSheet: View {
                     Spacer()
 
                     if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
-                        Button { saved = true } label: {
-                            Text("Save Log")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(Color.fmsIndigo.gradient)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                                .padding(.horizontal, 24)
+                        Button { Task { await saveLog() } } label: {
+                            HStack(spacing: 8) {
+                                if isSaving {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Text("Save Log")
+                                }
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.fmsIndigo.gradient)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .padding(.horizontal, 24)
                         }
+                        .disabled(isSaving)
                         .padding(.bottom, 12)
                     }
                 }
@@ -604,6 +616,14 @@ struct VoiceLogSheet: View {
             } message: {
                 Text("Your voice log has been saved successfully.")
             }
+            .alert("Save Failed", isPresented: .init(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
+            }
         }
     }
 
@@ -617,6 +637,36 @@ struct VoiceLogSheet: View {
             Task {
                 await voiceLogger.startRecording()
             }
+        }
+    }
+
+    private func saveLog() async {
+        guard !voiceLogger.transcribedText.isEmpty else { return }
+        isSaving = true
+        defer { isSaving = false }
+
+        let driverId = await MainActor.run {
+            SupabaseManager.shared.currentUser?.id ?? UUID()
+        }
+
+        let log = DBTripLog(
+            id: UUID(),
+            driverId: driverId,
+            tripId: tripId,
+            transcript: voiceLogger.transcribedText,
+            startLocation: voiceLogger.parsedData?.startLocation,
+            endLocation: voiceLogger.parsedData?.endLocation,
+            startTime: voiceLogger.parsedData?.startTime,
+            endTime: voiceLogger.parsedData?.endTime,
+            mileage: voiceLogger.parsedData?.mileage,
+            createdAt: Date()
+        )
+
+        do {
+            try await SupabaseManager.shared.createTripLog(log)
+            saved = true
+        } catch {
+            saveError = error.localizedDescription
         }
     }
 }

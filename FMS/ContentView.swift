@@ -11,6 +11,7 @@ import AVKit
 @available(iOS 26.0, *)
 struct ContentView: View {
     @Environment(SupabaseManager.self) private var supabaseManager
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     @State private var showSplash = true
 
     var body: some View {
@@ -41,6 +42,7 @@ struct ContentView: View {
                 }
             }
         }
+        .dynamicTypeSize(accessibility.isLargeTextEnabled ? .xxLarge : .medium)
         .onOpenURL { url in
             handleDeepLink(url)
         }

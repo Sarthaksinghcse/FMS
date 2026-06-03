@@ -8,6 +8,7 @@ import AVFoundation
 
 struct FleetContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     @State private var selectedTab = 0
     
     @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]

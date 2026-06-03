@@ -324,45 +324,63 @@ struct MaintenanceRowCard: View {
 // MARK: - Work Order Row
 
 struct WorkOrderRow: View {
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     let order: WorkOrder
     var action: (() -> Void)? = nil
 
     var body: some View {
+        let isOutdoor = accessibility.maintenanceOutdoorContrast
         let content = HStack(spacing: 14) {
             // Icon + Priority badge matching the screenshot layout
             VStack(spacing: 4) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(.systemGray6))
+                        .fill(isOutdoor ? Color.white : Color(.systemGray6))
                         .frame(width: 44, height: 44)
+                        .overlay(
+                            Group {
+                                if isOutdoor {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(Color.black, lineWidth: 2)
+                                }
+                            }
+                        )
                     Image(systemName: "doc.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(order.priority.detailColor)
+                        .foregroundColor(isOutdoor ? Color.black : order.priority.detailColor)
                 }
                 
                 Text(order.priority.shortLabel)
                     .font(.system(size: 8, weight: .bold, design: .rounded))
-                    .foregroundColor(order.priority.detailColor)
+                    .foregroundColor(isOutdoor ? Color.black : order.priority.detailColor)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(order.priority.detailColor.opacity(0.08))
+                    .background(isOutdoor ? Color.white : order.priority.detailColor.opacity(0.08))
                     .cornerRadius(4)
+                    .overlay(
+                        Group {
+                            if isOutdoor {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.black, lineWidth: 1)
+                            }
+                        }
+                    )
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(order.title)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.primary)
+                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.primary)
                     .lineLimit(1)
                 
                 Text(order.workDescription)
                     .font(.system(size: 13))
-                    .foregroundColor(AppTheme.Text.secondary)
+                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.secondary)
                     .lineLimit(1)
                 
                 Text("Created: \(order.createdAt.formatted(date: .abbreviated, time: .omitted))\nMaintenance Personnel")
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.Text.tertiary)
+                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.tertiary)
                     .lineLimit(2)
             }
 
@@ -377,12 +395,21 @@ struct WorkOrderRow: View {
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.tertiary.opacity(0.5))
             }
         }
         .contentShape(Rectangle())
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        .background(isOutdoor ? Color.white : Color.clear)
+        .overlay(
+            Group {
+                if isOutdoor {
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(Color.black, lineWidth: 2)
+                }
+            }
+        )
 
         Group {
             if let action = action {
@@ -400,17 +427,19 @@ struct WorkOrderRow: View {
 // MARK: - Status Badge
 
 struct WorkOrderStatusBadge: View {
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     let statusLabel: String
     let statusColor: Color
 
     var body: some View {
+        let isOutdoor = accessibility.maintenanceOutdoorContrast
         Text(statusLabel)
             .font(.system(size: 11, weight: .bold, design: .rounded))
-            .foregroundColor(statusColor)
+            .foregroundColor(isOutdoor ? Color.black : statusColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Capsule().fill(statusColor.opacity(0.12)))
-            .overlay(Capsule().stroke(statusColor.opacity(0.25), lineWidth: 1))
+            .background(Capsule().fill(isOutdoor ? Color.white : statusColor.opacity(0.12)))
+            .overlay(Capsule().stroke(isOutdoor ? Color.black : statusColor.opacity(0.25), lineWidth: isOutdoor ? 2 : 1))
     }
 }
 

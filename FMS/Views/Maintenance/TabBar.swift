@@ -11,6 +11,7 @@ import Supabase
 
 struct MaintenanceDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     // Logged-in maintenance user
     let currentUser: User

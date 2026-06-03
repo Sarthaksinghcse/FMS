@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import AVFoundation
 
 struct CardMetric: Identifiable {
     var id: String { label }
@@ -1877,6 +1878,7 @@ struct TripDetailView: View {
 
     @Query private var vehicles: [Vehicle]
     @Query private var users: [User]
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     private var assignedVehicle: Vehicle? {
         vehicles.first(where: { $0.id == trip.vehicleId })
@@ -1887,6 +1889,8 @@ struct TripDetailView: View {
     }
 
     @State private var position: MapCameraPosition = .automatic
+    @State private var voiceLogs: [DBTripLog] = []
+    @State private var isLoadingLogs = false
 
     var body: some View {
         ZStack {
@@ -1910,6 +1914,9 @@ struct TripDetailView: View {
                     // ── Distance & Instructions ────────────────
                     additionalInfoCard
 
+                    // ── Voice Logs ─────────────────────────────
+                    voiceLogsCard
+
                     Spacer().frame(height: 20)
                 }
                 .padding(16)
@@ -1931,6 +1938,15 @@ struct TripDetailView: View {
                 longitudeDelta: abs(startCoord.longitude - endCoord.longitude) * 1.5 + 0.05
             )
             position = .region(MKCoordinateRegion(center: center, span: span))
+        }
+        .task {
+            isLoadingLogs = true
+            do {
+                voiceLogs = try await SupabaseManager.shared.fetchTripLogs(for: trip.id)
+            } catch {
+                print("Failed to fetch trip voice logs: \(error)")
+            }
+            isLoadingLogs = false
         }
     }
 
@@ -2224,6 +2240,174 @@ struct TripDetailView: View {
             return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
         }
         return String(name.prefix(2)).uppercased()
+    }
+    
+    private func speak(_ text: String) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        // Check if rate property is available or just let it use default
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        let synthesizer = AVSpeechSynthesizer()
+        synthesizer.speak(utterance)
+    }
+
+    // MARK: - Voice Logs Card
+    private var voiceLogsCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "mic.fill")
+                        .foregroundColor(AppTheme.Brand.primary)
+                        .font(.system(size: 16))
+                    Text("Voice Logs")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.primary)
+                }
+                Spacer()
+                
+                if !voiceLogs.isEmpty {
+                    Text("\(voiceLogs.count)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(AppTheme.Brand.primary)
+                        .clipShape(Capsule())
+                }
+            }
+            
+            if isLoadingLogs {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(AppTheme.Brand.primary)
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+            } else if voiceLogs.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "mic.slash.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text("No voice logs recorded for this trip")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 16)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(voiceLogs) { log in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Label {
+                                    Text(log.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                } icon: {
+                                    Image(systemName: "clock")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(AppTheme.Text.tertiary)
+                                }
+                                Spacer()
+                                
+                                if accessibility.fleetSpeakLogs {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "speaker.wave.2.fill")
+                                            .font(.system(size: 10))
+                                        Text("Tap to Listen")
+                                            .font(.system(size: 9, weight: .bold))
+                                    }
+                                    .foregroundColor(AppTheme.Brand.primary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(AppTheme.Brand.primary.opacity(0.1))
+                                    .clipShape(Capsule())
+                                }
+                            }
+                            
+                            // Transcript block
+                            Text(log.transcript)
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(AppTheme.Text.primary)
+                                .lineSpacing(3)
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(UIColor.secondarySystemFill))
+                                .cornerRadius(8)
+                                .onTapGesture {
+                                    if accessibility.fleetSpeakLogs {
+                                        speak(log.transcript)
+                                    }
+                                }
+                            
+                            // Parsed Metadata if present
+                            let hasMetadata = (log.mileage != nil) || (log.startLocation != nil) || (log.endLocation != nil) || (log.startTime != nil) || (log.endTime != nil)
+                            if hasMetadata {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 6) {
+                                        if let mileage = log.mileage {
+                                            MetadataChip(icon: "road.lanes", label: "Mileage", value: String(format: "%.1f km", mileage))
+                                        }
+                                        if let start = log.startLocation, !start.isEmpty {
+                                            MetadataChip(icon: "mappin.circle.fill", label: "Start", value: start)
+                                        }
+                                        if let end = log.endLocation, !end.isEmpty {
+                                            MetadataChip(icon: "flag.circle.fill", label: "End", value: end)
+                                        }
+                                        if let startT = log.startTime, !startT.isEmpty {
+                                            MetadataChip(icon: "clock.fill", label: "Dep", value: startT)
+                                        }
+                                        if let endT = log.endTime, !endT.isEmpty {
+                                            MetadataChip(icon: "clock.badge.checkmark.fill", label: "Arr", value: endT)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(12)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color(UIColor.separator).opacity(0.4), lineWidth: 1)
+                        )
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+    }
+}
+
+@available(iOS 26.0, *)
+private struct MetadataChip: View {
+    let icon: String
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundColor(AppTheme.Brand.primary)
+            Text("\(label):")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(AppTheme.Text.secondary)
+            Text(value)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(AppTheme.Text.primary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(AppTheme.Brand.primary.opacity(0.08))
+        .clipShape(Capsule())
     }
 }
 
