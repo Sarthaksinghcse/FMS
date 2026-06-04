@@ -70,10 +70,20 @@ final class SupabaseManager {
     var showResetPasswordSheet = false
     
     private init() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
         self.client = SupabaseClient(
             supabaseURL: Self.supabaseURL,
             supabaseKey: Self.supabaseAnonKey,
             options: SupabaseClientOptions(
+                db: .init(
+                    encoder: encoder,
+                    decoder: decoder
+                ),
                 auth: .init(
                     emitLocalSessionAsInitialSession: true
                 )

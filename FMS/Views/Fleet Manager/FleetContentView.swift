@@ -242,12 +242,13 @@ struct FleetContentView: View {
             await SupabaseManager.shared.syncAllData(context: modelContext)
             checkForActiveAlerts()
             
-            // Start safety polling loop to fetch SOS alerts in the background every 15 seconds
+            // Start background polling loop to sync all dashboard data and SOS alerts every 8 seconds
             pollingTask = Task {
                 while !Task.isCancelled {
-                    try? await Task.sleep(nanoseconds: 15_000_000_000)
+                    try? await Task.sleep(nanoseconds: 8_000_000_000)
                     if Task.isCancelled { break }
-                    print("🔄 [SOS Polling] Safety sync running...")
+                    print("🔄 [Fleet Manager Dashboard Polling] Syncing latest database changes...")
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
                     await syncActiveSOSAlerts()
                 }
             }
@@ -520,27 +521,32 @@ struct FleetContentView: View {
             let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
             let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
             
-            try? await channel.subscribeWithError()
-            print("🟢 [FleetContentView Realtime] Subscribed successfully to general database changes.")
+            do {
+                try await channel.subscribeWithError()
+                print("🟢 [FleetContentView Realtime] Subscribed successfully to general database changes.")
+            } catch {
+                print("❌ [FleetContentView Realtime] Subscription failed: \(error.localizedDescription)")
+            }
             
-            async let _ : () = handleStream(tripsStream)
-            async let _ : () = handleStream(defectStream)
-            async let _ : () = handleStream(workOrderStream)
-            async let _ : () = handleStream(notifStream)
-            async let _ : () = handleStream(taskStream)
-            async let _ : () = handleStream(vehicleStream)
-            async let _ : () = handleStream(complianceStream)
-            async let _ : () = handleStream(routeDevStream)
+            Task { await handleStream(tripsStream, tableName: "trips") }
+            Task { await handleStream(defectStream, tableName: "defect_reports") }
+            Task { await handleStream(workOrderStream, tableName: "work_orders") }
+            Task { await handleStream(notifStream, tableName: "notifications") }
+            Task { await handleStream(taskStream, tableName: "maintenance_tasks") }
+            Task { await handleStream(vehicleStream, tableName: "vehicles") }
+            Task { await handleStream(complianceStream, tableName: "compliance_alerts") }
+            Task { await handleStream(routeDevStream, tableName: "route_deviation_alerts") }
         }
     }
     
-    private func handleStream<S: AsyncSequence>(_ stream: S) async {
+    private func handleStream<S: AsyncSequence>(_ stream: S, tableName: String) async {
         do {
-            for try await _ in stream {
+            for try await action in stream {
+                print("🔔 [Realtime - FleetContentView] Received change on '\(tableName)': \(action)")
                 await SupabaseManager.shared.syncAllData(context: modelContext)
             }
         } catch {
-            print("❌ [FleetContentView Realtime] Stream error: \(error)")
+            print("❌ [Realtime - FleetContentView] Stream error on '\(tableName)': \(error.localizedDescription)")
         }
     }
 }

@@ -1,7 +1,9 @@
 
 
 import SwiftUI
+import SwiftData
 struct DriverHomeTab: View {
+    @Environment(\.modelContext) private var modelContext
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTab: Int
     @State private var selectedTripForAddress: DBTrip?
@@ -109,7 +111,7 @@ struct DriverHomeTab: View {
                     Spacer(minLength: 100)
                 }
             }
-            .refreshable { await vm.load() }
+            .refreshable { await vm.load(context: modelContext) }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationBarHidden(true)
             .sheet(item: $selectedTripForAddress) { trip in

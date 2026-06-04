@@ -32,6 +32,7 @@ struct DriverDashboardView: View {
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var realtimeMessagesChannel: RealtimeChannelV2?
     @State private var showFuelLogPrompt = false
+    @State private var pollingTask: Task<Void, Never>?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -59,8 +60,20 @@ struct DriverDashboardView: View {
             await vm.load(context: modelContext)
             startRealtimeTripsListener()
             startRealtimeMessagesListener()
+            
+            pollingTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 8_000_000_000)
+                    if Task.isCancelled { break }
+                    print("🔄 [Driver Dashboard Polling] Syncing latest database changes...")
+                    await vm.load(context: modelContext)
+                }
+            }
         }
         .onDisappear {
+            pollingTask?.cancel()
+            pollingTask = nil
+            
             if let activeChannel = realtimeChannel {
                 let client = SupabaseManager.shared.client
                 Task {
@@ -79,13 +92,13 @@ struct DriverDashboardView: View {
         
         .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet(tripId: vm.activeTrip?.id ?? vm.currentTrip?.id) }
         .sheet(isPresented: $vm.showIssue)     { IssueReportSheet() }
-        .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
+        .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true, vehicleId: vm.activeTrip?.vehicleId ?? vm.currentTrip?.vehicleId, initialVehicleNumber: vm.assignedVehicle?.vehicleNumber) }
         .sheet(isPresented: $vm.showPostTrip, onDismiss: {
             if vm.showPostTripOnEnd {
                 showFuelLogPrompt = true
             }
         }) {
-            InspectionFormSheet(isPreTrip: false) { passed, issues, remarks in
+            InspectionFormSheet(isPreTrip: false, vehicleId: vm.activeTrip?.vehicleId ?? vm.currentTrip?.vehicleId, initialVehicleNumber: vm.assignedVehicle?.vehicleNumber) { passed, issues, remarks in
                 vm.lastInspectionPassed = passed
                 vm.lastIssuesFound      = issues
                 vm.lastInspectionRemarks = remarks
@@ -996,6 +1009,8 @@ struct InspectionFormSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
+    var vehicleId: UUID? = nil
+    var initialVehicleNumber: String? = nil
     
     var onComplete: ((Bool, Int, String) -> Void)? = nil
 
@@ -1164,11 +1179,7 @@ struct InspectionFormSheet: View {
                                 ) {
                                     Label("Add Photos", systemImage: "photo.badge.plus")
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(
-                                            !allPass && defectPhotos.isEmpty
-                                                ? AppTheme.Status.danger
-                                                : Color.fmsIndigo
-                                        )
+                                        .foregroundStyle(Color.fmsIndigo)
                                         .padding(.leading, 14)
                                         .padding(.bottom, defectPhotos.isEmpty ? 14 : 4)
                                 }
@@ -1188,14 +1199,13 @@ struct InspectionFormSheet: View {
 
                                 Spacer()
 
-                                // Required badge — shown only when defect & no photo
                                 if !allPass && defectPhotos.isEmpty {
-                                    Text("Required")
+                                    Text("Optional")
                                         .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(AppTheme.Status.danger)
+                                        .foregroundStyle(.secondary)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
-                                        .background(AppTheme.Status.danger.opacity(0.12), in: Capsule())
+                                        .background(Color.black.opacity(0.05), in: Capsule())
                                         .padding(.trailing, 14)
                                         .padding(.bottom, defectPhotos.isEmpty ? 14 : 4)
                                 }
@@ -1232,21 +1242,7 @@ struct InspectionFormSheet: View {
                             }
                         }
                     }
-                    // Highlight the whole remarks card in danger tint when photo is required but missing
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(AppTheme.Status.danger.opacity(!allPass && defectPhotos.isEmpty ? 0.5 : 0), lineWidth: 1.5)
-                    )
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
-
-                    // Warning label below the card
-                    if !allPass && defectPhotos.isEmpty {
-                        Label("Attach at least one photo of the defect to submit.", systemImage: "exclamationmark.triangle.fill")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(AppTheme.Status.danger)
-                            .padding(.horizontal, 4)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
 
                     Button {
                         Task { await doSubmit() }
@@ -1274,9 +1270,7 @@ struct InspectionFormSheet: View {
                             : (issuesFound > 0 ? AppTheme.Brand.accent : AppTheme.Status.success).gradient
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .opacity(!allPass && defectPhotos.isEmpty ? 0.45 : 1)
                     }
-                    .disabled(!allPass && defectPhotos.isEmpty)
                 }
                 .padding(20)
             }
@@ -1303,7 +1297,7 @@ struct InspectionFormSheet: View {
                 isPresented: $submitted
             ) {
                 Button("Done") {
-                    onComplete?(allPass, issuesFound, remarks)
+                    onComplete?(allPass && !hasDefect, issuesFound, remarks)
                     dismiss()
                 }
             } message: {
@@ -1319,15 +1313,19 @@ struct InspectionFormSheet: View {
             }
         }
         .task {
-            let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
-            if let trips = try? await SupabaseManager.shared.fetchTrips(),
-               let activeTrip = trips.first(where: { $0.driverId == driverId && ($0.status == .started || $0.status == .assigned) }),
-               let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
-               let matched = vehicles.first(where: { $0.id == activeTrip.vehicleId }) {
-                self.vehicleNumber = matched.vehicleNumber
-            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
-                      let assigned = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-                self.vehicleNumber = assigned.vehicleNumber
+            if let passedNum = initialVehicleNumber {
+                self.vehicleNumber = passedNum
+            } else {
+                let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+                if let trips = try? await SupabaseManager.shared.fetchTrips(),
+                   let activeTrip = trips.first(where: { $0.driverId == driverId && ($0.status == .started || $0.status == .assigned) }),
+                   let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+                   let matched = vehicles.first(where: { $0.id == activeTrip.vehicleId }) {
+                    self.vehicleNumber = matched.vehicleNumber
+                } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+                          let assigned = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                    self.vehicleNumber = assigned.vehicleNumber
+                }
             }
         }
     }
@@ -1337,28 +1335,30 @@ struct InspectionFormSheet: View {
         submitting = true
         
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
-        var vehicleId = UUID()
+        var resolvedVehicleId = vehicleId ?? UUID()
         
-        if let trips = try? await SupabaseManager.shared.fetchTrips() {
-            if let activeTrip = trips.first(where: { $0.driverId == driverId && $0.status == .started }) {
-                vehicleId = activeTrip.vehicleId
-            } else if let assignedTrip = trips.first(where: { $0.driverId == driverId && $0.status == .assigned }) {
-                vehicleId = assignedTrip.vehicleId
-            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
-                if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-                    vehicleId = assignedVehicle.id
-                } else if let firstVehicle = vehicles.first {
-                    vehicleId = firstVehicle.id
+        if vehicleId == nil {
+            if let trips = try? await SupabaseManager.shared.fetchTrips() {
+                if let activeTrip = trips.first(where: { $0.driverId == driverId && $0.status == .started }) {
+                    resolvedVehicleId = activeTrip.vehicleId
+                } else if let assignedTrip = trips.first(where: { $0.driverId == driverId && $0.status == .assigned }) {
+                    resolvedVehicleId = assignedTrip.vehicleId
+                } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+                    if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                        resolvedVehicleId = assignedVehicle.id
+                    } else if let firstVehicle = vehicles.first {
+                        resolvedVehicleId = firstVehicle.id
+                    }
                 }
             }
         }
         
         let checklistStrings = items.map { "\($0.label): \($0.passed ? "passed" : "failed")" }
-        let status: DBInspectionStatus = allPass ? .passed : (hasDefect ? .failed : .needsRepair)
+        let status: DBInspectionStatus = hasDefect ? .failed : (allPass ? .passed : .needsRepair)
         
         let dbInspection = DBVehicleInspection(
             id: UUID(),
-            vehicleId: vehicleId,
+            vehicleId: resolvedVehicleId,
             driverId: driverId,
             checklist: checklistStrings,
             defects: remarks.isEmpty ? nil : remarks,
@@ -1390,7 +1390,7 @@ struct InspectionFormSheet: View {
                 
                 let dbDefect = DBDefectReport(
                     id: defectId,
-                    vehicleId: vehicleId,
+                    vehicleId: resolvedVehicleId,
                     reportedBy: driverId,
                     inspectionId: dbInspection.id,
                     title: defectTitle,
@@ -1401,11 +1401,15 @@ struct InspectionFormSheet: View {
                 )
                 
                 // Submit to Supabase
-                try? await SupabaseManager.shared.createDefectReport(dbDefect)
+                do {
+                    try await SupabaseManager.shared.createDefectReport(dbDefect)
+                } catch {
+                    print("❌ [DriverDashboardView] Failed to submit defect report: \(error.localizedDescription)")
+                }
                 
                 // Notify Fleet Managers
                 let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
-                let fleetMsg = "Driver \(driverName) flagged a defect on Vehicle \(vehicleId.uuidString.prefix(4)) during \(isPreTrip ? "pre-trip" : "post-trip") inspection: \(defectDesc)"
+                let fleetMsg = "Driver \(driverName) flagged a defect on Vehicle \(resolvedVehicleId.uuidString.prefix(4)) during \(isPreTrip ? "pre-trip" : "post-trip") inspection: \(defectDesc)"
                 await SupabaseManager.shared.notifyFleetManagers(
                     title: "⚠️ Defect Flagged (\(isPreTrip ? "Pre" : "Post")-Trip)",
                     message: fleetMsg,

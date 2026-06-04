@@ -22,6 +22,7 @@ struct MaintenanceDashboardView: View {
     @State private var selectedTab: Int = 0
     @State private var schedulingFilter: Int = 0
     @State private var realtimeChannel: RealtimeChannelV2? = nil
+    @State private var pollingTask: Task<Void, Never>? = nil
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -47,8 +48,20 @@ struct MaintenanceDashboardView: View {
         .task {
             await SupabaseManager.shared.syncAllData(context: modelContext)
             startRealtimeListener()
+            
+            pollingTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 8_000_000_000)
+                    if Task.isCancelled { break }
+                    print("🔄 [Maintenance Dashboard Polling] Syncing latest database changes...")
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
+                }
+            }
         }
         .onDisappear {
+            pollingTask?.cancel()
+            pollingTask = nil
+            
             if let activeChannel = realtimeChannel {
                 let client = SupabaseManager.shared.client
                 Task {

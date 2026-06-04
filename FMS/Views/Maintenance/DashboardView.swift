@@ -212,7 +212,7 @@ struct MaintenanceDashboardTab: View {
                     .padding(.top, 12)
                     .padding(.bottom, 32)
                 }
-                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .scrollBounceBehavior(.always, axes: .vertical)
                 .refreshable {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
