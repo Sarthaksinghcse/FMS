@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 import Supabase
+import AVFoundation
 
 struct MaintenanceTaskDetailView: View {
     let order: WorkOrder
@@ -20,6 +21,9 @@ struct MaintenanceTaskDetailView: View {
     @Query private var allUsers: [User]
     @Query private var allVehicles: [Vehicle]
 
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+    @State private var speechSynthesizer = AVSpeechSynthesizer()
+
     @State private var repairNotes: String = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var repairPhotos: [UIImage] = []
@@ -29,6 +33,16 @@ struct MaintenanceTaskDetailView: View {
 
     @State private var laborCostText: String = ""
     @State private var selectedParts: [UUID: Int] = [:]
+
+    private func speak(_ text: String) {
+        if speechSynthesizer.isSpeaking {
+            speechSynthesizer.stopSpeaking(at: .immediate)
+        }
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        speechSynthesizer.speak(utterance)
+    }
 
     private var statusColor: Color {
         if order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]") {
@@ -89,7 +103,14 @@ struct MaintenanceTaskDetailView: View {
                     DetailHeroCard(order: order)
 
                     // ── Work details ─────────────────────────────────────────
-                    DetailSection(title: "Work Order Details", icon: "doc.text.fill", accentColor: AppTheme.Brand.primary) {
+                    DetailSection(
+                        title: "Work Order Details",
+                        icon: "doc.text.fill",
+                        accentColor: AppTheme.Brand.primary,
+                        onSpeak: accessibility.maintenanceSpeakTasks ? {
+                            speak("Work Order: \(order.title). Description: \(order.workDescription.isEmpty ? "No description provided." : order.workDescription). Priority: \(order.priority.rawValue). Status: \(order.status.displayLabel).")
+                        } : nil
+                    ) {
                         VStack(spacing: 0) {
                             DetailInfoRow(label: "Work Order Title", value: order.title, icon: "wrench.fill", color: AppTheme.Brand.primary)
                             Divider().padding(.leading, 52)
@@ -153,7 +174,14 @@ struct MaintenanceTaskDetailView: View {
                     }
 
                     // ── Parts list ───────────────────────────────────────────
-                    DetailSection(title: "Parts & Materials", icon: "cube.box.fill", accentColor: AppTheme.Brand.amber) {
+                    DetailSection(
+                        title: "Parts & Materials",
+                        icon: "cube.box.fill",
+                        accentColor: AppTheme.Brand.amber,
+                        onSpeak: accessibility.maintenanceSpeakTasks ? {
+                            speak("Parts and Materials checklist: " + simulatedParts.joined(separator: ", "))
+                        } : nil
+                    ) {
                         VStack(alignment: .leading, spacing: 10) {
                             ForEach(Array(simulatedParts.enumerated()), id: \.offset) { idx, part in
                                 HStack(spacing: 12) {
@@ -660,12 +688,14 @@ private struct DetailSection<Content: View>: View {
     let title: String
     let icon: String
     let accentColor: Color
+    var onSpeak: (() -> Void)? = nil
     let content: () -> Content
 
-    init(title: String, icon: String, accentColor: Color, @ViewBuilder content: @escaping () -> Content) {
+    init(title: String, icon: String, accentColor: Color, onSpeak: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.title = title
         self.icon = icon
         self.accentColor = accentColor
+        self.onSpeak = onSpeak
         self.content = content
     }
 
@@ -678,6 +708,19 @@ private struct DetailSection<Content: View>: View {
                 Text(title)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
+                
+                if let onSpeak = onSpeak {
+                    Spacer()
+                    Button(action: onSpeak) {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(accentColor)
+                            .padding(6)
+                            .background(accentColor.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal)
 

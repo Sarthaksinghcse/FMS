@@ -94,10 +94,26 @@ enum VehicleStatus: String, Codable {
         }
     }
     var statusColor: Color {
-        switch self {
-        case .active:        return Theme.royalBlue
-        case .inactive:      return Theme.darkOrange
-        case .inMaintenance: return Theme.darkOrange.opacity(0.80)
+        if AccessibilityManager.shared.isHighContrastEnabled {
+            return Color.primary
+        }
+        switch AccessibilityManager.shared.colorBlindMode {
+        case .deuteranopia, .protanopia:
+            switch self {
+            case .active: return Color.blue
+            case .inactive, .inMaintenance: return Color.orange
+            }
+        case .tritanopia:
+            switch self {
+            case .active: return Color.red
+            case .inactive, .inMaintenance: return Color.teal
+            }
+        case .none:
+            switch self {
+            case .active:        return Theme.royalBlue
+            case .inactive:      return Theme.darkOrange
+            case .inMaintenance: return Theme.darkOrange.opacity(0.80)
+            }
         }
     }
     var statusIcon: String {
@@ -127,12 +143,41 @@ enum TripStatus: String, Codable {
         }
     }
     var badgeColor: Color {
-        switch self {
-        case .assigned:   return Theme.royalBlue.opacity(0.60)
-        case .started:    return Theme.royalBlue.opacity(0.85)
-        case .inProgress: return Theme.royalBlue
-        case .completed:  return Theme.royalBlue.opacity(0.75)
-        case .cancelled:  return Theme.darkOrange
+        if AccessibilityManager.shared.isHighContrastEnabled {
+            return Color.primary
+        }
+        
+        switch AccessibilityManager.shared.colorBlindMode {
+        case .deuteranopia, .protanopia:
+            switch self {
+            case .assigned: return Color.blue.opacity(0.6)
+            case .started, .inProgress: return Color.blue
+            case .completed: return Color.blue.opacity(0.8)
+            case .cancelled: return Color.orange
+            }
+        case .tritanopia:
+            switch self {
+            case .assigned: return Color.red.opacity(0.6)
+            case .started, .inProgress: return Color.red
+            case .completed: return Color.red.opacity(0.8)
+            case .cancelled: return Color.teal
+            }
+        case .none:
+            if AccessibilityManager.shared.fleetColorFilterStatus {
+                switch self {
+                case .assigned: return Color.blue.opacity(0.6)
+                case .started, .inProgress: return Color.blue
+                case .completed: return Color.blue.opacity(0.8)
+                case .cancelled: return Color.orange
+                }
+            }
+            switch self {
+            case .assigned:   return Theme.royalBlue.opacity(0.60)
+            case .started:    return Theme.royalBlue.opacity(0.85)
+            case .inProgress: return Theme.royalBlue
+            case .completed:  return Theme.royalBlue.opacity(0.75)
+            case .cancelled:  return Theme.darkOrange
+            }
         }
     }
     var badgeIcon: String {
@@ -2188,6 +2233,8 @@ struct DBVehicleHealthScore: Codable, Identifiable {
     }
 }
 
+
+
 struct AIAnalyticsReport: Codable, Identifiable {
     let id: UUID
     let reportText: String
@@ -2201,3 +2248,34 @@ struct AIAnalyticsReport: Codable, Identifiable {
 }
 
 
+// MARK: - Trip Log (Voice Log Persistence)
+
+struct DBTripLog: Codable, Identifiable {
+    let id: UUID
+    var driverId: UUID
+    var tripId: UUID?
+    var transcript: String
+    var startLocation: String?
+    var endLocation: String?
+    var startTime: String?
+    var endTime: String?
+    var mileage: Double?
+    var createdAt: Date
+    var isEdited: Bool?
+    var updatedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case driverId       = "driver_id"
+        case tripId         = "trip_id"
+        case transcript
+        case startLocation  = "start_location"
+        case endLocation    = "end_location"
+        case startTime      = "start_time"
+        case endTime        = "end_time"
+        case mileage
+        case createdAt      = "created_at"
+        case isEdited       = "is_edited"
+        case updatedAt      = "updated_at"
+    }
+}

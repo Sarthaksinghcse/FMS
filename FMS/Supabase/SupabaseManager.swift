@@ -1315,6 +1315,42 @@ final class SupabaseManager {
         return reports.first
     }
     
+    // Trip Logs (Voice Log)
+    func createTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .insert(log)
+            .execute()
+    }
+    
+    func fetchTripLogs() async throws -> [DBTripLog] {
+        return try await client
+            .from("trip_logs")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(500)
+            .execute()
+            .value
+    }
+    
+    func fetchTripLogs(for tripId: UUID) async throws -> [DBTripLog] {
+        return try await client
+            .from("trip_logs")
+            .select()
+            .eq("trip_id", value: tripId.uuidString)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+    }
+    
+    func updateTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .update(log)
+            .eq("id", value: log.id.uuidString)
+            .execute()
+    }
+    
     // Fuel Logs
     func createFuelLog(_ log: DBFuelLog) async throws {
         try await client
