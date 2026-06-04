@@ -104,9 +104,9 @@ struct EditInventoryView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "exclamationmark.octagon.fill")
                                         .foregroundColor(AppTheme.Status.danger)
-                                        .font(.system(size: 16, weight: .bold))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     Text("Please correct the following errors:")
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(AppTheme.Status.danger)
                                     Spacer()
                                 }
@@ -115,9 +115,9 @@ struct EditInventoryView: View {
                                     HStack(alignment: .top, spacing: 6) {
                                         Text("•")
                                             .foregroundColor(AppTheme.Status.danger)
-                                            .font(.system(size: 14, weight: .bold))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         Text(errorMsg)
-                                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                             .foregroundColor(AppTheme.Text.secondary)
                                             .multilineTextAlignment(.leading)
                                     }
@@ -137,7 +137,7 @@ struct EditInventoryView: View {
                         // Part Details Section
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Part Details")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                                 .padding(.horizontal)
@@ -158,7 +158,7 @@ struct EditInventoryView: View {
                         // Stock Information Section
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Stock Information")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                                 .padding(.horizontal)
@@ -183,7 +183,7 @@ struct EditInventoryView: View {
                         // Supplier Section
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Supplier (Optional)")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                                 .padding(.horizontal)
@@ -201,9 +201,9 @@ struct EditInventoryView: View {
                         Button(action: saveChanges) {
                             HStack(spacing: 10) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 18, weight: .bold))
+                                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 Text("Save Changes")
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -227,9 +227,9 @@ struct EditInventoryView: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "trash.fill")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 Text("Delete Spare Part")
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             }
                             .foregroundColor(AppTheme.Status.danger)
                             .frame(maxWidth: .infinity)
@@ -342,17 +342,17 @@ private struct FormFieldRow: View {
                     .fill(color.opacity(0.1))
                     .frame(width: 36, height: 36)
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(color)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.secondary)
 
                 TextField(placeholder, text: $text)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Text.primary)
                     .keyboardType(keyboard)
                     .autocorrectionDisabled()

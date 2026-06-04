@@ -81,7 +81,7 @@ struct MaintenanceEditProfileView: View {
                                                     .shadow(color: AppTheme.Brand.amber.opacity(0.30), radius: 12, y: 4)
 
                                                 Text(initials.isEmpty ? "MP" : initials)
-                                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                     .foregroundColor(.white)
                                             } else {
                                                 ProgressView()
@@ -100,7 +100,7 @@ struct MaintenanceEditProfileView: View {
                                             .shadow(color: AppTheme.Brand.amber.opacity(0.30), radius: 12, y: 4)
 
                                         Text(initials.isEmpty ? "MP" : initials)
-                                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                                            .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.white)
                                     }
                                 }
@@ -108,7 +108,7 @@ struct MaintenanceEditProfileView: View {
 
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                                 Text("Change Photo")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Brand.amber)
                             }
                             .onChange(of: selectedPhotoItem) { _, newItem in
@@ -129,20 +129,20 @@ struct MaintenanceEditProfileView: View {
                             
                             HStack(spacing: 12) {
                                 Image(systemName: "envelope.fill")
-                                    .font(.system(size: 15))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                                     .frame(width: 32)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Email")
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.tertiary)
                                     Text(user?.email ?? "maintenance@fms.com")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "lock.fill")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                             }
                             .padding(.horizontal, 16)
@@ -153,20 +153,20 @@ struct MaintenanceEditProfileView: View {
                             
                             HStack(spacing: 12) {
                                 Image(systemName: "shield.checkered")
-                                    .font(.system(size: 15))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                                     .frame(width: 32)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Role")
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.tertiary)
                                     Text("Maintenance Personnel")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "lock.fill")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                             }
                             .padding(.horizontal, 16)
@@ -183,7 +183,7 @@ struct MaintenanceEditProfileView: View {
                             HStack(spacing: 8) {
                                 if isSaving { ProgressView().tint(.white) }
                                 Text(isSaving ? "Saving..." : "Save Changes")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -322,14 +322,14 @@ struct MaintenanceWorkHistoryView: View {
                         if completedWorkOrders.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "wrench.and.screwdriver")
-                                    .font(.system(size: 40))
+                                    .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
                                     .padding(.top, 40)
                                 Text("No work history")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 Text("Your completed or cancelled work orders will appear here.")
-                                    .font(.system(size: 12, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                     .foregroundColor(AppTheme.Text.tertiary)
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -339,13 +339,13 @@ struct MaintenanceWorkHistoryView: View {
                                 VStack(alignment: .leading, spacing: 10) {
                                     HStack {
                                         Text("WO-\(order.id.uuidString.prefix(4).uppercased())")
-                                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                                             .foregroundColor(AppTheme.Brand.amber)
 
                                         Spacer()
 
                                         Text(order.priority.rawValue.capitalized)
-                                            .font(.system(size: 10, weight: .bold))
+                                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(priorityColor(order.priority.rawValue.capitalized))
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 3)
@@ -354,25 +354,25 @@ struct MaintenanceWorkHistoryView: View {
                                     }
 
                                     Text(order.title)
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.primary)
 
                                     HStack(spacing: 16) {
                                         Label(vehicleRegistration(for: order.vehicleId), systemImage: "truck.box.fill")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
 
                                         Spacer()
 
                                         Label(order.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                                            .font(.system(size: 11))
+                                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.tertiary)
                                     }
 
                                     HStack {
                                         Spacer()
                                         Text(order.status.displayName)
-                                            .font(.system(size: 11, weight: .semibold))
+                                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                             .foregroundColor(order.status == .completed ? AppTheme.Status.success : AppTheme.Status.danger)
                                             .padding(.horizontal, 10)
                                             .padding(.vertical, 4)
@@ -449,7 +449,7 @@ struct MaintenanceCertificationsView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CERTIFICATIONS")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -463,23 +463,23 @@ struct MaintenanceCertificationsView: View {
                                                 .fill(cert.status == "Valid" ? AppTheme.IconBg.green : AppTheme.IconBg.orange)
                                                 .frame(width: 40, height: 40)
                                             Image(systemName: cert.status == "Valid" ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                                                .font(.system(size: 16))
+                                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                 .foregroundColor(cert.status == "Valid" ? AppTheme.Status.success : AppTheme.Status.warning)
                                         }
 
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text(cert.name)
-                                                .font(.system(size: 14, weight: .medium))
+                                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                                 .foregroundColor(AppTheme.Text.primary)
                                             Text("\(cert.issuer) • \(cert.date)")
-                                                .font(.system(size: 12))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                 .foregroundColor(AppTheme.Text.secondary)
                                         }
 
                                         Spacer()
 
                                         Text(cert.status)
-                                            .font(.system(size: 11, weight: .semibold))
+                                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                             .foregroundColor(cert.status == "Valid" ? AppTheme.Status.success : AppTheme.Status.warning)
                                     }
                                     .padding(.horizontal, 16)
@@ -498,7 +498,7 @@ struct MaintenanceCertificationsView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("TRAINING RECORDS")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -512,23 +512,23 @@ struct MaintenanceCertificationsView: View {
                                                 .fill(AppTheme.IconBg.amber)
                                                 .frame(width: 40, height: 40)
                                             Image(systemName: "book.fill")
-                                                .font(.system(size: 16))
+                                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                 .foregroundColor(AppTheme.Brand.amber)
                                         }
 
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text(tr.name)
-                                                .font(.system(size: 14, weight: .medium))
+                                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                                 .foregroundColor(AppTheme.Text.primary)
                                             Text("\(tr.provider) • \(tr.date)")
-                                                .font(.system(size: 12))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                 .foregroundColor(AppTheme.Text.secondary)
                                         }
 
                                         Spacer()
 
                                         Text(tr.hours)
-                                            .font(.system(size: 12, weight: .semibold))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                             .foregroundColor(AppTheme.Brand.amber)
                                     }
                                     .padding(.horizontal, 16)
@@ -588,7 +588,7 @@ struct MaintenanceNotificationSettingsView: View {
 
                         VStack(alignment: .leading, spacing: 0) {
                             Text("WORK ORDERS")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -608,7 +608,7 @@ struct MaintenanceNotificationSettingsView: View {
 
                         VStack(alignment: .leading, spacing: 0) {
                             Text("INVENTORY & GENERAL")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -673,7 +673,7 @@ struct MaintenanceSecuritySettingsView: View {
                         // CHANGE PASSWORD section
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CHANGE PASSWORD")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -694,7 +694,7 @@ struct MaintenanceSecuritySettingsView: View {
                         // AUTHENTICATION section
                         VStack(alignment: .leading, spacing: 0) {
                             Text("AUTHENTICATION")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -721,7 +721,7 @@ struct MaintenanceSecuritySettingsView: View {
                             HStack(spacing: 8) {
                                 if isSaving { ProgressView().tint(.white) }
                                 Text(isSaving ? "Updating..." : "Update Password")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -813,10 +813,10 @@ private struct MaintSecureField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.tertiary)
             SecureField(label, text: $text)
-                .font(.system(size: 15))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.primary)
         }
         .padding(.horizontal, 16)
@@ -856,13 +856,13 @@ struct MaintenanceHelpSupportView: View {
                             ForEach(Array(faqs.enumerated()), id: \.offset) { i, faq in
                                 DisclosureGroup {
                                     Text(faq.a)
-                                        .font(.system(size: 13))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.secondary)
                                         .padding(.top, 4)
                                         .padding(.bottom, 8)
                                 } label: {
                                     Text(faq.q)
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.primary)
                                         .multilineTextAlignment(.leading)
                                 }
@@ -947,7 +947,7 @@ struct MaintenanceSpecializationsView: View {
 
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Technical Specialties")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.primary)
                                 .padding(.leading, 4)
 
@@ -955,9 +955,9 @@ struct MaintenanceSpecializationsView: View {
                                 ForEach(specializations, id: \.self) { spec in
                                     HStack(spacing: 5) {
                                         Image(systemName: iconForSpecialization(spec))
-                                            .font(.system(size: 10))
+                                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         Text(spec)
-                                            .font(.system(size: 12, weight: .medium))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     }
                                     .foregroundColor(AppTheme.Brand.amber)
                                     .padding(.horizontal, 12)
@@ -975,7 +975,7 @@ struct MaintenanceSpecializationsView: View {
 
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Certifications")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.primary)
                                 .padding(.leading, 4)
 
@@ -984,7 +984,7 @@ struct MaintenanceSpecializationsView: View {
                             } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: "rosette")
-                                        .font(.system(size: 16))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Brand.amber)
                                         .frame(width: 36, height: 36)
                                         .background(AppTheme.IconBg.amber)
@@ -992,17 +992,17 @@ struct MaintenanceSpecializationsView: View {
 
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Certifications & Training")
-                                            .font(.system(size: 14, weight: .medium))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                             .foregroundColor(AppTheme.Text.primary)
                                         Text("View certificates and training records")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
 
                                     Spacer()
 
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.7))
                                 }
                                 .padding(.horizontal, 16)

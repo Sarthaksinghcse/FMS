@@ -20,41 +20,78 @@ enum AppTheme {
 
     // MARK: - Status Colors (Blue, Red & Orange)
     enum Status {
-        static let success      = Theme.royalBlue          // Success maps to Royal Blue shade
-        static let danger       = Theme.darkOrange.opacity(0.8)             // Error/Danger (Urgent) maps to Red replaced with Orange 0.8
-        static let warning      = Theme.darkOrange         // Warning maps to Orange
-        static let purple       = Theme.royalBlue          // Purple replaced with Royal Blue
-        static let neutral      = Theme.royalBlue.opacity(0.4) // Neutral pending/inactive
-        static let progress     = Theme.darkOrange
+        static var success: Color {
+            return Theme.royalBlue
+        }
+        
+        static var danger: Color {
+            return Theme.fmsRed
+        }
+        
+        static var warning: Color {
+            return Theme.darkOrange
+        }
+        
+        static var purple: Color {
+            return Theme.royalBlue
+        }
+        
+        static var neutral: Color {
+            return Theme.royalBlue.opacity(0.4)
+        }
+        
+        static var progress: Color {
+            return Theme.darkOrange
+        }
     }
 
     // MARK: - Background Colors
     enum Background {
-        static let page         = Color(red: 0.96, green: 0.97, blue: 0.99) // Lighter shade of Royal Blue
+        static var page: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .white : Color(red: 0.96, green: 0.97, blue: 0.99)
+        }
         static let card         = Theme.clearWhite
         static let auth         = Theme.clearWhite
-        static let driverStart  = Color(red: 0.05, green: 0.13, blue: 0.30) // Darker shade of Royal Blue
-        static let driverEnd    = Color(red: 0.08, green: 0.20, blue: 0.48) // Darker shade of Royal Blue
+        static var driverStart: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .black : Color(red: 0.05, green: 0.13, blue: 0.30)
+        }
+        static var driverEnd: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .black : Color(red: 0.08, green: 0.20, blue: 0.48)
+        }
     }
 
     // MARK: - Text Colors
     enum Text {
-        static let primary      = Color.black
-        static let secondary    = Color.secondary
-        static let tertiary     = Color.gray
+        static var primary: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .black : Color.black
+        }
+        static var secondary: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .black : Color.secondary
+        }
+        static var tertiary: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .black : Color.gray
+        }
         static let onDark       = Theme.clearWhite
-        static let onDarkMuted  = Theme.clearWhite.opacity(0.6)
+        static var onDarkMuted: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .white : Theme.clearWhite.opacity(0.6)
+        }
     }
 
     // MARK: - Glassmorphism & UI Borders
     enum Glass {
-        static let border       = Color.black.opacity(0.12)
-        static let ringTrack    = Theme.royalBlue.opacity(0.10)
+        static var border: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .black : Color.black.opacity(0.12)
+        }
+        static var ringTrack: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .black.opacity(0.3) : Theme.royalBlue.opacity(0.10)
+        }
     }
 
     // MARK: - Shadows
     enum Shadow {
-        static let card         = Color.black.opacity(0.03)
+        static var card: Color {
+            AccessibilityManager.shared.isHighContrastEnabled ? .black.opacity(0.15) : Color.black.opacity(0.03)
+        }
         static let modal        = Color.black.opacity(0.20)
         static func primaryGlow(opacity: Double = 0.30) -> Color {
             Theme.royalBlue.opacity(opacity)

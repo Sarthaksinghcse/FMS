@@ -35,29 +35,28 @@ struct ActiveNavigationOverlay: View {
 
     private var nextManeuverBanner: some View {
         let step = currentStep
-        let largeTap = accessibility.driverLargeTapTargets
         return HStack(spacing: 14) {
             // Direction arrow
             ZStack {
                 Circle()
                     .fill(Color.fmsIndigo)
-                    .frame(width: largeTap ? 64 : 52, height: largeTap ? 64 : 52)
+                    .frame(width: 52, height: 52)
                     .shadow(color: Color.fmsIndigo.opacity(0.45), radius: 8, y: 3)
                 Image(systemName: step?.sfSymbol ?? "arrow.up")
-                    .font(.system(size: largeTap ? 26 : 22, weight: .bold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.white)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 // Distance to maneuver
                 Text(formattedDistance(nav.distanceToNextManeuver))
-                    .font(.system(size: largeTap ? 34 : 28, weight: .black, design: .rounded))
+                    .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundStyle(.primary)
                     .monospacedDigit()
 
                 // Street name / instruction
                 Text(step?.instruction ?? "Head towards destination")
-                    .font(.system(size: largeTap ? 17 : 14, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
@@ -67,11 +66,11 @@ struct ActiveNavigationOverlay: View {
             // ETA pill
             VStack(spacing: 2) {
                 Text(formattedETA)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.fmsIndigo)
                     .monospacedDigit()
                 Text("ETA")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 12).padding(.vertical, 8)
@@ -152,21 +151,21 @@ struct ActiveNavigationOverlay: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "point.topleft.down.to.point.bottomright.curvepath.fill")
-                        .font(.system(size: 13))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(Color.fmsIndigo)
                     Text("Turn-by-Turn · \(nav.steps.count) steps")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundStyle(Color.fmsIndigo)
                     Spacer()
                     // Highlight current step
                     Text("Step \(nav.currentStepIndex + 1)")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Color.fmsIndigo)
                         .clipShape(Capsule())
                     Image(systemName: showStepList ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundStyle(.tertiary)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
@@ -272,20 +271,20 @@ private struct TurnStepBubble: View {
                     .fill(circleColor)
                     .frame(width: 32, height: 32)
                 Image(systemName: step.sfSymbol)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.white)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(step.instruction)
-                    .font(.system(size: 13, weight: isCurrent ? .bold : .regular))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: isCurrent ? .bold : .regular))
                     .foregroundStyle(isPast ? .tertiary : .primary)
                     .lineLimit(2)
                 if step.distance > 0 {
                     Text(step.distance < 1000
                          ? String(format: "%.0f m", step.distance)
                          : String(format: "%.1f km", step.distance / 1000))
-                        .font(.system(size: 11))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -325,14 +324,14 @@ private struct NavMetricCell: View {
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
             Text(label)
-                .font(.system(size: 10))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)

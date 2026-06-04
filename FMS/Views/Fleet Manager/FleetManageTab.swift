@@ -179,20 +179,20 @@ struct ManagementCardView: View {
                             .fill(card.accentColor.opacity(0.12))
                             .frame(width: 48, height: 48)
                         Image(systemName: card.icon)
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(card.accentColor)
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text(card.title)
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                         Text(card.subtitle)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             .foregroundColor(.gray)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(.gray.opacity(0.4))
                 }
 
@@ -209,15 +209,15 @@ struct ManagementCardView: View {
                                     .fill(metric.iconColor.opacity(0.08))
                                     .frame(width: 24, height: 24)
                                 Image(systemName: metric.systemIcon)
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(metric.iconColor)
                             }
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(metric.value)
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                 Text(metric.label)
-                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                     .foregroundColor(.gray)
                             }
                         }
@@ -299,7 +299,7 @@ struct VehicleListView: View {
                             ProgressView("Syncing vehicles...")
                                 .tint(AppTheme.Brand.royalBlue)
                                 .foregroundStyle(AppTheme.Text.secondary)
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             Spacer()
                         }
                         .frame(minHeight: 200)
@@ -463,10 +463,10 @@ struct FilterChipView: View {
         Button(action: onTap) {
             HStack(spacing: 6) {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 if count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(isSelected ? Color.white.opacity(0.25) : color.opacity(0.12))
                         .clipShape(Capsule())
@@ -505,19 +505,19 @@ struct VehicleCardView: View {
                     .frame(width: 52, height: 52)
                     .shadow(color: vehicle.vehicleType.iconColor.opacity(0.3), radius: 8, x: 0, y: 4)
                 Image(systemName: vehicle.vehicleType.icon)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(.white)
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(vehicle.registrationNumber)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                     Spacer()
                     HStack(spacing: 4) {
-                        Image(systemName: vehicle.status.statusIcon).font(.system(size: 9))
-                        Text(vehicle.status.displayName).font(.system(size: 10, weight: .bold, design: .rounded)).tracking(0.3)
+                        Image(systemName: vehicle.status.statusIcon).font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                        Text(vehicle.status.displayName).font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).tracking(0.3)
                     }
                     .foregroundColor(vehicle.status.statusColor)
                     .padding(.horizontal, 10).padding(.vertical, 5)
@@ -525,20 +525,20 @@ struct VehicleCardView: View {
                     .clipShape(Capsule())
                 }
                 Text("\(vehicle.make) \(vehicle.model) · \(String(vehicle.year))")
-                    .font(.system(size: 13, design: .rounded)).foregroundColor(.gray)
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray)
 
                 HStack(spacing: 8) {
                     HStack(spacing: 4) {
-                        Image(systemName: vehicle.vehicleType.icon).font(.system(size: 9))
-                        Text(vehicle.vehicleType.displayName).font(.system(size: 10, weight: .semibold, design: .rounded))
+                        Image(systemName: vehicle.vehicleType.icon).font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                        Text(vehicle.vehicleType.displayName).font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     }
                     .foregroundColor(vehicle.vehicleType.iconColor)
                     .padding(.horizontal, 8).padding(.vertical, 4)
                     .background(vehicle.vehicleType.iconColor.opacity(0.08)).clipShape(Capsule())
 
                     HStack(spacing: 4) {
-                        Image(systemName: vehicle.fuelType.icon).font(.system(size: 9))
-                        Text(vehicle.fuelType.displayName).font(.system(size: 10, weight: .semibold, design: .rounded))
+                        Image(systemName: vehicle.fuelType.icon).font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                        Text(vehicle.fuelType.displayName).font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     }
                     .foregroundColor(.gray.opacity(0.8))
                     .padding(.horizontal, 8).padding(.vertical, 4)
@@ -546,8 +546,8 @@ struct VehicleCardView: View {
 
                     Spacer()
                     HStack(spacing: 3) {
-                        Image(systemName: "gauge.with.needle").font(.system(size: 9))
-                        Text("\(formattedOdometer) km").font(.system(size: 10, weight: .medium, design: .rounded))
+                        Image(systemName: "gauge.with.needle").font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                        Text("\(formattedOdometer) km").font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     }
                     .foregroundColor(.gray.opacity(0.7))
                 }
@@ -555,7 +555,7 @@ struct VehicleCardView: View {
 
             Button { onEdit() } label: {
                 Image(systemName: "pencil")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Brand.royalBlue)
                     .frame(width: 36, height: 36)
                     .background(AppTheme.Brand.royalBlue.opacity(0.08))
@@ -664,7 +664,7 @@ struct DriverListView: View {
                             ProgressView("Syncing drivers...")
                                 .tint(AppTheme.Brand.royalBlue)
                                 .foregroundStyle(AppTheme.Text.secondary)
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             Spacer()
                         }
                         .frame(minHeight: 200)
@@ -778,31 +778,31 @@ struct DriverListView: View {
                             .frame(width: 56, height: 56)
                             .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 8, x: 0, y: 4)
                         Text(initials(for: driver.fullName))
-                            .font(.system(size: 20, weight: .bold, design: .rounded)).foregroundColor(.white)
+                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.white)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(driver.fullName)
-                            .font(.system(size: 17, weight: .semibold, design: .rounded)).foregroundColor(.black).lineLimit(1)
+                            .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded)).foregroundColor(.black).lineLimit(1)
 
                         HStack(spacing: 6) {
-                            Image(systemName: "envelope.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.6))
-                            Text(driver.email).font(.system(size: 13, design: .rounded)).foregroundColor(.gray).lineLimit(1)
+                            Image(systemName: "envelope.fill").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(.gray.opacity(0.6))
+                            Text(driver.email).font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray).lineLimit(1)
                         }
                         HStack(spacing: 6) {
-                            Image(systemName: "phone.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.6))
-                            Text(driver.phoneNumber).font(.system(size: 13, design: .rounded)).foregroundColor(.gray)
+                            Image(systemName: "phone.fill").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(.gray.opacity(0.6))
+                            Text(driver.phoneNumber).font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray)
                         }
 
                         if let v = vehicleForDriver(driver) {
                             HStack(spacing: 6) {
-                                Image(systemName: "car.fill").font(.system(size: 11)).foregroundColor(AppTheme.Brand.royalBlue.opacity(0.7))
-                                Text(v.registrationNumber).font(.system(size: 12, weight: .medium, design: .rounded)).foregroundColor(AppTheme.Brand.royalBlue)
+                                Image(systemName: "car.fill").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(AppTheme.Brand.royalBlue.opacity(0.7))
+                                Text(v.registrationNumber).font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded)).foregroundColor(AppTheme.Brand.royalBlue)
                             }
                         } else {
                             HStack(spacing: 6) {
-                                Image(systemName: "car.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.4))
-                                Text("Unassigned").font(.system(size: 12, weight: .medium, design: .rounded)).foregroundColor(.gray.opacity(0.5)).italic()
+                                Image(systemName: "car.fill").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(.gray.opacity(0.4))
+                                Text("Unassigned").font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded)).foregroundColor(.gray.opacity(0.5)).italic()
                             }
                         }
 
@@ -821,7 +821,7 @@ struct DriverListView: View {
             } label: {
                 ZStack {
                     Circle().fill(Color.gray.opacity(0.08)).frame(width: 40, height: 40)
-                    Image(systemName: "pencil").font(.system(size: 16, weight: .semibold)).foregroundColor(AppTheme.Brand.royalBlue)
+                    Image(systemName: "pencil").font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold)).foregroundColor(AppTheme.Brand.royalBlue)
                 }
             }
             .buttonStyle(ScaleButtonStyle())
@@ -839,10 +839,10 @@ struct DriverListView: View {
     private func activeStatusBadge(isActive: Bool) -> some View {
         HStack(spacing: 4) {
             Image(systemName: isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
             Text(isActive ? "Active" : "Inactive")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .tracking(0.3)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
@@ -979,12 +979,12 @@ struct AddDriverStubView: View {
                             ))
                             .frame(width: 100, height: 100)
                         Image(systemName: "person.badge.plus")
-                            .font(.system(size: 38, weight: .medium))
+                            .font(.system(size: 38 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                             .symbolEffect(.bounce, value: appeared)
                     }
                     VStack(spacing: 8) {
-                        Text("Add New Driver").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
+                        Text("Add New Driver").font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.black)
                         Text("Driver registration form\ncoming soon.")
                             .font(.system(.subheadline, design: .rounded)).foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -1033,10 +1033,10 @@ struct EditDriverStubView: View {
                             ))
                             .frame(width: 80, height: 80)
                             .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 12, x: 0, y: 6)
-                        Text(initials).font(.system(size: 28, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        Text(initials).font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.white)
                     }
                     VStack(spacing: 8) {
-                        Text("Edit Driver Profile").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
+                        Text("Edit Driver Profile").font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.black)
                         Text(driver.fullName).font(.system(.subheadline, design: .rounded)).foregroundColor(.gray)
                         Text("Profile editing form\ncoming soon.")
                             .font(.system(.subheadline, design: .rounded)).foregroundColor(.gray.opacity(0.6))
@@ -1176,20 +1176,20 @@ struct MaintenanceStaffListView: View {
                         .frame(width: 56, height: 56)
                         .shadow(color: AppTheme.Brand.accent.opacity(0.3), radius: 8, x: 0, y: 4)
                     Text(initials(for: staff.fullName))
-                        .font(.system(size: 18, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.white)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(staff.fullName)
-                        .font(.system(size: 17, weight: .bold, design: .rounded)).foregroundColor(.black).lineLimit(1)
+                        .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.black).lineLimit(1)
 
                     HStack(spacing: 6) {
-                        Image(systemName: "envelope.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.6))
-                        Text(staff.email).font(.system(size: 13, design: .rounded)).foregroundColor(.gray).lineLimit(1)
+                        Image(systemName: "envelope.fill").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(.gray.opacity(0.6))
+                        Text(staff.email).font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray).lineLimit(1)
                     }
                     HStack(spacing: 6) {
-                        Image(systemName: "phone.fill").font(.system(size: 11)).foregroundColor(.gray.opacity(0.6))
-                        Text(staff.phoneNumber).font(.system(size: 13, design: .rounded)).foregroundColor(.gray)
+                        Image(systemName: "phone.fill").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(.gray.opacity(0.6))
+                        Text(staff.phoneNumber).font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray)
                     }
                     HStack(spacing: 8) {
                         staffStatusBadge(isActive: staff.isActive)
@@ -1207,7 +1207,7 @@ struct MaintenanceStaffListView: View {
                         selectedStaffForEdit = staff
                     } label: {
                         Image(systemName: "pencil.circle.fill")
-                            .font(.system(size: 28))
+                            .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(AppTheme.Brand.royalBlue)
                             .symbolEffect(.bounce, value: selectedStaffForEdit?.id == staff.id)
                     }
@@ -1223,7 +1223,7 @@ struct MaintenanceStaffListView: View {
 
             if orders > 0 {
                 Text("\(orders)")
-                    .font(.system(size: 12, weight: .bold, design: .rounded)).foregroundColor(.white)
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.white)
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(Capsule().fill(AppTheme.Brand.royalBlue)
                         .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 6, x: 0, y: 3))
@@ -1235,7 +1235,7 @@ struct MaintenanceStaffListView: View {
     private func staffStatusBadge(isActive: Bool) -> some View {
         HStack(spacing: 5) {
             Circle().fill(isActive ? AppTheme.Status.success : AppTheme.Brand.accent).frame(width: 7, height: 7)
-            Text(isActive ? "Available" : "Busy").font(.system(size: 11, weight: .semibold, design: .rounded))
+            Text(isActive ? "Available" : "Busy").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.accent)
         }
         .padding(.horizontal, 10).padding(.vertical, 4)
@@ -1244,8 +1244,8 @@ struct MaintenanceStaffListView: View {
 
     private var staffRoleBadge: some View {
         HStack(spacing: 4) {
-            Image(systemName: "wrench.and.screwdriver").font(.system(size: 9, weight: .bold))
-            Text("Technician").font(.system(size: 11, weight: .semibold, design: .rounded))
+            Image(systemName: "wrench.and.screwdriver").font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
+            Text("Technician").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
         }
         .foregroundColor(AppTheme.Brand.accent)
         .padding(.horizontal, 10).padding(.vertical, 4)
@@ -1310,13 +1310,13 @@ struct AddStaffSheetView: View {
                     ZStack {
                         Circle().fill(AppTheme.Brand.accent.opacity(0.1)).frame(width: 90, height: 90)
                         Image(systemName: "person.badge.plus")
-                            .font(.system(size: 36, weight: .medium))
+                            .font(.system(size: 36 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Brand.accent).symbolEffect(.bounce)
                     }
                     VStack(spacing: 8) {
-                        Text("Add Staff Member").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
+                        Text("Add Staff Member").font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.black)
                         Text("This feature is coming soon.\nYou'll be able to add maintenance technicians here.")
-                            .font(.system(size: 15, design: .rounded)).foregroundColor(.gray)
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray)
                             .multilineTextAlignment(.center).padding(.horizontal, 32)
                     }
                     Spacer(); Spacer()
@@ -1358,12 +1358,12 @@ struct EditStaffSheetView: View {
                             ))
                             .frame(width: 80, height: 80)
                             .shadow(color: AppTheme.Brand.accent.opacity(0.3), radius: 10, x: 0, y: 6)
-                        Text(staffInitials).font(.system(size: 26, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        Text(staffInitials).font(.system(size: 26 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.white)
                     }
                     VStack(spacing: 8) {
-                        Text(staff.fullName).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
+                        Text(staff.fullName).font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.black)
                         Text("Edit functionality coming soon.\nYou'll be able to update staff details here.")
-                            .font(.system(size: 15, design: .rounded)).foregroundColor(.gray)
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray)
                             .multilineTextAlignment(.center).padding(.horizontal, 32)
                     }
                     Spacer(); Spacer()
@@ -1475,7 +1475,7 @@ struct TripListContentView: View {
                     ProgressView("Syncing trips...")
                         .tint(AppTheme.Brand.royalBlue)
                         .foregroundStyle(AppTheme.Text.secondary)
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     Spacer()
                 } else if filteredTrips.isEmpty {
                     if searchText.isEmpty && selectedFilter == .all {
@@ -1545,11 +1545,11 @@ struct TripListContentView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Text(filter.rawValue)
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             let count = countForFilter(filter)
                             if count > 0 {
                                 Text("\(count)")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .padding(.horizontal, 6).padding(.vertical, 2)
                                     .background(isSelected ? Color.white.opacity(0.25) : chipColor.opacity(0.12))
                                     .clipShape(Capsule())
@@ -1683,19 +1683,19 @@ struct TripCardView: View {
                         .frame(width: 48, height: 48)
                         .shadow(color: accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
                     Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
-                        .font(.system(size: 20, weight: .semibold)).foregroundColor(.white)
+                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold)).foregroundColor(.white)
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(trip.tripCode).font(.system(size: 16, weight: .bold, design: .rounded)).foregroundColor(.black)
+                    Text(trip.tripCode).font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.black)
                     Text(Self.dateFmt.string(from: trip.scheduledStartTime))
-                        .font(.system(size: 12, weight: .medium, design: .rounded)).foregroundColor(.gray)
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded)).foregroundColor(.gray)
                 }
                 Spacer()
                 tripStatusBadge
                 if let onEdit {
                     Button(action: onEdit) {
                         Image(systemName: "pencil.circle.fill")
-                            .font(.system(size: 26)).foregroundColor(.gray.opacity(0.35))
+                            .font(.system(size: 26 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(.gray.opacity(0.35))
                     }
                     .buttonStyle(ScaleButtonStyle())
                 }
@@ -1703,11 +1703,11 @@ struct TripCardView: View {
 
             
             HStack(spacing: 8) {
-                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(AppTheme.Status.success.opacity(0.7))
-                Text(trip.startLocation).font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
-                Image(systemName: "arrow.right").font(.system(size: 11, weight: .bold)).foregroundColor(.gray.opacity(0.5))
-                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(AppTheme.Status.danger.opacity(0.7))
-                Text(trip.endLocation).font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
+                Image(systemName: "mappin.circle.fill").font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(AppTheme.Status.success.opacity(0.7))
+                Text(trip.startLocation).font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
+                Image(systemName: "arrow.right").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold)).foregroundColor(.gray.opacity(0.5))
+                Image(systemName: "mappin.circle.fill").font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(AppTheme.Status.danger.opacity(0.7))
+                Text(trip.endLocation).font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1728,22 +1728,22 @@ struct TripCardView: View {
                 Divider().background(AppTheme.Glass.border)
                 HStack(spacing: 16) {
                     HStack(spacing: 10) {
-                        Image(systemName: "person.circle.fill").font(.system(size: 18)).foregroundColor(accentColor.opacity(0.7))
+                        Image(systemName: "person.circle.fill").font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(accentColor.opacity(0.7))
                         VStack(alignment: .leading, spacing: 2) {
                             Text("ASSIGNED DRIVER")
-                                .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
-                            Text(name).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                            Text(name).font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded)).foregroundColor(.black)
                         }
                     }
                     
                     if let carName = vehicleName {
                         Spacer()
                         HStack(spacing: 10) {
-                            Image(systemName: "car.fill").font(.system(size: 16)).foregroundColor(accentColor.opacity(0.7))
+                            Image(systemName: "car.fill").font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(accentColor.opacity(0.7))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("ASSIGNED VEHICLE")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
-                                Text(carName).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                                Text(carName).font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded)).foregroundColor(.black)
                             }
                         }
                     }
@@ -1753,11 +1753,11 @@ struct TripCardView: View {
             if let notes = trip.notes, !notes.isEmpty {
                 Divider().background(AppTheme.Glass.border)
                 HStack(spacing: 10) {
-                    Image(systemName: "box.truck.fill").font(.system(size: 18)).foregroundColor(accentColor.opacity(0.7))
+                    Image(systemName: "box.truck.fill").font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(accentColor.opacity(0.7))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("CARGO TYPE")
-                            .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
-                        Text(notes).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                        Text(notes).font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded)).foregroundColor(.black)
                     }
                     Spacer()
                 }
@@ -1773,9 +1773,9 @@ struct TripCardView: View {
     private var tripStatusBadge: some View {
         HStack(spacing: 4) {
             Image(systemName: trip.tripStatus.badgeIcon)
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
             Text(trip.tripStatus.displayName)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
         }
@@ -1788,9 +1788,9 @@ struct TripCardView: View {
 
     private func tripDetailCol(label: String, value: String, icon: String) -> some View {
         VStack(spacing: 5) {
-            Image(systemName: icon).font(.system(size: 14)).foregroundColor(accentColor.opacity(0.6))
-            Text(label).font(.system(size: 9, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
-            Text(value).font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(.black)
+            Image(systemName: icon).font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(accentColor.opacity(0.6))
+            Text(label).font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+            Text(value).font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded)).foregroundColor(.black)
         }
     }
 }
@@ -1810,13 +1810,13 @@ struct AddTripStubView: View {
                     Spacer()
                     ZStack {
                         Circle().fill(tripBlue.opacity(0.08)).frame(width: 100, height: 100)
-                        Image(systemName: "map.fill").font(.system(size: 38, weight: .medium))
+                        Image(systemName: "map.fill").font(.system(size: 38 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(tripBlue.opacity(0.5)).symbolEffect(.bounce)
                     }
                     VStack(spacing: 8) {
-                        Text("Add New Trip").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
+                        Text("Add New Trip").font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.black)
                         Text("Trip creation form\ncoming soon.")
-                            .font(.system(size: 14, design: .rounded)).foregroundColor(.gray).multilineTextAlignment(.center)
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray).multilineTextAlignment(.center)
                     }
                     Spacer(); Spacer()
                 }
@@ -1845,14 +1845,14 @@ struct EditTripStubView: View {
                     Spacer()
                     ZStack {
                         Circle().fill(tripBlue.opacity(0.08)).frame(width: 100, height: 100)
-                        Image(systemName: "pencil.and.list.clipboard").font(.system(size: 38, weight: .medium))
+                        Image(systemName: "pencil.and.list.clipboard").font(.system(size: 38 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(tripBlue.opacity(0.5)).symbolEffect(.bounce)
                     }
                     VStack(spacing: 8) {
-                        Text("Edit Trip").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
-                        Text("Editing \(trip.tripCode)").font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundColor(tripBlue)
+                        Text("Edit Trip").font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.black)
+                        Text("Editing \(trip.tripCode)").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded)).foregroundColor(tripBlue)
                         Text("Trip editing form\ncoming soon.")
-                            .font(.system(size: 14, design: .rounded)).foregroundColor(.gray).multilineTextAlignment(.center)
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray).multilineTextAlignment(.center)
                     }
                     Spacer(); Spacer()
                 }
@@ -1975,7 +1975,7 @@ struct TripDetailView: View {
                             Image(systemName: "location.fill")
                             Text("Track Live Location")
                         }
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -1997,19 +1997,19 @@ struct TripDetailView: View {
     private var routeInfoCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Route Details")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
 
             HStack(spacing: 12) {
                 Image(systemName: "mappin.circle.fill")
                     .foregroundColor(AppTheme.Status.success)
-                    .font(.system(size: 18))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("START LOCATION")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Text(trip.startLocation)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.primary)
                 }
             }
@@ -2019,13 +2019,13 @@ struct TripDetailView: View {
             HStack(spacing: 12) {
                 Image(systemName: "flag.circle.fill")
                     .foregroundColor(AppTheme.Status.danger)
-                    .font(.system(size: 18))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("END LOCATION")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Text(trip.endLocation)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.primary)
                 }
             }
@@ -2041,15 +2041,15 @@ struct TripDetailView: View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Text("Schedule")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
                 Spacer()
                 
                 HStack(spacing: 4) {
                     Image(systemName: trip.tripStatus.badgeIcon)
-                        .font(.system(size: 10))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     Text(trip.tripStatus.displayName)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 8)
@@ -2080,21 +2080,21 @@ struct TripDetailView: View {
                     // Departure Info
                     VStack(alignment: .leading, spacing: 4) {
                         Text("DEPARTURE")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Status.success)
                             .tracking(0.8)
                         
                         Text(trip.scheduledStartTime.formatted(date: .long, time: .shortened))
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(AppTheme.Text.primary)
                         
                         if let actualStart = trip.actualStartTime {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Status.success)
                                 Text("Actual: \(actualStart.formatted(date: .long, time: .shortened))")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.secondary)
                             }
                         }
@@ -2103,21 +2103,21 @@ struct TripDetailView: View {
                     // Arrival Info
                     VStack(alignment: .leading, spacing: 4) {
                         Text("ARRIVAL")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(trip.tripStatus == .completed ? AppTheme.Brand.primary.opacity(0.4) : AppTheme.Status.danger)
                             .tracking(0.8)
                         
                         Text(trip.scheduledEndTime.formatted(date: .long, time: .shortened))
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(AppTheme.Text.primary)
                         
                         if let actualEnd = trip.actualEndTime {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(trip.tripStatus == .completed ? AppTheme.Brand.primary.opacity(0.4) : AppTheme.Status.danger)
                                 Text("Actual: \(actualEnd.formatted(date: .long, time: .shortened))")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.secondary)
                             }
                         }
@@ -2137,7 +2137,7 @@ struct TripDetailView: View {
     private var assignmentCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Assignments")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
 
             if let vehicle = assignedVehicle {
@@ -2147,25 +2147,25 @@ struct TripDetailView: View {
                             .fill(vehicle.vehicleType.iconColor.opacity(0.12))
                             .frame(width: 40, height: 40)
                         Image(systemName: vehicle.vehicleType.icon)
-                            .font(.system(size: 18))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(vehicle.vehicleType.iconColor)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("VEHICLE")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text("\(vehicle.make) \(vehicle.model) (\(vehicle.registrationNumber))")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Text.primary)
                         Text("VIN: \(vehicle.vinNumber) · \(vehicle.year)")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                 }
             } else {
                 Text("⚠️ No assigned vehicle found")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Brand.accent)
             }
 
@@ -2178,25 +2178,25 @@ struct TripDetailView: View {
                             .fill(AppTheme.Brand.royalBlue.opacity(0.12))
                             .frame(width: 40, height: 40)
                         Text(initials(for: driver.fullName))
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("ASSIGNED DRIVER")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text(driver.fullName)
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Text.primary)
                         Text("\(driver.email) · \(driver.phoneNumber)")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                 }
             } else {
                 Text("⚠️ No assigned driver found")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Brand.accent)
             }
         }
@@ -2210,7 +2210,7 @@ struct TripDetailView: View {
     private var additionalInfoCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Additional Information")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
 
             TripDetailRow(label: "Total Distance", value: String(format: "%.1f km", trip.distanceKm))
@@ -2219,11 +2219,11 @@ struct TripDetailView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("SPECIAL INSTRUCTIONS")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(AppTheme.Text.tertiary)
                 
                 Text(trip.notes ?? "No special instructions provided.")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.primary)
                     .lineSpacing(3)
             }
@@ -2243,12 +2243,7 @@ struct TripDetailView: View {
     }
     
     private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        // Check if rate property is available or just let it use default
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-        let synthesizer = AVSpeechSynthesizer()
-        synthesizer.speak(utterance)
+        AudioSpeechManager.shared.speak(text)
     }
 
     // MARK: - Voice Logs Card
@@ -2258,16 +2253,16 @@ struct TripDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "mic.fill")
                         .foregroundColor(AppTheme.Brand.primary)
-                        .font(.system(size: 16))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     Text("Voice Logs")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                 }
                 Spacer()
                 
                 if !voiceLogs.isEmpty {
                     Text("\(voiceLogs.count)")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -2289,10 +2284,10 @@ struct TripDetailView: View {
                     Spacer()
                     VStack(spacing: 8) {
                         Image(systemName: "mic.slash.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text("No voice logs recorded for this trip")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                     Spacer()
@@ -2305,44 +2300,25 @@ struct TripDetailView: View {
                             HStack {
                                 Label {
                                     Text(log.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 } icon: {
                                     Image(systemName: "clock")
-                                        .font(.system(size: 10))
+                                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.tertiary)
                                 }
                                 Spacer()
-                                
-                                if accessibility.fleetSpeakLogs {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "speaker.wave.2.fill")
-                                            .font(.system(size: 10))
-                                        Text("Tap to Listen")
-                                            .font(.system(size: 9, weight: .bold))
-                                    }
-                                    .foregroundColor(AppTheme.Brand.primary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 3)
-                                    .background(AppTheme.Brand.primary.opacity(0.1))
-                                    .clipShape(Capsule())
-                                }
                             }
                             
                             // Transcript block
                             Text(log.transcript)
-                                .font(.system(size: 13, weight: .regular))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                                 .foregroundColor(AppTheme.Text.primary)
                                 .lineSpacing(3)
                                 .padding(10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color(UIColor.secondarySystemFill))
                                 .cornerRadius(8)
-                                .onTapGesture {
-                                    if accessibility.fleetSpeakLogs {
-                                        speak(log.transcript)
-                                    }
-                                }
                             
                             // Parsed Metadata if present
                             let hasMetadata = (log.mileage != nil) || (log.startLocation != nil) || (log.endLocation != nil) || (log.startTime != nil) || (log.endTime != nil)
@@ -2395,13 +2371,13 @@ private struct MetadataChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 10))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Brand.primary)
             Text("\(label):")
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(AppTheme.Text.secondary)
             Text(value)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(AppTheme.Text.primary)
         }
         .padding(.horizontal, 8)
@@ -2419,11 +2395,11 @@ private struct TripDetailRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
             Spacer()
             Text(value)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(valueColor ?? AppTheme.Text.primary)
         }
     }

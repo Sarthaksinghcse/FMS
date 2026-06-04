@@ -276,7 +276,7 @@ struct DriverBottomTabBar: View {
         )
         .overlay(
             Capsule()
-                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 1)
         )
     }
 
@@ -288,9 +288,9 @@ struct DriverBottomTabBar: View {
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
             }
             .foregroundColor(selectedTab == index ? Color.fmsIndigo : Color.black.opacity(0.6))
             .frame(width: 80, height: 48)
@@ -341,12 +341,12 @@ struct FMSRouteRow: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Text(source)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundStyle(.primary)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(destination)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundStyle(.primary)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
@@ -365,14 +365,14 @@ struct TripMetaCell: View {
     var body: some View {
         VStack(spacing: 5) {
             Image(systemName: icon)
-                .font(.system(size: 13))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(Color.fmsIndigo)
             Text(value)
-                .font(.system(size: 12, weight: .bold))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
             Text(label)
-                .font(.system(size: 10))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -399,20 +399,20 @@ struct FMSMsgRow: View {
                     .fill(roleColor.opacity(0.12))
                     .frame(width: 40, height: 40)
                 Text(msg.initials)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(roleColor)
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(msg.sender)
-                        .font(.system(size: 13, weight: msg.unread ? .semibold : .regular))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: msg.unread ? .semibold : .regular))
                     Spacer()
                     Text(msg.time)
-                        .font(.system(size: 11))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.tertiary)
                 }
                 Text(msg.preview)
-                    .font(.system(size: 12))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -437,7 +437,7 @@ struct ActionTile: View {
         Button(action: onTap) {
             VStack(spacing: 11) {
                 Image(systemName: qa.icon)
-                    .font(.system(size: 22, weight: .medium))
+                    .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundStyle(qa.color)
                     .frame(width: 44, height: 44)
                     .background(qa.color.opacity(0.10))
@@ -445,10 +445,10 @@ struct ActionTile: View {
 
                 VStack(spacing: 2) {
                     Text(qa.title)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundStyle(.primary)
                     Text(qa.subtitle)
-                        .font(.system(size: 10))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -507,7 +507,7 @@ struct VoiceLogSheet: View {
                                         radius: 20, y: 6
                                     )
                                 Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
-                                    .font(.system(size: 32, weight: .bold))
+                                    .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundStyle(.white)
                                     .contentTransition(.symbolEffect(.replace))
                             }
@@ -521,7 +521,7 @@ struct VoiceLogSheet: View {
                             ? String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
                             : "Tap to Record"
                         )
-                        .font(.system(size: 30, weight: .bold, design: .monospaced))
+                        .font(.system(size: 30 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                         .foregroundStyle(voiceLogger.isRecording ? AppTheme.Brand.accent : Color.fmsIndigo)
                         .contentTransition(.numericText())
 
@@ -530,7 +530,7 @@ struct VoiceLogSheet: View {
                             ? "Listening…"
                             : "Voice-log your trip notes, delays, or ETA"
                         )
-                        .font(.system(size: 14))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
@@ -538,7 +538,7 @@ struct VoiceLogSheet: View {
 
                     if let err = voiceLogger.errorMessage {
                         Text(err)
-                            .font(.system(size: 13))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(AppTheme.Status.danger)
                             .padding(.horizontal, 40)
                             .multilineTextAlignment(.center)
@@ -547,16 +547,16 @@ struct VoiceLogSheet: View {
                     if !voiceLogger.transcribedText.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("Transcript", systemImage: "text.quote")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(Color.fmsIndigo)
                             Text(voiceLogger.transcribedText)
-                                .font(.system(size: 13))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.secondary)
                             
                             if let parsed = voiceLogger.parsedData {
                                 Divider().padding(.vertical, 4)
                                 Label("Extracted Entities", systemImage: "wand.and.stars")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundStyle(AppTheme.Brand.accent)
                                 
                                 HStack(alignment: .top, spacing: 16) {
@@ -589,7 +589,7 @@ struct VoiceLogSheet: View {
                                     Text("Save Log")
                                 }
                             }
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -712,10 +712,10 @@ struct IssueReportSheet: View {
                                 Button { withAnimation(.spring(response: 0.3)) { kind = k } } label: {
                                     VStack(spacing: 6) {
                                         Image(systemName: k.icon)
-                                            .font(.system(size: 20))
+                                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundStyle(kind == k ? Color.fmsIndigo : .secondary)
                                         Text(k.rawValue)
-                                            .font(.system(size: 10, weight: .medium))
+                                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                             .foregroundStyle(kind == k ? Color.fmsIndigo : .secondary)
                                             .multilineTextAlignment(.center)
                                     }
@@ -755,7 +755,7 @@ struct IssueReportSheet: View {
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Description")
                         TextField("What's happening? Add any relevant details…", text: $desc, axis: .vertical)
-                            .font(.system(size: 14))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .lineLimit(4...8)
                             .padding(14)
                             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
@@ -763,7 +763,7 @@ struct IssueReportSheet: View {
 
                     Button { done = true } label: {
                         Text("Submit Report")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -791,7 +791,7 @@ struct IssueReportSheet: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
             .foregroundStyle(.secondary)
             .textCase(.uppercase)
             .tracking(0.6)
@@ -832,14 +832,14 @@ struct RaiseQuerySheet: View {
                                 .fill(AppTheme.Brand.accent.opacity(0.12))
                                 .frame(width: 72, height: 72)
                             Image(systemName: "questionmark.bubble.fill")
-                                .font(.system(size: 32))
+                                .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(AppTheme.Brand.accent)
                         }
                         Text("Raise a Query")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         if let trip = trip {
                             Text("Trip: \(trip.source) → \(trip.destination)")
-                                .font(.system(size: 13))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                         }
@@ -852,7 +852,7 @@ struct RaiseQuerySheet: View {
                     // Reason picker
                     VStack(alignment: .leading, spacing: 0) {
                         Text("REASON")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(.secondary)
                             .tracking(0.6)
                             .padding(.horizontal, 16)
@@ -869,9 +869,9 @@ struct RaiseQuerySheet: View {
                                         Image(systemName: selectedReason == idx
                                               ? "checkmark.circle.fill" : "circle")
                                             .foregroundStyle(selectedReason == idx ? AppTheme.Brand.accent : .secondary)
-                                            .font(.system(size: 18))
+                                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         Text(reason)
-                                            .font(.system(size: 14))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundStyle(.primary)
                                         Spacer()
                                     }
@@ -892,11 +892,11 @@ struct RaiseQuerySheet: View {
                     // Custom text field
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ADDITIONAL DETAILS")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(.secondary)
                             .tracking(0.6)
                         TextField("Describe your concern in detail…", text: $customText, axis: .vertical)
-                            .font(.system(size: 14))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .lineLimit(4...8)
                             .padding(14)
                             .background(Color(UIColor.secondarySystemGroupedBackground))
@@ -918,7 +918,7 @@ struct RaiseQuerySheet: View {
                                 Text("Submit Query")
                             }
                         }
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
@@ -1015,11 +1015,11 @@ struct InspectionFormSheet: View {
                                 .frame(width: 80, height: 80)
                                 .animation(.spring(response: 0.4), value: passCount)
                             Text("\(passCount)/\(items.count)")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         }
-                        Text(title).font(.system(size: 15, weight: .semibold))
+                        Text(title).font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         Text("Vehicle \(vehicleNumber)")
-                            .font(.system(size: 12)).foregroundStyle(.secondary)
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
@@ -1031,11 +1031,11 @@ struct InspectionFormSheet: View {
                             VStack(spacing: 0) {
                                 HStack(spacing: 14) {
                                     Image(systemName: item.icon)
-                                        .font(.system(size: 16))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundStyle(item.passed ? AppTheme.Status.success : .secondary)
                                         .frame(width: 26)
                                     Text(item.label)
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundStyle(item.passed ? .primary : .secondary)
                                     Spacer()
 
@@ -1079,7 +1079,7 @@ struct InspectionFormSheet: View {
                                 .fill(AppTheme.Status.success.opacity(0.22))
                                 .overlay {
                                     Label("All Passed! ✓", systemImage: "checkmark.seal.fill")
-                                        .font(.system(size: 15, weight: .bold))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundStyle(AppTheme.Status.success)
                                 }
                                 .transition(.opacity)
@@ -1089,7 +1089,7 @@ struct InspectionFormSheet: View {
                     
                     HStack {
                         Label("Defect Found", systemImage: "exclamationmark.triangle.fill")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(hasDefect ? AppTheme.Status.danger : .secondary)
                         Spacer()
                         Toggle("", isOn: $hasDefect).tint(AppTheme.Status.danger)
@@ -1101,7 +1101,7 @@ struct InspectionFormSheet: View {
                     // ── Remarks + Photo upload ────────────────────────────────
                     VStack(alignment: .leading, spacing: 12) {
                         TextField("Remarks or additional notes…", text: $remarks, axis: .vertical)
-                            .font(.system(size: 14))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .lineLimit(3...6)
                             .padding(14)
 
@@ -1117,7 +1117,7 @@ struct InspectionFormSheet: View {
                                     photoLibrary: .shared()
                                 ) {
                                     Label("Add Photos", systemImage: "photo.badge.plus")
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundStyle(
                                             !allPass && defectPhotos.isEmpty
                                                 ? AppTheme.Status.danger
@@ -1145,7 +1145,7 @@ struct InspectionFormSheet: View {
                                 // Required badge — shown only when defect & no photo
                                 if !allPass && defectPhotos.isEmpty {
                                     Text("Required")
-                                        .font(.system(size: 11, weight: .bold))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundStyle(AppTheme.Status.danger)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
@@ -1172,7 +1172,7 @@ struct InspectionFormSheet: View {
                                                     }
                                                 } label: {
                                                     Image(systemName: "xmark.circle.fill")
-                                                        .font(.system(size: 18))
+                                                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                         .symbolRenderingMode(.palette)
                                                         .foregroundStyle(.white, Color.black.opacity(0.5))
                                                 }
@@ -1196,7 +1196,7 @@ struct InspectionFormSheet: View {
                     // Warning label below the card
                     if !allPass && defectPhotos.isEmpty {
                         Label("Attach at least one photo of the defect to submit.", systemImage: "exclamationmark.triangle.fill")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(AppTheme.Status.danger)
                             .padding(.horizontal, 4)
                             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -1211,11 +1211,11 @@ struct InspectionFormSheet: View {
                             } else {
                                 if isPreTrip {
                                     Text(allPass ? "Submit  ✓ All Passed" : "Submit Inspection")
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundStyle(.white)
                                 } else {
                                     Text(issuesFound > 0 ? "Submit  ⚠ \(issuesFound) Issue(s) Found" : "Submit  ✓ All Good")
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundStyle(.white)
                                 }
                             }
@@ -1424,10 +1424,10 @@ struct DefectReportSheet: View {
                                 Button { withAnimation(.spring(response: 0.3)) { part = p } } label: {
                                     VStack(spacing: 6) {
                                         Image(systemName: p.icon)
-                                            .font(.system(size: 20))
+                                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundStyle(part == p ? Color.fmsIndigo : .secondary)
                                         Text(p.rawValue)
-                                            .font(.system(size: 10, weight: .medium))
+                                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                             .foregroundStyle(part == p ? Color.fmsIndigo : .secondary)
                                     }
                                     .frame(maxWidth: .infinity).padding(.vertical, 14)
@@ -1450,14 +1450,14 @@ struct DefectReportSheet: View {
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Defect Title")
                         TextField("e.g. Oil leak near rear axle", text: $titleStr)
-                            .font(.system(size: 14)).padding(14)
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).padding(14)
                             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
                         sectionLabel("Description")
                         TextField("Describe the defect in detail…", text: $desc, axis: .vertical)
-                            .font(.system(size: 14)).lineLimit(4...8).padding(14)
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).lineLimit(4...8).padding(14)
                             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
                     }
 
@@ -1476,7 +1476,7 @@ struct DefectReportSheet: View {
                             if submitting { ProgressView().tint(.white) }
                             else {
                                 Text("Submit Defect Report")
-                                    .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold)).foregroundStyle(.white)
                             }
                         }
                         .frame(maxWidth: .infinity).frame(height: 52)
@@ -1506,7 +1506,7 @@ struct DefectReportSheet: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
             .foregroundStyle(.secondary)
             .textCase(.uppercase)
             .tracking(0.6)
@@ -1604,14 +1604,14 @@ struct ChatSheet: View {
                             if vm.messages.isEmpty {
                                 VStack(spacing: 12) {
                                     Image(systemName: "bubble.left.and.bubble.right")
-                                        .font(.system(size: 32))
+                                        .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(.gray.opacity(0.4))
                                         .padding(.top, 40)
                                     Text("No messages yet")
-                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                         .foregroundColor(.gray)
                                     Text("Type below to send a message to the Fleet Manager.")
-                                        .font(.system(size: 12, design: .rounded))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                         .foregroundColor(.gray)
                                         .multilineTextAlignment(.center)
                                 }
@@ -1624,7 +1624,7 @@ struct ChatSheet: View {
                                             VStack(alignment: .trailing, spacing: 4) {
                                                 messageBubbleContent(text: message.preview, isMe: true)
                                                 Text(message.time)
-                                                    .font(.system(size: 9))
+                                                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                     .foregroundColor(.gray)
                                                     .padding(.trailing, 4)
                                             }
@@ -1632,7 +1632,7 @@ struct ChatSheet: View {
                                             VStack(alignment: .leading, spacing: 4) {
                                                 messageBubbleContent(text: message.preview, isMe: false)
                                                 Text(message.time)
-                                                    .font(.system(size: 9))
+                                                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                     .foregroundColor(.gray)
                                                     .padding(.leading, 4)
                                             }
@@ -1676,7 +1676,7 @@ struct ChatSheet: View {
                                     selectedImageData = nil
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 18))
+                                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Status.danger)
                                         .background(Circle().fill(Color.white))
                                 }
@@ -1697,13 +1697,13 @@ struct ChatSheet: View {
                         HStack(spacing: 10) {
                             PhotosPicker(selection: $selectedItem, matching: .images) {
                                 Image(systemName: "photo.fill")
-                                    .font(.system(size: 18))
+                                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Brand.primary)
                             }
                             .buttonStyle(PlainButtonStyle())
                             
                             TextField("Type a message...", text: $messageText)
-                                .font(.system(size: 15))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -1735,7 +1735,7 @@ struct ChatSheet: View {
                             }
                         }) {
                             Image(systemName: "paperplane.fill")
-                                .font(.system(size: 18))
+                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(Color.white)
                                 .padding(10)
                                 .background((messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil) ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
@@ -1757,7 +1757,7 @@ struct ChatSheet: View {
                         dismiss()
                     } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.primary)
                             .frame(width: 36, height: 36)
                             .contentShape(Rectangle())
@@ -1818,7 +1818,7 @@ struct ChatSheet: View {
 
     private func fallbackText(_ text: String, isMe: Bool) -> some View {
         Text(text)
-            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
             .foregroundColor(isMe ? .white : .black)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -1875,16 +1875,16 @@ struct ChatHubSheet: View {
                                     .frame(width: 42, height: 42)
                                     .overlay(
                                         Image(systemName: contact.icon)
-                                            .font(.system(size: 17, weight: .medium))
+                                            .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                             .foregroundStyle(.white)
                                     )
 
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(contact.name)
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundStyle(contact.isEnabled ? .primary : .tertiary)
                                     Text(contact.role)
-                                        .font(.system(size: 12))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundStyle(.secondary)
                                 }
 
@@ -1892,11 +1892,11 @@ struct ChatHubSheet: View {
 
                                 if contact.isEnabled {
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundStyle(.tertiary)
                                 } else {
                                     Text("Soon")
-                                        .font(.system(size: 10, weight: .semibold))
+                                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 8).padding(.vertical, 3)
                                         .background(AppTheme.Brand.primary.opacity(0.15))
@@ -1922,7 +1922,7 @@ struct ChatHubSheet: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundStyle(Color.fmsIndigo)
                     }
                 }
@@ -1945,7 +1945,7 @@ struct DriverNotificationRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(notification.title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 Spacer()
                 if !notification.isRead {
@@ -1956,11 +1956,11 @@ struct DriverNotificationRow: View {
             }
 
             Text(notification.message)
-                .font(.system(size: 13, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                 .foregroundColor(.gray)
 
             Text(timeAgo)
-                .font(.system(size: 10, design: .rounded))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                 .foregroundColor(.gray.opacity(0.6))
                 .padding(.top, 2)
         }
@@ -2018,7 +2018,7 @@ struct DriverNotificationsSheet: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundStyle(Color.fmsIndigo)
                     }
                 }

@@ -64,7 +64,7 @@ struct FleetAnalyticsView: View {
                         generateAndSharePDF()
                     } label: {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundStyle(AppTheme.Brand.primary)
                     }
                 }
@@ -109,15 +109,15 @@ struct FleetAnalyticsView: View {
                     .fill(color.opacity(0.12))
                     .frame(width: 32, height: 32)
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(color)
             }
             Text(title)
-                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.Text.primary)
             Spacer()
             Text(viewModel.periodLabel)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundStyle(AppTheme.Text.tertiary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
@@ -252,11 +252,11 @@ struct FleetAnalyticsView: View {
                     .fill(color)
                     .frame(width: 8, height: 8)
                 Text(label)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.Text.tertiary)
             }
             Text("\(count)")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.Text.primary)
                 .padding(.leading, 14)
         }
@@ -303,16 +303,16 @@ struct FleetAnalyticsView: View {
                     .fill(color.opacity(0.12))
                     .frame(width: 32, height: 32)
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(color)
             }
             Text(value)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.Text.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Text(title)
-                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundStyle(AppTheme.Text.tertiary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -362,7 +362,7 @@ struct FleetAnalyticsView: View {
                         .cornerRadius(6)
                         .annotation(position: .trailing, alignment: .leading, spacing: 8) {
                             Text("\(item.count)")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundStyle(AppTheme.Text.secondary)
                         }
                     }
@@ -371,7 +371,7 @@ struct FleetAnalyticsView: View {
                 .chartYAxis {
                     AxisMarks { _ in
                         AxisValueLabel()
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundStyle(AppTheme.Text.primary)
                     }
                 }
@@ -396,7 +396,7 @@ struct FleetAnalyticsView: View {
                         .cornerRadius(6)
                         .annotation(position: .trailing, alignment: .leading, spacing: 8) {
                             Text("\(item.count)")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundStyle(AppTheme.Text.secondary)
                         }
                     }
@@ -405,7 +405,7 @@ struct FleetAnalyticsView: View {
                 .chartYAxis {
                     AxisMarks { _ in
                         AxisValueLabel()
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundStyle(AppTheme.Text.primary)
                     }
                 }
@@ -425,15 +425,15 @@ struct FleetAnalyticsView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Driver Availability")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                         .foregroundStyle(AppTheme.Text.tertiary)
 
                     Text(viewModel.formatPercent(stats.rate))
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundStyle(AppTheme.Text.primary)
 
                     Text("\(stats.active) of \(stats.total) drivers active")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                         .foregroundStyle(AppTheme.Text.secondary)
                 }
 
@@ -467,7 +467,7 @@ struct FleetAnalyticsView: View {
                                     )
                                     .frame(width: 36, height: 36)
                                 Text(driverInitials(stat.driverName))
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundStyle(
                                         stat.tripCount > 0
                                             ? AppTheme.Brand.primary
@@ -477,11 +477,11 @@ struct FleetAnalyticsView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(stat.driverName)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                     .foregroundStyle(AppTheme.Text.primary)
                                     .lineLimit(1)
                                 Text("\(viewModel.formatDistance(stat.completedDistance)) km covered")
-                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                     .foregroundStyle(AppTheme.Text.tertiary)
                             }
 
@@ -489,11 +489,11 @@ struct FleetAnalyticsView: View {
 
                             // Trip count badge
                             Text("\(stat.tripCount)")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundStyle(stat.tripCount > 0 ? AppTheme.Text.primary : AppTheme.Text.tertiary)
 
                             Text("trips")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundStyle(AppTheme.Text.tertiary)
                         }
                         .padding(.vertical, 4)
@@ -547,7 +547,7 @@ struct FleetAnalyticsView: View {
                     .foregroundStyle(AppTheme.Brand.accent.opacity(0.6))
                     .annotation(position: .top, alignment: .trailing) {
                         Text("avg")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundStyle(AppTheme.Brand.accent)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -561,14 +561,14 @@ struct FleetAnalyticsView: View {
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
                             .foregroundStyle(Color.gray.opacity(0.15))
                         AxisValueLabel()
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             .foregroundStyle(.gray)
                     }
                 }
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day)) { _ in
                         AxisValueLabel(format: .dateTime.weekday(.abbreviated))
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundStyle(.gray)
                     }
                 }
@@ -607,10 +607,10 @@ struct FleetAnalyticsView: View {
 
                         VStack(spacing: 1) {
                             Text("\(totalTrips)")
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundStyle(AppTheme.Text.primary)
                             Text("Trips")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundStyle(AppTheme.Text.tertiary)
                         }
                     }
@@ -622,11 +622,11 @@ struct FleetAnalyticsView: View {
                                     .fill(item.color)
                                     .frame(width: 8, height: 8)
                                 Text(item.label)
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                     .foregroundStyle(AppTheme.Text.secondary)
                                 Spacer()
                                 Text("\(item.count)")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundStyle(AppTheme.Text.primary)
                             }
                         }
@@ -701,24 +701,24 @@ struct FleetAnalyticsView: View {
                 // Priority breakdown
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Work Order Priority")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundStyle(AppTheme.Text.tertiary)
 
                     ForEach(priorities) { item in
                         HStack(spacing: 10) {
                             Image(systemName: item.icon)
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(item.color)
                                 .frame(width: 20)
 
                             Text(item.label)
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                 .foregroundStyle(AppTheme.Text.primary)
 
                             Spacer()
 
                             Text("\(item.count)")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundStyle(AppTheme.Text.primary)
 
                             let maxPriority = max(priorities.map(\.count).max() ?? 1, 1)
@@ -747,16 +747,16 @@ struct FleetAnalyticsView: View {
                     .fill(color.opacity(0.12))
                     .frame(width: 34, height: 34)
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(color)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundStyle(AppTheme.Text.tertiary)
                     .lineLimit(1)
                 Text(value)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.Text.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -778,12 +778,12 @@ struct FleetAnalyticsView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text(title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.Text.primary)
                 Spacer()
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundStyle(AppTheme.Text.tertiary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -807,10 +807,10 @@ struct FleetAnalyticsView: View {
             Spacer()
             VStack(spacing: 8) {
                 Image(systemName: "chart.bar.xaxis")
-                    .font(.system(size: 28))
+                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(AppTheme.Text.tertiary.opacity(0.4))
                 Text(message)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     .foregroundStyle(AppTheme.Text.tertiary)
             }
             .padding(.vertical, 24)
@@ -837,23 +837,23 @@ private struct AnalyticsKPICard: View {
                     .fill(bgColor)
                     .frame(width: 36, height: 36)
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(color)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundStyle(AppTheme.Text.tertiary)
 
                 Text(value)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.Text.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
                 Text(subtitle)
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundStyle(AppTheme.Text.tertiary)
             }
         }

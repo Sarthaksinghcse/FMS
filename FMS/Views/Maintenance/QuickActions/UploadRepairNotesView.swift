@@ -56,14 +56,14 @@ struct UploadRepairNotesView: View {
                             // Section 1: Identification
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("Record Details")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.accent)
                                     .textCase(.uppercase)
                                 
                                 // Vehicle Selector
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Vehicle")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     
                                     Picker("Vehicle", selection: $selectedVehicleId) {
@@ -84,7 +84,7 @@ struct UploadRepairNotesView: View {
                                 // Work Order Selector (Optional)
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Link Work Order (Optional)")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     
                                     Picker("Work Order", selection: $selectedWorkOrderId) {
@@ -107,14 +107,14 @@ struct UploadRepairNotesView: View {
                             // Section 2: Service Info
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("Service Information")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.accent)
                                     .textCase(.uppercase)
                                 
                                 // Service Type
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Service Type")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     
                                     Picker("Service Type", selection: $serviceType) {
@@ -133,11 +133,11 @@ struct UploadRepairNotesView: View {
                                 // Cost
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Cost (₹)")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     TextField("e.g. 5000", text: $costString)
                                         .keyboardType(.decimalPad)
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .padding(12)
                                         .background(Color.black.opacity(0.04))
                                         .cornerRadius(8)
@@ -146,7 +146,7 @@ struct UploadRepairNotesView: View {
                                 // Notes
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Repair Notes")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     TextEditor(text: $notes)
                                         .frame(minHeight: 100)
@@ -161,7 +161,7 @@ struct UploadRepairNotesView: View {
                             // Section 3: Photo Evidence
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("Image Evidence")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.accent)
                                     .textCase(.uppercase)
                                 
@@ -170,12 +170,12 @@ struct UploadRepairNotesView: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: "paperclip")
-                                            .font(.system(size: 18))
+                                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         Text("Add Photos / Files")
-                                            .font(.system(size: 13, weight: .bold))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         Spacer()
                                         Text("\(selectedImages.count)/5")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(.secondary)
                                     }
                                     .padding(14)
@@ -232,7 +232,7 @@ struct UploadRepairNotesView: View {
                                     Text("Save Repair Record")
                                 }
                             }
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
@@ -254,10 +254,10 @@ struct UploadRepairNotesView: View {
                         VStack(spacing: 16) {
                             ZStack {
                                 Circle().fill(AppTheme.Status.success).frame(width: 80, height: 80)
-                                Image(systemName: "checkmark").font(.system(size: 32, weight: .bold)).foregroundColor(.white)
+                                Image(systemName: "checkmark").font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold)).foregroundColor(.white)
                             }
-                            Text("Record Saved").font(.system(size: 18, weight: .bold, design: .rounded))
-                            Text("Repair notes and images uploaded.").font(.system(size: 13)).foregroundColor(AppTheme.Text.secondary)
+                            Text("Record Saved").font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
+                            Text("Repair notes and images uploaded.").font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(AppTheme.Text.secondary)
                         }
                         .padding(32)
                         .background(AppTheme.Background.card)

@@ -71,7 +71,7 @@ struct FleetManagerEditProfileView: View {
                                             .scaledToFill()
                                     } placeholder: {
                                         Text(initials.isEmpty ? "FM" : initials)
-                                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                                            .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.white)
                                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                                             .background(
@@ -86,14 +86,14 @@ struct FleetManagerEditProfileView: View {
                                     .clipShape(Circle())
                                 } else {
                                     Text(initials.isEmpty ? "FM" : initials)
-                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
                                 }
                             }
 
                             PhotosPicker(selection: $selectedItem, matching: .images) {
                                 Text("Change Photo")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Brand.primary)
                             }
                         }
@@ -123,23 +123,23 @@ struct FleetManagerEditProfileView: View {
                             
                             HStack(spacing: 12) {
                                 Image(systemName: "envelope.fill")
-                                    .font(.system(size: 15))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                                     .frame(width: 32)
 
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Email")
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.tertiary)
                                     Text(user?.email ?? "manager@fms.com")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 }
 
                                 Spacer()
 
                                 Image(systemName: "lock.fill")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                             }
                             .padding(.horizontal, 16)
@@ -150,23 +150,23 @@ struct FleetManagerEditProfileView: View {
                             
                             HStack(spacing: 12) {
                                 Image(systemName: "shield.checkered")
-                                    .font(.system(size: 15))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                                     .frame(width: 32)
 
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Role")
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.tertiary)
                                     Text("Fleet Manager")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 }
 
                                 Spacer()
 
                                 Image(systemName: "lock.fill")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                             }
                             .padding(.horizontal, 16)
@@ -224,10 +224,10 @@ struct FleetManagerEditProfileView: View {
                                         .tint(.white)
                                 } else {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 16))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 }
                                 Text(isSaving ? "Saving..." : "Save Changes")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

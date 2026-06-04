@@ -87,7 +87,7 @@ struct PredictiveAlertDetailView: View {
                             ProgressView()
                                 .tint(AppTheme.Brand.royalBlue)
                             Text("Fetching database records...")
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                 .foregroundColor(AppTheme.Text.secondary)
                         }
                         .frame(maxWidth: .infinity)
@@ -95,7 +95,7 @@ struct PredictiveAlertDetailView: View {
                         // Horizontal Selector for predicted vehicle alerts
                         VStack(alignment: .leading, spacing: 8) {
                             Text("PREDICTION FLEET LIST (\(alerts.count))")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .padding(.horizontal)
                             
@@ -127,22 +127,22 @@ struct PredictiveAlertDetailView: View {
                                             .fill(AppTheme.Brand.royalBlue.opacity(0.1))
                                             .frame(width: 44, height: 44)
                                         Image(systemName: "cpu.fill")
-                                            .font(.system(size: 20))
+                                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Brand.royalBlue)
                                     }
                                     
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("SMART TELEMATICS DETECTED")
-                                            .font(.system(size: 10, weight: .bold))
+                                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(AppTheme.Brand.royalBlue)
                                         Text("AI Maintenance Prediction")
-                                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(AppTheme.Text.primary)
                                     }
                                     Spacer()
                                     
                                     Text(activeAlert.riskLevel.uppercased())
-                                        .font(.system(size: 10, weight: .bold))
+                                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
@@ -157,28 +157,28 @@ struct PredictiveAlertDetailView: View {
                                 
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("AI Diagnostic Summary")
-                                        .font(.system(size: 13, weight: .bold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(AppTheme.Text.primary)
                                     
                                     if let explanation = activeAlert.llmExplanation, !explanation.isEmpty {
                                         Text(explanation)
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                             .lineSpacing(4)
                                     } else if let reasons = activeAlert.triggeredReasons, !reasons.isEmpty {
                                         Text(reasons.joined(separator: "\n"))
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                             .lineSpacing(4)
                                     } else {
                                         Text("AI predicts maintenance required due to telemetry risk score of \(Int(activeAlert.riskScore * 100))%.")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
                                     
                                     if let action = activeAlert.suggestedAction, !action.isEmpty {
                                         Text("Recommended Action: \(action)")
-                                            .font(.system(size: 12, weight: .bold))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(AppTheme.Brand.primary)
                                             .padding(.top, 4)
                                     }
@@ -206,7 +206,7 @@ struct PredictiveAlertDetailView: View {
                             // Vehicle Info
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Associated Vehicle Details")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.primary)
                                 
                                 HStack(spacing: 12) {
@@ -215,16 +215,16 @@ struct PredictiveAlertDetailView: View {
                                             .fill(AppTheme.Brand.royalBlue.opacity(0.1))
                                             .frame(width: 50, height: 50)
                                         Image(systemName: "truck.box.fill")
-                                            .font(.system(size: 22))
+                                            .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Brand.royalBlue)
                                     }
                                     
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(associatedVehicle?.model ?? "Vehicle Model")
-                                            .font(.system(size: 14, weight: .bold))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(AppTheme.Text.primary)
                                         Text("Reg No: \(associatedVehicle?.registrationNumber ?? "MH-12-AB-3456")")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
                                 }
@@ -245,15 +245,15 @@ struct PredictiveAlertDetailView: View {
                         VStack(spacing: 16) {
                             Spacer().frame(height: 50)
                             Image(systemName: "sparkles.radiance")
-                                .font(.system(size: 48))
+                                .font(.system(size: 48 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(AppTheme.Brand.royalBlue.opacity(0.6))
                             
                             Text("No Active Diagnostic Alerts")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
                             
                             Text("Run AI Diagnostic analysis to process vehicle telematics and identify potential maintenance risks in the database.")
-                                .font(.system(size: 12))
+                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 32)
@@ -264,7 +264,7 @@ struct PredictiveAlertDetailView: View {
                     
                     if let error = errorMessage {
                         Text(error)
-                            .font(.system(size: 12))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Status.danger)
                             .padding(.horizontal)
                     }
@@ -308,7 +308,7 @@ struct PredictiveAlertDetailView: View {
                                     Image(systemName: "wrench.and.screwdriver.fill")
                                     Text("Schedule Maintenance Task")
                                 }
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
@@ -363,7 +363,7 @@ struct PredictiveAlertDetailView: View {
                             .tint(AppTheme.Brand.royalBlue)
                     } else {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                 }
@@ -465,7 +465,7 @@ struct PredictionSelectorCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(regNo)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(isSelected ? .white : AppTheme.Text.primary)
                         .lineLimit(1)
                     
@@ -477,15 +477,15 @@ struct PredictionSelectorCard: View {
                 }
                 
                 Text(model)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(isSelected ? .white.opacity(0.8) : AppTheme.Text.secondary)
                     .lineLimit(1)
                 
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
-                        .font(.system(size: 9))
+                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     Text(String(format: "Risk: %.0f%%", alert.riskScore * 100))
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 }
                 .foregroundColor(isSelected ? .white : riskColor)
             }
@@ -518,7 +518,7 @@ struct TelemetryDiagnosticFactorsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Telemetry & AI Diagnostic Input Factors")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
             
             // Odometer & Runs
@@ -528,21 +528,21 @@ struct TelemetryDiagnosticFactorsCard: View {
                         .fill(AppTheme.Brand.royalBlue.opacity(0.1))
                         .frame(width: 36, height: 36)
                     Image(systemName: "speedometer")
-                        .font(.system(size: 16))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Brand.royalBlue)
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Mileage & Fleet Runs")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.primary)
                     
                     Text("Current Odometer: \(Int(associatedVehicle?.odometerReading ?? 0)) km")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.secondary)
                     
                     Text("Recent Trip Activity: \(Int(recentTripDistance)) km completed run")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.secondary)
                 }
             }
@@ -557,13 +557,13 @@ struct TelemetryDiagnosticFactorsCard: View {
                         .fill(hasActiveDefects ? AppTheme.Status.danger.opacity(0.1) : AppTheme.Status.success.opacity(0.1))
                         .frame(width: 36, height: 36)
                     Image(systemName: hasActiveDefects ? "exclamationmark.triangle.fill" : "checkmark.shield.fill")
-                        .font(.system(size: 16))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(hasActiveDefects ? AppTheme.Status.danger : AppTheme.Status.success)
                 }
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Inspection & Defect Status")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.primary)
                     
                     if hasActiveDefects {
@@ -573,13 +573,13 @@ struct TelemetryDiagnosticFactorsCard: View {
                                     .fill(AppTheme.Status.danger)
                                     .frame(width: 4, height: 4)
                                 Text("\(defect.title) (\(defect.severity.rawValue.uppercased()))")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .foregroundColor(AppTheme.Text.secondary)
                             }
                         }
                     } else {
                         Text("No active defects reported in pre/post-trip inspections.")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                     
@@ -587,12 +587,12 @@ struct TelemetryDiagnosticFactorsCard: View {
                         let typeText = lastInspection.inspectionType == .preTrip ? "Pre-Trip" : "Post-Trip"
                         let dateText = lastInspection.createdAt.formatted(date: .abbreviated, time: .shortened)
                         Text("Last \(typeText) Checkup: \(dateText)")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(AppTheme.Text.tertiary)
                         
                         if let remarks = lastInspection.remarks, !remarks.trimmingCharacters(in: .whitespaces).isEmpty {
                             Text("\"\(remarks)\"")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .italic()
                                 .padding(6)
@@ -612,36 +612,36 @@ struct TelemetryDiagnosticFactorsCard: View {
                         .fill(AppTheme.Brand.amber.opacity(0.1))
                         .frame(width: 36, height: 36)
                     Image(systemName: "wrench.and.screwdriver.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Brand.amber)
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Scheduled Service & Interval")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.primary)
                     
                     if let nextService = associatedVehicle?.nextServiceDate {
                         Text("Next Scheduled Service: \(nextService.formatted(date: .abbreviated, time: .omitted))")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(AppTheme.Brand.primary)
                     } else {
                         Text("No upcoming scheduled services.")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                     
                     if let lastRecord = lastMaintenanceRecord {
                         Text("Last Completed Service: \(lastRecord.serviceType) on \(lastRecord.serviceDate.formatted(date: .abbreviated, time: .omitted))")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     } else if let lastService = associatedVehicle?.lastServiceDate {
                         Text("Last Completed Service: \(lastService.formatted(date: .abbreviated, time: .omitted))")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     } else {
                         Text("No completed service history logged.")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                 }

@@ -80,7 +80,7 @@ struct DriverEditProfileView: View {
                                                 .scaledToFill()
                                         default:
                                             Text(initials.isEmpty ? "DR" : initials)
-                                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                                .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                 .foregroundColor(.white)
                                         }
                                     }
@@ -88,14 +88,14 @@ struct DriverEditProfileView: View {
                                     .clipShape(Circle())
                                 } else {
                                     Text(initials.isEmpty ? "DR" : initials)
-                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
                                 }
                             }
 
                             PhotosPicker(selection: $selectedItem, matching: .images) {
                                 Text("Change Photo")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Status.success)
                             }
                         }
@@ -113,20 +113,20 @@ struct DriverEditProfileView: View {
                             
                             HStack(spacing: 12) {
                                 Image(systemName: "envelope.fill")
-                                    .font(.system(size: 15))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                                     .frame(width: 32)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Email")
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.tertiary)
                                     Text(user?.email ?? "driver@fms.com")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "lock.fill")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                             }
                             .padding(.horizontal, 16)
@@ -188,7 +188,7 @@ struct DriverEditProfileView: View {
                             HStack(spacing: 8) {
                                 if isSaving { ProgressView().tint(.white) }
                                 Text(isSaving ? "Saving..." : "Save Changes")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -264,16 +264,16 @@ struct DriverLicenseDetailView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("DRIVING LICENSE")
-                                        .font(.system(size: 10, weight: .bold))
+                                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(.white.opacity(0.6))
                                         .tracking(1.2)
                                     Text("DL-1234567890")
-                                        .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                                         .foregroundColor(.white)
                                 }
                                 Spacer()
                                 Image(systemName: "creditcard.fill")
-                                    .font(.system(size: 28))
+                                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Brand.amber)
                             }
 
@@ -346,11 +346,11 @@ private struct DriverLicenseInfo: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label.uppercased())
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(.white.opacity(0.5))
                 .tracking(0.5)
             Text(value)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -382,14 +382,14 @@ struct DriverTripHistoryView: View {
                         if driverTrips.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "road.lanes.curve.right")
-                                    .font(.system(size: 40))
+                                    .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
                                     .padding(.top, 40)
                                 Text("No trip history")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 Text("Your completed trips will be listed here.")
-                                    .font(.system(size: 12, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                     .foregroundColor(AppTheme.Text.tertiary)
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -399,11 +399,11 @@ struct DriverTripHistoryView: View {
                                 VStack(alignment: .leading, spacing: 10) {
                                     HStack {
                                         Text(trip.tripCode)
-                                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                                             .foregroundColor(AppTheme.Text.primary)
                                         Spacer()
                                         Text(trip.tripStatus.displayName)
-                                            .font(.system(size: 11, weight: .bold))
+                                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(trip.tripStatus == .completed ? AppTheme.Status.success : AppTheme.Text.secondary)
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 3)
@@ -421,11 +421,11 @@ struct DriverTripHistoryView: View {
                                         }
                                         VStack(alignment: .leading, spacing: 8) {
                                             Text(trip.startLocation)
-                                                .font(.system(size: 12, weight: .medium))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                                 .foregroundColor(AppTheme.Text.secondary)
                                                 .lineLimit(1)
                                             Text(trip.endLocation)
-                                                .font(.system(size: 12, weight: .medium))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                                 .foregroundColor(AppTheme.Text.secondary)
                                                 .lineLimit(1)
                                         }
@@ -433,11 +433,11 @@ struct DriverTripHistoryView: View {
 
                                     HStack {
                                         Label(trip.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                                            .font(.system(size: 11))
+                                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.tertiary)
                                         Spacer()
                                         Label(String(format: "%.1f km", trip.distanceKm), systemImage: "road.lanes")
-                                            .font(.system(size: 11, weight: .semibold))
+                                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
                                 }
@@ -557,7 +557,7 @@ struct DriverSecuritySettingsView: View {
                         // CHANGE PASSWORD section
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CHANGE PASSWORD")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -578,7 +578,7 @@ struct DriverSecuritySettingsView: View {
                         // AUTHENTICATION section
                         VStack(alignment: .leading, spacing: 0) {
                             Text("AUTHENTICATION")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -605,7 +605,7 @@ struct DriverSecuritySettingsView: View {
                             HStack(spacing: 8) {
                                 if isSaving { ProgressView().tint(.white) }
                                 Text(isSaving ? "Updating..." : "Update Password")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -697,10 +697,10 @@ private struct ProfileSecureField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.tertiary)
             SecureField(label, text: $text)
-                .font(.system(size: 15))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.primary)
         }
         .padding(.horizontal, 16)
@@ -740,12 +740,12 @@ struct DriverHelpSupportView: View {
                             ForEach(Array(faqs.enumerated()), id: \.offset) { i, faq in
                                 DisclosureGroup {
                                     Text(faq.a)
-                                        .font(.system(size: 13))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.secondary)
                                         .padding(.top, 4).padding(.bottom, 8)
                                 } label: {
                                     Text(faq.q)
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.primary)
                                         .multilineTextAlignment(.leading)
                                 }
@@ -812,7 +812,7 @@ struct DriverPerformanceStatsView: View {
                         // Performance Rings
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Performance")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.primary)
                                 .padding(.leading, 4)
 
@@ -845,7 +845,7 @@ struct DriverPerformanceStatsView: View {
                         // Driving Stats Grid
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Driving Stats")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.primary)
                                 .padding(.leading, 4)
 
@@ -923,13 +923,13 @@ private struct DriverPerformanceStatsRing: View {
                     .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Text(maxValue == 100 ? "\(Int(value))%" : String(format: "%.1f", value))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
             }
             .frame(width: 60, height: 60)
 
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
         }
         .frame(maxWidth: .infinity)

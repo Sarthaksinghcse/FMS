@@ -25,7 +25,7 @@ struct MessageInputView: View {
                             selectedImageData = nil
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 18))
+                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(AppTheme.Status.danger)
                                 .background(Circle().fill(Color.white))
                         }
@@ -46,13 +46,13 @@ struct MessageInputView: View {
                 HStack(spacing: 10) {
                     PhotosPicker(selection: $selectedItem, matching: .images) {
                         Image(systemName: "photo.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                     .buttonStyle(PlainButtonStyle())
                     
                     TextField("Type a message...", text: $textMessage)
-                        .font(.system(size: 14))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -67,7 +67,7 @@ struct MessageInputView: View {
                             .frame(width: 34, height: 34)
                         
                         Image(systemName: "arrow.up")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(.white)
                     }
                 }

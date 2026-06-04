@@ -47,7 +47,7 @@ struct SlideToResumeButton: View {
                 .fill(Color.white.opacity(0.15))
             
             Text("slide to resume")
-                .font(.system(size: 20, weight: .regular))
+                .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                 .foregroundColor(.white.opacity(0.5))
                 .frame(maxWidth: .infinity)
             
@@ -60,7 +60,7 @@ struct SlideToResumeButton: View {
                 .frame(width: knobSize, height: knobSize)
                 .overlay(
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(.black)
                 )
                 .offset(x: offset)
@@ -96,6 +96,7 @@ struct SlideToResumeButton: View {
 struct DrowsinessAlarmView: View {
     @ObservedObject var detector: DrowsinessDetector
     @State private var flashOn = false
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     var body: some View {
         ZStack {
@@ -107,7 +108,7 @@ struct DrowsinessAlarmView: View {
             
             // Subtle red pulsing vignette
             RadialGradient(
-                colors: [AppTheme.Status.danger.opacity(flashOn ? 0.35 : 0.0), .clear],
+                colors: [AppTheme.Status.danger.opacity(flashOn ? 0.8 : 0.0), .clear],
                 center: .center,
                 startRadius: 50,
                 endRadius: UIScreen.main.bounds.height / 1.5
@@ -124,19 +125,19 @@ struct DrowsinessAlarmView: View {
                         .frame(width: 100, height: 100)
                     
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 48, weight: .bold))
+                        .font(.system(size: 48 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(.white)
                 }
                 .padding(.bottom, 16)
 
                 // Native bold typography
                 Text("Drowsiness Detected")
-                    .font(.system(size: 34, weight: .bold, design: .default))
+                    .font(.system(size: 34 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .default))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
 
                 Text("It looks like your eyes were closed. Please pull over safely if you are tired.")
-                    .font(.system(size: 17, weight: .regular, design: .default))
+                    .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular, design: .default))
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
@@ -266,7 +267,7 @@ struct DrowsinessMonitorHUD: View {
                 .frame(width: collapsedSize, height: collapsedSize)
                 .shadow(color: .black.opacity(0.15), radius: 6)
             Image(systemName: "video.fill")
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundStyle(Color(UIColor.label))
         }
     }

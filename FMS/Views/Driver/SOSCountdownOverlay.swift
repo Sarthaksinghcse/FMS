@@ -5,6 +5,7 @@ import SwiftUI
 struct SOSCountdownOverlay: View {
     @Binding var isPresented: Bool
     var onTriggered: () -> Void
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     private let totalSeconds = 5
     @State private var remaining = 5
@@ -66,14 +67,14 @@ struct SOSCountdownOverlay: View {
                     
                     if !triggered {
                         Text("\(remaining)")
-                            .font(.system(size: 72, weight: .heavy, design: .rounded))
+                            .font(.system(size: 72 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
                             .scaleEffect(numberScale)
                             .contentTransition(.numericText())
                             .animation(.spring(response: 0.3, dampingFraction: 0.5), value: remaining)
                     } else {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 52))
+                            .font(.system(size: 52 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(.white)
                             .transition(.scale.combined(with: .opacity))
                     }
@@ -85,26 +86,26 @@ struct SOSCountdownOverlay: View {
                 VStack(spacing: 8) {
                     HStack(spacing: 8) {
                         Image(systemName: "sos")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         Text("EMERGENCY SOS")
-                            .font(.system(size: 18, weight: .heavy))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .heavy))
                             .tracking(1.5)
                     }
                     .foregroundStyle(.white)
 
                     if !triggered {
                         Text("Sending emergency alert in \(remaining) seconds…")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(.white.opacity(0.8))
                             .contentTransition(.numericText())
                     } else {
                         Text("Emergency alert sent to fleet manager!")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(.white.opacity(0.8))
                     }
 
                     Text("Your GPS location will be shared.")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.white.opacity(0.5))
                 }
 
@@ -117,9 +118,9 @@ struct SOSCountdownOverlay: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 18))
+                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             Text("Cancel")
-                                .font(.system(size: 17, weight: .bold))
+                                .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         }
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -134,7 +135,7 @@ struct SOSCountdownOverlay: View {
                         isPresented = false
                     } label: {
                         Text("Done")
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
@@ -161,6 +162,8 @@ struct SOSCountdownOverlay: View {
         withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
             pulseScale = 1.08
         }
+        
+
 
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor in

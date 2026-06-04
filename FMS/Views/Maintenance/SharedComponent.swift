@@ -33,7 +33,7 @@ struct MaintenanceHeaderView: View {
             if showBackButton {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.primary)
                 }
                 .padding(.top, 4)
@@ -43,17 +43,17 @@ struct MaintenanceHeaderView: View {
             VStack(alignment: .leading, spacing: 4) {
                 if let greeting = greeting, !greeting.isEmpty {
                     Text(greeting)
-                        .font(.system(size: 17, weight: .regular))
+                        .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                         .foregroundStyle(.secondary)
                 }
                 
                 Text(title)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.primary)
                 
 //                if !subtitle.isEmpty {
 //                    Text(subtitle)
-//                        .font(.system(size: 13, weight: .medium, design: .rounded))
+//                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
 //                        .foregroundColor(AppTheme.Text.secondary)
 //                }
             }
@@ -65,7 +65,7 @@ struct MaintenanceHeaderView: View {
                     if showChat {
                         Button(action: onChatTap) {
                             Image(systemName: "bubble.left.and.bubble.right.fill")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(Color(UIColor.label))
                                 .frame(width: 40, height: 40)
                                 .background(Color(UIColor.secondarySystemGroupedBackground))
@@ -77,7 +77,7 @@ struct MaintenanceHeaderView: View {
                     Button(action: onNotificationTap) {
                         ZStack(alignment: .topTrailing) {
                             Image(systemName: "bell.fill")
-                                .font(.system(size: 18))
+                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(Color(UIColor.label))
                                 .frame(width: 40, height: 40)
                                 .background(Color(UIColor.secondarySystemGroupedBackground))
@@ -106,7 +106,7 @@ struct MaintenanceHeaderView: View {
                                 )
                                 .frame(width: 40, height: 40)
                             Text(initials)
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                         }
                     }
@@ -128,7 +128,7 @@ struct CustomCenteredHeaderView: View {
         HStack {
             Button(action: { dismiss() }) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Brand.primary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
@@ -137,7 +137,7 @@ struct CustomCenteredHeaderView: View {
             Spacer()
             
             Text(title)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
             
             Spacer()
@@ -179,14 +179,14 @@ struct StatCard: View {
                             .fill(iconBg)
                             .frame(width: 40, height: 40)
                         Image(systemName: icon)
-                            .font(.system(size: 18))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(iconColor)
                     }
                     
                     Spacer()
                     
                     Image(systemName: "arrow.up.forward")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
                 
@@ -194,7 +194,7 @@ struct StatCard: View {
                     .font(.subheadline).fontWeight(.medium)
                     .foregroundColor(AppTheme.Text.primary)
                 Text(value)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.system(size: 34 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary) // Unified clean adaptive dark navy value
                 Text(footnote)
                     .font(.caption)
@@ -225,11 +225,11 @@ struct QuickActionButton: View {
                         .fill(color.opacity(0.12))
                         .frame(width: 48, height: 48)
                     Image(systemName: icon)
-                        .font(.system(size: 20))
+                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(color)
                 }
                 Text(label)
-                    .font(.system(size: 11)).fontWeight(.medium)
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).fontWeight(.medium)
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.Text.primary)
                     .lineLimit(2)
@@ -266,12 +266,12 @@ struct MaintenanceRowCard: View {
                             .fill(iconBg)
                             .frame(width: 44, height: 44)
                         Image(systemName: icon)
-                            .font(.system(size: 20))
+                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(iconColor)
                         
                         if let count = badgeCount, count > 0 {
                             Text("\(count)")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                                 .frame(width: 18, height: 18)
                                 .background(AppTheme.Status.danger)
@@ -283,23 +283,23 @@ struct MaintenanceRowCard: View {
                     Spacer()
                     
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.8))
                 }
                 
                 // Bottom content: Title & Descriptions
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                     
                     Text(description)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(iconColor)
                         .lineLimit(1)
                     
                     Text(footnote)
-                        .font(.system(size: 11))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -313,7 +313,7 @@ struct MaintenanceRowCard: View {
             .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                    .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                    .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -324,63 +324,45 @@ struct MaintenanceRowCard: View {
 // MARK: - Work Order Row
 
 struct WorkOrderRow: View {
-    @ObservedObject private var accessibility = AccessibilityManager.shared
     let order: WorkOrder
     var action: (() -> Void)? = nil
 
     var body: some View {
-        let isOutdoor = accessibility.maintenanceOutdoorContrast
         let content = HStack(spacing: 14) {
             // Icon + Priority badge matching the screenshot layout
             VStack(spacing: 4) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isOutdoor ? Color.white : Color(.systemGray6))
+                        .fill(Color(.systemGray6))
                         .frame(width: 44, height: 44)
-                        .overlay(
-                            Group {
-                                if isOutdoor {
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .stroke(Color.black, lineWidth: 2)
-                                }
-                            }
-                        )
                     Image(systemName: "doc.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(isOutdoor ? Color.black : order.priority.detailColor)
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                        .foregroundColor(order.priority.detailColor)
                 }
                 
                 Text(order.priority.shortLabel)
-                    .font(.system(size: 8, weight: .bold, design: .rounded))
-                    .foregroundColor(isOutdoor ? Color.black : order.priority.detailColor)
+                    .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
+                    .foregroundColor(order.priority.detailColor)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(isOutdoor ? Color.white : order.priority.detailColor.opacity(0.08))
+                    .background(order.priority.detailColor.opacity(0.08))
                     .cornerRadius(4)
-                    .overlay(
-                        Group {
-                            if isOutdoor {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.black, lineWidth: 1)
-                            }
-                        }
-                    )
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(order.title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.primary)
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
                     .lineLimit(1)
                 
                 Text(order.workDescription)
-                    .font(.system(size: 13))
-                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.secondary)
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                    .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(1)
                 
                 Text("Created: \(order.createdAt.formatted(date: .abbreviated, time: .omitted))\nMaintenance Personnel")
-                    .font(.system(size: 11))
-                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.tertiary)
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                    .foregroundColor(AppTheme.Text.tertiary)
                     .lineLimit(2)
             }
 
@@ -394,22 +376,14 @@ struct WorkOrderRow: View {
                 )
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.tertiary.opacity(0.5))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
+                    .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
             }
         }
         .contentShape(Rectangle())
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(isOutdoor ? Color.white : Color.clear)
-        .overlay(
-            Group {
-                if isOutdoor {
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                        .stroke(Color.black, lineWidth: 2)
-                }
-            }
-        )
+        .background(Color.clear)
 
         Group {
             if let action = action {
@@ -427,19 +401,17 @@ struct WorkOrderRow: View {
 // MARK: - Status Badge
 
 struct WorkOrderStatusBadge: View {
-    @ObservedObject private var accessibility = AccessibilityManager.shared
     let statusLabel: String
     let statusColor: Color
 
     var body: some View {
-        let isOutdoor = accessibility.maintenanceOutdoorContrast
         Text(statusLabel)
-            .font(.system(size: 11, weight: .bold, design: .rounded))
-            .foregroundColor(isOutdoor ? Color.black : statusColor)
+            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
+            .foregroundColor(statusColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Capsule().fill(isOutdoor ? Color.white : statusColor.opacity(0.12)))
-            .overlay(Capsule().stroke(isOutdoor ? Color.black : statusColor.opacity(0.25), lineWidth: isOutdoor ? 2 : 1))
+            .background(Capsule().fill(statusColor.opacity(0.12)))
+            .overlay(Capsule().stroke(statusColor.opacity(0.25), lineWidth: 1))
     }
 }
 
@@ -453,11 +425,11 @@ struct NotificationBellButton: View {
         Button(action: action) {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: "bell.fill")
-                    .font(.system(size: 18))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(AppTheme.Text.primary.opacity(0.6))
                 if count > 0 {
                     Text("\(min(count, 99))")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.onDark)
                         .frame(minWidth: 15, minHeight: 15)
                         .background(AppTheme.Status.danger)

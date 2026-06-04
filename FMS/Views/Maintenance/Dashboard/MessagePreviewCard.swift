@@ -39,26 +39,26 @@ struct MessagePreviewCard: View {
                     .frame(width: 46, height: 46)
                 
                 Text(message.initials)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(message.avatarBg)
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(message.senderName)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                     
                     Spacer()
                     
                     Text(message.timestamp)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Text.tertiary)
                 }
                 
                 HStack {
                     Text(message.textPreview)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Text.secondary)
                         .lineLimit(1)
                     
@@ -66,7 +66,7 @@ struct MessagePreviewCard: View {
                     
                     if message.unreadCount > 0 {
                         Text("\(message.unreadCount)")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)

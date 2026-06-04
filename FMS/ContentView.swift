@@ -265,13 +265,13 @@ struct DriverPlaceholderView: View {
                             .fill(Color.white.opacity(0.08))
                             .frame(width: 110, height: 110)
                         Image(systemName: "steeringwheel")
-                            .font(.system(size: 48, weight: .medium))
+                            .font(.system(size: 48 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(.white)
                     }
 
                     VStack(spacing: 8) {
                         Text("Welcome, \(user.name)")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.white)
                         Text("Driver Dashboard")
                             .font(.system(.subheadline, design: .rounded))

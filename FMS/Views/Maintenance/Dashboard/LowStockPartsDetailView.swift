@@ -32,13 +32,13 @@ struct LowStockPartsDetailView: View {
                         if lowStockItems.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "checkmark.seal.fill")
-                                    .font(.system(size: 48))
+                                    .font(.system(size: 48 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Status.success)
                                 Text("Inventory is Healthy")
-                                    .font(.system(size: 16, weight: .bold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.primary)
                                 Text("All parts currently satisfy safe restocking thresholds.")
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.secondary)
                                     .multilineTextAlignment(.center)
                             }
@@ -46,7 +46,7 @@ struct LowStockPartsDetailView: View {
                             .padding(.vertical, 80)
                         } else {
                             Text("The following items require immediate reordering:")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .padding(.horizontal)
                                 .padding(.top, 8)

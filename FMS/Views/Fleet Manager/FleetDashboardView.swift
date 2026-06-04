@@ -6,6 +6,7 @@ import Supabase
 @available(iOS 26.0, *)
 struct FleetDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     // Live data from SwiftData (synced from Supabase every 15 s)
     @Query private var vehicles:      [Vehicle]
@@ -75,10 +76,10 @@ struct FleetDashboardView: View {
                         HStack(alignment: .center, spacing: 0) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(viewModel.getGreetingTime() + ",")
-                                    .font(.system(size: 17, weight: .regular))
+                                    .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                                     .foregroundStyle(.secondary)
                                 Text(SupabaseManager.shared.currentUser?.name ?? managerFirstName)
-                                    .font(.system(size: 28, weight: .bold))
+                                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundStyle(.primary)
                             }
 
@@ -92,7 +93,7 @@ struct FleetDashboardView: View {
                             } label: {
                                 ZStack(alignment: .topTrailing) {
                                     Image(systemName: "bell.fill")
-                                        .font(.system(size: 18))
+                                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundStyle(Color(UIColor.label))
                                         .frame(width: 40, height: 40)
                                         .background(Color(UIColor.secondarySystemGroupedBackground))
@@ -139,7 +140,7 @@ struct FleetDashboardView: View {
                                                 )
                                                 .frame(width: 40, height: 40)
                                             Text(managerInitials)
-                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                 .foregroundColor(.white)
                                         }
                                     }
@@ -151,7 +152,7 @@ struct FleetDashboardView: View {
                         .padding(.top, 24)
 
                         Text("Overview")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(.black)
                             .padding(.horizontal, 16)
 
@@ -177,7 +178,7 @@ struct FleetDashboardView: View {
                         // ── Quick Actions ─────────────────────────
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Quick Actions")
-                                .font(.system(size: 18, weight: .bold))
+                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 16)
 
@@ -218,13 +219,13 @@ struct FleetDashboardView: View {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(alignment: .center, spacing: 8) {
                                 Text("Recent Activity")
-                                    .font(.system(size: 18, weight: .bold))
+                                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(.black)
 
                                 // Live badge count (events in last 24 h)
                                 if badgeCount > 0 {
                                     Text("\(min(badgeCount, 99))")
-                                        .font(.system(size: 11, weight: .bold))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(AppTheme.Text.onDark)
                                         .frame(minWidth: 18, minHeight: 18)
                                         .padding(.horizontal, 4)
@@ -239,7 +240,7 @@ struct FleetDashboardView: View {
                                     viewModel.showAllActivities = true
                                 } label: {
                                     Text("See All")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Brand.primary)
                                 }
                             }
@@ -251,13 +252,13 @@ struct FleetDashboardView: View {
                                     Spacer()
                                     VStack(spacing: 10) {
                                         Image(systemName: "clock.arrow.circlepath")
-                                            .font(.system(size: 32))
+                                            .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.tertiary.opacity(0.4))
                                         Text("No activity yet")
-                                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                             .foregroundColor(AppTheme.Text.secondary)
                                         Text("Trips, alerts and maintenance events will appear here.")
-                                            .font(.system(size: 12, design: .rounded))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                             .foregroundColor(AppTheme.Text.tertiary)
                                             .multilineTextAlignment(.center)
                                             .padding(.horizontal, 20)
@@ -403,7 +404,7 @@ struct FleetDashboardView: View {
     private var aiInsightsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("AI Insights")
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
             
@@ -415,18 +416,18 @@ struct FleetDashboardView: View {
                             .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.system(size: 18))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
                             Text("Predictive Maintenance Alert")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
                             
                             Text("SMART")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
@@ -435,7 +436,7 @@ struct FleetDashboardView: View {
                         }
                         
                         Text("Identify telemetry risks, vehicle alerts, and wear trends...")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -444,7 +445,7 @@ struct FleetDashboardView: View {
                     Spacer()
                     
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
                 .padding(14)
@@ -467,18 +468,18 @@ struct FleetDashboardView: View {
                             .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "box.truck.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
                             Text("AI Parts Demand Forecasting")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
                             
                             Text("PREDICT")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
@@ -487,7 +488,7 @@ struct FleetDashboardView: View {
                         }
                         
                         Text("Calculate upcoming parts consumption & reorder recommendations...")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -496,7 +497,7 @@ struct FleetDashboardView: View {
                     Spacer()
                     
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
                 .padding(14)
@@ -519,18 +520,18 @@ struct FleetDashboardView: View {
                             .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "fuelpump.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
                             Text("Fuel Insights & Optimization")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
                             
                             Text("OPTIMIZE")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
@@ -539,7 +540,7 @@ struct FleetDashboardView: View {
                         }
                         
                         Text("Uncover cost savings, efficiency grades, and consumption anomalies...")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -548,7 +549,7 @@ struct FleetDashboardView: View {
                     Spacer()
                     
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
                 .padding(14)
@@ -571,18 +572,18 @@ struct FleetDashboardView: View {
                             .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "heart.text.square.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
                             Text("AI Vehicle Health Analytics")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
                             
                             Text("HEALTH")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
@@ -591,7 +592,7 @@ struct FleetDashboardView: View {
                         }
                         
                         Text("Assess fleet vehicle health grades, issue flags and repair tasks...")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -600,7 +601,7 @@ struct FleetDashboardView: View {
                     Spacer()
                     
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
                 .padding(14)
@@ -741,7 +742,7 @@ struct FleetCircularProgressView: View {
                 .rotationEffect(Angle(degrees: -90))
 
             Text("\(Int(progress * 100))%")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(AppTheme.Brand.primary)
         }
         .frame(width: 52, height: 52)
@@ -750,6 +751,7 @@ struct FleetCircularProgressView: View {
 
 // MARK: - FleetGridQuickActionButton
 struct FleetGridQuickActionButton: View {
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     let icon: String
     let label: String
     var iconColor: Color = AppTheme.Brand.royalBlue
@@ -764,12 +766,12 @@ struct FleetGridQuickActionButton: View {
                         .fill(bgColor)
                         .frame(width: 58, height: 58)
                     Image(systemName: icon)
-                        .font(.system(size: 24))
+                        .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(iconColor)
                 }
                 
                 Text(label)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.Text.primary)

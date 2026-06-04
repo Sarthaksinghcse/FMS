@@ -31,17 +31,17 @@ struct SparePartsForecastView: View {
                                                     .fill(section.iconBgColor)
                                                     .frame(width: 38, height: 38)
                                                 Image(systemName: section.icon)
-                                                    .font(.system(size: 15, weight: .bold))
+                                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                                     .foregroundColor(section.iconColor)
                                             }
                                             
                                             Text(section.title)
-                                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                 .foregroundColor(.black)
                                         }
                                         
                                         Text(LocalizedStringKey(section.content))
-                                            .font(.system(size: 13.5, weight: .medium, design: .rounded))
+                                            .font(.system(size: 13.5 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                             .foregroundColor(AppTheme.Text.primary)
                                             .lineSpacing(5)
                                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -60,7 +60,7 @@ struct SparePartsForecastView: View {
                             // Stock lists
                             if !viewModel.atRiskParts.isEmpty {
                                 Text("Stockout Risks Detected")
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                     .padding(.horizontal, 4)
                                     .padding(.top, 8)
@@ -72,7 +72,7 @@ struct SparePartsForecastView: View {
 
                             if !viewModel.healthyParts.isEmpty {
                                 Text("Safe Stock Levels")
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                     .padding(.horizontal, 4)
                                     .padding(.top, 8)
@@ -102,7 +102,7 @@ struct SparePartsForecastView: View {
                             .tint(AppTheme.Brand.primary)
                     } else {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                 }
@@ -122,10 +122,10 @@ struct SparePartsForecastView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(part.partName)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                     Text("Stockout risk: " + (part.stockoutRisk ? "YES" : "NO"))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(part.stockoutRisk ? AppTheme.Status.danger : AppTheme.Status.success)
                 }
                 
@@ -133,7 +133,7 @@ struct SparePartsForecastView: View {
                 
                 // Urgency badge
                 Text(part.urgency.uppercased())
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -144,19 +144,19 @@ struct SparePartsForecastView: View {
             HStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("CURRENT STOCK")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Text("\(part.currentStock) units")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PREDICTED DEMAND (30D)")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Text("\(part.predictedDemand) units")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                 }
 
@@ -165,10 +165,10 @@ struct SparePartsForecastView: View {
                 if part.recommendedReorder > 0 {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("REORDER REC")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Brand.primary)
                         Text("+\(part.recommendedReorder) units")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                 }

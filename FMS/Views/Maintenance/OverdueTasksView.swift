@@ -163,18 +163,18 @@ private struct OverdueAlertBanner: View {
                     .fill(AppTheme.Status.danger.opacity(0.12))
                     .frame(width: 44, height: 44)
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(AppTheme.Status.danger)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(totalOverdue) overdue work order\(totalOverdue == 1 ? "" : "s")")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                 Text(criticalCount > 0
                      ? "\(criticalCount) critical (3+ days past due)"
                      : "Immediate attention required")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Status.danger.opacity(0.8))
             }
 
@@ -226,11 +226,11 @@ private struct OverdueTaskCard: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(order.title)
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                                 .lineLimit(1)
                             Text("Due: \(order.createdAt.formatted(date: .abbreviated, time: .omitted))")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                 .foregroundColor(AppTheme.Text.secondary)
                         }
                         Spacer()
@@ -238,10 +238,10 @@ private struct OverdueTaskCard: View {
                         // Overdue duration badge
                         VStack(alignment: .trailing, spacing: 2) {
                             Text(urgencyLabel)
-                                .font(.system(size: 9, weight: .black))
+                                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black))
                                 .foregroundColor(urgencyColor)
                             Text("\(daysOverdue)d late")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(urgencyColor)
                         }
                         .padding(.horizontal, 10)
@@ -296,7 +296,7 @@ private struct OverdueTaskCard: View {
                             icon: "circle.fill"
                         )
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                             .padding(.leading, 6)
                     }
@@ -331,15 +331,15 @@ private struct OverdueDetailRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(color)
                 .frame(width: 20)
             Text(label)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
                 .frame(width: 100, alignment: .leading)
             Text(value)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(AppTheme.Text.primary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)

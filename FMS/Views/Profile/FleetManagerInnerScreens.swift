@@ -41,7 +41,7 @@ struct FMNotificationSettingsView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("FLEET ALERTS")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -91,7 +91,7 @@ struct FMNotificationSettingsView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("GENERAL")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -168,7 +168,7 @@ struct FMSecuritySettingsView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CHANGE PASSWORD")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -189,7 +189,7 @@ struct FMSecuritySettingsView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("AUTHENTICATION")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -218,7 +218,7 @@ struct FMSecuritySettingsView: View {
                                     ProgressView().tint(.white)
                                 }
                                 Text(isSaving ? "Updating..." : "Update Password")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -312,10 +312,10 @@ private struct SecureFormField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.tertiary)
             SecureField(label, text: $text)
-                .font(.system(size: 15))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.primary)
         }
         .padding(.horizontal, 16)
@@ -354,7 +354,7 @@ struct FMHelpSupportView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("FREQUENTLY ASKED QUESTIONS")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -364,13 +364,13 @@ struct FMHelpSupportView: View {
                                 ForEach(Array(faqs.enumerated()), id: \.offset) { index, faq in
                                     DisclosureGroup {
                                         Text(faq.answer)
-                                            .font(.system(size: 13))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                             .padding(.top, 4)
                                             .padding(.bottom, 8)
                                     } label: {
                                         Text(faq.question)
-                                            .font(.system(size: 14, weight: .medium))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                             .foregroundColor(AppTheme.Text.primary)
                                             .multilineTextAlignment(.leading)
                                     }
@@ -391,7 +391,7 @@ struct FMHelpSupportView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("CONTACT SUPPORT")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -453,16 +453,16 @@ struct FMAboutView: View {
                                     .shadow(color: AppTheme.Brand.primary.opacity(0.30), radius: 12, y: 4)
 
                                 Image(systemName: "bus.fill")
-                                    .font(.system(size: 30, weight: .medium))
+                                    .font(.system(size: 30 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .foregroundColor(.white)
                             }
 
                             Text("Fleet Management System")
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
 
                             Text("Version 1.0.0 (Build 1)")
-                                .font(.system(size: 13))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(AppTheme.Text.secondary)
                         }
                         .padding(.vertical, 24)
@@ -484,11 +484,11 @@ struct FMAboutView: View {
                             Button { } label: {
                                 HStack {
                                     Text("Terms of Service")
-                                        .font(.system(size: 15, weight: .medium))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.primary)
                                     Spacer()
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.7))
                                 }
                                 .padding(.horizontal, 16)
@@ -502,11 +502,11 @@ struct FMAboutView: View {
                             Button { } label: {
                                 HStack {
                                     Text("Privacy Policy")
-                                        .font(.system(size: 15, weight: .medium))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.primary)
                                     Spacer()
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.7))
                                 }
                                 .padding(.horizontal, 16)
@@ -520,7 +520,7 @@ struct FMAboutView: View {
                         .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
 
                         Text("© 2026 FMS. All rights reserved.")
-                            .font(.system(size: 12))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.tertiary)
                             .padding(.top, 8)
                     }

@@ -7,6 +7,7 @@ import SwiftUI
 
 struct DashboardStatCard: View {
     let stat: DashboardStat
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     private var cardDescription: String {
         switch stat.label {
@@ -25,25 +26,25 @@ struct DashboardStatCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) { // Reduced spacing to give text more room
                 // Icon circle
                 ZStack {
                     Circle()
                         .fill(stat.iconBgColor)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 40, height: 40) // Slightly smaller icon container
                     
                     if stat.icon == "checkmark.circle.fill" {
                         ZStack {
                             Circle()
                                 .fill(Color.white)
-                                .frame(width: 18, height: 18)
+                                .frame(width: 16, height: 16)
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(stat.iconColor)
                         }
                     } else {
                         Image(systemName: stat.icon)
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(stat.iconColor)
                     }
                 }
@@ -51,13 +52,13 @@ struct DashboardStatCard: View {
                 // Text columns
                 VStack(alignment: .leading, spacing: 2) {
                     Text(stat.label)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12.5 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.primary.opacity(0.85))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.9) // Higher scale factor to ensure uniformity
                     
                     Text(stat.value)
-                        .font(.system(size: 26, weight: .bold))
+                        .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(stat.iconColor)
                         .lineLimit(1)
                 }
@@ -66,13 +67,13 @@ struct DashboardStatCard: View {
                 
                 // Chevron icon
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(stat.iconColor)
             }
             
             // Description subtitle (Full width, no divider line)
             Text(cardDescription)
-                .font(.system(size: 11.5, weight: .regular))
+                .font(.system(size: 11.5 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                 .foregroundColor(AppTheme.Text.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -86,8 +87,9 @@ struct DashboardStatCard: View {
         .shadow(color: Color.black.opacity(0.015), radius: 6, x: 0, y: 3)
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.black.opacity(0.05), lineWidth: 0.8)
+                .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.05), lineWidth: 0.8)
         )
+        .applyHighContrastBorder(cornerRadius: 16)
     }
 }
 

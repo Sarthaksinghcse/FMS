@@ -134,7 +134,7 @@ struct AllActivitiesView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Text("\(filteredActivities.count) events")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(AppTheme.Text.secondary)
                 }
             }
@@ -151,9 +151,9 @@ struct AllActivitiesView: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: tab.icon)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 Text(tab.rawValue)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
             }
             .foregroundColor(selectedFilter == tab ? .white : tab.color)
             .padding(.horizontal, 14)
@@ -169,13 +169,13 @@ struct AllActivitiesView: View {
         VStack(spacing: 16) {
             Spacer()
             Image(systemName: searchText.isEmpty ? "clock.arrow.circlepath" : "magnifyingglass")
-                .font(.system(size: 44))
+                .font(.system(size: 44 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.tertiary.opacity(0.4))
             Text(searchText.isEmpty ? "No activities yet" : "No matching activities")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(AppTheme.Text.secondary)
             Text(searchText.isEmpty ? "Activity will appear here as trips, alerts and maintenance events happen." : "Try a different search term or filter.")
-                .font(.system(size: 13, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                 .foregroundColor(AppTheme.Text.tertiary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)

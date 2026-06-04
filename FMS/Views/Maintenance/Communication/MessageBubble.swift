@@ -22,7 +22,7 @@ struct MessageBubble: View {
                     messageContent
                     
                     Text(timestamp.formatted(date: .omitted, time: .shortened))
-                        .font(.system(size: 9))
+                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.tertiary)
                         .padding(.trailing, 4)
                 }
@@ -32,7 +32,7 @@ struct MessageBubble: View {
                     messageContent
                     
                     Text(timestamp.formatted(date: .omitted, time: .shortened))
-                        .font(.system(size: 9))
+                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.tertiary)
                         .padding(.leading, 4)
                 }
@@ -85,7 +85,7 @@ struct MessageBubble: View {
 
     private var fallbackText: some View {
         Text(text)
-            .font(.system(size: 14, weight: .medium))
+            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
             .foregroundColor(isSender ? .white : AppTheme.Text.primary)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
