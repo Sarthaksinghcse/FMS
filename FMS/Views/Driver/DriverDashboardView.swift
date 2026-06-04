@@ -36,17 +36,20 @@ struct DriverDashboardView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Group {
-                if selectedTab == 0 {
-                    DriverHomeTab(vm: vm, selectedTab: $selectedTab)
-                } else {
-                    DriverTripsTab(vm: vm)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            TabView(selection: $selectedTab) {
+                DriverHomeTab(vm: vm, selectedTab: $selectedTab)
+                    .tabItem {
+                        Label("Dashboard", systemImage: "square.grid.2x2.fill")
+                    }
+                    .tag(0)
 
-            DriverBottomTabBar(selectedTab: $selectedTab)
-                .padding(.bottom, 16)
+                DriverTripsTab(vm: vm)
+                    .tabItem {
+                        Label("Trips", systemImage: "road.lanes")
+                    }
+                    .tag(1)
+            }
+            .tint(Color.fmsIndigo)
 
             if vm.showSOSCountdown {
                 SOSCountdownOverlay(isPresented: $vm.showSOSCountdown) {
@@ -273,46 +276,6 @@ struct DriverDashboardView: View {
 }
 
 
-struct DriverBottomTabBar: View {
-    @Binding var selectedTab: Int
-
-    var body: some View {
-        HStack(spacing: 12) {
-            tabButton(index: 0, icon: "square.grid.2x2.fill", label: "Dashboard")
-            tabButton(index: 1, icon: "road.lanes", label: "Trips")
-        }
-        .padding(6)
-        .glassEffect(.regular, in: Capsule())
-    }
-
-    private func tabButton(index: Int, icon: String, label: String) -> some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                selectedTab = index
-            }
-        } label: {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
-                Text(label)
-                    .font(.system(size: 10, weight: .medium))
-            }
-            .foregroundColor(selectedTab == index ? Color.fmsIndigo : Color.black.opacity(0.6))
-            .frame(width: 80, height: 48)
-            .background(
-                Group {
-                    if selectedTab == index {
-                        Capsule()
-                            .fill(Color.black.opacity(0.05))
-                    } else {
-                        Color.clear
-                    }
-                }
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
 
 
 
