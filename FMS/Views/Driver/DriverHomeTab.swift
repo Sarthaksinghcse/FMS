@@ -182,18 +182,33 @@ private struct DashboardInlineHeader: View {
             // ── Gap between bell and avatar ───────────────────────────
             Spacer().frame(width: 12)
 
-            // ── Driver initials avatar ──────────────────────────────
+            // ── Driver profile avatar ──────────────────────────────
             Button {
                 vm.showProfile = true
             } label: {
-                Text(initials)
-                    .font(.system(size: 14, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Color.fmsIndigo)
-                    .clipShape(Circle())
+                ZStack {
+                    if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                       let imageURL = URL(string: imageURLString) {
+                        CachedAsyncImage(url: imageURL) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                    } else {
+                        Text(initials)
+                            .font(.system(size: 14, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.fmsIndigo)
+                            .clipShape(Circle())
+                    }
+                }
             }
             .buttonStyle(.plain)
         }

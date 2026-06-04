@@ -18,6 +18,7 @@ struct FleetContentView: View {
     @State private var isPulsing = false
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var usersRealtimeChannel: RealtimeChannelV2?
+    @State private var generalRealtimeChannel: RealtimeChannelV2?
     @State private var activeSOSAlert: DBSOSAlert?
     @State private var pollingTask: Task<Void, Never>?
     @State private var acknowledgedAlertIds = Set<UUID>()
@@ -235,6 +236,7 @@ struct FleetContentView: View {
         .task {
             startRealtimeSOSListener()
             startRealtimeUsersListener()
+            startRealtimeGeneralListener()
             
             // Sync immediately on startup to get the latest online/offline active SOS
             await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -269,6 +271,12 @@ struct FleetContentView: View {
                     await client.removeChannel(activeUsersChannel)
                 }
                 usersRealtimeChannel = nil
+            }
+            if let activeGeneralChannel = generalRealtimeChannel {
+                Task {
+                    await client.removeChannel(activeGeneralChannel)
+                }
+                generalRealtimeChannel = nil
             }
         }
     }
@@ -493,6 +501,46 @@ struct FleetContentView: View {
             }
         } catch {
             print("⚠️ [SOS Polling] Failed to fetch active SOS: \(error.localizedDescription)")
+        }
+    }
+    
+    private func startRealtimeGeneralListener() {
+        guard generalRealtimeChannel == nil else { return }
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("fleet_manager_general_realtime_channel")
+        self.generalRealtimeChannel = channel
+        
+        Task {
+            let tripsStream = channel.postgresChange(AnyAction.self, schema: "public", table: "trips")
+            let defectStream = channel.postgresChange(AnyAction.self, schema: "public", table: "defect_reports")
+            let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
+            let notifStream = channel.postgresChange(AnyAction.self, schema: "public", table: "notifications")
+            let taskStream = channel.postgresChange(AnyAction.self, schema: "public", table: "maintenance_tasks")
+            let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
+            let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+            let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
+            
+            try? await channel.subscribeWithError()
+            print("🟢 [FleetContentView Realtime] Subscribed successfully to general database changes.")
+            
+            async let _ : () = handleStream(tripsStream)
+            async let _ : () = handleStream(defectStream)
+            async let _ : () = handleStream(workOrderStream)
+            async let _ : () = handleStream(notifStream)
+            async let _ : () = handleStream(taskStream)
+            async let _ : () = handleStream(vehicleStream)
+            async let _ : () = handleStream(complianceStream)
+            async let _ : () = handleStream(routeDevStream)
+        }
+    }
+    
+    private func handleStream<S: AsyncSequence>(_ stream: S) async {
+        do {
+            for try await _ in stream {
+                await SupabaseManager.shared.syncAllData(context: modelContext)
+            }
+        } catch {
+            print("❌ [FleetContentView Realtime] Stream error: \(error)")
         }
     }
 }

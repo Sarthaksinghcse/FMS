@@ -981,6 +981,7 @@ final class SupabaseManager {
                         local.email = rd.email
                         local.phoneNumber = rd.phoneNumber ?? ""
                         local.role = rd.role.asLocalRole
+                        local.profileImageURL = rd.profileImage
                         local.isActive = rd.isActive
                     } else {
                         context.insert(rd.asLocalUser)
@@ -1007,6 +1008,7 @@ final class SupabaseManager {
                         local.email = rm.email
                         local.phoneNumber = rm.phoneNumber ?? ""
                         local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
                         local.isActive = rm.isActive
                     } else {
                         context.insert(rm.asLocalUser)
@@ -1033,6 +1035,7 @@ final class SupabaseManager {
                         local.email = rm.email
                         local.phoneNumber = rm.phoneNumber ?? ""
                         local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
                         local.isActive = rm.isActive
                     } else {
                         context.insert(rm.asLocalUser)

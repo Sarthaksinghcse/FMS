@@ -939,6 +939,18 @@ struct RaiseQuerySheet: View {
 
                     // Submit button
                     Button {
+                        let selectedReasonText = reasons[selectedReason]
+                        let details = customText
+                        Task {
+                            let driverName = SupabaseManager.shared.currentUser?.name ?? "Driver"
+                            let title = "New Driver Query"
+                            let message = "Driver \(driverName) raised a query: \(selectedReasonText). Details: \(details)"
+                            await SupabaseManager.shared.notifyFleetManagers(
+                                title: title,
+                                message: message,
+                                type: .info
+                            )
+                        }
                         withAnimation { submitted = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                             dismiss()
