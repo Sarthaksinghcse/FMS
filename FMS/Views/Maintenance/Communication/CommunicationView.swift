@@ -284,6 +284,9 @@ private struct CommunicationRow: View {
                 Text(channel.initials)
                     .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(channel.avatarColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: 36, height: 36, alignment: .center)
             }
             
             VStack(alignment: .leading, spacing: 2) {

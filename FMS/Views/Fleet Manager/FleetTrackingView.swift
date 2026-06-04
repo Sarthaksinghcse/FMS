@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
 struct FleetTrackingView: View {
     @State private var viewModel = FleetTrackingViewModel()
@@ -10,6 +11,7 @@ struct FleetTrackingView: View {
     var initialSelectedVehicleId: UUID? = nil
     
     var body: some View {
+        GeometryReader { outerGeometry in
         ZStack(alignment: .bottom) {
             Map(position: $cameraPosition, selection: $selectedVehicle) {
                 MapCircle(center: viewModel.hubCoordinate, radius: viewModel.geofenceRadius)
@@ -61,7 +63,8 @@ struct FleetTrackingView: View {
                             ForEach(viewModel.mappedVehicles) { vehicle in
                                 VehicleHorizontalCard(
                                     mappedVehicle: vehicle,
-                                    isSelected: selectedVehicle == vehicle
+                                    isSelected: selectedVehicle == vehicle,
+                                    containerWidth: outerGeometry.size.width
                                 )
                                 .id(vehicle.id)
                                 .onTapGesture {
@@ -104,6 +107,7 @@ struct FleetTrackingView: View {
                 .padding(.bottom, 24)
             }
         }
+        } // GeometryReader
         .navigationTitle("Live Tracking")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -170,25 +174,38 @@ struct FleetTrackingView: View {
         }
         
         Task {
-            let geocoder = CLGeocoder()
             do {
-                let sourcePlacemarks = try? await geocoder.geocodeAddressString(trip.source)
-                let destPlacemarks = try? await geocoder.geocodeAddressString(trip.destination)
+                // Use MKLocalSearch for geocoding (non-deprecated MapKit API)
+                let sourceRequest = MKLocalSearch.Request()
+                sourceRequest.naturalLanguageQuery = trip.source
+                let sourceSearch = MKLocalSearch(request: sourceRequest)
+                let sourceResponse = try? await sourceSearch.start()
                 
-                let sourceCoord = sourcePlacemarks?.first?.location?.coordinate ?? vehicle.coordinate
-                let destCoord = destPlacemarks?.first?.location?.coordinate
+                let destRequest = MKLocalSearch.Request()
+                destRequest.naturalLanguageQuery = trip.destination
+                let destSearch = MKLocalSearch(request: destRequest)
+                let destResponse = try? await destSearch.start()
+                
+                let sourceCoord = sourceResponse?.mapItems.first?.location.coordinate ?? vehicle.coordinate
+                let destCoord = destResponse?.mapItems.first?.location.coordinate
                 
                 guard let source = sourceCoord, let dest = destCoord else {
                     await MainActor.run { withAnimation { currentRoute = nil } }
                     return
                 }
                 
-                let request = MKDirections.Request()
-                request.source = MKMapItem(placemark: MKPlacemark(coordinate: source))
-                request.destination = MKMapItem(placemark: MKPlacemark(coordinate: dest))
-                request.transportType = .automobile
+                let dirRequest = MKDirections.Request()
+                dirRequest.source = sourceResponse?.mapItems.first ?? MKMapItem(
+                    location: CLLocation(latitude: source.latitude, longitude: source.longitude),
+                    address: MKAddress(fullAddress: trip.source, shortAddress: nil)
+                )
+                dirRequest.destination = destResponse?.mapItems.first ?? MKMapItem(
+                    location: CLLocation(latitude: dest.latitude, longitude: dest.longitude),
+                    address: MKAddress(fullAddress: trip.destination, shortAddress: nil)
+                )
+                dirRequest.transportType = .automobile
                 
-                let directions = MKDirections(request: request)
+                let directions = MKDirections(request: dirRequest)
                 let response = try await directions.calculate()
                 
                 await MainActor.run {
@@ -209,8 +226,15 @@ struct FleetTrackingView: View {
 struct VehicleHorizontalCard: View {
     let mappedVehicle: MappedVehicle
     let isSelected: Bool
+    var containerWidth: CGFloat = 390
     
     var body: some View {
+        cardContent
+            .frame(width: isSelected ? containerWidth - 48 : 220)
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
+    }
+    
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(mappedVehicle.trip?.tripCode ?? "No Active Trip")
@@ -310,7 +334,6 @@ struct VehicleHorizontalCard: View {
             .padding(.top, 4)
         }
         .padding(16)
-        .frame(width: isSelected ? UIScreen.main.bounds.width - 48 : 220)
         .background(
             ZStack {
                 AppTheme.Background.card
@@ -325,7 +348,6 @@ struct VehicleHorizontalCard: View {
         )
         .cornerRadius(AppTheme.Radius.card)
         .shadow(color: AppTheme.Shadow.card, radius: isSelected ? 12 : 6, x: 0, y: isSelected ? 6 : 3)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
     }
     
     private func timeAgo(from date: Date) -> String {

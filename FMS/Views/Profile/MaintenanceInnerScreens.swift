@@ -83,6 +83,9 @@ struct MaintenanceEditProfileView: View {
                                                 Text(initials.isEmpty ? "MP" : initials)
                                                     .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                     .foregroundColor(.white)
+                                                    .lineLimit(1)
+                                                    .minimumScaleFactor(0.5)
+                                                    .frame(width: 80, height: 80, alignment: .center)
                                             } else {
                                                 ProgressView()
                                             }
@@ -102,6 +105,9 @@ struct MaintenanceEditProfileView: View {
                                         Text(initials.isEmpty ? "MP" : initials)
                                             .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.white)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.5)
+                                            .frame(width: 80, height: 80, alignment: .center)
                                     }
                                 }
                             }
@@ -704,8 +710,8 @@ struct MaintenanceSecuritySettingsView: View {
                                 ProfileToggleRow(
                                     icon: "faceid",
                                     iconColor: AppTheme.Brand.primary,
-                                    title: "Face ID / Touch ID",
-                                    subtitle: "Use biometrics to unlock",
+                                    title: "Face ID ",
+                                    subtitle: "",
                                     isOn: $biometricEnabled
                                 )
                             }

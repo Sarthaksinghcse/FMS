@@ -1101,6 +1101,7 @@ final class SupabaseManager {
                         local.priority = rwo.priority.toLocalPriority
                         local.workDescription = rwo.issueDescription
                         local.status = rwo.status.toLocalStatus
+                        local.estimatedCost = rwo.estimatedCost
                     } else {
                         context.insert(rwo.asLocalWorkOrder)
                     }
@@ -1337,10 +1338,18 @@ final class SupabaseManager {
         return try await client
             .from("trip_logs")
             .select()
-            .eq("trip_id", value: tripId)
+            .eq("trip_id", value: tripId.uuidString)
             .order("created_at", ascending: false)
             .execute()
             .value
+    }
+    
+    func updateTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .update(log)
+            .eq("id", value: log.id.uuidString)
+            .execute()
     }
     
     // Fuel Logs

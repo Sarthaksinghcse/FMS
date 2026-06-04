@@ -192,6 +192,9 @@ struct MaintenanceDashboardTab: View {
                                             Text(initials)
                                                 .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                 .foregroundColor(.white)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.5)
+                                                .frame(width: 40, height: 40, alignment: .center)
                                         }
                                     }
                                 }
@@ -232,6 +235,16 @@ struct MaintenanceDashboardTab: View {
             }
         }
     }
+
+
+
+
+
+
+
+
+
+
 
     // MARK: - Overview Cards (fully tappable via NavigationLink)
 

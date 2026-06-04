@@ -223,6 +223,9 @@ struct FleetManagerChatListView: View {
                     Text(String(user.name.prefix(2)).uppercased())
                         .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(roleColor(for: user.role))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: 48, height: 48, alignment: .center)
                 }
                 
                 // Status dot indicator

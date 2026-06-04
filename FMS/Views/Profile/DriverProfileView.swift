@@ -193,6 +193,9 @@ struct DriverProfileView: View {
                                     Text(initials)
                                         .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.5)
+                                        .frame(width: 90, height: 90, alignment: .center)
                                 }
                             }
                             .frame(width: 90, height: 90)
@@ -201,6 +204,9 @@ struct DriverProfileView: View {
                             Text(initials)
                                 .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 90, height: 90, alignment: .center)
                         }
                     }
 

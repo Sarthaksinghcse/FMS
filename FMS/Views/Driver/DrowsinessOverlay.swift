@@ -99,6 +99,7 @@ struct DrowsinessAlarmView: View {
     @ObservedObject private var accessibility = AccessibilityManager.shared
 
     var body: some View {
+        GeometryReader { geometry in
         ZStack {
             // Native dark glass background
             Rectangle()
@@ -111,7 +112,7 @@ struct DrowsinessAlarmView: View {
                 colors: [AppTheme.Status.danger.opacity(flashOn ? 0.8 : 0.0), .clear],
                 center: .center,
                 startRadius: 50,
-                endRadius: UIScreen.main.bounds.height / 1.5
+                endRadius: geometry.size.height / 1.5
             )
             .ignoresSafeArea()
 
@@ -160,6 +161,7 @@ struct DrowsinessAlarmView: View {
             // Trigger initial critical haptic
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
+        } // GeometryReader
     }
 }
 

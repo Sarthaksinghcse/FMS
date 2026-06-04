@@ -123,6 +123,9 @@ struct DriverHistoryView: View {
                     Text(initials(for: driver.fullName))
                         .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: 72, height: 72, alignment: .center)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {

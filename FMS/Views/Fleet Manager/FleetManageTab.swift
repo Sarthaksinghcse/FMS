@@ -1120,9 +1120,12 @@ struct MaintenanceStaffListView: View {
                     } else {
                         LazyVStack(spacing: 16) {
                             ForEach(filteredStaff) { staff in
-                                staffCard(for: staff)
-                                    .opacity(cardAnimations[staff.id] == true ? 1 : 0)
-                                    .offset(y: cardAnimations[staff.id] == true ? 0 : 30)
+                                NavigationLink(destination: TechnicianWorkDetailsView(technician: staff).environment(\.modelContext, modelContext)) {
+                                    staffCard(for: staff)
+                                }
+                                .buttonStyle(.plain)
+                                .opacity(cardAnimations[staff.id] == true ? 1 : 0)
+                                .offset(y: cardAnimations[staff.id] == true ? 0 : 30)
                             }
                         }
                         .padding(.horizontal, 24)
@@ -1164,8 +1167,7 @@ struct MaintenanceStaffListView: View {
     }
 
     private func staffCard(for staff: User) -> some View {
-        let orders = workOrderCount(for: staff.id)
-        return ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topTrailing) {
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
@@ -2180,6 +2182,9 @@ struct TripDetailView: View {
                         Text(initials(for: driver.fullName))
                             .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.royalBlue)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 40, height: 40, alignment: .center)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {

@@ -142,6 +142,9 @@ struct FleetDashboardView: View {
                                             Text(managerInitials)
                                                 .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                 .foregroundColor(.white)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.5)
+                                                .frame(width: 40, height: 40, alignment: .center)
                                         }
                                     }
                                 }

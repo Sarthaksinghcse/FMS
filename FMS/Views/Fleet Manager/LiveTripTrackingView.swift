@@ -132,6 +132,9 @@ struct LiveTripTrackingView: View {
                             Text(driverInitials(for: driverName))
                                 .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Brand.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 42, height: 42, alignment: .center)
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {

@@ -19,9 +19,5 @@
 	<array>
 		<string>location</string>
 	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>FMS needs microphone access to record voice trip logs.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>FMS uses speech recognition to transcribe your voice trip notes.</string>
 </dict>
 </plist>

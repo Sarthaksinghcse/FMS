@@ -171,7 +171,9 @@ struct DriverProfileSheet: View {
                                 Text(initials)
                                     .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .frame(width: 90, height: 90, alignment: .center)
                                     .background(
                                         LinearGradient(
                                             colors: [AppTheme.Status.success, AppTheme.Brand.teal],
@@ -186,6 +188,9 @@ struct DriverProfileSheet: View {
                             Text(initials)
                                 .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 90, height: 90, alignment: .center)
                         }
                     }
 
@@ -306,8 +311,8 @@ struct DriverProfileSheet: View {
 
                 ProfileSettingsRow(
                     icon: "creditcard.fill",
-                    iconColor: AppTheme.Brand.amber,
-                    iconBg: AppTheme.IconBg.amber,
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.IconBg.indigo,
                     title: "License Details",
                     subtitle: "View driving license & validity"
                 ) {
@@ -318,8 +323,8 @@ struct DriverProfileSheet: View {
 
                 ProfileSettingsRow(
                     icon: "bell.badge.fill",
-                    iconColor: AppTheme.Status.danger,
-                    iconBg: AppTheme.IconBg.red,
+                    iconColor: AppTheme.Status.success,
+                    iconBg: AppTheme.IconBg.indigo,
                     title: "Notifications",
                     subtitle: "Manage alert preferences"
                 ) {
@@ -379,10 +384,10 @@ struct DriverProfileSheet: View {
                 Text("Sign Out")
                     .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
             }
-            .foregroundColor(AppTheme.Status.danger)
+            .foregroundColor(AppTheme.Status.success)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(AppTheme.Status.danger.opacity(0.08))
+            .background(AppTheme.Status.success.opacity(0.08))
             .cornerRadius(AppTheme.Radius.medium)
         }
         .buttonStyle(PlainButtonStyle())
