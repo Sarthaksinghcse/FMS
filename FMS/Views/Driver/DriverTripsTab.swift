@@ -133,11 +133,15 @@ struct DriverTripsTab: View {
                 } else {
                     // ── COMPLETED TRIPS ───────────────────────────────────────
                     if vm.completedTrips.isEmpty {
-                        Spacer()
-                        EmptyTripsCell(icon: "checkmark.seal",
-                                       message: "No completed trips yet",
-                                       subtitle: "Trips you finish will appear here with full details.")
-                        Spacer()
+                        ScrollView {
+                            VStack {
+                                Spacer().frame(height: 80)
+                                EmptyTripsCell(icon: "checkmark.seal",
+                                               message: "No completed trips yet",
+                                               subtitle: "Trips you finish will appear here with full details.")
+                                Spacer()
+                            }
+                        }
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 14) {
@@ -152,7 +156,7 @@ struct DriverTripsTab: View {
                     }
                 }
             }
-            .refreshable { await vm.load() }
+            .refreshable { await vm.load(context: modelContext) }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trips")
             .navigationBarTitleDisplayMode(.large)
@@ -1228,7 +1232,7 @@ struct TripNavigationView: View {
 
             // ── Sheets ───────────────────────────────────────────────────────
             .sheet(isPresented: $showPreTripNav) {
-                InspectionFormSheet(isPreTrip: true) { passed, _, _ in
+                InspectionFormSheet(isPreTrip: true, vehicleId: trip.vehicleId, initialVehicleNumber: vm.vehicleForTrip(trip)?.vehicleNumber) { passed, _, _ in
                     preTripPassed = passed
                 }
             }
