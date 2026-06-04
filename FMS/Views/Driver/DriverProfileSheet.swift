@@ -306,8 +306,8 @@ struct DriverProfileSheet: View {
 
                 ProfileSettingsRow(
                     icon: "creditcard.fill",
-                    iconColor: AppTheme.Brand.amber,
-                    iconBg: AppTheme.IconBg.amber,
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.IconBg.indigo,
                     title: "License Details",
                     subtitle: "View driving license & validity"
                 ) {
@@ -318,8 +318,8 @@ struct DriverProfileSheet: View {
 
                 ProfileSettingsRow(
                     icon: "bell.badge.fill",
-                    iconColor: AppTheme.Status.danger,
-                    iconBg: AppTheme.IconBg.red,
+                    iconColor: AppTheme.Status.success,
+                    iconBg: AppTheme.IconBg.indigo,
                     title: "Notifications",
                     subtitle: "Manage alert preferences"
                 ) {
@@ -379,10 +379,10 @@ struct DriverProfileSheet: View {
                 Text("Sign Out")
                     .font(.system(size: 16, weight: .semibold))
             }
-            .foregroundColor(AppTheme.Status.danger)
+            .foregroundColor(AppTheme.Status.success)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(AppTheme.Status.danger.opacity(0.08))
+            .background(AppTheme.Status.success.opacity(0.08))
             .cornerRadius(AppTheme.Radius.medium)
         }
         .buttonStyle(PlainButtonStyle())
