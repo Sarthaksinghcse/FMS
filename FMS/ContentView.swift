@@ -27,7 +27,13 @@ struct ContentView: View {
                         }
                     }
             } else {
-                if let user = supabaseManager.currentUser {
+                if supabaseManager.mfaChallengeRequired {
+                    MFAVerificationView()
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.95)),
+                            removal: .opacity
+                        ))
+                } else if let user = supabaseManager.currentUser {
                     switch user.role {
                     case .fleetManager:
                         FleetContentView()

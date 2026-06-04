@@ -14,6 +14,7 @@
 import SwiftUI
 import PhotosUI
 import SwiftData
+import Supabase
 
 
 
@@ -546,6 +547,13 @@ struct DriverSecuritySettingsView: View {
     @State private var showErrorAlert = false
     @State private var errorAlertMessage = ""
 
+    // MFA state
+    @State private var showMFAEnrollment = false
+    @State private var mfaEnabled = false
+    @State private var enrolledFactors: [Factor] = []
+    @State private var showDisableMFAConfirm = false
+    @State private var isCheckingMFA = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -598,6 +606,53 @@ struct DriverSecuritySettingsView: View {
                                     subtitle: "",
                                     isOn: $biometricEnabled
                                 )
+                                
+                                Divider().padding(.leading, 66)
+                                
+                                Button {
+                                    if mfaEnabled {
+                                        showDisableMFAConfirm = true
+                                    } else {
+                                        showMFAEnrollment = true
+                                    }
+                                } label: {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: "shield.checkered")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(AppTheme.Brand.royalBlue)
+                                            .frame(width: 36, height: 36)
+                                            .background(AppTheme.Brand.royalBlue.opacity(0.10))
+                                            .clipShape(RoundedRectangle(cornerRadius: 9))
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("2-Step Verification")
+                                                .font(.system(size: 15, weight: .medium))
+                                                .foregroundColor(AppTheme.Text.primary)
+                                            Text(mfaEnabled ? "Google Authenticator is active" : "Google Authenticator is off")
+                                                .font(.system(size: 12))
+                                                .foregroundColor(AppTheme.Text.secondary)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        if isCheckingMFA {
+                                            ProgressView()
+                                                .scaleEffect(0.8)
+                                        } else {
+                                            Text(mfaEnabled ? "Enabled" : "Setup")
+                                                .font(.system(size: 13, weight: .semibold))
+                                                .foregroundColor(mfaEnabled ? AppTheme.Status.success : AppTheme.Text.tertiary)
+                                                .padding(.trailing, 2)
+                                            
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundColor(AppTheme.Text.tertiary.opacity(0.7))
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                }
+                                .buttonStyle(PremiumRowButtonStyle())
                             }
                             .background(AppTheme.Background.card)
                             .cornerRadius(AppTheme.Radius.card)
@@ -648,6 +703,71 @@ struct DriverSecuritySettingsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorAlertMessage)
+            }
+            .sheet(isPresented: $showMFAEnrollment, onDismiss: {
+                fetchMFAFactors()
+            }) {
+                MFAEnrollmentView()
+                    .environment(supabaseManager)
+            }
+            .confirmationDialog(
+                "Disable 2-Step Verification",
+                isPresented: $showDisableMFAConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Disable Two-Step Verification", role: .destructive) {
+                    disableMFA()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to turn off two-step verification? Your account will be less secure.")
+            }
+            .task {
+                fetchMFAFactors()
+            }
+        }
+    }
+
+    private func fetchMFAFactors() {
+        isCheckingMFA = true
+        Task {
+            do {
+                let factors = try await supabaseManager.getMFAFactors()
+                await MainActor.run {
+                    self.enrolledFactors = factors.verified
+                    self.mfaEnabled = !factors.verified.isEmpty
+                    self.isCheckingMFA = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.isCheckingMFA = false
+                }
+            }
+        }
+    }
+    
+    private func disableMFA() {
+        guard let factor = enrolledFactors.first else { return }
+        
+        isSaving = true
+        Task {
+            do {
+                try await supabaseManager.unenrollMFA(factorId: factor.id)
+                await MainActor.run {
+                    self.isSaving = false
+                    self.mfaEnabled = false
+                    self.enrolledFactors = []
+                    let successGenerator = UINotificationFeedbackGenerator()
+                    successGenerator.notificationOccurred(.success)
+                }
+            } catch {
+                await MainActor.run {
+                    self.isSaving = false
+                    self.errorAlertMessage = error.localizedDescription
+                    self.showErrorAlert = true
+                    let errorGenerator = UINotificationFeedbackGenerator()
+                    errorGenerator.notificationOccurred(.error)
+                }
             }
         }
     }

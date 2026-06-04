@@ -1255,8 +1255,11 @@ struct MaintenanceStaffListView: View {
     private func staffStatusBadge(isActive: Bool) -> some View {
         HStack(spacing: 5) {
             Circle().fill(isActive ? AppTheme.Status.success : AppTheme.Brand.accent).frame(width: 7, height: 7)
-            Text(isActive ? "Available" : "Busy").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+            Text(isActive ? "Available" : "Busy")
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.accent)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 10).padding(.vertical, 4)
         .background(Capsule().fill((isActive ? AppTheme.Status.success : AppTheme.Brand.accent).opacity(0.12)))
@@ -1264,8 +1267,12 @@ struct MaintenanceStaffListView: View {
 
     private var staffRoleBadge: some View {
         HStack(spacing: 4) {
-            Image(systemName: "wrench.and.screwdriver").font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
-            Text("Technician").font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+            Image(systemName: "wrench.and.screwdriver")
+                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
+            Text("Technician")
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .foregroundColor(AppTheme.Brand.accent)
         .padding(.horizontal, 10).padding(.vertical, 4)
