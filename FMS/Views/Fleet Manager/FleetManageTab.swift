@@ -1167,8 +1167,7 @@ struct MaintenanceStaffListView: View {
     }
 
     private func staffCard(for staff: User) -> some View {
-        let orders = workOrderCount(for: staff.id)
-        return ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topTrailing) {
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
