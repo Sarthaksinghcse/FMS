@@ -199,8 +199,8 @@ struct FMSecuritySettingsView: View {
                                 ProfileToggleRow(
                                     icon: "faceid",
                                     iconColor: AppTheme.Brand.primary,
-                                    title: "Face ID / Touch ID",
-                                    subtitle: "Use biometrics to unlock",
+                                    title: "Face ID",
+                                    subtitle: "",
                                     isOn: $biometricEnabled
                                 )
                             }

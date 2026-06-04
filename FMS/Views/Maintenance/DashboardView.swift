@@ -192,6 +192,9 @@ struct MaintenanceDashboardTab: View {
                                             Text(initials)
                                                 .font(.system(size: 14, weight: .bold, design: .rounded))
                                                 .foregroundColor(.white)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.5)
+                                                .frame(width: 40, height: 40, alignment: .center)
                                         }
                                     }
                                 }
@@ -209,7 +212,7 @@ struct MaintenanceDashboardTab: View {
                     .padding(.top, 12)
                     .padding(.bottom, 32)
                 }
-                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .scrollBounceBehavior(.always, axes: .vertical)
                 .refreshable {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
@@ -223,15 +226,21 @@ struct MaintenanceDashboardTab: View {
             }
             .sheet(isPresented: $showChat) {
                 NavigationStack {
-                    if let channel = managerChannel {
-                        ChatDetailView(channel: channel)
-                    } else {
-                        CommunicationView()
-                    }
+                    CommunicationView()
                 }
             }
         }
     }
+
+
+
+
+
+
+
+
+
+
 
     // MARK: - Overview Cards (fully tappable via NavigationLink)
 
@@ -249,7 +258,7 @@ struct MaintenanceDashboardTab: View {
                     iconColor: AppTheme.Text.secondary,
                     iconBg: Color(.systemGray6),
                     gradient: [Color.clear, Color.clear],
-                    title: "Schedule",
+                    title: "Scheduled",
                     value: "\(scheduledToday.count)",
                     footnote: scheduledToday.count == 1 ? "1 open work order" : "\(scheduledToday.count) open work orders",
                     valueColor: Color(red: 0.08, green: 0.12, blue: 0.22)

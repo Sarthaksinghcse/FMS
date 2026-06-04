@@ -110,6 +110,7 @@ CREATE TABLE public.work_orders (
     priority          work_order_priority NOT NULL DEFAULT 'medium',
     issue_description TEXT NOT NULL,
     status            work_order_status NOT NULL DEFAULT 'open',
+    estimated_cost    NUMERIC(10, 2),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

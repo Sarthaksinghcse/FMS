@@ -10,6 +10,8 @@ struct ActiveNavigationOverlay: View {
     @ObservedObject var nav: NavigationManager
     let onEndTrip: () -> Void
     let onSOS: () -> Void
+    let onVoiceLog: () -> Void
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     // Collapsed / expanded turn list
     @State private var showStepList = false
@@ -33,28 +35,29 @@ struct ActiveNavigationOverlay: View {
 
     private var nextManeuverBanner: some View {
         let step = currentStep
+        let largeTap = accessibility.driverLargeTapTargets
         return HStack(spacing: 14) {
             // Direction arrow
             ZStack {
                 Circle()
                     .fill(Color.fmsIndigo)
-                    .frame(width: 52, height: 52)
+                    .frame(width: largeTap ? 64 : 52, height: largeTap ? 64 : 52)
                     .shadow(color: Color.fmsIndigo.opacity(0.45), radius: 8, y: 3)
                 Image(systemName: step?.sfSymbol ?? "arrow.up")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: largeTap ? 26 : 22, weight: .bold))
                     .foregroundStyle(.white)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 // Distance to maneuver
                 Text(formattedDistance(nav.distanceToNextManeuver))
-                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .font(.system(size: largeTap ? 34 : 28, weight: .black, design: .rounded))
                     .foregroundStyle(.primary)
                     .monospacedDigit()
 
                 // Street name / instruction
                 Text(step?.instruction ?? "Head towards destination")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: largeTap ? 17 : 14, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
@@ -206,6 +209,9 @@ struct ActiveNavigationOverlay: View {
 
     private var actionButtonsRow: some View {
         HStack(spacing: 10) {
+            MapActionButton(label: "Voice Log", icon: "mic.fill", style: .glass) {
+                onVoiceLog()
+            }
             MapActionButton(label: "Defect", icon: "wrench.and.screwdriver.fill", style: .warning) {}
             MapActionButton(label: "SOS",    icon: "sos",                          style: .destructive) {
                 onSOS()

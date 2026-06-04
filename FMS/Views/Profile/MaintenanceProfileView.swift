@@ -12,6 +12,7 @@ struct MaintenanceProfileView: View {
     @State private var showSpecializations = false
     @State private var showNotificationSettings = false
     @State private var showSecuritySettings = false
+    @State private var showAccessibilitySettings = false
     @State private var showHelpSupport = false
     @State private var showSignOutConfirm = false
 
@@ -71,6 +72,9 @@ struct MaintenanceProfileView: View {
             .sheet(isPresented: $showHelpSupport) {
                 MaintenanceHelpSupportView()
             }
+            .sheet(isPresented: $showAccessibilitySettings) {
+                AccessibilitySettingsView(role: .maintenance)
+            }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
                     dismiss()
@@ -115,6 +119,9 @@ struct MaintenanceProfileView: View {
                                 Text(initials)
                                     .font(.system(size: 32, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .frame(width: 90, height: 90, alignment: .center)
                             } else {
                                 ProgressView()
                             }
@@ -123,6 +130,9 @@ struct MaintenanceProfileView: View {
                         Text(initials)
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 90, height: 90, alignment: .center)
                     }
                 }
 
@@ -234,6 +244,18 @@ struct MaintenanceProfileView: View {
                     subtitle: "Password & authentication"
                 ) {
                     showSecuritySettings = true
+                }
+
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "accessibility.fill",
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.Brand.primary.opacity(0.12),
+                    title: "Accessibility",
+                    subtitle: "Speech, Contrast, Layout settings"
+                ) {
+                    showAccessibilitySettings = true
                 }
 
                 Divider().padding(.leading, 66)

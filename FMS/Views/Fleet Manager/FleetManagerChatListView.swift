@@ -175,7 +175,7 @@ struct FleetManagerChatListView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(Theme.fmsRed)
+                    .foregroundColor(Theme.royalBlue)
                     .bold()
                 }
                 
@@ -223,6 +223,9 @@ struct FleetManagerChatListView: View {
                     Text(String(user.name.prefix(2)).uppercased())
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundColor(roleColor(for: user.role))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: 48, height: 48, alignment: .center)
                 }
                 
                 // Status dot indicator

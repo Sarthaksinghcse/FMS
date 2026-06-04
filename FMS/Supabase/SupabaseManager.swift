@@ -70,10 +70,20 @@ final class SupabaseManager {
     var showResetPasswordSheet = false
     
     private init() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
         self.client = SupabaseClient(
             supabaseURL: Self.supabaseURL,
             supabaseKey: Self.supabaseAnonKey,
             options: SupabaseClientOptions(
+                db: .init(
+                    encoder: encoder,
+                    decoder: decoder
+                ),
                 auth: .init(
                     emitLocalSessionAsInitialSession: true
                 )
@@ -981,6 +991,7 @@ final class SupabaseManager {
                         local.email = rd.email
                         local.phoneNumber = rd.phoneNumber ?? ""
                         local.role = rd.role.asLocalRole
+                        local.profileImageURL = rd.profileImage
                         local.isActive = rd.isActive
                     } else {
                         context.insert(rd.asLocalUser)
@@ -1007,6 +1018,7 @@ final class SupabaseManager {
                         local.email = rm.email
                         local.phoneNumber = rm.phoneNumber ?? ""
                         local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
                         local.isActive = rm.isActive
                     } else {
                         context.insert(rm.asLocalUser)
@@ -1033,6 +1045,7 @@ final class SupabaseManager {
                         local.email = rm.email
                         local.phoneNumber = rm.phoneNumber ?? ""
                         local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
                         local.isActive = rm.isActive
                     } else {
                         context.insert(rm.asLocalUser)
@@ -1101,6 +1114,7 @@ final class SupabaseManager {
                         local.priority = rwo.priority.toLocalPriority
                         local.workDescription = rwo.issueDescription
                         local.status = rwo.status.toLocalStatus
+                        local.estimatedCost = rwo.estimatedCost
                     } else {
                         context.insert(rwo.asLocalWorkOrder)
                     }
@@ -1313,6 +1327,42 @@ final class SupabaseManager {
             .execute()
             .value
         return reports.first
+    }
+    
+    // Trip Logs (Voice Log)
+    func createTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .insert(log)
+            .execute()
+    }
+    
+    func fetchTripLogs() async throws -> [DBTripLog] {
+        return try await client
+            .from("trip_logs")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(500)
+            .execute()
+            .value
+    }
+    
+    func fetchTripLogs(for tripId: UUID) async throws -> [DBTripLog] {
+        return try await client
+            .from("trip_logs")
+            .select()
+            .eq("trip_id", value: tripId.uuidString)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+    }
+    
+    func updateTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .update(log)
+            .eq("id", value: log.id.uuidString)
+            .execute()
     }
     
     // Fuel Logs

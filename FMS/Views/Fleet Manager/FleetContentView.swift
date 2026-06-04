@@ -8,6 +8,7 @@ import AVFoundation
 
 struct FleetContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     @State private var selectedTab = 0
     
     @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]
@@ -17,6 +18,7 @@ struct FleetContentView: View {
     @State private var isPulsing = false
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var usersRealtimeChannel: RealtimeChannelV2?
+    @State private var generalRealtimeChannel: RealtimeChannelV2?
     @State private var activeSOSAlert: DBSOSAlert?
     @State private var pollingTask: Task<Void, Never>?
     @State private var acknowledgedAlertIds = Set<UUID>()
@@ -234,17 +236,19 @@ struct FleetContentView: View {
         .task {
             startRealtimeSOSListener()
             startRealtimeUsersListener()
+            startRealtimeGeneralListener()
             
             // Sync immediately on startup to get the latest online/offline active SOS
             await SupabaseManager.shared.syncAllData(context: modelContext)
             checkForActiveAlerts()
             
-            // Start safety polling loop to fetch SOS alerts in the background every 15 seconds
+            // Start background polling loop to sync all dashboard data and SOS alerts every 8 seconds
             pollingTask = Task {
                 while !Task.isCancelled {
-                    try? await Task.sleep(nanoseconds: 15_000_000_000)
+                    try? await Task.sleep(nanoseconds: 8_000_000_000)
                     if Task.isCancelled { break }
-                    print("🔄 [SOS Polling] Safety sync running...")
+                    print("🔄 [Fleet Manager Dashboard Polling] Syncing latest database changes...")
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
                     await syncActiveSOSAlerts()
                 }
             }
@@ -268,6 +272,12 @@ struct FleetContentView: View {
                     await client.removeChannel(activeUsersChannel)
                 }
                 usersRealtimeChannel = nil
+            }
+            if let activeGeneralChannel = generalRealtimeChannel {
+                Task {
+                    await client.removeChannel(activeGeneralChannel)
+                }
+                generalRealtimeChannel = nil
             }
         }
     }
@@ -492,6 +502,51 @@ struct FleetContentView: View {
             }
         } catch {
             print("⚠️ [SOS Polling] Failed to fetch active SOS: \(error.localizedDescription)")
+        }
+    }
+    
+    private func startRealtimeGeneralListener() {
+        guard generalRealtimeChannel == nil else { return }
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("fleet_manager_general_realtime_channel")
+        self.generalRealtimeChannel = channel
+        
+        Task {
+            let tripsStream = channel.postgresChange(AnyAction.self, schema: "public", table: "trips")
+            let defectStream = channel.postgresChange(AnyAction.self, schema: "public", table: "defect_reports")
+            let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
+            let notifStream = channel.postgresChange(AnyAction.self, schema: "public", table: "notifications")
+            let taskStream = channel.postgresChange(AnyAction.self, schema: "public", table: "maintenance_tasks")
+            let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
+            let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+            let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
+            
+            do {
+                try await channel.subscribeWithError()
+                print("🟢 [FleetContentView Realtime] Subscribed successfully to general database changes.")
+            } catch {
+                print("❌ [FleetContentView Realtime] Subscription failed: \(error.localizedDescription)")
+            }
+            
+            Task { await handleStream(tripsStream, tableName: "trips") }
+            Task { await handleStream(defectStream, tableName: "defect_reports") }
+            Task { await handleStream(workOrderStream, tableName: "work_orders") }
+            Task { await handleStream(notifStream, tableName: "notifications") }
+            Task { await handleStream(taskStream, tableName: "maintenance_tasks") }
+            Task { await handleStream(vehicleStream, tableName: "vehicles") }
+            Task { await handleStream(complianceStream, tableName: "compliance_alerts") }
+            Task { await handleStream(routeDevStream, tableName: "route_deviation_alerts") }
+        }
+    }
+    
+    private func handleStream<S: AsyncSequence>(_ stream: S, tableName: String) async {
+        do {
+            for try await action in stream {
+                print("🔔 [Realtime - FleetContentView] Received change on '\(tableName)': \(action)")
+                await SupabaseManager.shared.syncAllData(context: modelContext)
+            }
+        } catch {
+            print("❌ [Realtime - FleetContentView] Stream error on '\(tableName)': \(error.localizedDescription)")
         }
     }
 }

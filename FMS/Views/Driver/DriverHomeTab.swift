@@ -1,10 +1,13 @@
 
 
 import SwiftUI
+import SwiftData
 struct DriverHomeTab: View {
+    @Environment(\.modelContext) private var modelContext
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTab: Int
     @State private var selectedTripForAddress: DBTrip?
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     var body: some View {
         NavigationStack {
@@ -108,7 +111,7 @@ struct DriverHomeTab: View {
                     Spacer(minLength: 100)
                 }
             }
-            .refreshable { await vm.load() }
+            .refreshable { await vm.load(context: modelContext) }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationBarHidden(true)
             .sheet(item: $selectedTripForAddress) { trip in
@@ -181,16 +184,33 @@ private struct DashboardInlineHeader: View {
             // ── Gap between bell and avatar ───────────────────────────
             Spacer().frame(width: 12)
 
-            // ── Driver initials avatar ──────────────────────────────
+            // ── Driver profile avatar ──────────────────────────────
             Button {
                 vm.showProfile = true
             } label: {
-                Text(initials)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Color.fmsIndigo)
-                    .clipShape(Circle())
+                ZStack {
+                    if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                       let imageURL = URL(string: imageURLString) {
+                        CachedAsyncImage(url: imageURL) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                    } else {
+                        Text(initials)
+                            .font(.system(size: 14, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.fmsIndigo)
+                            .clipShape(Circle())
+                    }
+                }
             }
             .buttonStyle(.plain)
         }
@@ -230,6 +250,7 @@ private struct VerticalDashedLine: View {
 private struct LiveTripCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTripForAddress: DBTrip?
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     private func formatTime(_ date: Date) -> String {
         let f = DateFormatter()
@@ -383,18 +404,36 @@ private struct LiveTripCard: View {
                         .foregroundStyle(.primary)
                         .contentTransition(.numericText())
 
-                    HStack(spacing: 10) {
-                        Button {
-                            vm.mapActiveTrip = vm.activeTrip
-                            vm.showMaps = true
-                        } label: {
-                            Label("Navigate", systemImage: "location.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color.fmsIndigo)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 48)
-                                .background(Color.fmsIndigo.opacity(0.10))
-                                .cornerRadius(12)
+                    VStack(spacing: 10) {
+                        let largeTap = accessibility.driverLargeTapTargets
+                        let btnHeight: CGFloat = largeTap ? 64 : 48
+                        let btnFontSize: CGFloat = largeTap ? 17 : 14
+                        
+                        HStack(spacing: 10) {
+                            Button {
+                                vm.mapActiveTrip = vm.activeTrip
+                                vm.showMaps = true
+                            } label: {
+                                Label("Navigate", systemImage: "location.fill")
+                                    .font(.system(size: btnFontSize, weight: .bold))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: btnHeight)
+                                    .background(Color.fmsIndigo.opacity(0.10))
+                                    .cornerRadius(12)
+                            }
+
+                            Button {
+                                vm.showVoiceLog = true
+                            } label: {
+                                Label("Voice Log", systemImage: "mic.fill")
+                                    .font(.system(size: btnFontSize, weight: .bold))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: btnHeight)
+                                    .background(Color.fmsIndigo.opacity(0.10))
+                                    .cornerRadius(12)
+                            }
                         }
 
                         Button {
@@ -403,10 +442,10 @@ private struct LiveTripCard: View {
                             }
                         } label: {
                             Label("End Trip", systemImage: "stop.fill")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: btnFontSize, weight: .bold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 48)
+                                .frame(height: btnHeight)
                                 .background(AppTheme.Brand.accent.gradient)
                                 .cornerRadius(12)
                         }

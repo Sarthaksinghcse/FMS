@@ -97,3 +97,6 @@ ALTER TABLE public.fuel_logs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "fuel_logs_select" ON public.fuel_logs;
 CREATE POLICY "fuel_logs_select" ON public.fuel_logs FOR SELECT USING (TRUE);
+
+-- Add estimated_cost column to work_orders table
+ALTER TABLE public.work_orders ADD COLUMN IF NOT EXISTS estimated_cost NUMERIC(10, 2);

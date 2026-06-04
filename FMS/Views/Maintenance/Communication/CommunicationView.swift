@@ -48,6 +48,8 @@ struct CommunicationView: View {
         let otherUsers: [User]
         if supabase.currentUser?.role == .fleetManager {
             otherUsers = allUsers.filter { $0.id != currentUserId }
+        } else if supabase.currentUser?.role == .maintenance {
+            otherUsers = allUsers.filter { $0.id != currentUserId && ($0.role == .fleetManager || $0.role == .driver) }
         } else {
             otherUsers = allUsers.filter { $0.id != currentUserId && $0.role == .fleetManager }
         }
@@ -152,7 +154,7 @@ struct CommunicationView: View {
                     .padding(.horizontal)
 
                 // Category filters
-                if supabase.currentUser?.role == .fleetManager {
+                if supabase.currentUser?.role == .fleetManager || supabase.currentUser?.role == .maintenance {
                     MessageFilterView(selectedCategory: $selectedCategory)
                         .padding(.bottom, 8)
                 }
@@ -284,6 +286,9 @@ private struct CommunicationRow: View {
                 Text(channel.initials)
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(channel.avatarColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: 36, height: 36, alignment: .center)
             }
             
             VStack(alignment: .leading, spacing: 2) {
