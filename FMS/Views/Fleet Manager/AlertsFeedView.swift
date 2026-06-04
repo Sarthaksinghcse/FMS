@@ -316,6 +316,15 @@ struct AlertsFeedView: View {
                     }
                 )
             }
+            .sheet(item: $selectedDefectForAssignment) { defect in
+                AssignTechnicianSheet(
+                    defect: defect,
+                    users: users,
+                    viewModel: viewModel,
+                    context: modelContext,
+                    defectReports: defectReports
+                )
+            }
         }
     }
     
