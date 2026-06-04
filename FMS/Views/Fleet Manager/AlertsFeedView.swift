@@ -287,7 +287,7 @@ struct AlertsFeedView: View {
                     } label: {
                         Text("Close")
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(Theme.fmsRed)
+                            .foregroundColor(Theme.royalBlue)
                     }
                 }
 
@@ -1247,7 +1247,7 @@ struct SOSAlertDetailView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(Theme.fmsRed)
+                    .foregroundColor(Theme.royalBlue)
                 }
             }
             .onAppear {

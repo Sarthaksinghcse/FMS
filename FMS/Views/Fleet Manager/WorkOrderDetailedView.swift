@@ -83,6 +83,10 @@ struct WorkOrderDetailedView: View {
     @State private var isLoadingCostEstimate = false
     @State private var costEstimateError: String?
     
+    // PDF Sharing State
+    @State private var showShareSheet = false
+    @State private var pdfData: Data? = nil
+    
     // MARK: - Derived Properties (Real Data Only)
     
     private var associatedVehicle: Vehicle? {
@@ -131,20 +135,14 @@ struct WorkOrderDetailedView: View {
     
     // Numeric index mapping for the progress bar
     private var currentStepIndex: Int {
-        if order.status == .completed { return 6 }
-        if order.workDescription.contains("[PENDING_APPROVAL]") { return 3 } // Awaiting Approval
+        if order.status == .completed { return 3 }
+        if order.workDescription.contains("[PENDING_APPROVAL]") { return 1 } // Approval
         
         switch order.status {
         case .open:
             return 0 // Assigned
         case .inProgress:
-            // Map middle states based on work description keywords
-            let desc = order.workDescription.lowercased()
-            if desc.contains("inspection") { return 1 }
-            if desc.contains("diagnos") { return 2 }
-            if desc.contains("parts") { return 4 }
-            if desc.contains("quality") || desc.contains("check") { return 5 }
-            return 4 // Default Repair phase
+            return 2 // Repair
         default:
             return 0
         }
@@ -209,6 +207,17 @@ struct WorkOrderDetailedView: View {
         }
         .navigationTitle("Work Order Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    generateAndSharePDF()
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AppTheme.Brand.primary)
+                }
+            }
+        }
         .task {
             await fetchGeminiPredictiveAlert()
             buildApprovalHistory()
@@ -217,6 +226,11 @@ struct WorkOrderDetailedView: View {
         .sheet(isPresented: $showingInfoPrompt) {
             infoRequestSheet
                 .interactiveDismissDisabled()
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let data = pdfData {
+                ShareSheetView(activityItems: [data])
+            }
         }
     }
     
@@ -277,7 +291,7 @@ struct WorkOrderDetailedView: View {
                         .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                         .frame(width: 80, height: 80)
                     
-                    Image(systemName: "box.truck.fill")
+                    Image(systemName: associatedVehicle?.vehicleType.icon ?? "box.truck.fill")
                         .font(.system(size: 36))
                         .foregroundColor(AppTheme.Brand.royalBlue)
                 }
@@ -303,7 +317,7 @@ struct WorkOrderDetailedView: View {
     
     // MARK: - Progress Tracker View Component
     private var progressTrackerView: some View {
-        let steps = ["Assigned", "Inspection", "Diagnosis", "Approval", "Repair", "QC", "Completed"]
+        let steps = ["Assigned", "Approval", "Repair", "Completed"]
         
         return VStack(spacing: 8) {
             HStack(spacing: 0) {
@@ -382,81 +396,8 @@ struct WorkOrderDetailedView: View {
         }
     }
     
-    // MARK: - Tab: Overview Tab Content
     private var overviewTabContent: some View {
         VStack(spacing: 16) {
-            // Circular Failure Risk Gauge Powered by Gemini
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                    Text("AI Risk Analysis")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.primary)
-                    Spacer()
-                    
-                    if isLoadingAlert {
-                        ProgressView().tint(AppTheme.Brand.royalBlue)
-                    }
-                }
-                
-                Divider()
-                
-                HStack(spacing: 20) {
-                    // Risk percentage gauge
-                    let riskPercent = Int((predictiveAlert?.riskScore ?? 0.0) * 100)
-                    let riskLevel = predictiveAlert?.riskLevel ?? "Low"
-                    
-                    ZStack {
-                        Circle()
-                            .stroke(Color.gray.opacity(0.1), lineWidth: 8)
-                            .frame(width: 80, height: 80)
-                        
-                        Circle()
-                            .trim(from: 0.0, to: CGFloat(Double(riskPercent) / 100.0))
-                            .stroke(
-                                riskLevel.localizedCaseInsensitiveCompare("critical") == .orderedSame ||
-                                riskLevel.localizedCaseInsensitiveCompare("high") == .orderedSame
-                                ? AppTheme.Status.danger
-                                : AppTheme.Brand.royalBlue,
-                                style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                            )
-                            .frame(width: 80, height: 80)
-                            .rotationEffect(Angle(degrees: -90))
-                        
-                        Text("\(riskPercent)%")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundColor(AppTheme.Text.primary)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Failure Risk")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(AppTheme.Text.secondary)
-                        Text(riskLevel.uppercased())
-                            .font(.system(size: 16, weight: .black, design: .rounded))
-                            .foregroundColor(
-                                riskLevel.localizedCaseInsensitiveCompare("critical") == .orderedSame ||
-                                riskLevel.localizedCaseInsensitiveCompare("high") == .orderedSame
-                                ? AppTheme.Status.danger
-                                : AppTheme.Brand.royalBlue
-                            )
-                        
-                        Text("Recommendation")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(AppTheme.Text.tertiary)
-                        Text(predictiveAlert?.suggestedAction ?? "Monitor vehicle performance.")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(AppTheme.Text.primary)
-                            .lineLimit(2)
-                    }
-                }
-            }
-            .padding(16)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 4)
-            
             // Work Order Basic Info
             VStack(alignment: .leading, spacing: 12) {
                 Text("Work Order Info")
@@ -1480,5 +1421,19 @@ struct WorkOrderDetailedView: View {
                 print("Failed to sync request for details: \(error)")
             }
         }
+    }
+    
+    private func generateAndSharePDF() {
+        let data = WorkOrderPDFGenerator.generatePDFData(
+            order: order,
+            vehicle: associatedVehicle,
+            technician: assignedTechnician,
+            maintenanceRecord: matchingMaintenanceRecord,
+            partsCost: computedPartsCost,
+            laborCost: computedLaborCost,
+            additionalCost: computedAdditionalCost
+        )
+        self.pdfData = data
+        showShareSheet = true
     }
 }
