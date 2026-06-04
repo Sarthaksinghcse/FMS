@@ -28,7 +28,7 @@ struct FleetManagerChatDetailView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(AppTheme.Brand.primary)
                         .frame(width: 36, height: 36)
                         .contentShape(Rectangle())
@@ -41,7 +41,7 @@ struct FleetManagerChatDetailView: View {
                         .fill(roleColor(for: chatUser.role).opacity(0.12))
                         .frame(width: 36, height: 36)
                     Text(String(chatUser.name.prefix(2)).uppercased())
-                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(roleColor(for: chatUser.role))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
@@ -56,10 +56,10 @@ struct FleetManagerChatDetailView: View {
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(chatUser.name)
-                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     Text(chatUser.isActive ? "Online" : "Offline")
-                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(chatUser.isActive ? AppTheme.Status.success : .secondary)
                 }
                 
@@ -82,14 +82,14 @@ struct FleetManagerChatDetailView: View {
                         if conversationMessages.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "bubble.left.and.bubble.right")
-                                    .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                                    .font(.system(size: 32))
                                     .foregroundColor(.gray.opacity(0.4))
                                     .padding(.top, 40)
                                 Text("No messages yet")
-                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                                     .foregroundColor(.gray)
                                 Text("Send a message to start the conversation.")
-                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
+                                    .font(.system(size: 12, design: .rounded))
                                     .foregroundColor(.gray)
                                     .multilineTextAlignment(.center)
                             }
@@ -110,7 +110,7 @@ struct FleetManagerChatDetailView: View {
                                                     }
                                                 }
                                             Text(formatTime(message.timestamp))
-                                                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                                                .font(.system(size: 9))
                                                 .foregroundColor(.gray)
                                                 .padding(.trailing, 4)
                                         }
@@ -125,7 +125,7 @@ struct FleetManagerChatDetailView: View {
                                                     }
                                                 }
                                             Text(formatTime(message.timestamp))
-                                                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                                                .font(.system(size: 9))
                                                 .foregroundColor(.gray)
                                                 .padding(.leading, 4)
                                         }
@@ -155,53 +155,15 @@ struct FleetManagerChatDetailView: View {
             
             // Bottom Message Input Bar
             VStack(spacing: 0) {
-                if let imgData = selectedImageData, let uiImage = UIImage(data: imgData) {
-                    HStack {
-                        ZStack(alignment: .topTrailing) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 60, height: 60)
-                                .cornerRadius(8)
-                                .clipped()
-                            
-                            Button {
-                                selectedImageData = nil
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
-                                    .foregroundColor(AppTheme.Status.danger)
-                                    .background(Circle().fill(Color.white))
-                            }
-                            .offset(x: 6, y: -6)
-                        }
-                        .padding(.leading, 16)
-                        .padding(.vertical, 8)
-                        
-                        Spacer()
-                    }
-                    .background(Color.white)
-                }
-                
                 Divider()
                 
                 HStack(spacing: 12) {
-                    // Text Input Area with Photo Picker
-                    HStack(spacing: 10) {
-                        PhotosPicker(selection: $selectedItem, matching: .images) {
-                            Image(systemName: "photo.fill")
-                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
-                                .foregroundColor(AppTheme.Brand.primary)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        TextField("Type a message...", text: $messageText)
-                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(20)
+                    TextField("Type a message...", text: $messageText)
+                        .font(.system(size: 15))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(20)
                     
                     Button(action: {
                         let sentText = messageText
@@ -224,7 +186,7 @@ struct FleetManagerChatDetailView: View {
                         }
                     }) {
                         Image(systemName: "paperplane.fill")
-                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+                            .font(.system(size: 18))
                             .foregroundColor(Color.white)
                             .padding(10)
                             .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
@@ -301,7 +263,7 @@ struct FleetManagerChatDetailView: View {
 
     private func fallbackText(_ text: String, isMe: Bool) -> some View {
         Text(text)
-            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
+            .font(.system(size: 14, weight: .medium, design: .rounded))
             .foregroundColor(isMe ? .white : .black)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
