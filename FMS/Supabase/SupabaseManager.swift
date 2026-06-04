@@ -95,8 +95,11 @@ final class SupabaseManager {
             for await state in client.auth.authStateChanges {
                 if let session = state.session, !session.isExpired {
                     await fetchProfile(userId: session.user.id)
+                    await evaluateMFARequirements()
                 } else {
                     self.currentUser = nil
+                    self.mfaChallengeRequired = false
+                    self.pendingFactorId = nil
                 }
             }
         }
@@ -1391,6 +1394,7 @@ final class SupabaseManager {
         return url.absoluteString
     }
     
+    
     // Chat Broadcast
     func sendBroadcastMessages(_ messages: [DBMessage]) async throws {
         try await client
@@ -1399,6 +1403,129 @@ final class SupabaseManager {
             .execute()
     }
     
+    // MARK: - Multi-Factor Authentication (MFA)
+    
+    var mfaChallengeRequired = false
+    var pendingFactorId: String? = nil
+    
+    /// Checks the Authenticator Assurance Level (AAL) of the current session.
+    func checkMFAStatus() async throws -> (current: String?, next: String?) {
+        let aal = try await client.auth.mfa.getAuthenticatorAssuranceLevel()
+        return (aal.currentLevel, aal.nextLevel)
+    }
+    
+    /// Checks if the current session requires an MFA step-up challenge.
+    func evaluateMFARequirements() async {
+        do {
+            let (current, next) = try await checkMFAStatus()
+            if current == "aal1" && next == "aal2" {
+                let factors = try await client.auth.mfa.listFactors()
+                if let verifiedFactor = factors.totp.first {
+                    self.pendingFactorId = verifiedFactor.id
+                    self.mfaChallengeRequired = true
+                } else {
+                    self.mfaChallengeRequired = false
+                    self.pendingFactorId = nil
+                }
+            } else {
+                self.mfaChallengeRequired = false
+                self.pendingFactorId = nil
+            }
+        } catch {
+            print("Failed to evaluate MFA status: \(error.localizedDescription)")
+            self.mfaChallengeRequired = false
+            self.pendingFactorId = nil
+        }
+    }
+    
+    /// Enrolls a new TOTP factor.
+    func enrollMFA() async throws -> (factorId: String, secret: String, qrCodeUri: String) {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let friendlyName = currentUser?.name ?? currentUser?.email ?? "FMS User"
+        let params = MFATotpEnrollParams(issuer: "Carwaan Fleet", friendlyName: friendlyName)
+        let response = try await client.auth.mfa.enroll(params: params)
+        
+        guard let totp = response.totp else {
+            throw NSError(
+                domain: "SupabaseManager",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to generate TOTP enrollment details."]
+            )
+        }
+        
+        return (
+            factorId: response.id,
+            secret: totp.secret,
+            qrCodeUri: totp.uri
+        )
+    }
+    
+    /// Verifies the first code of enrollment to activate the factor.
+    func verifyMFAEnrollment(factorId: String, code: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let challengeParams = MFAChallengeParams(factorId: factorId)
+        let challenge = try await client.auth.mfa.challenge(params: challengeParams)
+        
+        let verifyParams = MFAVerifyParams(factorId: factorId, challengeId: challenge.id, code: code)
+        _ = try await client.auth.mfa.verify(params: verifyParams)
+        
+        // Refresh local MFA state
+        await evaluateMFARequirements()
+    }
+    
+    /// Challenges and verifies a pending factor to upgrade the session to AAL2.
+    func verifyMFALogin(code: String) async throws {
+        guard let factorId = pendingFactorId else {
+            throw NSError(
+                domain: "SupabaseManager",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "No pending MFA factor ID found."]
+            )
+        }
+        
+        isLoading = true
+        defer { isLoading = false }
+        
+        let challengeParams = MFAChallengeParams(factorId: factorId)
+        let challenge = try await client.auth.mfa.challenge(params: challengeParams)
+        
+        let verifyParams = MFAVerifyParams(factorId: factorId, challengeId: challenge.id, code: code)
+        _ = try await client.auth.mfa.verify(params: verifyParams)
+        
+        // Success: Clear flags
+        self.mfaChallengeRequired = false
+        self.pendingFactorId = nil
+        
+        // Refresh current user profile
+        if let currentUserId = client.auth.currentUser?.id {
+            await fetchProfile(userId: currentUserId)
+        }
+    }
+    
+    /// Disables MFA by unenrolling a factor.
+    func unenrollMFA(factorId: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let params = MFAUnenrollParams(factorId: factorId)
+        try await client.auth.mfa.unenroll(params: params)
+        
+        // Update local state
+        await evaluateMFARequirements()
+    }
+    
+    /// Lists all factors enrolled by the user.
+    func getMFAFactors() async throws -> (verified: [Factor], unverified: [Factor]) {
+        let factors = try await client.auth.mfa.listFactors()
+        let verified = factors.totp
+        let unverified = factors.all.filter { $0.status == .unverified }
+        return (verified, unverified)
+    }
+
     func updatePassword(newPassword: String) async throws {
         try await client.auth.update(user: UserAttributes(password: newPassword))
     }
