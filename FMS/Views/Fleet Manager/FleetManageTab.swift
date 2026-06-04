@@ -1120,9 +1120,12 @@ struct MaintenanceStaffListView: View {
                     } else {
                         LazyVStack(spacing: 16) {
                             ForEach(filteredStaff) { staff in
-                                staffCard(for: staff)
-                                    .opacity(cardAnimations[staff.id] == true ? 1 : 0)
-                                    .offset(y: cardAnimations[staff.id] == true ? 0 : 30)
+                                NavigationLink(destination: TechnicianWorkDetailsView(technician: staff).environment(\.modelContext, modelContext)) {
+                                    staffCard(for: staff)
+                                }
+                                .buttonStyle(.plain)
+                                .opacity(cardAnimations[staff.id] == true ? 1 : 0)
+                                .offset(y: cardAnimations[staff.id] == true ? 0 : 30)
                             }
                         }
                         .padding(.horizontal, 24)
@@ -1221,14 +1224,7 @@ struct MaintenanceStaffListView: View {
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(AppTheme.Glass.border, lineWidth: 1))
             .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
 
-            if orders > 0 {
-                Text("\(orders)")
-                    .font(.system(size: 12, weight: .bold, design: .rounded)).foregroundColor(.white)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(Capsule().fill(AppTheme.Brand.royalBlue)
-                        .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 6, x: 0, y: 3))
-                    .offset(x: -12, y: -8)
-            }
+            // Badge count removed per user request
         }
     }
 
@@ -2304,9 +2300,20 @@ struct TripDetailView: View {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Label {
-                                    Text(log.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(AppTheme.Text.secondary)
+                                    HStack(spacing: 4) {
+                                        Text(log.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        if log.isEdited == true {
+                                            Text("·")
+                                            Text("Edited")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.orange)
+                                            if let editDate = log.updatedAt {
+                                                Text("at \(editDate.formatted(date: .abbreviated, time: .shortened))")
+                                            }
+                                        }
+                                    }
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(AppTheme.Text.secondary)
                                 } icon: {
                                     Image(systemName: "clock")
                                         .font(.system(size: 10))

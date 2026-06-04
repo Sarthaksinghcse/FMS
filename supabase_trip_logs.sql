@@ -40,3 +40,13 @@ CREATE POLICY "trip_logs_delete_manager" ON public.trip_logs FOR DELETE USING (
 
 -- 5. Add to Realtime Publication
 ALTER PUBLICATION supabase_realtime ADD TABLE public.trip_logs;
+
+-- 6. Add columns if table already exists
+ALTER TABLE public.trip_logs ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.trip_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+
+-- 7. Add UPDATE policy for drivers
+CREATE POLICY "trip_logs_update_own" ON public.trip_logs FOR UPDATE USING (
+    driver_id = auth.uid()
+);
+
