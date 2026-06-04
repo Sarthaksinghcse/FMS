@@ -25,11 +25,11 @@ struct DriverTripsTab: View {
                         VStack(spacing: 6) {
                             HStack(spacing: 6) {
                                 Text(i == 0 ? "Upcoming" : "Completed")
-                                    .font(.system(size: 14, weight: selectedSegment == i ? .bold : .medium))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: selectedSegment == i ? .bold : .medium))
                                     .foregroundStyle(selectedSegment == i ? Color.fmsIndigo : .secondary)
                                 if i == 0 && !vm.upcomingTrips.isEmpty {
                                     Text("\(vm.upcomingTrips.count)")
-                                        .font(.system(size: 11, weight: .bold))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 6).padding(.vertical, 2)
                                         .background(Color.fmsIndigo)
@@ -37,7 +37,7 @@ struct DriverTripsTab: View {
                                 }
                                 if i == 1 && !vm.completedTrips.isEmpty {
                                     Text("\(vm.completedTrips.count)")
-                                        .font(.system(size: 11, weight: .bold))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 6).padding(.vertical, 2)
                                         .background(AppTheme.Status.success)
@@ -180,12 +180,12 @@ private struct EmptyTripsCell: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 40, weight: .thin))
+                .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .thin))
                 .foregroundStyle(Color.fmsIndigo.opacity(0.30))
             Text(message)
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
             Text(subtitle)
-                .font(.system(size: 13))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -211,7 +211,7 @@ private struct CompletedTripCard: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(record.trip.tripCode)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.secondary)
                 Spacer()
             }
@@ -227,17 +227,17 @@ private struct CompletedTripCard: View {
                         .fill(AppTheme.Status.success.opacity(0.12))
                         .frame(width: 44, height: 44)
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22))
+                        .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(AppTheme.Status.success)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(record.trip.destination)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                     Text("from  \(record.trip.source)")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.secondary)
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
@@ -247,13 +247,13 @@ private struct CompletedTripCard: View {
 
                 VStack(alignment: .trailing, spacing: 3) {
                     Text("COMPLETED")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundStyle(AppTheme.Status.success)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(AppTheme.Status.success.opacity(0.12))
                         .clipShape(Capsule())
                     Text(dateLabel)
-                        .font(.system(size: 10))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -289,12 +289,12 @@ private struct CompletedTripCard: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 13))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     Text("View Full Details")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundStyle(.tertiary)
                 }
                 .foregroundStyle(Color.fmsIndigo)
@@ -326,13 +326,13 @@ private struct StatPill: View {
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(color)
             Text(value)
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundStyle(.primary)
             Text(label)
-                .font(.system(size: 10))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -397,18 +397,18 @@ struct TripDetailSheet: View {
                                 .fill(AppTheme.Status.success.opacity(0.12))
                                 .frame(width: 72, height: 72)
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 40))
+                                .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(AppTheme.Status.success)
                         }
 
                         VStack(spacing: 4) {
                             Text(record.trip.tripCode)
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(.secondary)
                             Text("Trip Completed")
-                                .font(.system(size: 20, weight: .bold))
+                                .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             Text(dateLabel)
-                                .font(.system(size: 13))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.secondary)
                         }
 
@@ -419,7 +419,7 @@ struct TripDetailSheet: View {
                                     .frame(width: 8, height: 8)
                                     .padding(.top, 4)
                                 Text(record.trip.source)
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundStyle(.secondary)
                                     .lineLimit(nil)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -432,7 +432,7 @@ struct TripDetailSheet: View {
                                     .frame(width: 8, height: 8)
                                     .padding(.top, 4)
                                 Text(record.trip.destination)
-                                    .font(.system(size: 13, weight: .medium))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .foregroundStyle(Color.fmsIndigo)
                                     .lineLimit(nil)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -447,7 +447,7 @@ struct TripDetailSheet: View {
                             showingFullAddressSheet = true
                         } label: {
                             Label("View Full Address", systemImage: "map.fill")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(Color.fmsIndigo)
                         }
                         .buttonStyle(.plain)
@@ -521,7 +521,7 @@ struct TripDetailSheet: View {
                                 Text(record.inspectionPassed
                                      ? "All items passed — vehicle in good condition"
                                      : "\(record.issuesFound) item(s) flagged for maintenance")
-                                    .font(.system(size: 13, weight: .medium))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .foregroundStyle(record.inspectionPassed
                                                      ? AppTheme.Status.success
                                                      : AppTheme.Status.danger)
@@ -540,15 +540,15 @@ struct TripDetailSheet: View {
                                 let itemPassed = idx < passedCount
                                 HStack(spacing: 14) {
                                     Image(systemName: item.1)
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundStyle(itemPassed ? AppTheme.Status.success : AppTheme.Status.danger)
                                         .frame(width: 24)
                                     Text(item.0)
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundStyle(itemPassed ? .primary : AppTheme.Status.danger)
                                     Spacer()
                                     Image(systemName: itemPassed ? "checkmark" : "xmark")
-                                        .font(.system(size: 12, weight: .bold))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundStyle(itemPassed ? AppTheme.Status.success : AppTheme.Status.danger)
                                 }
                                 .padding(.horizontal, 16)
@@ -568,7 +568,7 @@ struct TripDetailSheet: View {
                         VStack(alignment: .leading, spacing: 12) {
                             sectionHeader("DRIVER REMARKS")
                             Text(record.inspectionRemarks)
-                                .font(.system(size: 14))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.primary)
                                 .padding(16)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -711,7 +711,7 @@ struct TripDetailSheet: View {
 
     private func sectionHeader(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .bold))
+            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
             .foregroundStyle(.secondary)
             .tracking(0.6)
     }
@@ -729,17 +729,17 @@ private struct DetailStatCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 14))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(color)
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundStyle(.secondary)
             }
             Text(value)
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundStyle(.primary)
             Text(sub)
-                .font(.system(size: 11))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(.secondary)
         }
         .padding(14)
@@ -766,18 +766,18 @@ private struct ActiveTripCell: View {
                             .frame(width: 6, height: 6)
                             .shadow(color: Color.fmsIndigo.opacity(0.5), radius: 3)
                         Text("In Progress")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(Color.fmsIndigo)
                     }
                     Text(vm.elapsedFormatted)
-                        .font(.system(size: 40, weight: .bold, design: .monospaced))
+                        .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                         .foregroundStyle(.primary)
                         .contentTransition(.numericText())
                 }
                 Spacer()
                 
                 Label(String(format: "%.0f%%", vm.fuelLevel * 100), systemImage: "fuelpump.fill")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundStyle(vm.fuelLevel < 0.25 ? AppTheme.Status.danger : Color.fmsIndigo)
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background((vm.fuelLevel < 0.25 ? AppTheme.Status.danger : Color.fmsIndigo).opacity(0.08))
@@ -850,7 +850,7 @@ private struct TripRow: View {
             HStack(spacing: 10) {
                 
                 Text("\(index + 1)")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 26, height: 26)
                     .background(Color.fmsIndigo)
@@ -858,10 +858,10 @@ private struct TripRow: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(trip.destination)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .lineLimit(1)
                     Text(trip.source)
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -869,7 +869,7 @@ private struct TripRow: View {
                 Spacer()
 
                 Text(trip.status.rawValue.capitalized)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundStyle(statusColor)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(statusColor.opacity(0.10))
@@ -902,7 +902,7 @@ private struct TripRow: View {
                     vm.showRaiseQuery = true
                 } label: {
                     Label("Raise Query", systemImage: "questionmark.bubble.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
@@ -924,7 +924,7 @@ private struct TripRow: View {
                         (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "Navigate" : "Confirm",
                         systemImage: (vm.isTripActive && vm.activeTrip?.id == trip.id) ? "location.fill" : "checkmark.circle.fill"
                     )
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 42)
@@ -936,9 +936,9 @@ private struct TripRow: View {
             
             HStack(spacing: 4) {
                 Image(systemName: "hand.point.left")
-                    .font(.system(size: 10))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 Text("Swipe for quick actions  ·  Hold for more options")
-                    .font(.system(size: 10))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
             }
             .foregroundStyle(.tertiary)
         }
@@ -953,8 +953,8 @@ private struct TripChip: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 10))
-            Text(label).font(.system(size: 11, weight: .medium))
+            Image(systemName: icon).font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
+            Text(label).font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
         }
         .foregroundStyle(.secondary)
         .padding(.horizontal, 9).padding(.vertical, 4)
@@ -978,10 +978,10 @@ private struct TripActionButton: View {
     var body: some View {
         Button(action: action) {
             Label(label, systemImage: icon)
-                .font(.system(size: manager.driverLargeTapTargets ? 16 : 13, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(foregroundColor)
                 .frame(maxWidth: .infinity)
-                .frame(height: manager.driverLargeTapTargets ? 64 : 44)
+                .frame(height: 44)
                 .background(backgroundContent)
                 .clipShape(RoundedRectangle(cornerRadius: 11))
         }
@@ -1108,7 +1108,7 @@ struct TripNavigationView: View {
                     HStack(spacing: 10) {
                         ProgressView().tint(Color.fmsIndigo)
                         Text("Calculating route…")
-                            .font(.system(size: 14))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(.secondary)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 12)
@@ -1202,7 +1202,7 @@ struct TripNavigationView: View {
                             dismiss()
                         } label: {
                             Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .padding(8)
                                 .glassEffect(.regular, in: Circle())
                         }
@@ -1220,7 +1220,7 @@ struct TripNavigationView: View {
                             ])
                         } label: {
                             Label("Maps", systemImage: "map.fill")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(Color.fmsIndigo)
                                 .padding(.horizontal, 12).padding(.vertical, 8)
                                 .glassEffect(.regular.tint(Color.fmsIndigo.opacity(0.08)),
@@ -1306,15 +1306,15 @@ struct TripNavigationView: View {
                     if let r = nav.route {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(String(format: "%d min", Int(r.expectedTravelTime / 60)))
-                                .font(.system(size: 34, weight: .bold))
+                                .font(.system(size: 34 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(AppTheme.Status.success)
                             Text(String(format: "%.1f km", r.distance / 1000))
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(.secondary)
                         }
                     }
                     Text("To: \(trip.destination)")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -1353,10 +1353,10 @@ struct TripNavigationView: View {
             if !preTripPassed {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 13))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(AppTheme.Brand.accent)
                     Text("Complete Pre-Trip Inspection before starting")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundStyle(AppTheme.Brand.accent)
                     Spacer()
                 }
@@ -1388,10 +1388,10 @@ struct TripNavigationView: View {
                 HStack(spacing: 8) {
                     if !preTripPassed {
                         Image(systemName: "lock.fill")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     }
                     Text(preTripPassed ? "Start Now" : "Complete Inspection to Start")
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -1420,7 +1420,7 @@ struct TripNavigationView: View {
     private var rerouteBannerView: some View {
         HStack(spacing: 10) {
             Image(systemName: "arrow.triangle.swap")
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 38, height: 38)
                 .background(AppTheme.Status.success.gradient)
@@ -1428,10 +1428,10 @@ struct TripNavigationView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Faster Route Available")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(AppTheme.Status.success)
                 Text("Save ~\(timeSavedMin) min via alternate route")
-                    .font(.system(size: 11))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(.secondary)
             }
 
@@ -1454,7 +1454,7 @@ struct TripNavigationView: View {
                 }
             } label: {
                 Text("Reroute")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14).padding(.vertical, 8)
                     .background(AppTheme.Status.success.gradient)
@@ -1463,7 +1463,7 @@ struct TripNavigationView: View {
 
             Button { withAnimation { rerouteDismissed = true } } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.secondary)
                     .padding(6)
                     .background(Color(UIColor.tertiarySystemFill))
@@ -1507,7 +1507,7 @@ struct TripNavigationView: View {
                 .frame(width: 30, height: 30)
                 .shadow(color: color.opacity(0.4), radius: 6)
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundStyle(.white)
         }
     }
@@ -1540,9 +1540,9 @@ struct MapActionButton: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: manager.driverLargeTapTargets ? 22 : 18, weight: .medium))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundStyle((style == .primary || style == .destructive) ? .white : color)
-                    .frame(width: manager.driverLargeTapTargets ? 58 : 46, height: manager.driverLargeTapTargets ? 58 : 46)
+                    .frame(width: 46, height: 46)
                     .background(
                         (style == .primary || style == .destructive)
                         ? AnyShapeStyle(color.gradient)
@@ -1550,7 +1550,7 @@ struct MapActionButton: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 Text(label)
-                    .font(.system(size: manager.driverLargeTapTargets ? 12 : 10, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
@@ -1578,23 +1578,23 @@ private struct TurnStepRow: View {
                         .fill(badgeColor)
                         .frame(width: 28, height: 28)
                     Text("\(index + 1)")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundStyle(badgeTextColor)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(instruction)
-                        .font(.system(size: 13, weight: isFirst ? .semibold : .regular))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: isFirst ? .semibold : .regular))
                         .foregroundStyle(isFirst ? Color.primary : Color.secondary)
                     if distance > 0 {
                         Text(String(format: "%.1f km", distance / 1000))
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(Color(UIColor.tertiaryLabel))
                     }
                 }
                 Spacer()
                 Image(systemName: iconName)
-                    .font(.system(size: 14))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(isFirst ? Color.fmsIndigo : Color(UIColor.tertiaryLabel))
             }
             .padding(.horizontal, 16)
@@ -1624,14 +1624,14 @@ private struct ActiveTripMetaCell: View {
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
             Text(label)
-                .font(.system(size: 10))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)

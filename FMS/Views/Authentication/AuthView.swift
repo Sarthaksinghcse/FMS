@@ -87,7 +87,7 @@ struct AuthView: View {
                                     handleForgotPassword()
                                 } label: {
                                     Text("Forgot Password?")
-                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                         .foregroundColor(AppTheme.Brand.royalBlue)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -318,13 +318,13 @@ struct GlassErrorAlert: View {
                             .fill(AppTheme.Status.danger.opacity(0.12))
                             .frame(width: 64, height: 64)
                         Image(systemName: "lock.trianglebadge.exclamationmark.fill")
-                            .font(.system(size: 28, weight: .semibold))
+                            .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(AppTheme.Status.danger)
                     }
                     .padding(.top, 28)
 
                     Text("Wrong Credentials")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(Color.black)
 
                     Text(message)
@@ -364,7 +364,7 @@ struct GlassErrorAlert: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous)
-                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                    .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.12), lineWidth: 1)
             )
             .shadow(color: AppTheme.Shadow.modal, radius: 40, x: 0, y: 20)
             .padding(.horizontal, AppTheme.Spacing.xl)
@@ -383,7 +383,7 @@ struct PremiumInputField: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: icon)
-                .font(.system(size: 18))
+                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(isFocused ? AppTheme.Brand.royalBlue : AppTheme.Text.tertiary.opacity(0.8))
                 .frame(width: 24)
 
@@ -418,7 +418,7 @@ struct PremiumSecureField: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: icon)
-                .font(.system(size: 18))
+                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(isFocused ? AppTheme.Brand.royalBlue : AppTheme.Text.tertiary.opacity(0.8))
                 .frame(width: 24)
 
@@ -439,7 +439,7 @@ struct PremiumSecureField: View {
                 isPasswordVisible.toggle()
             } label: {
                 Image(systemName: isPasswordVisible ? "eye.fill" : "eye.slash.fill")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.tertiary.opacity(0.8))
             }
             .buttonStyle(PlainButtonStyle())
@@ -479,17 +479,17 @@ struct GlassForgotPasswordAlert: View {
                             .fill(AppTheme.Brand.royalBlue.opacity(0.12))
                             .frame(width: 64, height: 64)
                         Image(systemName: "envelope.badge.shield.half.filled")
-                            .font(.system(size: 28, weight: .semibold))
+                            .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     .padding(.top, 24)
 
                     Text("Reset Password")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(Color.black)
 
                     Text("Enter your email address below. We'll send you a secure link to reset your password.")
-                        .font(.system(size: 13, design: .rounded))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                         .foregroundColor(Color.black)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppTheme.Spacing.md)
@@ -510,7 +510,7 @@ struct GlassForgotPasswordAlert: View {
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                            .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.12), lineWidth: 1)
                     )
                     .padding(.horizontal, AppTheme.Spacing.md)
                     .padding(.bottom, AppTheme.Spacing.md)
@@ -552,7 +552,7 @@ struct GlassForgotPasswordAlert: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous)
-                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                    .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.12), lineWidth: 1)
             )
             .shadow(color: AppTheme.Shadow.modal, radius: 40, x: 0, y: 20)
             .padding(.horizontal, AppTheme.Spacing.xl)
@@ -579,13 +579,13 @@ struct GlassSuccessAlert: View {
                             .fill(AppTheme.Status.success.opacity(0.12))
                             .frame(width: 64, height: 64)
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 32))
+                            .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Status.success)
                     }
                     .padding(.top, 28)
 
                     Text(title)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(Color.black)
 
                     Text(message)
@@ -611,7 +611,7 @@ struct GlassSuccessAlert: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous)
-                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                    .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.12), lineWidth: 1)
             )
             .shadow(color: AppTheme.Shadow.modal, radius: 40, x: 0, y: 20)
             .padding(.horizontal, AppTheme.Spacing.xl)

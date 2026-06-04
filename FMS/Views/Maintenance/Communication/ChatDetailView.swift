@@ -39,7 +39,7 @@ struct ChatDetailView: View {
                         dismiss()
                     } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.primary)
                             .frame(width: 36, height: 36)
                             .contentShape(Rectangle())
@@ -50,7 +50,7 @@ struct ChatDetailView: View {
                 }
                 
                 Text("Chat with \(channel.senderName)")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
             }
             .padding(.vertical, 10)

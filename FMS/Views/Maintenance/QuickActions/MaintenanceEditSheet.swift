@@ -15,7 +15,7 @@ struct SparePartsSelectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("In-Stock Spare Parts:")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(AppTheme.Text.secondary)
             
             Menu {
@@ -35,17 +35,17 @@ struct SparePartsSelectorView: View {
             } label: {
                 HStack {
                     Image(systemName: "shippingbox.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Brand.primary)
                     
                     Text("Select In-Stock Part...")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.primary)
                     
                     Spacer()
                     
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary)
                 }
                 .padding(.horizontal, 14)
@@ -54,7 +54,7 @@ struct SparePartsSelectorView: View {
                 .cornerRadius(10)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                        .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.08), lineWidth: 1)
                 )
             }
         }
@@ -106,7 +106,7 @@ struct MaintenanceEditSheet: View {
                         // Status Picker Card
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Current Task Status")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                             
@@ -126,14 +126,14 @@ struct MaintenanceEditSheet: View {
                         // Costs & Notes
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Service Record Details")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
 
                             // Cost field
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Total Estimated Cost (INR)")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 TextField("e.g. 7500", text: $costInput)
                                     .keyboardType(.numberPad)
@@ -145,7 +145,7 @@ struct MaintenanceEditSheet: View {
                             // Notes
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Work Description & Progress Notes")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 TextEditor(text: $notesInput)
                                     .frame(minHeight: 120)
@@ -162,7 +162,7 @@ struct MaintenanceEditSheet: View {
                         // Add Spare Parts Used (Criterion 1 & 3 & 4)
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Spare Parts & Consumables Used")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
 
@@ -177,7 +177,7 @@ struct MaintenanceEditSheet: View {
                                         Image(systemName: "cube.box.fill")
                                             .foregroundColor(AppTheme.Brand.violet)
                                         Text(part)
-                                            .font(.system(size: 13, weight: .medium))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         Spacer()
                                         Button {
                                             partsList.removeAll(where: { $0 == part })

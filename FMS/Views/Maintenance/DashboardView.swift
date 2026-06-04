@@ -128,10 +128,10 @@ struct MaintenanceDashboardTab: View {
                         HStack(alignment: .center, spacing: 0) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(getGreetingTime() + ",")
-                                    .font(.system(size: 17, weight: .regular))
+                                    .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                                     .foregroundStyle(.secondary)
                                 Text(personnelFirstName)
-                                    .font(.system(size: 28, weight: .bold))
+                                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundStyle(.primary)
                             }
 
@@ -143,7 +143,7 @@ struct MaintenanceDashboardTab: View {
                             } label: {
                                 ZStack(alignment: .topTrailing) {
                                     Image(systemName: "bell.fill")
-                                        .font(.system(size: 18))
+                                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundStyle(Color(UIColor.label))
                                         .frame(width: 40, height: 40)
                                         .background(Color(UIColor.secondarySystemGroupedBackground))
@@ -190,7 +190,7 @@ struct MaintenanceDashboardTab: View {
                                                 )
                                                 .frame(width: 40, height: 40)
                                             Text(initials)
-                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                 .foregroundColor(.white)
                                                 .lineLimit(1)
                                                 .minimumScaleFactor(0.5)
@@ -366,12 +366,12 @@ struct MaintenanceDashboardTab: View {
                                 .fill(AppTheme.Brand.primary.opacity(0.08))
                                 .frame(width: 56, height: 56)
                             Image(systemName: "bubble.left.and.bubble.right.fill")
-                                .font(.system(size: 24))
+                                .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(AppTheme.Brand.royalBlue)
                         }
                         
                         Text("Chat")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .minimumScaleFactor(0.8)
                             .multilineTextAlignment(.center)
                             .foregroundColor(AppTheme.Text.primary)
@@ -433,7 +433,7 @@ struct MaintenanceDashboardTab: View {
     private func emptyState(icon: String, message: String) -> some View {
         VStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 36))
+                .font(.system(size: 36 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.secondary)
             Text(message)
                 .font(.subheadline)
@@ -463,16 +463,16 @@ struct NavigationQuickActionButton<Destination: View>: View {
                         .fill(color.opacity(0.12))
                         .frame(width: 40, height: 40)
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(color)
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                     Text(description)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Text.secondary)
                         .lineLimit(1)
                 }
@@ -480,7 +480,7 @@ struct NavigationQuickActionButton<Destination: View>: View {
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(AppTheme.Text.tertiary)
                     .padding(.trailing, 2)
             }
@@ -513,12 +513,12 @@ struct GridQuickActionButton<Destination: View>: View {
                         .fill(AppTheme.Brand.primary.opacity(0.08))
                         .frame(width: 56, height: 56)
                     Image(systemName: icon)
-                        .font(.system(size: 24))
+                        .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Brand.royalBlue)
                 }
                 
                 Text(label)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.Text.primary)

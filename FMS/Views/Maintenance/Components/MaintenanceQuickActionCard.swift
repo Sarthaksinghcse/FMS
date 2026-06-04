@@ -70,7 +70,7 @@ struct QuickActionCard: View {
                         )
                     
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(theme.accentColor)
                 }
                 
@@ -78,7 +78,7 @@ struct QuickActionCard: View {
                 
                 if let badge = badgeCount, badge > 0 {
                     Text("\(badge)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
@@ -94,13 +94,13 @@ struct QuickActionCard: View {
             // Labels
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                     .lineLimit(1)
                 
                 if let subtitle = subtitle {
                     Text(subtitle)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                         .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22).opacity(0.55))
                         .lineLimit(1)
                 }

@@ -99,10 +99,10 @@ struct AddDriverFormView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
                 Text(isSaving ? "Saving..." : "Save Driver")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
@@ -349,7 +349,7 @@ struct EditDriverFormView: View {
                     .frame(width: 60, height: 60)
                     .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 10, y: 4)
                 Text(initials(for: driver.fullName))
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -357,10 +357,10 @@ struct EditDriverFormView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(driver.fullName)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 Text(driver.email)
-                    .font(.system(size: 13, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(.secondary)
             }
             Spacer()
@@ -381,9 +381,9 @@ struct EditDriverFormView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
-                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
@@ -406,9 +406,9 @@ struct EditDriverFormView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Status.danger))
                 } else {
-                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "trash.fill").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
-                Text(isDeleting ? "Deleting..." : "Delete Driver").font(.system(size: 15, weight: .semibold, design: .rounded))
+                Text(isDeleting ? "Deleting..." : "Delete Driver").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
             }
             .foregroundColor(AppTheme.Status.danger)
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -540,12 +540,12 @@ struct UserFormField: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .frame(width: 110, alignment: .leading)
 
             TextField(placeholder, text: $text)
-                .font(.system(size: 14, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                 .foregroundColor(AppTheme.Brand.royalBlue)
                 .keyboardType(keyboardType)
                 .focused(focus, equals: tag)
@@ -569,12 +569,12 @@ struct UserPasswordField: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .frame(width: 110, alignment: .leading)
 
             SecureField(placeholder, text: $text)
-                .font(.system(size: 14, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                 .foregroundColor(AppTheme.Brand.royalBlue)
                 .focused(focus, equals: tag)
                 .multilineTextAlignment(.trailing)
@@ -593,7 +593,7 @@ struct StatusToggleRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
 
             Spacer()

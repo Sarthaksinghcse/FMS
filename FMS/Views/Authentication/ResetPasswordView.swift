@@ -29,7 +29,7 @@ struct ResetPasswordView: View {
                         
                         VStack(alignment: .leading, spacing: 0) {
                             Text("ENTER NEW CREDENTIALS")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Text.tertiary)
                                 .tracking(0.6)
                                 .padding(.horizontal, 16)
@@ -63,7 +63,7 @@ struct ResetPasswordView: View {
                                     ProgressView().tint(.white)
                                 }
                                 Text(isSaving ? "Saving..." : "Save Password")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

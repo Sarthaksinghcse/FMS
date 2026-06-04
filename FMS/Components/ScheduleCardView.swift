@@ -81,7 +81,7 @@ struct ScheduleCardView: View {
                     ZStack {
                         Color.gray.opacity(0.1)
                         Image(systemName: "truck.box.fill")
-                            .font(.system(size: 20))
+                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(.gray)
                     }
                 }
@@ -92,30 +92,30 @@ struct ScheduleCardView: View {
             
             VStack(alignment: .leading, spacing: 6) {
                 Text(model.vehicleName)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
                 
                 Text(model.serviceType)
-                    .font(.system(size: 12, weight: .regular, design: .rounded))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(1)
                 
                 HStack(spacing: 12) {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                         Text(model.timeText)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     HStack(spacing: 4) {
                         Image(systemName: "mappin.and.ellipse")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text(model.bayText)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                 }
@@ -125,7 +125,7 @@ struct ScheduleCardView: View {
             
             HStack(spacing: 6) {
                 Text(model.status)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(statusColor)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -133,7 +133,7 @@ struct ScheduleCardView: View {
                     .cornerRadius(8)
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
             }
         }
@@ -142,7 +142,7 @@ struct ScheduleCardView: View {
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1.5)
+                .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.05), lineWidth: 1.5)
         )
     }
 }

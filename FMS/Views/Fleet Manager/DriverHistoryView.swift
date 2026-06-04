@@ -121,7 +121,7 @@ struct DriverHistoryView: View {
                         .frame(width: 72, height: 72)
                         .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 8, x: 0, y: 4)
                     Text(initials(for: driver.fullName))
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
@@ -130,24 +130,24 @@ struct DriverHistoryView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(driver.fullName)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                     
                     HStack(spacing: 6) {
                         Image(systemName: "envelope.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(.gray.opacity(0.6))
                         Text(driver.email)
-                            .font(.system(size: 14, design: .rounded))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                             .foregroundColor(.gray)
                     }
 
                     HStack(spacing: 6) {
                         Image(systemName: "phone.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(.gray.opacity(0.6))
                         Text(driver.phoneNumber)
-                            .font(.system(size: 14, design: .rounded))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                             .foregroundColor(.gray)
                     }
                 }
@@ -164,7 +164,7 @@ struct DriverHistoryView: View {
                         .fill(isOnline ? AppTheme.Status.success : AppTheme.Status.danger)
                         .frame(width: 8, height: 8)
                     Text(isOnline ? "Active" : "Inactive")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 }
                 .foregroundColor(isOnline ? AppTheme.Status.success : AppTheme.Status.danger)
                 .padding(.horizontal, 12)
@@ -174,9 +174,9 @@ struct DriverHistoryView: View {
 
                 HStack(spacing: 5) {
                     Image(systemName: "person.fill")
-                        .font(.system(size: 10))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     Text("Driver")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 }
                 .foregroundColor(AppTheme.Brand.royalBlue)
                 .padding(.horizontal, 12)
@@ -197,7 +197,7 @@ struct DriverHistoryView: View {
     private var assignedVehicleCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("ASSIGNED VEHICLE")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(.gray)
                 .tracking(0.8)
 
@@ -208,23 +208,23 @@ struct DriverHistoryView: View {
                             .fill(AppTheme.Brand.royalBlue.opacity(0.1))
                             .frame(width: 48, height: 48)
                         Image(systemName: "car.fill")
-                            .font(.system(size: 20))
+                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Brand.royalBlue)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("\(vehicle.make) \(vehicle.model)")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                         Text("Reg: \(vehicle.registrationNumber)")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             .foregroundColor(.gray)
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(.gray.opacity(0.3))
                 }
                 .padding(14)
@@ -233,10 +233,10 @@ struct DriverHistoryView: View {
             } else {
                 HStack(spacing: 12) {
                     Image(systemName: "car.fill")
-                        .font(.system(size: 16))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(.gray.opacity(0.4))
                     Text("No Vehicle Assigned")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                         .foregroundColor(.gray.opacity(0.6))
                         .italic()
                 }
@@ -268,16 +268,16 @@ struct DriverHistoryView: View {
                     .fill(color.opacity(0.1))
                     .frame(width: 32, height: 32)
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(color)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
             }
         }
@@ -322,7 +322,7 @@ struct DriverHistoryView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text(trip.tripCode)
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.black)
                             Spacer()
                             tripStatusBadge(status: trip.tripStatus)
@@ -334,15 +334,15 @@ struct DriverHistoryView: View {
                                 Line().stroke(style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [2]))
                                     .foregroundColor(.gray.opacity(0.4))
                                     .frame(width: 1, height: 16)
-                                Image(systemName: "mappin.circle.fill").font(.system(size: 10)).foregroundColor(AppTheme.Brand.accent)
+                                Image(systemName: "mappin.circle.fill").font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0))).foregroundColor(AppTheme.Brand.accent)
                             }
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(trip.startLocation)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                     .foregroundColor(.black)
                                 Text(trip.endLocation)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                     .foregroundColor(.black)
                             }
                         }
@@ -353,22 +353,22 @@ struct DriverHistoryView: View {
                         HStack {
                             HStack(spacing: 4) {
                                 Image(systemName: "calendar")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(.gray)
                                 Text(trip.scheduledStartTime.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.system(size: 12, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                     .foregroundColor(.gray)
                             }
                             Spacer()
                             Text(String(format: "%.1f km", trip.distanceKm))
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Brand.royalBlue)
                         }
                     }
                     .padding(16)
                     .background(AppTheme.Background.card)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.black.opacity(0.04), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 1))
                     .shadow(color: Color.black.opacity(0.02), radius: 6, x: 0, y: 3)
                 }
             }
@@ -378,9 +378,9 @@ struct DriverHistoryView: View {
     private func tripStatusBadge(status: TripStatus) -> some View {
         HStack(spacing: 4) {
             Image(systemName: status.badgeIcon)
-                .font(.system(size: 9))
+                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
             Text(status.displayName)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
         }
         .foregroundColor(status.badgeColor)
         .padding(.horizontal, 8)
@@ -401,10 +401,10 @@ struct DriverHistoryView: View {
                         HStack {
                             HStack(spacing: 6) {
                                 Image(systemName: inspection.inspectionType.icon)
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(inspection.inspectionType.color)
                                 Text(inspection.inspectionType.displayName)
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                             }
                             Spacer()
@@ -412,7 +412,7 @@ struct DriverHistoryView: View {
                             HStack(spacing: 4) {
                                 Circle().fill(inspection.defectReported ? AppTheme.Status.danger : AppTheme.Status.success).frame(width: 6, height: 6)
                                 Text(inspection.defectReported ? "Issue Reported" : "All Clear")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(inspection.defectReported ? AppTheme.Status.danger : AppTheme.Status.success)
                             }
                             .padding(.horizontal, 8)
@@ -436,11 +436,11 @@ struct DriverHistoryView: View {
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Remarks")
-                                    .font(.system(size: 9, weight: .black, design: .rounded))
+                                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                                     .foregroundColor(.gray)
                                     .tracking(0.5)
                                 Text(remarks)
-                                    .font(.system(size: 12, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                     .foregroundColor(.black.opacity(0.8))
                             }
                         }
@@ -450,17 +450,17 @@ struct DriverHistoryView: View {
 
                         HStack {
                             Image(systemName: "clock")
-                                .font(.system(size: 11))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(.gray)
                             Text(inspection.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.system(size: 12, design: .rounded))
+                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                 .foregroundColor(.gray)
                         }
                     }
                     .padding(16)
                     .background(AppTheme.Background.card)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.black.opacity(0.04), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 1))
                     .shadow(color: Color.black.opacity(0.02), radius: 6, x: 0, y: 3)
                 }
             }
@@ -470,10 +470,10 @@ struct DriverHistoryView: View {
     private func checklistIcon(label: String, ok: Bool) -> some View {
         HStack(spacing: 4) {
             Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.system(size: 10))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(ok ? AppTheme.Status.success : AppTheme.Status.danger)
             Text(label)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(.black.opacity(0.7))
         }
         .padding(.horizontal, 6)
@@ -493,10 +493,10 @@ struct DriverHistoryView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(defect.title)
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                 Text(defect.defectDescription)
-                                    .font(.system(size: 13, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                     .foregroundColor(.gray)
                                     .lineLimit(3)
                             }
@@ -514,17 +514,17 @@ struct DriverHistoryView: View {
 
                         HStack {
                             Image(systemName: "calendar")
-                                .font(.system(size: 11))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(.gray)
                             Text(defect.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.system(size: 12, design: .rounded))
+                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                 .foregroundColor(.gray)
                         }
                     }
                     .padding(16)
                     .background(AppTheme.Background.card)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.black.opacity(0.04), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 1))
                     .shadow(color: Color.black.opacity(0.02), radius: 6, x: 0, y: 3)
                 }
             }
@@ -533,7 +533,7 @@ struct DriverHistoryView: View {
 
     private func defectSeverityBadge(severity: DefectSeverity) -> some View {
         Text(severity.displayName)
-            .font(.system(size: 9, weight: .bold, design: .rounded))
+            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             .foregroundColor(.white)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -542,7 +542,7 @@ struct DriverHistoryView: View {
 
     private func defectStatusBadge(status: DefectStatus) -> some View {
         Text(status.displayName)
-            .font(.system(size: 9, weight: .bold, design: .rounded))
+            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             .foregroundColor(status.color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -555,10 +555,10 @@ struct DriverHistoryView: View {
     private func emptyTabState(message: String, icon: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 32))
+                .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(.gray.opacity(0.4))
             Text(message)
-                .font(.system(size: 13, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
         }
@@ -566,7 +566,7 @@ struct DriverHistoryView: View {
         .padding(.vertical, 40)
         .background(AppTheme.Background.card)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.black.opacity(0.03), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.03), lineWidth: 1))
     }
 }
 

@@ -175,15 +175,15 @@ struct ComplianceAlertsView: View {
     private var emptyState: some View {
         VStack(spacing: 14) {
             Image(systemName: "checkmark.shield.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 48 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Status.success.opacity(0.5))
 
             Text("All Clear!")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
 
             Text("No compliance alerts match your current filters.\nAll vehicles are within safe compliance limits.")
-                .font(.system(size: 13))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
@@ -252,16 +252,16 @@ struct ComplianceSummaryBadge: View {
                     .fill(color.opacity(0.1))
                     .frame(width: 44, height: 44)
                 Image(systemName: icon)
-                    .font(.system(size: 18))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(color)
             }
 
             Text("\(count)")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
 
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -286,9 +286,9 @@ struct TypeFilterChip: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 Text(label)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
             }
             .foregroundColor(isSelected ? .white : color)
             .padding(.horizontal, 14)
@@ -322,7 +322,7 @@ struct ComplianceAlertCard: View {
                         .fill(item.alertType.color.opacity(0.1))
                         .frame(width: 48, height: 48)
                     Image(systemName: item.alertType.icon)
-                        .font(.system(size: 20))
+                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(item.alertType.color)
                         .frame(width: 48, height: 48)
 
@@ -338,7 +338,7 @@ struct ComplianceAlertCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(item.alertType.displayName)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(item.alertType.color)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -350,21 +350,21 @@ struct ComplianceAlertCard: View {
                     }
 
                     Text(item.vehicleRegistration)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
 
                     Text("\(item.vehicleMakeModel) · \(item.vehicleYear)")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.secondary)
 
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
-                            .font(.system(size: 10))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         Text(item.deadlineDate.formatted(date: .abbreviated, time: .omitted))
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         Text("·")
                         Text(item.urgencyLabel)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(item.urgencyColor)
                     }
                     .foregroundColor(AppTheme.Text.tertiary)
@@ -373,7 +373,7 @@ struct ComplianceAlertCard: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
             }
             .padding(14)
@@ -402,7 +402,7 @@ struct ComplianceStatusPill: View {
 
     var body: some View {
         Text(status.displayName.uppercased())
-            .font(.system(size: 9, weight: .black, design: .rounded))
+            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
             .foregroundColor(status.color)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
@@ -436,10 +436,10 @@ struct ComplianceAlertDetailSheet: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 8) {
                                     Image(systemName: item.alertType.icon)
-                                        .font(.system(size: 22))
+                                        .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(item.alertType.color)
                                     Text(item.alertType.displayName + " Alert")
-                                        .font(.system(size: 20, weight: .bold))
+                                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(AppTheme.Text.primary)
                                 }
                                 ComplianceStatusPill(status: item.status)
@@ -454,7 +454,7 @@ struct ComplianceAlertDetailSheet: View {
                         // Vehicle Details
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Vehicle Information")
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
 
                             DetailRow(label: "Registration", value: item.vehicleRegistration)
@@ -470,7 +470,7 @@ struct ComplianceAlertDetailSheet: View {
                         // Deadline Details
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Deadline Information")
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
 
                             DetailRow(
@@ -499,9 +499,9 @@ struct ComplianceAlertDetailSheet: View {
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 18))
+                                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     Text("Mark as Resolved")
-                                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 }
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -529,7 +529,7 @@ struct ComplianceAlertDetailSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Brand.primary)
                 }
             }
@@ -548,11 +548,11 @@ private struct DetailRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
             Spacer()
             Text(value)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(valueColor ?? AppTheme.Text.primary)
         }
     }
@@ -581,16 +581,16 @@ struct ResolveAlertSheet: View {
                                     .fill(item.alertType.color.opacity(0.1))
                                     .frame(width: 48, height: 48)
                                 Image(systemName: item.alertType.icon)
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(item.alertType.color)
                             }
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.vehicleRegistration)
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.primary)
                                 Text("Renewing \(item.alertType.displayName)")
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.secondary)
                             }
                             Spacer()
@@ -603,7 +603,7 @@ struct ResolveAlertSheet: View {
                         // Date picker card
                         VStack(alignment: .leading, spacing: 14) {
                             Text("New Expiration Date")
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
 
                             DatePicker(
@@ -627,9 +627,9 @@ struct ResolveAlertSheet: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 18))
+                                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 Text("Update and Resolve")
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -656,7 +656,7 @@ struct ResolveAlertSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Brand.accent)
                 }
             }

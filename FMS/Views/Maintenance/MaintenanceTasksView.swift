@@ -35,13 +35,7 @@ struct MaintenanceTaskDetailView: View {
     @State private var selectedParts: [UUID: Int] = [:]
 
     private func speak(_ text: String) {
-        if speechSynthesizer.isSpeaking {
-            speechSynthesizer.stopSpeaking(at: .immediate)
-        }
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-        speechSynthesizer.speak(utterance)
+        AudioSpeechManager.shared.speak(text)
     }
 
     private var statusColor: Color {
@@ -110,10 +104,7 @@ struct MaintenanceTaskDetailView: View {
                     DetailSection(
                         title: "Work Order Details",
                         icon: "doc.text.fill",
-                        accentColor: AppTheme.Brand.primary,
-                        onSpeak: accessibility.maintenanceSpeakTasks ? {
-                            speak("Work Order: \(order.title). Description: \(order.workDescription.isEmpty ? "No description provided." : order.workDescription). Priority: \(order.priority.rawValue). Status: \(order.status.displayLabel).")
-                        } : nil
+                        accentColor: AppTheme.Brand.primary
                     ) {
                         VStack(spacing: 0) {
                             DetailInfoRow(label: "Work Order Title", value: order.title, icon: "wrench.fill", color: AppTheme.Brand.primary)
@@ -181,29 +172,26 @@ struct MaintenanceTaskDetailView: View {
                     DetailSection(
                         title: "Parts & Materials",
                         icon: "cube.box.fill",
-                        accentColor: AppTheme.Brand.amber,
-                        onSpeak: accessibility.maintenanceSpeakTasks ? {
-                            speak("Parts and Materials checklist: " + simulatedParts.joined(separator: ", "))
-                        } : nil
+                        accentColor: AppTheme.Brand.amber
                     ) {
                         VStack(alignment: .leading, spacing: 10) {
                             ForEach(Array(simulatedParts.enumerated()), id: \.offset) { idx, part in
                                 HStack(spacing: 12) {
                                     Text("\(idx + 1)")
-                                        .font(.system(size: 11, weight: .bold))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(.white)
                                         .frame(width: 22, height: 22)
                                         .background(AppTheme.Brand.amber.opacity(0.8))
                                         .clipShape(Circle())
 
                                     Text(part)
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Text.primary)
 
                                     Spacer()
 
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 11, weight: .bold))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(AppTheme.Status.success)
                                 }
                                 .padding(.horizontal, 16)
@@ -243,13 +231,13 @@ struct MaintenanceTaskDetailView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "clock.fill")
                                         .foregroundColor(AppTheme.Brand.amber)
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Approval Pending")
-                                            .font(.system(size: 14, weight: .bold))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(AppTheme.Text.primary)
                                         Text("This work order requires approval from the Fleet Manager before work can start.")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
                                 }
@@ -285,7 +273,7 @@ struct MaintenanceTaskDetailView: View {
                                     // Labor Cost Input
                                     VStack(alignment: .leading, spacing: 5) {
                                         Text("Labor Cost (₹)")
-                                            .font(.system(size: 13, weight: .bold))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(AppTheme.Text.secondary)
                                         
                                         TextField("e.g. 1500", text: $laborCostText)
@@ -295,19 +283,19 @@ struct MaintenanceTaskDetailView: View {
                                             .cornerRadius(8)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 8)
-                                                    .stroke(Color.black.opacity(0.1), lineWidth: 1)
+                                                    .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.1), lineWidth: 1)
                                             )
                                     }
                                     
                                     // Parts Used Picker
                                     VStack(alignment: .leading, spacing: 6) {
                                         Text("Parts Used")
-                                            .font(.system(size: 13, weight: .bold))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(AppTheme.Text.secondary)
                                         
                                         if inventoryItems.isEmpty {
                                             Text("No inventory items found.")
-                                                .font(.system(size: 12))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                 .italic()
                                                 .foregroundColor(.gray)
                                         } else {
@@ -329,14 +317,14 @@ struct MaintenanceTaskDetailView: View {
                                                             HStack(spacing: 8) {
                                                                 Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                                                                     .foregroundColor(isSelected ? AppTheme.Brand.primary : .gray)
-                                                                    .font(.system(size: 16))
+                                                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                                 
                                                                 VStack(alignment: .leading, spacing: 2) {
                                                                     Text(item.partName)
-                                                                        .font(.system(size: 13, weight: .semibold))
+                                                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                                                         .foregroundColor(.black)
                                                                     Text("In stock: \(item.quantityInStock) · Price: ₹\(Int(item.unitCost))")
-                                                                        .font(.system(size: 11))
+                                                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                                         .foregroundColor(.gray)
                                                                 }
                                                             }
@@ -355,11 +343,11 @@ struct MaintenanceTaskDetailView: View {
                                                                 } label: {
                                                                     Image(systemName: "minus.circle.fill")
                                                                         .foregroundColor(AppTheme.Brand.primary)
-                                                                        .font(.system(size: 18))
+                                                                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                                 }
                                                                 
                                                                 Text("\(qty)")
-                                                                    .font(.system(size: 13, weight: .bold))
+                                                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                                                     .frame(width: 20)
                                                                     .multilineTextAlignment(.center)
                                                                 
@@ -370,12 +358,12 @@ struct MaintenanceTaskDetailView: View {
                                                                 } label: {
                                                                     Image(systemName: "plus.circle.fill")
                                                                         .foregroundColor(AppTheme.Brand.primary)
-                                                                        .font(.system(size: 18))
+                                                                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                                 }
                                                             }
                                                         } else if item.quantityInStock <= 0 {
                                                             Text("OUT OF STOCK")
-                                                                .font(.system(size: 9, weight: .bold))
+                                                                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                                                 .foregroundColor(AppTheme.Status.danger)
                                                                 .padding(.horizontal, 6)
                                                                 .padding(.vertical, 2)
@@ -391,13 +379,13 @@ struct MaintenanceTaskDetailView: View {
                                             .cornerRadius(8)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 8)
-                                                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                                                    .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.06), lineWidth: 1)
                                             )
                                         }
                                     }
                                     
                                     Text("Repair Notes / Evidence")
-                                        .font(.system(size: 13, weight: .bold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     
                                     TextEditor(text: $repairNotes)
@@ -407,7 +395,7 @@ struct MaintenanceTaskDetailView: View {
                                         .cornerRadius(8)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.black.opacity(0.1), lineWidth: 1)
+                                                .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.1), lineWidth: 1)
                                         )
                                     
                                     // PhotosPicker
@@ -418,7 +406,7 @@ struct MaintenanceTaskDetailView: View {
                                         photoLibrary: .shared()
                                     ) {
                                         Label("Attach Repair Evidence Photos", systemImage: "photo.badge.plus")
-                                            .font(.system(size: 13, weight: .semibold))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                             .foregroundColor(AppTheme.Brand.primary)
                                     }
                                     .buttonStyle(.plain)
@@ -483,13 +471,13 @@ struct MaintenanceTaskDetailView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "checkmark.seal.fill")
                                         .foregroundColor(AppTheme.Status.success)
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Task Completed & Logged")
-                                            .font(.system(size: 14, weight: .bold))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(AppTheme.Text.primary)
                                         Text("Synced successfully back to Fleet Manager.")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
                                     Spacer()
@@ -653,13 +641,13 @@ private struct DetailHeroCard: View {
                     .fill(color.opacity(0.12))
                     .frame(width: 70, height: 70)
                 Image(systemName: icon)
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(color)
             }
 
             VStack(spacing: 6) {
                 Text(order.title)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                     .multilineTextAlignment(.center)
 
@@ -707,17 +695,17 @@ private struct DetailSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(accentColor)
                 Text(title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                 
                 if let onSpeak = onSpeak {
                     Spacer()
                     Button(action: onSpeak) {
                         Image(systemName: "speaker.wave.2.fill")
-                            .font(.system(size: 14))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(accentColor)
                             .padding(6)
                             .background(accentColor.opacity(0.1))
@@ -756,16 +744,16 @@ private struct DetailInfoRow: View {
                     .fill(color.opacity(0.10))
                     .frame(width: 34, height: 34)
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(color)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.secondary)
                 Text(value)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Text.primary)
                     .fixedSize(horizontal: false, vertical: true)
             }

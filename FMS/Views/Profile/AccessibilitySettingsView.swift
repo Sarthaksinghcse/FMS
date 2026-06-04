@@ -17,14 +17,11 @@ struct AccessibilitySettingsView: View {
                             icon: "accessibility.fill",
                             iconColor: AppTheme.Brand.primary,
                             title: "Accessibility Settings",
-                            subtitle: "Enable features tailored to your workflow as a \(role.displayName)"
+                            subtitle: "Enable features tailored to your workflow"
                         )
                         
                         // ── 1. Global Accessibility Section ─────────────────────────────
                         globalSettingsSection
-                        
-                        // ── 2. Role-Specific Accessibility Section ───────────────────────
-                        roleSpecificSection
                         
                         Spacer().frame(height: 20)
                     }
@@ -37,7 +34,7 @@ struct AccessibilitySettingsView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                 }
@@ -49,7 +46,7 @@ struct AccessibilitySettingsView: View {
     private var globalSettingsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("GLOBAL SETTINGS")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(AppTheme.Text.secondary)
                 .tracking(0.6)
                 .padding(.leading, 4)
@@ -59,7 +56,7 @@ struct AccessibilitySettingsView: View {
                     icon: "textformat.size",
                     iconColor: AppTheme.Brand.primary,
                     title: "Large Text",
-                    subtitle: "Scale font sizes up for improved legibility",
+                    subtitle: "Increases font size across the app",
                     isOn: $manager.isLargeTextEnabled,
                     tintColor: AppTheme.Brand.primary
                 )
@@ -88,7 +85,7 @@ struct AccessibilitySettingsView: View {
     private var colorBlindModeRow: some View {
         HStack(spacing: 14) {
             Image(systemName: "eye.fill")
-                .font(.system(size: 15))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Brand.teal)
                 .frame(width: 36, height: 36)
                 .background(AppTheme.Brand.teal.opacity(0.10))
@@ -96,10 +93,10 @@ struct AccessibilitySettingsView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text("Color Correction")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.primary)
                 Text("Adjust status badges colors")
-                    .font(.system(size: 12))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(AppTheme.Text.secondary)
             }
             
@@ -115,97 +112,5 @@ struct AccessibilitySettingsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-    }
-    
-    // MARK: - Role-Specific Section
-    private var roleSpecificSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("\(role.displayName.uppercased()) FEATURES")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(AppTheme.Text.secondary)
-                .tracking(0.6)
-                .padding(.leading, 4)
-            
-            VStack(spacing: 0) {
-                switch role {
-                case .driver:
-                    ProfileToggleRow(
-                        icon: "hand.tap.fill",
-                        iconColor: AppTheme.Status.success,
-                        title: "Large Tap Targets",
-                        subtitle: "Increase size of buttons on active trip cards",
-                        isOn: $manager.driverLargeTapTargets,
-                        tintColor: AppTheme.Status.success
-                    )
-                    
-                    Divider().padding(.leading, 66)
-                    
-                    ProfileToggleRow(
-                        icon: "speaker.wave.3.fill",
-                        iconColor: AppTheme.Brand.amber,
-                        title: "Voice Assistance",
-                        subtitle: "Announce navigation and geofence alerts",
-                        isOn: $manager.driverAudioPrompts,
-                        tintColor: AppTheme.Status.success
-                    )
-                    
-                    Divider().padding(.leading, 66)
-                    
-                    ProfileToggleRow(
-                        icon: "light.beacon.max.fill",
-                        iconColor: AppTheme.Status.danger,
-                        title: "Screen Flash Alerts",
-                        subtitle: "Flashes the screen on urgent alerts",
-                        isOn: $manager.driverScreenFlashAlerts,
-                        tintColor: AppTheme.Status.success
-                    )
-                    
-                case .fleetManager:
-                    ProfileToggleRow(
-                        icon: "eyes",
-                        iconColor: AppTheme.Brand.primary,
-                        title: "Color Blind Badges",
-                        subtitle: "Add text labels & strict filters to status symbols",
-                        isOn: $manager.fleetColorFilterStatus,
-                        tintColor: AppTheme.Brand.primary
-                    )
-                    
-                    Divider().padding(.leading, 66)
-                    
-                    ProfileToggleRow(
-                        icon: "quote.bubble.fill",
-                        iconColor: AppTheme.Brand.teal,
-                        title: "Speak Voice Logs",
-                        subtitle: "Reads aloud transcript text when clicked",
-                        isOn: $manager.fleetSpeakLogs,
-                        tintColor: AppTheme.Brand.primary
-                    )
-                    
-                case .maintenance:
-                    ProfileToggleRow(
-                        icon: "sun.max.fill",
-                        iconColor: AppTheme.Brand.amber,
-                        title: "Outdoor Contrast",
-                        subtitle: "High contrast outline cells for direct sunlight",
-                        isOn: $manager.maintenanceOutdoorContrast,
-                        tintColor: AppTheme.Brand.amber
-                    )
-                    
-                    Divider().padding(.leading, 66)
-                    
-                    ProfileToggleRow(
-                        icon: "list.bullet.rectangle.portrait",
-                        iconColor: AppTheme.Brand.violet,
-                        title: "Speak Checklist Tasks",
-                        subtitle: "Reads aloud work order items",
-                        isOn: $manager.maintenanceSpeakTasks,
-                        tintColor: AppTheme.Brand.amber
-                    )
-                }
-            }
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
-        }
     }
 }

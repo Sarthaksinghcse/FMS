@@ -126,7 +126,7 @@ struct UpdateMaintenanceView: View {
                         showDirectRecordSheet = true
                     } label: {
                         Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.amber)
                     }
                 }
@@ -161,17 +161,17 @@ private struct UpdateOrderCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(order.title)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                         .lineLimit(1)
                     
                     if let vehicle = vehicle {
                         Text("\(vehicle.make) \(vehicle.model) (Reg: \(vehicle.registrationNumber))")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Text.secondary)
                     } else {
                         Text("Vehicle ID: \(order.vehicleId.uuidString.prefix(6))")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                 }
@@ -192,7 +192,7 @@ private struct UpdateOrderCard: View {
                         .fill(statColor)
                         .frame(width: 8, height: 8)
                     Text(statText)
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(statColor)
                 }
                 .padding(.horizontal, 10)
@@ -204,12 +204,12 @@ private struct UpdateOrderCard: View {
 
                 if let cost = order.estimatedCost {
                     Text("Est: ₹\(Int(cost))")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.secondary)
                 }
 
                 Image(systemName: "pencil.circle.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(AppTheme.Brand.primary)
             }
         }
@@ -230,19 +230,19 @@ private struct MaintenanceRecordCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(record.serviceType)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                         .lineLimit(1)
                     
                     if let vehicle = vehicle {
                         Text("\(vehicle.make) \(vehicle.model) (Reg: \(vehicle.registrationNumber))")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                 }
                 Spacer()
                 Text(record.serviceDate, format: .dateTime.day().month().year())
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Text.tertiary)
             }
 
@@ -253,7 +253,7 @@ private struct MaintenanceRecordCard: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(AppTheme.Status.success)
                     Text("Completed")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Status.success)
                 }
                 .padding(.horizontal, 10)
@@ -264,7 +264,7 @@ private struct MaintenanceRecordCard: View {
                 Spacer()
 
                 Text("₹\(Int(record.cost))")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(AppTheme.Brand.amber)
             }
         }
@@ -292,7 +292,7 @@ private struct MaintenanceRecordDetailSheet: View {
                         
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Service Information")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                             
@@ -315,7 +315,7 @@ private struct MaintenanceRecordDetailSheet: View {
                         if !record.replacedParts.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Replaced Parts")
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                     .textCase(.uppercase)
 
@@ -324,9 +324,9 @@ private struct MaintenanceRecordDetailSheet: View {
                                         ForEach(record.replacedParts, id: \.self) { part in
                                         HStack(spacing: 5) {
                                             Image(systemName: "cube.box.fill")
-                                                .font(.system(size: 10))
+                                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             Text(part)
-                                                .font(.system(size: 12, weight: .medium))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         }
                                         .foregroundColor(AppTheme.Brand.violet)
                                         .padding(.horizontal, 12)
@@ -347,12 +347,12 @@ private struct MaintenanceRecordDetailSheet: View {
                         if let notes = record.notes, !notes.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Work Notes")
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                     .textCase(.uppercase)
                                 
                                 Text(notes)
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.primary)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -414,13 +414,13 @@ private struct RecordDirectMaintenanceSheet: View {
                         
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Service Information")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Vehicle")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 Picker("Select Vehicle", selection: $selectedVehicleId) {
                                     Text("Select a vehicle").tag(UUID?.none)
@@ -437,7 +437,7 @@ private struct RecordDirectMaintenanceSheet: View {
 
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Service Type")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 TextField("e.g. Engine Repair, Battery Replacement", text: $serviceType)
                                     .padding(12)
@@ -447,7 +447,7 @@ private struct RecordDirectMaintenanceSheet: View {
 
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Service Date")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 DatePicker("", selection: $serviceDate, displayedComponents: .date)
                                     .labelsHidden()
@@ -456,7 +456,7 @@ private struct RecordDirectMaintenanceSheet: View {
                             
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Total Cost (INR)")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 TextField("e.g. 2500", text: $costInput)
                                     .keyboardType(.numberPad)
@@ -472,7 +472,7 @@ private struct RecordDirectMaintenanceSheet: View {
 
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Spare Parts & Consumables Used")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
 
@@ -487,7 +487,7 @@ private struct RecordDirectMaintenanceSheet: View {
                                         Image(systemName: "cube.box.fill")
                                             .foregroundColor(AppTheme.Brand.violet)
                                         Text(part)
-                                            .font(.system(size: 13, weight: .medium))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         Spacer()
                                         Button {
                                             partsList.removeAll(where: { $0 == part })
@@ -508,7 +508,7 @@ private struct RecordDirectMaintenanceSheet: View {
                         
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Work Notes")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                             

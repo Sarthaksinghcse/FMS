@@ -166,14 +166,14 @@ struct InProgressTasksView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(order.title)
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                             .lineLimit(1)
                         HStack(spacing: 6) {
                             // Live pulse indicator
                             LivePulseDot()
                             Text("Active Repair")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Brand.primary)
                         }
                     }
@@ -188,11 +188,11 @@ struct InProgressTasksView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack {
                         Text("Repair Progress")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Text.secondary)
                         Spacer()
                         Text("\(Int(progress * 100))%")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                     GeometryReader { geo in
@@ -247,14 +247,14 @@ struct InProgressTasksView: View {
                 if !parts.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Parts In Use")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(AppTheme.Text.secondary)
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 6) {
                                 ForEach(parts, id: \.self) { part in
                                     Text(part)
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                         .foregroundColor(AppTheme.Brand.primary)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 5)
@@ -273,7 +273,7 @@ struct InProgressTasksView: View {
                     TaskStatusBadge(label: "In Progress", color: AppTheme.Brand.primary, icon: "wrench.fill")
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
                 .padding(.horizontal, 16)
@@ -335,15 +335,15 @@ struct InProgressTasksView: View {
         var body: some View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(color)
                     .frame(width: 20)
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.secondary)
                     .frame(width: 100, alignment: .leading)
                 Text(value)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Text.primary)
                     .lineLimit(1)
                 Spacer()

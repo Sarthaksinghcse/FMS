@@ -198,7 +198,7 @@ struct CommunicationView: View {
                     // Start new chat action
                 }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(.white)
                         .frame(width: 56, height: 56)
                         .background(AppTheme.Brand.primary)
@@ -216,7 +216,7 @@ struct CommunicationView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Brand.primary)
                         .frame(width: 36, height: 36)
                         .contentShape(Rectangle())
@@ -284,7 +284,7 @@ private struct CommunicationRow: View {
                     .frame(width: 36, height: 36)
                 
                 Text(channel.initials)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(channel.avatarColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -294,19 +294,19 @@ private struct CommunicationRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(channel.senderName)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                     
                     Spacer()
                     
                     Text(channel.timestamp)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Text.tertiary)
                 }
                 
                 HStack {
                     Text(channel.textPreview)
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.secondary)
                         .lineLimit(1)
                     
@@ -314,7 +314,7 @@ private struct CommunicationRow: View {
                     
                     if channel.unreadCount > 0 {
                         Text("\(channel.unreadCount)")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)

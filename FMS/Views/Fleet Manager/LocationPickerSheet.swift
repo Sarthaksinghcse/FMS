@@ -87,7 +87,7 @@ struct LocationPickerSheet: View {
                         // Center Pin
                         VStack(spacing: 0) {
                             Image(systemName: "mappin")
-                                .font(.system(size: 32, weight: .semibold))
+                                .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(AppTheme.Brand.royalBlue)
                             Circle()
                                 .fill(Color.black.opacity(0.2))
@@ -129,7 +129,7 @@ struct LocationPickerSheet: View {
                                 .foregroundColor(.secondary)
                             ZStack(alignment: .leading) {
                                 Text(addressText.isEmpty ? "Locating..." : addressText)
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .lineLimit(2)
                                     .opacity(isGeocoding ? 0.3 : 1.0)
                                 
@@ -152,7 +152,7 @@ struct LocationPickerSheet: View {
                         dismiss()
                     } label: {
                         Text("Confirm Location")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()

@@ -191,7 +191,7 @@ struct DriverProfileView: View {
                                         .scaledToFill()
                                 default:
                                     Text(initials)
-                                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                                        .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.5)
@@ -202,7 +202,7 @@ struct DriverProfileView: View {
                             .clipShape(Circle())
                         } else {
                             Text(initials)
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.5)
@@ -223,18 +223,18 @@ struct DriverProfileView: View {
 
                 VStack(spacing: 6) {
                     Text(user?.name ?? "Driver")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
 
                     Text(user?.email ?? "driver@fms.com")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Text.secondary)
 
                     HStack(spacing: 6) {
                         Image(systemName: "steeringwheel")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         Text("Driver")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     }
                     .foregroundColor(AppTheme.Status.success)
                     .padding(.horizontal, 14)
@@ -251,7 +251,7 @@ struct DriverProfileView: View {
                 showEditProfile = true
             } label: {
                 Image(systemName: "pencil.circle.fill")
-                    .font(.system(size: 28))
+                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundColor(AppTheme.Status.success)
             }
@@ -268,7 +268,7 @@ struct DriverProfileView: View {
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Account & Settings")
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(AppTheme.Text.primary)
                 .padding(.leading, 4)
 
@@ -356,9 +356,9 @@ struct DriverProfileView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 Text("Sign Out")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
             }
             .foregroundColor(AppTheme.Status.danger)
             .frame(maxWidth: .infinity)

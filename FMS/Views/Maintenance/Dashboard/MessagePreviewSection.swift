@@ -37,7 +37,7 @@ struct MessagesPreviewSection: View {
                 
                 Button(action: {}) {
                     Text("See All")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Brand.primary)
                 }
             }

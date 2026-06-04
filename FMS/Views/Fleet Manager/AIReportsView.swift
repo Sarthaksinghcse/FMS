@@ -7,6 +7,7 @@ struct AIReportsView: View {
     @State private var viewModel = AIReportsViewModel()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     var body: some View {
         ZStack {
@@ -17,16 +18,16 @@ struct AIReportsView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Executive AI Summary")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                         
                         if (viewModel.report?.generatedAt) != nil {
                             Text("Generated \(viewModel.formattedDate)")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                         } else {
                             Text("Ready to analyze fleet data")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                         }
                     }
@@ -44,9 +45,9 @@ struct AIReportsView: View {
                                     .tint(.white)
                             } else {
                                 Image(systemName: "sparkles")
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 Text("Generate Fresh")
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             }
                         }
                         .padding(.horizontal, 14)
@@ -69,7 +70,7 @@ struct AIReportsView: View {
                             .tint(Theme.royalBlue)
                             .scaleEffect(1.2)
                         Text("Running AI analytics engines...")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                     Spacer()
@@ -86,17 +87,17 @@ struct AIReportsView: View {
                                                 .fill(section.iconBgColor)
                                                 .frame(width: 38, height: 38)
                                             Image(systemName: section.icon)
-                                                .font(.system(size: 15, weight: .bold))
+                                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                                 .foregroundColor(section.iconColor)
                                         }
                                         
                                         Text(section.title)
-                                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.black)
                                     }
                                     
                                     Text(LocalizedStringKey(section.content))
-                                        .font(.system(size: 13.5, weight: .medium, design: .rounded))
+                                        .font(.system(size: 13.5 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                         .foregroundColor(AppTheme.Text.primary)
                                         .lineSpacing(5)
                                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -117,11 +118,11 @@ struct AIReportsView: View {
                     Spacer()
                     VStack(spacing: 16) {
                         Image(systemName: "sparkles")
-                            .font(.system(size: 40))
+                            .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(Theme.royalBlue.opacity(0.5))
                         
                         Text("No Fleet Report Generated")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                         
                         Button {
@@ -130,7 +131,7 @@ struct AIReportsView: View {
                             }
                         } label: {
                             Text("Generate AI Report Now")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 12)

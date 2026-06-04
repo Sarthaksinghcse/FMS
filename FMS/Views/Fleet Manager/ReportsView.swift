@@ -190,11 +190,11 @@ struct ReportsView: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Maintenance Reports")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(.system(size: 26 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
                 
                 Text("Real-time fleet maintenance analytics and fleet performance insights.")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
             }
             
@@ -208,16 +208,16 @@ struct ReportsView: View {
                                 .fill(Theme.darkOrange.opacity(0.12))
                                 .frame(width: 36, height: 36)
                             Image(systemName: "sparkles")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(Theme.darkOrange)
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Executive AI Report")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.black)
                             Text("Drafted by AI analyst")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundColor(.gray)
                         }
                     }
@@ -225,7 +225,7 @@ struct ReportsView: View {
                     Spacer()
                     
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(.gray)
                 }
                 .padding(12)
@@ -294,18 +294,18 @@ struct ReportsView: View {
                 Image(systemName: "lightbulb.fill")
                     .foregroundColor(AppTheme.Brand.amber)
                 Text("Performance Insights")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
             }
             
             VStack(alignment: .leading, spacing: 8) {
                 if !overdueVehicles.isEmpty {
                     Text("• Critical: \(overdueVehicles.count) vehicles require urgent scheduled servicing to maintain optimal operational performance.")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                         .foregroundColor(AppTheme.Status.danger)
                 } else {
                     Text("• Fleet Status: Optimal. No overdue maintenance jobs or pending schedules detected today.")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                         .foregroundColor(AppTheme.Status.success)
                 }
                 
@@ -313,12 +313,12 @@ struct ReportsView: View {
                 let maxCat = categoryCosts.max(by: { $0.cost < $1.cost })
                 if let highest = maxCat, highest.cost > 0 {
                     Text("• Expense Warning: '\(highest.category)' is the highest cost driver at \(String(format: "₹%.0f", highest.cost)), representing \(String(format: "%.0f%%", (totalCategorySum > 0 ? highest.cost / totalCategorySum : 0.0) * 100)) of your filtered budget.")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                         .foregroundColor(AppTheme.Text.secondary)
                 }
                 
                 Text("• Recommendation: Rotate tires every 10,000 km to decrease tire costs by up to 15% and increase fuel economy.")
-                    .font(.system(size: 11, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(AppTheme.Text.tertiary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -338,7 +338,7 @@ struct ReportsView: View {
     private var costBreakdownSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Service Category Cost Breakdown")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(.black)
             
             VStack(spacing: 14) {
@@ -347,15 +347,15 @@ struct ReportsView: View {
                         HStack {
                             HStack(spacing: 6) {
                                 Image(systemName: cat.icon)
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(cat.color)
                                 Text(cat.category)
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                             }
                             Spacer()
                             Text(String(format: "₹%.0f (%.0f%%)", cat.cost, (totalCategorySum > 0 ? cat.cost / totalCategorySum : 0.0) * 100))
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.gray)
                         }
                         
@@ -391,11 +391,11 @@ struct ReportsView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("⚠️ Overdue Maintenance Alerts")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 Spacer()
                 Text("\(overdueVehicles.count) Vehicles")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -408,10 +408,10 @@ struct ReportsView: View {
                     Spacer()
                     VStack(spacing: 6) {
                         Image(systemName: "checkmark.shield.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Status.success)
                         Text("All vehicles current")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 12)
@@ -426,16 +426,16 @@ struct ReportsView: View {
                                     .fill(AppTheme.IconBg.red)
                                     .frame(width: 38, height: 38)
                                 Image(systemName: "wrench.and.screwdriver.fill")
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Status.danger)
                             }
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(vehicle.registrationNumber)
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                 Text("\(vehicle.make) \(vehicle.model) · Odo: \(Int(vehicle.odometerReading)) km")
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                     .foregroundColor(.gray)
                             }
                             
@@ -443,7 +443,7 @@ struct ReportsView: View {
                             
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text(vehicle.status == .inMaintenance ? "Maintenance" : "Overdue")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
@@ -452,7 +452,7 @@ struct ReportsView: View {
                                 
                                 if let nextDate = vehicle.nextServiceDate {
                                     Text("Due: " + formatDateShort(nextDate))
-                                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                         .foregroundColor(.gray)
                                 }
                             }
@@ -479,12 +479,12 @@ struct ReportsView: View {
     private var frequentlyMaintainedSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("📊 Frequently Maintained Vehicles")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(.black)
             
             if frequentlyMaintained.isEmpty {
                 Text("No service records found.")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 16)
@@ -495,20 +495,20 @@ struct ReportsView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "car.fill")
                                     .foregroundColor(AppTheme.Brand.primary)
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(item.vehicle.registrationNumber)
-                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(.black)
                                     Text("\(item.vehicle.make) \(item.vehicle.model)")
-                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                         .foregroundColor(.gray)
                                 }
                                 Spacer()
                                 
                                 Text("\(item.count) Services")
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.violet)
                             }
                             
@@ -548,14 +548,14 @@ struct ReportsView: View {
     private var historyLogSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("🔧 Live Maintenance Log History")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(.black)
                 .padding(.horizontal, 18)
                 .padding(.top, 14)
             
             if filteredRecords.isEmpty {
                 Text("No records found in this time period.")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 24)
@@ -566,22 +566,22 @@ struct ReportsView: View {
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(record.serviceType)
-                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(.black)
                                     
                                     Text((vehicleForRecord(record)?.registrationNumber ?? "Unknown Vehicle") + " · " + formatDateLong(record.serviceDate))
-                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                         .foregroundColor(.gray)
                                 }
                                 Spacer()
                                 Text(String(format: "₹%.0f", record.cost))
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.primary)
                             }
                             
                             if let notes = record.notes, !notes.isEmpty {
                                 Text(notes)
-                                    .font(.system(size: 10, design: .rounded))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                     .foregroundColor(.secondary)
                                     .padding(6)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -642,23 +642,23 @@ struct ReportKpiCard: View {
                     .frame(width: 36, height: 36)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(color)
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
                 
                 Text(value)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                     .minimumScaleFactor(0.8)
                     .lineLimit(1)
                 
                 Text(subtitle)
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
             }
         }

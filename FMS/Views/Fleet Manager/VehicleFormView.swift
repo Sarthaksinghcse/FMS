@@ -124,10 +124,10 @@ struct AddVehicleFormView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
                 Text(isSaving ? "Saving..." : "Save Vehicle")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
@@ -363,15 +363,15 @@ struct EditVehicleFormView: View {
                     .frame(width: 60, height: 60)
                     .shadow(color: vehicle.vehicleType.iconColor.opacity(0.35), radius: 10, y: 4)
                 Image(systemName: vehicle.vehicleType.icon)
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(.white)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(vehicle.registrationNumber)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 Text("\(vehicle.make) \(vehicle.model) · \(String(vehicle.year))")
-                    .font(.system(size: 13, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(.secondary)
             }
             Spacer()
@@ -392,9 +392,9 @@ struct EditVehicleFormView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
-                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
@@ -417,9 +417,9 @@ struct EditVehicleFormView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: Theme.darkOrange))
                 } else {
-                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "trash.fill").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
-                Text(isDeleting ? "Deleting..." : "Delete Vehicle").font(.system(size: 15, weight: .semibold, design: .rounded))
+                Text(isDeleting ? "Deleting..." : "Delete Vehicle").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
             }
             .foregroundColor(Theme.darkOrange)
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -577,11 +577,11 @@ func formSection<Content: View>(
                     .fill(iconColor.opacity(0.12))
                     .frame(width: 30, height: 30)
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(iconColor)
             }
             Text(title)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
                 .tracking(0.5)
@@ -613,12 +613,12 @@ struct VehicleFormField: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .frame(width: 130, alignment: .leading)
 
             TextField(placeholder, text: $text)
-                .font(.system(size: 14, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                 .foregroundColor(AppTheme.Brand.royalBlue)
                 .keyboardType(keyboardType)
                 .focused(focus, equals: tag)
@@ -640,7 +640,7 @@ struct SegmentPickerRow<T: Hashable>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
@@ -654,7 +654,7 @@ struct SegmentPickerRow<T: Hashable>: View {
                             }
                         } label: {
                             Text(displayName(option))
-                                .font(.system(size: 13, weight: selection == option ? .bold : .medium, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: selection == option ? .bold : .medium, design: .rounded))
                                 .foregroundColor(selection == option ? .white : AppTheme.Brand.royalBlue)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
@@ -685,7 +685,7 @@ struct StatusPickerRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Status")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
@@ -697,7 +697,7 @@ struct StatusPickerRow: View {
                     } label: {
                         HStack(spacing: 5) {
                             Circle().fill(color).frame(width: 7, height: 7)
-                            Text(label).font(.system(size: 12, weight: selection == status ? .bold : .medium, design: .rounded))
+                            Text(label).font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: selection == status ? .bold : .medium, design: .rounded))
                         }
                         .foregroundColor(selection == status ? .white : color)
                         .padding(.horizontal, 12).padding(.vertical, 8)
@@ -729,7 +729,7 @@ struct DatePickerRow: View {
         )
         .datePickerStyle(.compact)
         .tint(AppTheme.Brand.royalBlue)
-        .font(.system(size: 14, weight: .medium, design: .rounded))
+        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
     }

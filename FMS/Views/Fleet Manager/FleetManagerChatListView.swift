@@ -117,7 +117,7 @@ struct FleetManagerChatListView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
                     TextField("Search chats...", text: $searchText)
-                        .font(.system(size: 15))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 }
                 .padding(10)
                 .background(Color(.systemGray6))
@@ -144,11 +144,11 @@ struct FleetManagerChatListView: View {
                         } else if filteredUsers.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "bubble.left.and.bubble.right")
-                                    .font(.system(size: 40))
+                                    .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(.gray.opacity(0.5))
                                     .padding(.top, 40)
                                 Text("No conversations found")
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.gray)
                             }
                             .frame(maxWidth: .infinity)
@@ -221,7 +221,7 @@ struct FleetManagerChatListView: View {
                         .fill(roleColor(for: user.role).opacity(0.12))
                         .frame(width: 48, height: 48)
                     Text(String(user.name.prefix(2)).uppercased())
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(roleColor(for: user.role))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
@@ -240,19 +240,19 @@ struct FleetManagerChatListView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(user.name)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                     
                     Spacer()
                     
                     Text(lastMessageTimeText(for: user.id))
-                        .font(.system(size: 11))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(.gray)
                 }
                 
                 HStack(spacing: 6) {
                     Text(user.role.displayName)
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(roleColor(for: user.role))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -261,7 +261,7 @@ struct FleetManagerChatListView: View {
                     
                     if !user.isActive {
                         Text("Offline")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             .foregroundColor(.gray)
                     }
                 }
@@ -283,7 +283,7 @@ struct FleetManagerChatListView: View {
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.black.opacity(0.04), lineWidth: 1.2)
+                .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 1.2)
         )
         .shadow(color: Color.black.opacity(0.01), radius: 5, x: 0, y: 2)
     }
@@ -364,13 +364,13 @@ struct FleetManagerBroadcastSheet: View {
                             .fill(AppTheme.Brand.accent.opacity(0.12))
                             .frame(width: 64, height: 64)
                         Image(systemName: "megaphone.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(AppTheme.Brand.accent)
                     }
                     Text("Broadcast Message")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     Text("Send a message to all drivers and maintenance personnel.")
-                        .font(.system(size: 13))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 30)
@@ -379,7 +379,7 @@ struct FleetManagerBroadcastSheet: View {
 
                 // Input field
                 TextField("Type your broadcast message here...", text: $messageText, axis: .vertical)
-                    .font(.system(size: 15))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .lineLimit(4...8)
                     .padding(14)
                     .background(Color(.systemGray6))
@@ -388,7 +388,7 @@ struct FleetManagerBroadcastSheet: View {
 
                 if let err = errorMsg {
                     Text(err)
-                        .font(.system(size: 13))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(AppTheme.Status.danger)
                         .padding(.horizontal, 20)
                 }
@@ -404,11 +404,11 @@ struct FleetManagerBroadcastSheet: View {
                             ProgressView().tint(.white)
                         } else if sent {
                             Label("Broadcast Sent!", systemImage: "checkmark.circle.fill")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(.white)
                         } else {
                             Label("Send Broadcast", systemImage: "paperplane.fill")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(.white)
                         }
                     }
