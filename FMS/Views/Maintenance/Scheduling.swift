@@ -20,10 +20,10 @@ final class ScheduledTasksViewModel: ObservableObject {
     // MARK: Published state
     @Published var searchText: String = ""
     @Published var selectedFilter: Int = 0    // 0=All, 1=High Priority, 2=Assigned To Me
+    @Published var allWorkOrders: [WorkOrder]
 
     // MARK: Data (injected from SwiftData queries + user context)
     let currentUserId: UUID
-    private let allWorkOrders: [WorkOrder]
 
     init(currentUserId: UUID, allWorkOrders: [WorkOrder]) {
         self.currentUserId = currentUserId
@@ -77,6 +77,7 @@ extension WorkOrderPriority {
 struct ScheduledTasksView: View {
     let currentUser: User
     let hidesTabBar: Bool
+    let allWorkOrders: [WorkOrder]
     @StateObject private var vm: ScheduledTasksViewModel
     @Environment(\.dismiss) private var dismiss
     private var externalFilter: Binding<Int>?
@@ -85,6 +86,7 @@ struct ScheduledTasksView: View {
 
     init(currentUser: User, allWorkOrders: [WorkOrder], selectedFilter: Binding<Int>? = nil, hidesTabBar: Bool = false) {
         self.currentUser = currentUser
+        self.allWorkOrders = allWorkOrders
         self.externalFilter = selectedFilter
         self.hidesTabBar = hidesTabBar
         _vm = StateObject(wrappedValue: ScheduledTasksViewModel(
@@ -164,6 +166,9 @@ struct ScheduledTasksView: View {
             }
         }
         .toolbar(hidesTabBar ? .hidden : .automatic, for: .tabBar)
+        .onChange(of: allWorkOrders) { _, newValue in
+            vm.allWorkOrders = newValue
+        }
     }
 }
 
