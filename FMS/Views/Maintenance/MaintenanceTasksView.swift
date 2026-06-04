@@ -58,8 +58,12 @@ struct MaintenanceTaskDetailView: View {
         return "Tech-" + order.assignedTo.uuidString.prefix(8).uppercased()
     }
 
+    private var associatedVehicle: Vehicle? {
+        allVehicles.first(where: { $0.id == order.vehicleId })
+    }
+
     private var vehicleNameAndReg: String {
-        if let vehicle = allVehicles.first(where: { $0.id == order.vehicleId }) {
+        if let vehicle = associatedVehicle {
             return "\(vehicle.make) \(vehicle.model) (\(vehicle.registrationNumber))"
         }
         return "Veh-" + order.vehicleId.uuidString.prefix(8).uppercased()
@@ -225,7 +229,7 @@ struct MaintenanceTaskDetailView: View {
                             DetailInfoRow(
                                 label: "Vehicle",
                                 value: vehicleNameAndReg,
-                                icon: "car.fill",
+                                icon: associatedVehicle?.vehicleType.icon ?? "car.fill",
                                 color: AppTheme.Brand.primary
                             )
                         }
