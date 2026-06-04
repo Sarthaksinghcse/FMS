@@ -79,10 +79,27 @@ struct MaintenanceManagementView: View {
     
     private var activeWorkOrders: [WorkOrder] {
         let base = workOrders.filter { $0.status == .open || $0.status == .inProgress }
+        let sortedBase: [WorkOrder]
         if sortByAIPriority {
-            return AIWorkOrderService.shared.sorted(base, defects: defectReports, vehicles: vehicles)
+            sortedBase = AIWorkOrderService.shared.sorted(base, defects: defectReports, vehicles: vehicles)
+        } else {
+            sortedBase = base.sorted { $0.createdAt > $1.createdAt }
         }
-        return base
+        
+        return sortedBase.sorted { (wo1, wo2) -> Bool in
+            let isPending1 = wo1.workDescription.contains("[PENDING_APPROVAL]")
+            let isPending2 = wo2.workDescription.contains("[PENDING_APPROVAL]")
+            
+            if isPending1 && !isPending2 {
+                return true
+            } else if !isPending1 && isPending2 {
+                return false
+            } else {
+                let idx1 = sortedBase.firstIndex(where: { $0.id == wo1.id }) ?? 0
+                let idx2 = sortedBase.firstIndex(where: { $0.id == wo2.id }) ?? 0
+                return idx1 < idx2
+            }
+        }
     }
     
     private var historicWorkOrders: [WorkOrder] {

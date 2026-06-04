@@ -273,6 +273,7 @@ struct ReportIssueView: View {
         }
         .navigationTitle("Report Issue")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var isFormValid: Bool {

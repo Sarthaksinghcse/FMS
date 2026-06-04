@@ -15,8 +15,6 @@ struct FMSApp: App {
         #if DEBUG
         DashboardNavigationTests.runTests()
         #endif
-        // Disable scroll bouncing globally so screens do not move or bounce when dragged
-        UIScrollView.appearance().bounces = false
     }
 
     var body: some Scene {

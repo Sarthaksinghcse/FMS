@@ -12,6 +12,7 @@ struct DriverProfileSheet: View {
     @State private var showLicenseDetails = false
     @State private var showNotificationSettings = false
     @State private var showSecuritySettings = false
+    @State private var showAccessibilitySettings = false
     @State private var showHelpSupport = false
     @State private var showPerformanceStats = false
     @State private var showSignOutConfirm = false
@@ -94,6 +95,9 @@ struct DriverProfileSheet: View {
             .sheet(isPresented: $showSecuritySettings) {
                 DriverSecuritySettingsView()
             }
+            .sheet(isPresented: $showAccessibilitySettings) {
+                AccessibilitySettingsView(role: .driver)
+            }
             .sheet(isPresented: $showHelpSupport) {
                 DriverHelpSupportView()
             }
@@ -167,7 +171,9 @@ struct DriverProfileSheet: View {
                                 Text(initials)
                                     .font(.system(size: 32, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .frame(width: 90, height: 90, alignment: .center)
                                     .background(
                                         LinearGradient(
                                             colors: [AppTheme.Status.success, AppTheme.Brand.teal],
@@ -182,6 +188,9 @@ struct DriverProfileSheet: View {
                             Text(initials)
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 90, height: 90, alignment: .center)
                         }
                     }
 
@@ -302,8 +311,8 @@ struct DriverProfileSheet: View {
 
                 ProfileSettingsRow(
                     icon: "creditcard.fill",
-                    iconColor: AppTheme.Brand.amber,
-                    iconBg: AppTheme.IconBg.amber,
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.IconBg.indigo,
                     title: "License Details",
                     subtitle: "View driving license & validity"
                 ) {
@@ -314,8 +323,8 @@ struct DriverProfileSheet: View {
 
                 ProfileSettingsRow(
                     icon: "bell.badge.fill",
-                    iconColor: AppTheme.Status.danger,
-                    iconBg: AppTheme.IconBg.red,
+                    iconColor: AppTheme.Status.success,
+                    iconBg: AppTheme.IconBg.indigo,
                     title: "Notifications",
                     subtitle: "Manage alert preferences"
                 ) {
@@ -332,6 +341,18 @@ struct DriverProfileSheet: View {
                     subtitle: "Password & authentication"
                 ) {
                     showSecuritySettings = true
+                }
+
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "accessibility.fill",
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.Brand.primary.opacity(0.12),
+                    title: "Accessibility",
+                    subtitle: "Speech, Contrast, Layout settings"
+                ) {
+                    showAccessibilitySettings = true
                 }
 
                 Divider().padding(.leading, 66)
@@ -363,10 +384,10 @@ struct DriverProfileSheet: View {
                 Text("Sign Out")
                     .font(.system(size: 16, weight: .semibold))
             }
-            .foregroundColor(AppTheme.Status.danger)
+            .foregroundColor(AppTheme.Status.success)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(AppTheme.Status.danger.opacity(0.08))
+            .background(AppTheme.Status.success.opacity(0.08))
             .cornerRadius(AppTheme.Radius.medium)
         }
         .buttonStyle(PlainButtonStyle())

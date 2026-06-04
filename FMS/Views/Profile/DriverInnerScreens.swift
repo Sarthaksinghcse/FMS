@@ -82,6 +82,9 @@ struct DriverEditProfileView: View {
                                             Text(initials.isEmpty ? "DR" : initials)
                                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                                 .foregroundColor(.white)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.5)
+                                                .frame(width: 80, height: 80, alignment: .center)
                                         }
                                     }
                                     .frame(width: 80, height: 80)
@@ -90,6 +93,9 @@ struct DriverEditProfileView: View {
                                     Text(initials.isEmpty ? "DR" : initials)
                                         .font(.system(size: 28, weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.5)
+                                        .frame(width: 80, height: 80, alignment: .center)
                                 }
                             }
 
@@ -139,7 +145,7 @@ struct DriverEditProfileView: View {
                         
                         Button {
                             let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
-                            guard trimmedPhone.isValidPhoneNumber else {
+                            if !trimmedPhone.isEmpty && !trimmedPhone.isValidPhoneNumber {
                                 errorAlertMessage = "Please enter a valid 10-digit phone number."
                                 showErrorAlert = true
                                 return
@@ -588,8 +594,8 @@ struct DriverSecuritySettingsView: View {
                                 ProfileToggleRow(
                                     icon: "faceid",
                                     iconColor: AppTheme.Brand.primary,
-                                    title: "Face ID / Touch ID",
-                                    subtitle: "Use biometrics to unlock",
+                                    title: "Face ID",
+                                    subtitle: "",
                                     isOn: $biometricEnabled
                                 )
                             }

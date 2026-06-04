@@ -21,9 +21,9 @@ final class InProgressTasksViewModel: ObservableObject {
 
     @Published var searchText: String = ""
     @Published var selectedFilter: Int = 0   // 0=All, 1=High Priority, 2=My Tasks
+    @Published var allWorkOrders: [WorkOrder]
 
     let currentUserId: UUID
-    private let allWorkOrders: [WorkOrder]
 
     init(currentUserId: UUID, allWorkOrders: [WorkOrder]) {
         self.currentUserId = currentUserId
@@ -62,15 +62,14 @@ final class InProgressTasksViewModel: ObservableObject {
 
     /// Parts list from work description or default set
     func parts(for order: WorkOrder) -> [String] {
-        let defaults = [
-            ["Brake pads", "Rotor disc"],
-            ["Engine oil filter", "Oil 5W-30"],
-            ["Air filter", "Spark plugs"],
-            ["Coolant", "Radiator cap"],
-            ["Transmission fluid", "Gasket set"]
+        let allParts = [
+            ["Brake pads", "Rotor disc", "Caliper"],
+            ["Engine oil filter", "Oil 5W-30", "Drain plug washer"],
+            ["Air filter", "Spark plugs (x4)"],
+            ["Coolant 5L", "Radiator cap", "Hose clamp"],
+            ["Transmission fluid", "Gasket set", "Seal kit"]
         ]
-        let idx = abs(order.id.hashValue) % defaults.count
-        return defaults[idx]
+        return allParts[abs(order.id.hashValue) % allParts.count]
     }
 }
 
@@ -79,10 +78,13 @@ final class InProgressTasksViewModel: ObservableObject {
 // ─────────────────────────────────────────────────────────────────────────────
 
 struct InProgressTasksView: View {
-    
+    let hidesTabBar: Bool
+    let allWorkOrders: [WorkOrder]
     @StateObject private var vm: InProgressTasksViewModel
     
-    init(currentUserId: UUID, allWorkOrders: [WorkOrder]) {
+    init(currentUserId: UUID, allWorkOrders: [WorkOrder], hidesTabBar: Bool = false) {
+        self.hidesTabBar = hidesTabBar
+        self.allWorkOrders = allWorkOrders
         _vm = StateObject(wrappedValue: InProgressTasksViewModel(
             currentUserId: currentUserId,
             allWorkOrders: allWorkOrders
@@ -137,6 +139,10 @@ struct InProgressTasksView: View {
                     }
                 }
             }
+        }
+        .toolbar(hidesTabBar ? .hidden : .automatic, for: .tabBar)
+        .onChange(of: allWorkOrders) { _, newValue in
+            vm.allWorkOrders = newValue
         }
     }
     

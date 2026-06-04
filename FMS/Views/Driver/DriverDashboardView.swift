@@ -25,12 +25,14 @@ extension Color {
 @available(iOS 26.0, *)
 struct DriverDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     @StateObject private var vm = DriverDashboardViewModel()
     @State private var selectedTab = 0
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var realtimeMessagesChannel: RealtimeChannelV2?
     @State private var showFuelLogPrompt = false
+    @State private var pollingTask: Task<Void, Never>?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -58,8 +60,20 @@ struct DriverDashboardView: View {
             await vm.load(context: modelContext)
             startRealtimeTripsListener()
             startRealtimeMessagesListener()
+            
+            pollingTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 8_000_000_000)
+                    if Task.isCancelled { break }
+                    print("🔄 [Driver Dashboard Polling] Syncing latest database changes...")
+                    await vm.load(context: modelContext)
+                }
+            }
         }
         .onDisappear {
+            pollingTask?.cancel()
+            pollingTask = nil
+            
             if let activeChannel = realtimeChannel {
                 let client = SupabaseManager.shared.client
                 Task {
@@ -76,15 +90,15 @@ struct DriverDashboardView: View {
             }
         }
         
-        .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet() }
+        .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet(tripId: vm.activeTrip?.id ?? vm.currentTrip?.id) }
         .sheet(isPresented: $vm.showIssue)     { IssueReportSheet() }
-        .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
+        .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true, vehicleId: vm.activeTrip?.vehicleId ?? vm.currentTrip?.vehicleId, initialVehicleNumber: vm.assignedVehicle?.vehicleNumber) }
         .sheet(isPresented: $vm.showPostTrip, onDismiss: {
             if vm.showPostTripOnEnd {
                 showFuelLogPrompt = true
             }
         }) {
-            InspectionFormSheet(isPreTrip: false) { passed, issues, remarks in
+            InspectionFormSheet(isPreTrip: false, vehicleId: vm.activeTrip?.vehicleId ?? vm.currentTrip?.vehicleId, initialVehicleNumber: vm.assignedVehicle?.vehicleNumber) { passed, issues, remarks in
                 vm.lastInspectionPassed = passed
                 vm.lastIssuesFound      = issues
                 vm.lastInspectionRemarks = remarks
@@ -400,6 +414,9 @@ struct FMSMsgRow: View {
                 Text(msg.initials)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(roleColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: 40, height: 40, alignment: .center)
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
@@ -472,11 +489,15 @@ struct ActionTile: View {
 
 
 struct VoiceLogSheet: View {
+    let tripId: UUID?
     @Environment(\.dismiss) private var dismiss
     @State private var voiceLogger = VoiceTripLogger()
     @State private var elapsed    = 0
     @State private var timer: Timer?
     @State private var saved      = false
+    @State private var isSaving   = false
+    @State private var saveError: String?
+    @State private var lastSavedTranscript: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -502,7 +523,7 @@ struct VoiceLogSheet: View {
                                         color: voiceLogger.isRecording ? AppTheme.Brand.accent.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
                                         radius: 20, y: 6
                                     )
-                                Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
+                                Image(systemName: voiceLogger.isRecording ? "pause.fill" : "mic.fill")
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundStyle(.white)
                                     .contentTransition(.symbolEffect(.replace))
@@ -515,7 +536,7 @@ struct VoiceLogSheet: View {
                         Text(
                             voiceLogger.isRecording
                             ? String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
-                            : "Tap to Record"
+                            : (elapsed > 0 ? "Paused" : "Tap to Record")
                         )
                         .font(.system(size: 30, weight: .bold, design: .monospaced))
                         .foregroundStyle(voiceLogger.isRecording ? AppTheme.Brand.accent : Color.fmsIndigo)
@@ -523,7 +544,7 @@ struct VoiceLogSheet: View {
 
                         Text(
                             voiceLogger.isRecording
-                            ? "Listening…"
+                            ? "Recording... Tap Pause to translate to text"
                             : "Voice-log your trip notes, delays, or ETA"
                         )
                         .font(.system(size: 14))
@@ -575,17 +596,43 @@ struct VoiceLogSheet: View {
 
                     Spacer()
 
-                    if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
-                        Button { saved = true } label: {
-                            Text("Save Log")
+                    if saved {
+                        HStack(spacing: 8) {
+                            Text("✓ Voice log saved successfully!")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(Color.fmsIndigo.gradient)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                                .padding(.horizontal, 24)
                         }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color(red: 0.18, green: 0.70, blue: 0.38).gradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 12)
+                    } else if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
+                        Button {
+                            guard !isSaving && !saved && voiceLogger.transcribedText != lastSavedTranscript else { return }
+                            isSaving = true
+                            Task {
+                                await saveLog()
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isSaving {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Text("Save Log")
+                                }
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.fmsIndigo.gradient)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .padding(.horizontal, 24)
+                        }
+                        .disabled(isSaving || saved || voiceLogger.transcribedText == lastSavedTranscript)
                         .padding(.bottom, 12)
                     }
                 }
@@ -600,9 +647,17 @@ struct VoiceLogSheet: View {
                 }
             }
             .alert("Log Saved", isPresented: $saved) {
-                Button("OK") { dismiss() }
+                Button("OK") {}
             } message: {
                 Text("Your voice log has been saved successfully.")
+            }
+            .alert("Save Failed", isPresented: .init(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
             }
         }
     }
@@ -612,10 +667,52 @@ struct VoiceLogSheet: View {
             voiceLogger.stopRecording()
             timer?.invalidate(); timer = nil
         } else {
+            saved = false
             elapsed = 0
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in elapsed += 1 }
             Task {
                 await voiceLogger.startRecording()
+            }
+        }
+    }
+
+    private func saveLog() async {
+        guard !voiceLogger.transcribedText.isEmpty && voiceLogger.transcribedText != lastSavedTranscript else { return }
+        await MainActor.run { isSaving = true }
+        defer {
+            Task { @MainActor in
+                isSaving = false
+            }
+        }
+
+        let driverId = await MainActor.run {
+            SupabaseManager.shared.currentUser?.id ?? UUID()
+        }
+
+        let logText = voiceLogger.transcribedText
+
+        let log = DBTripLog(
+            id: UUID(),
+            driverId: driverId,
+            tripId: tripId,
+            transcript: logText,
+            startLocation: voiceLogger.parsedData?.startLocation,
+            endLocation: voiceLogger.parsedData?.endLocation,
+            startTime: voiceLogger.parsedData?.startTime,
+            endTime: voiceLogger.parsedData?.endTime,
+            mileage: voiceLogger.parsedData?.mileage,
+            createdAt: Date()
+        )
+
+        do {
+            try await SupabaseManager.shared.createTripLog(log)
+            await MainActor.run {
+                lastSavedTranscript = logText
+                saved = true
+            }
+        } catch {
+            await MainActor.run {
+                saveError = error.localizedDescription
             }
         }
     }
@@ -855,6 +952,18 @@ struct RaiseQuerySheet: View {
 
                     // Submit button
                     Button {
+                        let selectedReasonText = reasons[selectedReason]
+                        let details = customText
+                        Task {
+                            let driverName = SupabaseManager.shared.currentUser?.name ?? "Driver"
+                            let title = "New Driver Query"
+                            let message = "Driver \(driverName) raised a query: \(selectedReasonText). Details: \(details)"
+                            await SupabaseManager.shared.notifyFleetManagers(
+                                title: title,
+                                message: message,
+                                type: .info
+                            )
+                        }
                         withAnimation { submitted = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                             dismiss()
@@ -900,6 +1009,8 @@ struct InspectionFormSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     let isPreTrip: Bool
+    var vehicleId: UUID? = nil
+    var initialVehicleNumber: String? = nil
     
     var onComplete: ((Bool, Int, String) -> Void)? = nil
 
@@ -1068,11 +1179,7 @@ struct InspectionFormSheet: View {
                                 ) {
                                     Label("Add Photos", systemImage: "photo.badge.plus")
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(
-                                            !allPass && defectPhotos.isEmpty
-                                                ? AppTheme.Status.danger
-                                                : Color.fmsIndigo
-                                        )
+                                        .foregroundStyle(Color.fmsIndigo)
                                         .padding(.leading, 14)
                                         .padding(.bottom, defectPhotos.isEmpty ? 14 : 4)
                                 }
@@ -1092,14 +1199,13 @@ struct InspectionFormSheet: View {
 
                                 Spacer()
 
-                                // Required badge — shown only when defect & no photo
                                 if !allPass && defectPhotos.isEmpty {
-                                    Text("Required")
+                                    Text("Optional")
                                         .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(AppTheme.Status.danger)
+                                        .foregroundStyle(.secondary)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
-                                        .background(AppTheme.Status.danger.opacity(0.12), in: Capsule())
+                                        .background(Color.black.opacity(0.05), in: Capsule())
                                         .padding(.trailing, 14)
                                         .padding(.bottom, defectPhotos.isEmpty ? 14 : 4)
                                 }
@@ -1136,21 +1242,7 @@ struct InspectionFormSheet: View {
                             }
                         }
                     }
-                    // Highlight the whole remarks card in danger tint when photo is required but missing
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(AppTheme.Status.danger.opacity(!allPass && defectPhotos.isEmpty ? 0.5 : 0), lineWidth: 1.5)
-                    )
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
-
-                    // Warning label below the card
-                    if !allPass && defectPhotos.isEmpty {
-                        Label("Attach at least one photo of the defect to submit.", systemImage: "exclamationmark.triangle.fill")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(AppTheme.Status.danger)
-                            .padding(.horizontal, 4)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
 
                     Button {
                         Task { await doSubmit() }
@@ -1178,9 +1270,7 @@ struct InspectionFormSheet: View {
                             : (issuesFound > 0 ? AppTheme.Brand.accent : AppTheme.Status.success).gradient
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .opacity(!allPass && defectPhotos.isEmpty ? 0.45 : 1)
                     }
-                    .disabled(!allPass && defectPhotos.isEmpty)
                 }
                 .padding(20)
             }
@@ -1207,7 +1297,7 @@ struct InspectionFormSheet: View {
                 isPresented: $submitted
             ) {
                 Button("Done") {
-                    onComplete?(allPass, issuesFound, remarks)
+                    onComplete?(allPass && !hasDefect, issuesFound, remarks)
                     dismiss()
                 }
             } message: {
@@ -1223,15 +1313,19 @@ struct InspectionFormSheet: View {
             }
         }
         .task {
-            let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
-            if let trips = try? await SupabaseManager.shared.fetchTrips(),
-               let activeTrip = trips.first(where: { $0.driverId == driverId && ($0.status == .started || $0.status == .assigned) }),
-               let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
-               let matched = vehicles.first(where: { $0.id == activeTrip.vehicleId }) {
-                self.vehicleNumber = matched.vehicleNumber
-            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
-                      let assigned = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-                self.vehicleNumber = assigned.vehicleNumber
+            if let passedNum = initialVehicleNumber {
+                self.vehicleNumber = passedNum
+            } else {
+                let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
+                if let trips = try? await SupabaseManager.shared.fetchTrips(),
+                   let activeTrip = trips.first(where: { $0.driverId == driverId && ($0.status == .started || $0.status == .assigned) }),
+                   let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+                   let matched = vehicles.first(where: { $0.id == activeTrip.vehicleId }) {
+                    self.vehicleNumber = matched.vehicleNumber
+                } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles(),
+                          let assigned = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                    self.vehicleNumber = assigned.vehicleNumber
+                }
             }
         }
     }
@@ -1241,28 +1335,30 @@ struct InspectionFormSheet: View {
         submitting = true
         
         let driverId = SupabaseManager.shared.currentUser?.id ?? UUID()
-        var vehicleId = UUID()
+        var resolvedVehicleId = vehicleId ?? UUID()
         
-        if let trips = try? await SupabaseManager.shared.fetchTrips() {
-            if let activeTrip = trips.first(where: { $0.driverId == driverId && $0.status == .started }) {
-                vehicleId = activeTrip.vehicleId
-            } else if let assignedTrip = trips.first(where: { $0.driverId == driverId && $0.status == .assigned }) {
-                vehicleId = assignedTrip.vehicleId
-            } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
-                if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
-                    vehicleId = assignedVehicle.id
-                } else if let firstVehicle = vehicles.first {
-                    vehicleId = firstVehicle.id
+        if vehicleId == nil {
+            if let trips = try? await SupabaseManager.shared.fetchTrips() {
+                if let activeTrip = trips.first(where: { $0.driverId == driverId && $0.status == .started }) {
+                    resolvedVehicleId = activeTrip.vehicleId
+                } else if let assignedTrip = trips.first(where: { $0.driverId == driverId && $0.status == .assigned }) {
+                    resolvedVehicleId = assignedTrip.vehicleId
+                } else if let vehicles = try? await SupabaseManager.shared.fetchVehicles() {
+                    if let assignedVehicle = vehicles.first(where: { $0.assignedDriverId == driverId }) {
+                        resolvedVehicleId = assignedVehicle.id
+                    } else if let firstVehicle = vehicles.first {
+                        resolvedVehicleId = firstVehicle.id
+                    }
                 }
             }
         }
         
         let checklistStrings = items.map { "\($0.label): \($0.passed ? "passed" : "failed")" }
-        let status: DBInspectionStatus = allPass ? .passed : (hasDefect ? .failed : .needsRepair)
+        let status: DBInspectionStatus = hasDefect ? .failed : (allPass ? .passed : .needsRepair)
         
         let dbInspection = DBVehicleInspection(
             id: UUID(),
-            vehicleId: vehicleId,
+            vehicleId: resolvedVehicleId,
             driverId: driverId,
             checklist: checklistStrings,
             defects: remarks.isEmpty ? nil : remarks,
@@ -1294,7 +1390,7 @@ struct InspectionFormSheet: View {
                 
                 let dbDefect = DBDefectReport(
                     id: defectId,
-                    vehicleId: vehicleId,
+                    vehicleId: resolvedVehicleId,
                     reportedBy: driverId,
                     inspectionId: dbInspection.id,
                     title: defectTitle,
@@ -1305,11 +1401,15 @@ struct InspectionFormSheet: View {
                 )
                 
                 // Submit to Supabase
-                try? await SupabaseManager.shared.createDefectReport(dbDefect)
+                do {
+                    try await SupabaseManager.shared.createDefectReport(dbDefect)
+                } catch {
+                    print("❌ [DriverDashboardView] Failed to submit defect report: \(error.localizedDescription)")
+                }
                 
                 // Notify Fleet Managers
                 let driverName = SupabaseManager.shared.currentUser?.name ?? "Unknown"
-                let fleetMsg = "Driver \(driverName) flagged a defect on Vehicle \(vehicleId.uuidString.prefix(4)) during \(isPreTrip ? "pre-trip" : "post-trip") inspection: \(defectDesc)"
+                let fleetMsg = "Driver \(driverName) flagged a defect on Vehicle \(resolvedVehicleId.uuidString.prefix(4)) during \(isPreTrip ? "pre-trip" : "post-trip") inspection: \(defectDesc)"
                 await SupabaseManager.shared.notifyFleetManagers(
                     title: "⚠️ Defect Flagged (\(isPreTrip ? "Pre" : "Post")-Trip)",
                     message: fleetMsg,
@@ -1542,6 +1642,8 @@ struct ChatSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var messageText = ""
+    @State private var selectedImageData: Data? = nil
+    @State private var selectedItem: PhotosPickerItem? = nil
 
     var body: some View {
         NavigationStack {
@@ -1570,13 +1672,7 @@ struct ChatSheet: View {
                                         if message.isMe {
                                             Spacer()
                                             VStack(alignment: .trailing, spacing: 4) {
-                                                Text(message.preview)
-                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                    .foregroundColor(.white)
-                                                    .padding(.horizontal, 14)
-                                                    .padding(.vertical, 10)
-                                                    .background(AppTheme.Brand.primary)
-                                                    .cornerRadius(16)
+                                                messageBubbleContent(text: message.preview, isMe: true)
                                                 Text(message.time)
                                                     .font(.system(size: 9))
                                                     .foregroundColor(.gray)
@@ -1584,13 +1680,7 @@ struct ChatSheet: View {
                                             }
                                         } else {
                                             VStack(alignment: .leading, spacing: 4) {
-                                                Text(message.preview)
-                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                    .foregroundColor(.black)
-                                                    .padding(.horizontal, 14)
-                                                    .padding(.vertical, 10)
-                                                    .background(Color(.systemGray6))
-                                                    .cornerRadius(16)
+                                                messageBubbleContent(text: message.preview, isMe: false)
                                                 Text(message.time)
                                                     .font(.system(size: 9))
                                                     .foregroundColor(.gray)
@@ -1620,50 +1710,170 @@ struct ChatSheet: View {
                     }
                 }
                 
-                // Bottom Input Bar
-                HStack(spacing: 12) {
-                    TextField("Type a message...", text: $messageText)
-                        .font(.system(size: 15))
-                        .padding(10)
+                // Bottom Input Bar with Photos Picker & Preview
+                VStack(spacing: 0) {
+                    if let imgData = selectedImageData, let uiImage = UIImage(data: imgData) {
+                        HStack {
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 60, height: 60)
+                                    .cornerRadius(8)
+                                    .clipped()
+                                
+                                Button {
+                                    selectedImageData = nil
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(AppTheme.Status.danger)
+                                        .background(Circle().fill(Color.white))
+                                }
+                                .offset(x: 6, y: -6)
+                            }
+                            .padding(.leading, 16)
+                            .padding(.vertical, 8)
+                            
+                            Spacer()
+                        }
+                        .background(Color.white)
+                    }
+                    
+                    Divider()
+                    
+                    HStack(spacing: 12) {
+                        // Text Input Area with Photo Picker
+                        HStack(spacing: 10) {
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
+                                Image(systemName: "photo.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(AppTheme.Brand.primary)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            TextField("Type a message...", text: $messageText)
+                                .font(.system(size: 15))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                         .background(Color(.systemGray6))
                         .cornerRadius(20)
-                    
-                    Button(action: {
-                        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !text.isEmpty {
+                        
+                        Button(action: {
+                            let sentText = messageText
+                            let imgData = selectedImageData
+                            selectedImageData = nil
+                            messageText = ""
+                            
                             Task {
-                                await vm.sendMessage(text: text)
-                                await MainActor.run {
-                                    messageText = ""
+                                if let data = imgData {
+                                    let msgId = UUID()
+                                    do {
+                                        let urlString = try await SupabaseManager.shared.uploadChatImage(messageId: msgId, imageData: data)
+                                        await vm.sendMessage(text: "[IMAGE: \(urlString)]")
+                                    } catch {
+                                        let base64 = data.base64EncodedString()
+                                        await vm.sendMessage(text: "[IMAGE_BASE64: \(base64)]")
+                                    }
+                                }
+                                
+                                let textTrimmed = sentText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !textTrimmed.isEmpty {
+                                    await vm.sendMessage(text: textTrimmed)
                                 }
                             }
+                        }) {
+                            Image(systemName: "paperplane.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(Color.white)
+                                .padding(10)
+                                .background((messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil) ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
+                                .clipShape(Circle())
                         }
-                    }) {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(Color.white)
-                            .padding(10)
-                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
-                            .clipShape(Circle())
+                        .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil)
                     }
-                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .padding()
+                    .background(Color.white)
+                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
                 }
-                .padding()
-                .background(Color.white)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
             }
             .navigationTitle("Chat with Manager")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.primary)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
                     }
-                    .foregroundColor(Theme.fmsRed)
-                    .bold()
+                }
+            }
+            .onChange(of: selectedItem) { _, newValue in
+                Task {
+                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            self.selectedImageData = data
+                            self.selectedItem = nil
+                        }
+                    }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func messageBubbleContent(text: String, isMe: Bool) -> some View {
+        if text.hasPrefix("[IMAGE:"), text.hasSuffix("]") {
+            let urlString = String(text.dropFirst(7).dropLast())
+            if let url = URL(string: urlString) {
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 220, maxHeight: 220)
+                        .cornerRadius(12)
+                } placeholder: {
+                    ProgressView().tint(isMe ? .white : AppTheme.Brand.primary)
+                }
+                .padding(4)
+                .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+                .cornerRadius(16)
+            } else {
+                fallbackText(text, isMe: isMe)
+            }
+        } else if text.hasPrefix("[IMAGE_BASE64:"), text.hasSuffix("]") {
+            let base64String = String(text.dropFirst(14).dropLast())
+            if let data = Data(base64Encoded: base64String), let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .cornerRadius(12)
+                    .padding(4)
+                    .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+                    .cornerRadius(16)
+            } else {
+                fallbackText(text, isMe: isMe)
+            }
+        } else {
+            fallbackText(text, isMe: isMe)
+        }
+    }
+
+    private func fallbackText(_ text: String, isMe: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundColor(isMe ? .white : .black)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+            .cornerRadius(16)
     }
 }
 

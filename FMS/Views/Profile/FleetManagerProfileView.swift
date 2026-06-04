@@ -9,6 +9,7 @@ struct FleetManagerProfileView: View {
     @State private var showEditProfile = false
     @State private var showNotificationSettings = false
     @State private var showSecuritySettings = false
+    @State private var showAccessibilitySettings = false
     @State private var showHelpSupport = false
     @State private var showAbout = false
     @State private var showSignOutConfirm = false
@@ -62,6 +63,9 @@ struct FleetManagerProfileView: View {
             }
             .sheet(isPresented: $showHelpSupport) {
                 FMHelpSupportView()
+            }
+            .sheet(isPresented: $showAccessibilitySettings) {
+                AccessibilitySettingsView(role: .fleetManager)
             }
             .sheet(isPresented: $showAbout) {
                 FMAboutView()
@@ -127,6 +131,9 @@ struct FleetManagerProfileView: View {
                             Text(initials)
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 90, height: 90, alignment: .center)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background(
                                     LinearGradient(
@@ -142,6 +149,9 @@ struct FleetManagerProfileView: View {
                         Text(initials)
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 90, height: 90, alignment: .center)
                     }
                 }
 
@@ -216,6 +226,18 @@ struct FleetManagerProfileView: View {
                     subtitle: "Password & authentication"
                 ) {
                     showSecuritySettings = true
+                }
+
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "accessibility.fill",
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.Brand.primary.opacity(0.12),
+                    title: "Accessibility",
+                    subtitle: "Speech, Contrast, Layout settings"
+                ) {
+                    showAccessibilitySettings = true
                 }
 
                 Divider().padding(.leading, 66)

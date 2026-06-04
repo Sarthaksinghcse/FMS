@@ -72,79 +72,83 @@ struct FleetDashboardView: View {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .center, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(viewModel.getGreetingTime() + ",")
                                     .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(.secondary)
-                                Text(managerFirstName)
+                                Text(SupabaseManager.shared.currentUser?.name ?? managerFirstName)
                                     .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(.primary)
                             }
 
                             Spacer()
 
-                            HStack(spacing: 16) {
-
-                                Button {
-                                    lastGeofenceAlertViewTime = Date().timeIntervalSince1970
-                                    activeGeofenceAlertsCount = 0
-                                    viewModel.activeQuickAction = .alerts
-                                } label: {
-                                    ZStack(alignment: .topTrailing) {
-                                        Image(systemName: "bell.fill")
-                                            .font(.system(size: 18))
-                                            .foregroundStyle(Color(UIColor.label))
-                                            .frame(width: 40, height: 40)
-                                            .background(Color(UIColor.secondarySystemGroupedBackground))
-                                            .clipShape(Circle())
-                                        
-                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
-                                            Circle()
-                                                .fill(AppTheme.Status.danger)
-                                                .frame(width: 10, height: 10)
-                                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                                .offset(x: 2, y: -2)
-                                        }
+                            // Bell Button
+                            Button {
+                                lastGeofenceAlertViewTime = Date().timeIntervalSince1970
+                                activeGeofenceAlertsCount = 0
+                                viewModel.activeQuickAction = .alerts
+                            } label: {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Color(UIColor.label))
+                                        .frame(width: 40, height: 40)
+                                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                                        .clipShape(Circle())
+                                    
+                                    if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
+                                        Circle()
+                                            .fill(AppTheme.Status.danger)
+                                            .frame(width: 10, height: 10)
+                                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                            .offset(x: 2, y: -2)
                                     }
                                 }
-                                .buttonStyle(.plain)
-
-                                Button {
-                                    showProfile = true
-                                } label: {
-                                    ZStack {
-                                        if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
-                                           let imageURL = URL(string: imageURLString) {
-                                            CachedAsyncImage(url: imageURL) { image in
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                            } placeholder: {
-                                                ProgressView()
-                                            }
-                                            .frame(width: 40, height: 40)
-                                            .clipShape(Circle())
-                                        } else {
-                                            ZStack {
-                                                Circle()
-                                                    .fill(
-                                                        LinearGradient(
-                                                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
-                                                            startPoint: .topLeading,
-                                                            endPoint: .bottomTrailing
-                                                        )
-                                                    )
-                                                    .frame(width: 40, height: 40)
-                                                Text(managerInitials)
-                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                                    .foregroundColor(.white)
-                                            }
-                                        }
-                                    }
-                                }
-                                .buttonStyle(.plain)
                             }
+                            .buttonStyle(.plain)
+
+                            Spacer().frame(width: 12)
+
+                            // Avatar Button
+                            Button {
+                                showProfile = true
+                            } label: {
+                                ZStack {
+                                    if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                                       let imageURL = URL(string: imageURLString) {
+                                        CachedAsyncImage(url: imageURL) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                    } else {
+                                        ZStack {
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                                .frame(width: 40, height: 40)
+                                            Text(managerInitials)
+                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.5)
+                                                .frame(width: 40, height: 40, alignment: .center)
+                                        }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 24)
@@ -298,7 +302,7 @@ struct FleetDashboardView: View {
                 }
                 .scrollIndicators(.hidden)
                 .safeAreaPadding(.top)
-                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .scrollBounceBehavior(.always, axes: .vertical)
                 .refreshable {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -675,38 +679,45 @@ struct FleetDashboardView: View {
             let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
             let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
             
-            try? await channel.subscribeWithError()
+            do {
+                try await channel.subscribeWithError()
+                print("🟢 [FleetDashboardView Realtime] Subscribed successfully to channel: \(channel.topic)")
+            } catch {
+                print("❌ [FleetDashboardView Realtime] Subscription failed: \(error.localizedDescription)")
+            }
             
-            async let _ : () = handleStream(tripsStream)
-            async let _ : () = handleStream(sosStream)
-            async let _ : () = handleStream(defectStream)
-            async let _ : () = handleStream(workOrderStream)
-            async let _ : () = handleStream(notifStream)
-            async let _ : () = handleStream(taskStream)
-            async let _ : () = handleStream(vehicleStream)
-            async let _ : () = handleStream(fuelStream)
-            async let _ : () = handleStream(complianceStream)
-            async let _ : () = handleRouteDevStream(routeDevStream)
+            Task { await handleStream(tripsStream, tableName: "trips") }
+            Task { await handleStream(sosStream, tableName: "sos_alerts") }
+            Task { await handleStream(defectStream, tableName: "defect_reports") }
+            Task { await handleStream(workOrderStream, tableName: "work_orders") }
+            Task { await handleStream(notifStream, tableName: "notifications") }
+            Task { await handleStream(taskStream, tableName: "maintenance_tasks") }
+            Task { await handleStream(vehicleStream, tableName: "vehicles") }
+            Task { await handleStream(fuelStream, tableName: "fuel_logs") }
+            Task { await handleStream(complianceStream, tableName: "compliance_alerts") }
+            Task { await handleRouteDevStream(routeDevStream) }
         }
     }
     
     private func handleRouteDevStream<S: AsyncSequence>(_ stream: S) async {
         do {
-            for try await _ in stream {
+            for try await action in stream {
+                print("🔔 [Realtime - FleetDashboardView] Received change on route_deviation_alerts: \(action)")
                 fetchActiveGeofenceAlerts()
             }
         } catch {
-            print("Route dev stream error: \(error)")
+            print("❌ [Realtime - FleetDashboardView] Route dev stream error: \(error.localizedDescription)")
         }
     }
     
-    private func handleStream<S: AsyncSequence>(_ stream: S) async {
+    private func handleStream<S: AsyncSequence>(_ stream: S, tableName: String) async {
         do {
-            for try await _ in stream {
+            for try await action in stream {
+                print("🔔 [Realtime - FleetDashboardView] Received change on '\(tableName)': \(action)")
                 await SupabaseManager.shared.syncAllData(context: modelContext)
             }
         } catch {
-            print("Stream error: \(error)")
+            print("❌ [Realtime - FleetDashboardView] Stream error on '\(tableName)': \(error.localizedDescription)")
         }
     }
 }

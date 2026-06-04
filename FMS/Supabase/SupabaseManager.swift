@@ -70,10 +70,20 @@ final class SupabaseManager {
     var showResetPasswordSheet = false
     
     private init() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
         self.client = SupabaseClient(
             supabaseURL: Self.supabaseURL,
             supabaseKey: Self.supabaseAnonKey,
             options: SupabaseClientOptions(
+                db: .init(
+                    encoder: encoder,
+                    decoder: decoder
+                ),
                 auth: .init(
                     emitLocalSessionAsInitialSession: true
                 )
@@ -919,6 +929,21 @@ final class SupabaseManager {
         
         return url.absoluteString
     }
+
+    func uploadChatImage(messageId: UUID, imageData: Data) async throws -> String {
+        let path = "chat_\(messageId.uuidString).jpg"
+        _ = try await client.storage
+            .from("maintenance-images")
+            .upload(
+                path,
+                data: imageData,
+                options: FileOptions(contentType: "image/jpeg", upsert: true)
+            )
+        let url = try client.storage
+            .from("maintenance-images")
+            .getPublicURL(path: path)
+        return url.absoluteString
+    }
     
     
     
@@ -966,6 +991,7 @@ final class SupabaseManager {
                         local.email = rd.email
                         local.phoneNumber = rd.phoneNumber ?? ""
                         local.role = rd.role.asLocalRole
+                        local.profileImageURL = rd.profileImage
                         local.isActive = rd.isActive
                     } else {
                         context.insert(rd.asLocalUser)
@@ -992,6 +1018,7 @@ final class SupabaseManager {
                         local.email = rm.email
                         local.phoneNumber = rm.phoneNumber ?? ""
                         local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
                         local.isActive = rm.isActive
                     } else {
                         context.insert(rm.asLocalUser)
@@ -1004,6 +1031,33 @@ final class SupabaseManager {
                     for localStaff in localMaintenance {
                         if !remoteIds.contains(localStaff.id) {
                             context.delete(localStaff)
+                        }
+                    }
+                }
+            }
+            
+            if let remoteManagers = try? await fetchFleetManagers() {
+                let descriptor = FetchDescriptor<User>()
+                let localUsers = (try? context.fetch(descriptor)) ?? []
+                for rm in remoteManagers {
+                    if let local = localUsers.first(where: { $0.id == rm.id }) {
+                        local.fullName = rm.name
+                        local.email = rm.email
+                        local.phoneNumber = rm.phoneNumber ?? ""
+                        local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
+                        local.isActive = rm.isActive
+                    } else {
+                        context.insert(rm.asLocalUser)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteManagers.map { $0.id })
+                    let localManagers = localUsers.filter { $0.role == .fleetManager }
+                    for localManager in localManagers {
+                        if !remoteIds.contains(localManager.id) {
+                            context.delete(localManager)
                         }
                     }
                 }
@@ -1060,6 +1114,7 @@ final class SupabaseManager {
                         local.priority = rwo.priority.toLocalPriority
                         local.workDescription = rwo.issueDescription
                         local.status = rwo.status.toLocalStatus
+                        local.estimatedCost = rwo.estimatedCost
                     } else {
                         context.insert(rwo.asLocalWorkOrder)
                     }
@@ -1272,6 +1327,42 @@ final class SupabaseManager {
             .execute()
             .value
         return reports.first
+    }
+    
+    // Trip Logs (Voice Log)
+    func createTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .insert(log)
+            .execute()
+    }
+    
+    func fetchTripLogs() async throws -> [DBTripLog] {
+        return try await client
+            .from("trip_logs")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(500)
+            .execute()
+            .value
+    }
+    
+    func fetchTripLogs(for tripId: UUID) async throws -> [DBTripLog] {
+        return try await client
+            .from("trip_logs")
+            .select()
+            .eq("trip_id", value: tripId.uuidString)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+    }
+    
+    func updateTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .update(log)
+            .eq("id", value: log.id.uuidString)
+            .execute()
     }
     
     // Fuel Logs
