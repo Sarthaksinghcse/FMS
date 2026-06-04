@@ -978,7 +978,7 @@ struct WorkOrderDetailedView: View {
                 .cornerRadius(AppTheme.Radius.card)
                 .shadow(color: AppTheme.Shadow.card, radius: 4)
                 
-                if order.workDescription.contains("[PENDING_APPROVAL]") || order.workDescription.contains("[INFO_REQUESTED]") {
+                if order.workDescription.contains("[PENDING_APPROVAL]") || order.workDescription.contains("[INFO_REQUESTED]") || order.estimatedCost == nil || order.estimatedCost == 0.0 {
                     Button {
                         Task {
                             await loadAICostEstimate()
@@ -1336,8 +1336,8 @@ struct WorkOrderDetailedView: View {
     
     private func loadAICostEstimate() async {
         guard !isLoadingCostEstimate else { return }
-        // Only fetch if order is still pending approval and does not have an approved cost yet
-        guard order.workDescription.contains("[PENDING_APPROVAL]") || order.workDescription.contains("[INFO_REQUESTED]") else {
+        // Only fetch if order is still pending approval, info requested, or has no estimated cost yet
+        guard order.workDescription.contains("[PENDING_APPROVAL]") || order.workDescription.contains("[INFO_REQUESTED]") || order.estimatedCost == nil || order.estimatedCost == 0.0 else {
             return
         }
         

@@ -1104,6 +1104,7 @@ final class SupabaseManager {
                         local.priority = rwo.priority.toLocalPriority
                         local.workDescription = rwo.issueDescription
                         local.status = rwo.status.toLocalStatus
+                        local.estimatedCost = rwo.estimatedCost
                     } else {
                         context.insert(rwo.asLocalWorkOrder)
                     }
