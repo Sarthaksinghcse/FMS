@@ -77,7 +77,7 @@ struct DriverDashboardView: View {
             }
         }
         
-        .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet(tripId: vm.activeTrip?.id) }
+        .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet(tripId: vm.activeTrip?.id ?? vm.currentTrip?.id) }
         .sheet(isPresented: $vm.showIssue)     { IssueReportSheet() }
         .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
         .sheet(isPresented: $vm.showPostTrip, onDismiss: {
@@ -481,6 +481,7 @@ struct VoiceLogSheet: View {
     @State private var saved      = false
     @State private var isSaving   = false
     @State private var saveError: String?
+    @State private var lastSavedTranscript: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -506,7 +507,7 @@ struct VoiceLogSheet: View {
                                         color: voiceLogger.isRecording ? AppTheme.Brand.accent.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
                                         radius: 20, y: 6
                                     )
-                                Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
+                                Image(systemName: voiceLogger.isRecording ? "pause.fill" : "mic.fill")
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundStyle(.white)
                                     .contentTransition(.symbolEffect(.replace))
@@ -519,7 +520,7 @@ struct VoiceLogSheet: View {
                         Text(
                             voiceLogger.isRecording
                             ? String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
-                            : "Tap to Record"
+                            : (elapsed > 0 ? "Paused" : "Tap to Record")
                         )
                         .font(.system(size: 30, weight: .bold, design: .monospaced))
                         .foregroundStyle(voiceLogger.isRecording ? AppTheme.Brand.accent : Color.fmsIndigo)
@@ -527,7 +528,7 @@ struct VoiceLogSheet: View {
 
                         Text(
                             voiceLogger.isRecording
-                            ? "Listening…"
+                            ? "Recording... Tap Pause to translate to text"
                             : "Voice-log your trip notes, delays, or ETA"
                         )
                         .font(.system(size: 14))
@@ -579,8 +580,26 @@ struct VoiceLogSheet: View {
 
                     Spacer()
 
-                    if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
-                        Button { Task { await saveLog() } } label: {
+                    if saved {
+                        HStack(spacing: 8) {
+                            Text("✓ Voice log saved successfully!")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color(red: 0.18, green: 0.70, blue: 0.38).gradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 12)
+                    } else if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
+                        Button {
+                            guard !isSaving && !saved && voiceLogger.transcribedText != lastSavedTranscript else { return }
+                            isSaving = true
+                            Task {
+                                await saveLog()
+                            }
+                        } label: {
                             HStack(spacing: 8) {
                                 if isSaving {
                                     ProgressView()
@@ -597,7 +616,7 @@ struct VoiceLogSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                             .padding(.horizontal, 24)
                         }
-                        .disabled(isSaving)
+                        .disabled(isSaving || saved || voiceLogger.transcribedText == lastSavedTranscript)
                         .padding(.bottom, 12)
                     }
                 }
@@ -612,7 +631,7 @@ struct VoiceLogSheet: View {
                 }
             }
             .alert("Log Saved", isPresented: $saved) {
-                Button("OK") { dismiss() }
+                Button("OK") {}
             } message: {
                 Text("Your voice log has been saved successfully.")
             }
@@ -632,6 +651,7 @@ struct VoiceLogSheet: View {
             voiceLogger.stopRecording()
             timer?.invalidate(); timer = nil
         } else {
+            saved = false
             elapsed = 0
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in elapsed += 1 }
             Task {
@@ -641,19 +661,25 @@ struct VoiceLogSheet: View {
     }
 
     private func saveLog() async {
-        guard !voiceLogger.transcribedText.isEmpty else { return }
-        isSaving = true
-        defer { isSaving = false }
+        guard !voiceLogger.transcribedText.isEmpty && voiceLogger.transcribedText != lastSavedTranscript else { return }
+        await MainActor.run { isSaving = true }
+        defer {
+            Task { @MainActor in
+                isSaving = false
+            }
+        }
 
         let driverId = await MainActor.run {
             SupabaseManager.shared.currentUser?.id ?? UUID()
         }
 
+        let logText = voiceLogger.transcribedText
+
         let log = DBTripLog(
             id: UUID(),
             driverId: driverId,
             tripId: tripId,
-            transcript: voiceLogger.transcribedText,
+            transcript: logText,
             startLocation: voiceLogger.parsedData?.startLocation,
             endLocation: voiceLogger.parsedData?.endLocation,
             startTime: voiceLogger.parsedData?.startTime,
@@ -664,9 +690,14 @@ struct VoiceLogSheet: View {
 
         do {
             try await SupabaseManager.shared.createTripLog(log)
-            saved = true
+            await MainActor.run {
+                lastSavedTranscript = logText
+                saved = true
+            }
         } catch {
-            saveError = error.localizedDescription
+            await MainActor.run {
+                saveError = error.localizedDescription
+            }
         }
     }
 }

@@ -2261,6 +2261,8 @@ struct DBTripLog: Codable, Identifiable {
     var endTime: String?
     var mileage: Double?
     var createdAt: Date
+    var isEdited: Bool?
+    var updatedAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -2273,5 +2275,7 @@ struct DBTripLog: Codable, Identifiable {
         case endTime        = "end_time"
         case mileage
         case createdAt      = "created_at"
+        case isEdited       = "is_edited"
+        case updatedAt      = "updated_at"
     }
 }
