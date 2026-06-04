@@ -188,6 +188,8 @@ private struct DashboardInlineHeader: View {
             } label: {
                 Text(initials)
                     .font(.system(size: 14, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .foregroundStyle(.white)
                     .frame(width: 40, height: 40)
                     .background(Color.fmsIndigo)

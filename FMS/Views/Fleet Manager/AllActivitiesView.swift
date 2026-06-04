@@ -154,6 +154,8 @@ struct AllActivitiesView: View {
                     .font(.system(size: 11, weight: .bold))
                 Text(tab.rawValue)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .foregroundColor(selectedFilter == tab ? .white : tab.color)
             .padding(.horizontal, 14)

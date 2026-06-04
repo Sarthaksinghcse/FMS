@@ -177,6 +177,8 @@ struct TechnicianWorkDetailsView: View {
                     HStack(spacing: 6) {
                         Text(label)
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                         if count > 0 {
                             Text("\(count)")
                                 .font(.system(size: 11, weight: .bold, design: .rounded))

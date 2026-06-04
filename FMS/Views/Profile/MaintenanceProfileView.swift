@@ -119,6 +119,9 @@ struct MaintenanceProfileView: View {
                                 Text(initials)
                                     .font(.system(size: 32, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .frame(width: 90, height: 90, alignment: .center)
                             } else {
                                 ProgressView()
                             }
@@ -127,6 +130,9 @@ struct MaintenanceProfileView: View {
                         Text(initials)
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 90, height: 90, alignment: .center)
                     }
                 }
 

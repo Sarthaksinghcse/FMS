@@ -171,7 +171,9 @@ struct DriverProfileSheet: View {
                                 Text(initials)
                                     .font(.system(size: 32, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .frame(width: 90, height: 90, alignment: .center)
                                     .background(
                                         LinearGradient(
                                             colors: [AppTheme.Status.success, AppTheme.Brand.teal],
@@ -186,6 +188,9 @@ struct DriverProfileSheet: View {
                             Text(initials)
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 90, height: 90, alignment: .center)
                         }
                     }
 

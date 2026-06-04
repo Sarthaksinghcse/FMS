@@ -351,6 +351,9 @@ struct EditDriverFormView: View {
                 Text(initials(for: driver.fullName))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: 60, height: 60, alignment: .center)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(driver.fullName)
