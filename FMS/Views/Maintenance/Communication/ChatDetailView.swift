@@ -27,7 +27,7 @@ struct ChatDetailView: View {
     @State private var textMessage: String = ""
     @State private var messages: [MessageThreadItem] = []
     @State private var realtimeChannel: RealtimeChannelV2? = nil
-    @State private var selectedImageData: Data? = nil
+
 
     var body: some View {
         VStack(spacing: 0) {
@@ -85,7 +85,6 @@ struct ChatDetailView: View {
             // Typing Input Row
             MessageInputView(
                 textMessage: $textMessage,
-                selectedImageData: $selectedImageData,
                 onSend: sendMessage,
                 onAttachWorkOrder: simulateWorkOrderAttachment
             )
@@ -156,41 +155,14 @@ struct ChatDetailView: View {
     }
 
     private func sendMessage() {
-        guard !textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedImageData != nil else { return }
+        guard !textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         guard let currentUserId = supabase.currentUser?.id else { return }
         
         let sentText = textMessage
         textMessage = ""
-        let imgData = selectedImageData
-        selectedImageData = nil
         
         Task {
             do {
-                if let data = imgData {
-                    let msgId = UUID()
-                    do {
-                        let urlString = try await supabase.uploadChatImage(messageId: msgId, imageData: data)
-                        let imageMsg = DBMessage(
-                            id: msgId,
-                            senderId: currentUserId,
-                            receiverId: channel.id,
-                            message: "[IMAGE: \(urlString)]",
-                            timestamp: Date()
-                        )
-                        try await supabase.sendMessage(imageMsg)
-                    } catch {
-                        let base64 = data.base64EncodedString()
-                        let fallbackMsg = DBMessage(
-                            id: msgId,
-                            senderId: currentUserId,
-                            receiverId: channel.id,
-                            message: "[IMAGE_BASE64: \(base64)]",
-                            timestamp: Date()
-                        )
-                        try await supabase.sendMessage(fallbackMsg)
-                    }
-                }
-                
                 let textTrimmed = sentText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !textTrimmed.isEmpty {
                     let textMsg = DBMessage(

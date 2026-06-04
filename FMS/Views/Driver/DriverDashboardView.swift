@@ -106,7 +106,7 @@ struct DriverDashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
-        .sheet(isPresented: $vm.showMessaging) { ChatSheet(vm: vm) }
+        .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
         .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
             vm.showRaiseQuery = false
@@ -1642,8 +1642,6 @@ struct ChatSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var messageText = ""
-    @State private var selectedImageData: Data? = nil
-    @State private var selectedItem: PhotosPickerItem? = nil
 
     var body: some View {
         NavigationStack {
@@ -1660,7 +1658,7 @@ struct ChatSheet: View {
                                     Text("No messages yet")
                                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                                         .foregroundColor(.gray)
-                                    Text("Type below to send a message to the Fleet Manager.")
+                                    Text("Type below to send a message to \(vm.selectedRecipient?.name ?? "the Fleet Manager").")
                                         .font(.system(size: 12, design: .rounded))
                                         .foregroundColor(.gray)
                                         .multilineTextAlignment(.center)
@@ -1710,74 +1708,23 @@ struct ChatSheet: View {
                     }
                 }
                 
-                // Bottom Input Bar with Photos Picker & Preview
+                // Bottom Input Bar
                 VStack(spacing: 0) {
-                    if let imgData = selectedImageData, let uiImage = UIImage(data: imgData) {
-                        HStack {
-                            ZStack(alignment: .topTrailing) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 60, height: 60)
-                                    .cornerRadius(8)
-                                    .clipped()
-                                
-                                Button {
-                                    selectedImageData = nil
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 18))
-                                        .foregroundColor(AppTheme.Status.danger)
-                                        .background(Circle().fill(Color.white))
-                                }
-                                .offset(x: 6, y: -6)
-                            }
-                            .padding(.leading, 16)
-                            .padding(.vertical, 8)
-                            
-                            Spacer()
-                        }
-                        .background(Color.white)
-                    }
-                    
                     Divider()
                     
                     HStack(spacing: 12) {
-                        // Text Input Area with Photo Picker
-                        HStack(spacing: 10) {
-                            PhotosPicker(selection: $selectedItem, matching: .images) {
-                                Image(systemName: "photo.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundColor(AppTheme.Brand.primary)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            TextField("Type a message...", text: $messageText)
-                                .font(.system(size: 15))
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(20)
+                        TextField("Type a message...", text: $messageText)
+                            .font(.system(size: 15))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(20)
                         
                         Button(action: {
                             let sentText = messageText
-                            let imgData = selectedImageData
-                            selectedImageData = nil
                             messageText = ""
                             
                             Task {
-                                if let data = imgData {
-                                    let msgId = UUID()
-                                    do {
-                                        let urlString = try await SupabaseManager.shared.uploadChatImage(messageId: msgId, imageData: data)
-                                        await vm.sendMessage(text: "[IMAGE: \(urlString)]")
-                                    } catch {
-                                        let base64 = data.base64EncodedString()
-                                        await vm.sendMessage(text: "[IMAGE_BASE64: \(base64)]")
-                                    }
-                                }
-                                
                                 let textTrimmed = sentText.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if !textTrimmed.isEmpty {
                                     await vm.sendMessage(text: textTrimmed)
@@ -1788,17 +1735,17 @@ struct ChatSheet: View {
                                 .font(.system(size: 18))
                                 .foregroundColor(Color.white)
                                 .padding(10)
-                                .background((messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil) ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
+                                .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
                                 .clipShape(Circle())
                         }
-                        .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil)
+                        .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding()
                     .background(Color.white)
                     .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
                 }
             }
-            .navigationTitle("Chat with Manager")
+            .navigationTitle(vm.selectedRecipient?.name ?? "Chat")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
@@ -1814,15 +1761,8 @@ struct ChatSheet: View {
                     }
                 }
             }
-            .onChange(of: selectedItem) { _, newValue in
-                Task {
-                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
-                        await MainActor.run {
-                            self.selectedImageData = data
-                            self.selectedItem = nil
-                        }
-                    }
-                }
+            .task {
+                await vm.loadMessages()
             }
         }
     }
@@ -1835,12 +1775,15 @@ struct ChatSheet: View {
                 CachedAsyncImage(url: url) { image in
                     image
                         .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 220, maxHeight: 220)
+                        .scaledToFill()
+                        .frame(width: 200, height: 150)
                         .cornerRadius(12)
+                        .clipped()
                 } placeholder: {
                     ProgressView().tint(isMe ? .white : AppTheme.Brand.primary)
+                        .frame(width: 200, height: 150)
                 }
+                .frame(width: 200, height: 150)
                 .padding(4)
                 .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
                 .cornerRadius(16)
@@ -1852,9 +1795,10 @@ struct ChatSheet: View {
             if let data = Data(base64Encoded: base64String), let uiImage = UIImage(data: data) {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 220, maxHeight: 220)
+                    .scaledToFill()
+                    .frame(width: 200, height: 150)
                     .cornerRadius(12)
+                    .clipped()
                     .padding(4)
                     .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
                     .cornerRadius(16)
@@ -1890,7 +1834,8 @@ struct ChatSheet: View {
 struct ChatHubSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var showFleetManagerChat = false
+    @State private var showChatDetail = false
+    @State private var showMaintenancePicker = false
 
     private struct ContactEntry: Identifiable {
         let id = UUID()
@@ -1904,8 +1849,8 @@ struct ChatHubSheet: View {
     private let contacts: [ContactEntry] = [
         ContactEntry(name: "Fleet Manager",       role: "Direct supervisor for your routes",
                      icon: "person.badge.shield.checkmark.fill", iconColor: AppTheme.Brand.primaryDeep,  isEnabled: true),
-        ContactEntry(name: "Maintenance Worker",  role: "Vehicle maintenance & repairs",
-                     icon: "wrench.and.screwdriver.fill",          iconColor: AppTheme.Brand.accent,       isEnabled: false),
+        ContactEntry(name: "Maintenance Manager", role: "Vehicle maintenance & repairs",
+                     icon: "wrench.and.screwdriver.fill",          iconColor: AppTheme.Brand.accent,       isEnabled: true),
         ContactEntry(name: "Maintenance Office",  role: "Schedule service & inspections",
                      icon: "building.2.fill",                      iconColor: AppTheme.Brand.teal,         isEnabled: false),
     ]
@@ -1916,7 +1861,33 @@ struct ChatHubSheet: View {
                 Section {
                     ForEach(contacts) { contact in
                         Button {
-                            if contact.isEnabled { showFleetManagerChat = true }
+                            if contact.isEnabled {
+                                if contact.name == "Fleet Manager" {
+                                    Task {
+                                        do {
+                                            let managers = try await SupabaseManager.shared.fetchFleetManagers()
+                                            if let firstManager = managers.first {
+                                                await MainActor.run {
+                                                    vm.selectedRecipient = firstManager
+                                                }
+                                            }
+                                            await vm.loadMessages()
+                                            await MainActor.run {
+                                                showChatDetail = true
+                                            }
+                                        } catch {
+                                            print("Failed to fetch fleet managers: \(error)")
+                                        }
+                                    }
+                                } else if contact.name == "Maintenance Manager" {
+                                    Task {
+                                        await vm.loadMaintenanceStaff()
+                                        await MainActor.run {
+                                            showMaintenancePicker = true
+                                        }
+                                    }
+                                }
+                            }
                         } label: {
                             HStack(spacing: 14) {
                                 // Icon bubble
@@ -1977,8 +1948,11 @@ struct ChatHubSheet: View {
                     }
                 }
             }
-            .sheet(isPresented: $showFleetManagerChat) {
+            .sheet(isPresented: $showChatDetail) {
                 ChatSheet(vm: vm)
+            }
+            .sheet(isPresented: $showMaintenancePicker) {
+                MaintenanceStaffPickerSheet(vm: vm, isPresented: $showMaintenancePicker, showChatDetail: $showChatDetail)
             }
         }
     }
@@ -2141,6 +2115,82 @@ struct RecordingRing: View {
                 : .default,
                 value: isRecording
             )
+    }
+}
+
+// MARK: - Maintenance Staff Picker Sheet
+struct MaintenanceStaffPickerSheet: View {
+    @ObservedObject var vm: DriverDashboardViewModel
+    @Binding var isPresented: Bool
+    @Binding var showChatDetail: Bool
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.fmsBackground.ignoresSafeArea()
+                
+                if vm.maintenanceStaffList.isEmpty {
+                    ContentUnavailableView {
+                        Label("No Maintenance Staff", systemImage: "person.slash")
+                    } description: {
+                        Text("No maintenance managers found in the directory.")
+                    }
+                } else {
+                    List(vm.maintenanceStaffList) { staff in
+                        Button {
+                            vm.selectedRecipient = staff
+                            Task {
+                                await vm.loadMessages()
+                                await MainActor.run {
+                                    isPresented = false
+                                    showChatDetail = true
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(AppTheme.Brand.accent.opacity(0.12))
+                                        .frame(width: 40, height: 40)
+                                    Text(String(staff.name.prefix(2)).uppercased())
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundStyle(AppTheme.Brand.accent)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(staff.name)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.primary)
+                                    Text(staff.role.displayName)
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Circle()
+                                    .fill(staff.isActive ? AppTheme.Status.success : Color(UIColor.systemGray3))
+                                    .frame(width: 8, height: 8)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("Select Maintenance Manager")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.fmsIndigo)
+                }
+            }
+        }
     }
 }
 

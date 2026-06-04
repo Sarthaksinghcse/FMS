@@ -172,6 +172,8 @@ final class DriverDashboardViewModel: ObservableObject {
     @Published var upcomingTrips: [DBTrip] = []
     @Published var assignedVehicle: DBVehicle?
     @Published var messages: [DriverChatMessage] = []
+    @Published var selectedRecipient: DBUser? = nil
+    @Published var maintenanceStaffList: [DBUser] = []
     @Published var banners: [DashboardBanner] = []
     @Published var isTripActive  = false
     @Published var tripElapsed   = 0
@@ -604,25 +606,52 @@ final class DriverDashboardViewModel: ObservableObject {
             let dbMessages = try await SupabaseManager.shared.fetchMessages()
             let uid = driverId
             
-            let relevant = dbMessages.filter { $0.senderId == uid || $0.receiverId == uid }
-            self.messages = relevant.map { msg in
+            let relevant: [DBMessage]
+            if let recipient = selectedRecipient {
+                relevant = dbMessages.filter {
+                    ($0.senderId == uid && $0.receiverId == recipient.id) ||
+                    ($0.senderId == recipient.id && $0.receiverId == uid)
+                }
+            } else {
+                relevant = dbMessages.filter { $0.senderId == uid || $0.receiverId == uid }
+            }
+            
+            let mappedMessages = relevant.map { msg in
                 let isSentByMe = msg.senderId == uid
+                let senderName = isSentByMe ? driverName : (selectedRecipient?.name ?? "Fleet Manager")
+                let senderRole = isSentByMe ? "Driver" : (selectedRecipient?.role.displayName ?? "Fleet Manager")
+                let initials = isSentByMe ? String(driverName.prefix(2)).uppercased() : String((selectedRecipient?.name ?? "FM").prefix(2)).uppercased()
+                
                 let formatter = DateFormatter()
                 formatter.dateFormat = "h:mm a"
                 return DriverChatMessage(
                     id: msg.id,
-                    sender: isSentByMe ? driverName : "Fleet Manager",
-                    role: isSentByMe ? "Driver" : "Fleet Manager",
+                    sender: senderName,
+                    role: senderRole,
                     preview: msg.message,
                     time: formatter.string(from: msg.timestamp),
                     unread: !isSentByMe,
-                    initials: isSentByMe ? String(driverName.prefix(2)).uppercased() : "FM",
+                    initials: initials,
                     isMe: isSentByMe
                 )
             }
+            
+            await MainActor.run {
+                self.messages = mappedMessages
+            }
         } catch {
             print("⚠️ Failed to load messages from Supabase: \(error.localizedDescription)")
-            
+        }
+    }
+    
+    func loadMaintenanceStaff() async {
+        do {
+            let staff = try await SupabaseManager.shared.fetchMaintenancePersonnel()
+            await MainActor.run {
+                self.maintenanceStaffList = staff
+            }
+        } catch {
+            print("Failed to load maintenance staff: \(error)")
         }
     }
     
@@ -661,41 +690,43 @@ final class DriverDashboardViewModel: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
-        var managerId: UUID? = nil
+        var recipientId = selectedRecipient?.id
         
-        // Find the last message received from any fleet manager
-        do {
-            let dbMessages = try await SupabaseManager.shared.fetchMessages()
-            let uid = driverId
-            let managers = try await SupabaseManager.shared.fetchFleetManagers()
-            let managerIds = Set(managers.map { $0.id })
-            
-            // Check messages where we were the receiver, and the sender was a manager
-            if let lastIncoming = dbMessages.last(where: { $0.receiverId == uid && managerIds.contains($0.senderId) }) {
-                managerId = lastIncoming.senderId
-            }
-        } catch {
-            print("Failed to find last manager sender: \(error)")
-        }
-        
-        // Fallback to first manager if no previous messages found
-        if managerId == nil {
+        if recipientId == nil {
+            // Find the last message received from any fleet manager
             do {
+                let dbMessages = try await SupabaseManager.shared.fetchMessages()
+                let uid = driverId
                 let managers = try await SupabaseManager.shared.fetchFleetManagers()
-                if let firstManager = managers.first {
-                    managerId = firstManager.id
+                let managerIds = Set(managers.map { $0.id })
+                
+                // Check messages where we were the receiver, and the sender was a manager
+                if let lastIncoming = dbMessages.last(where: { $0.receiverId == uid && managerIds.contains($0.senderId) }) {
+                    recipientId = lastIncoming.senderId
                 }
             } catch {
-                print("Failed to fetch manager ID for messaging: \(error)")
+                print("Failed to find last manager sender: \(error)")
+            }
+            
+            // Fallback to first manager if no previous messages found
+            if recipientId == nil {
+                do {
+                    let managers = try await SupabaseManager.shared.fetchFleetManagers()
+                    if let firstManager = managers.first {
+                        recipientId = firstManager.id
+                    }
+                } catch {
+                    print("Failed to fetch manager ID for messaging: \(error)")
+                }
             }
         }
         
-        let finalManagerId = managerId ?? UUID()
+        let finalRecipientId = recipientId ?? UUID()
         
         let dbMessage = DBMessage(
             id: UUID(),
             senderId: driverId,
-            receiverId: finalManagerId,
+            receiverId: finalRecipientId,
             message: trimmed,
             timestamp: Date()
         )
