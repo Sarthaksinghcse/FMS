@@ -219,7 +219,6 @@ struct WorkOrderDetailedView: View {
             }
         }
         .task {
-            await fetchGeminiPredictiveAlert()
             buildApprovalHistory()
             await loadAICostEstimate()
         }
@@ -398,77 +397,7 @@ struct WorkOrderDetailedView: View {
     
     private var overviewTabContent: some View {
         VStack(spacing: 16) {
-            // Circular Failure Risk Gauge Powered by Gemini
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(AppTheme.Brand.royalBlue)
-                    Text("AI Risk Analysis")
-                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.primary)
-                    Spacer()
-                    
-                    if isLoadingAlert {
-                        ProgressView().tint(AppTheme.Brand.royalBlue)
-                    }
-                }
-                
-                Divider()
-                
-                HStack(spacing: 20) {
-                    // Risk percentage gauge
-                    let riskPercent = Int((predictiveAlert?.riskScore ?? 0.0) * 100)
-                    let riskLevel = predictiveAlert?.riskLevel ?? "Low"
-                    
-                    ZStack {
-                        Circle()
-                            .stroke(Color.gray.opacity(0.1), lineWidth: 8)
-                            .frame(width: 80, height: 80)
-                        
-                        Circle()
-                            .trim(from: 0.0, to: CGFloat(Double(riskPercent) / 100.0))
-                            .stroke(
-                                riskLevel.localizedCaseInsensitiveCompare("critical") == .orderedSame ||
-                                riskLevel.localizedCaseInsensitiveCompare("high") == .orderedSame
-                                ? AppTheme.Status.danger
-                                : AppTheme.Brand.royalBlue,
-                                style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                            )
-                            .frame(width: 80, height: 80)
-                            .rotationEffect(Angle(degrees: -90))
-                        
-                        Text("\(riskPercent)%")
-                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
-                            .foregroundColor(AppTheme.Text.primary)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Failure Risk")
-                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
-                            .foregroundColor(AppTheme.Text.secondary)
-                        Text(riskLevel.uppercased())
-                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
-                            .foregroundColor(
-                                riskLevel.localizedCaseInsensitiveCompare("critical") == .orderedSame ||
-                                riskLevel.localizedCaseInsensitiveCompare("high") == .orderedSame
-                                ? AppTheme.Status.danger
-                                : AppTheme.Brand.royalBlue
-                            )
-                        
-                        Text("Recommendation")
-                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
-                            .foregroundColor(AppTheme.Text.tertiary)
-                        Text(predictiveAlert?.suggestedAction ?? "Monitor vehicle performance.")
-                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
-                            .foregroundColor(AppTheme.Text.primary)
-                            .lineLimit(2)
-                    }
-                }
-            }
-            .padding(16)
-            .background(AppTheme.Background.card)
-            .cornerRadius(AppTheme.Radius.card)
-            .shadow(color: AppTheme.Shadow.card, radius: 4)
+
             
             // Work Order Basic Info
             VStack(alignment: .leading, spacing: 12) {
@@ -1019,34 +948,74 @@ struct WorkOrderDetailedView: View {
             Divider()
             
             VStack(alignment: .leading, spacing: 20) {
+                // Step 1: Work Order Created (always completed)
                 timelineEventRow(
                     title: "Work Order Created",
                     time: order.createdAt.formatted(date: .abbreviated, time: .shortened),
-                    desc: "System logged work order following diagnostic risk detection.",
+                    desc: "Work order logged and submitted to the system.",
                     isCompleted: true
                 )
                 
-                let isAssigned = currentStepIndex >= 0
+                // Step 2: Technician Assigned (completed once we have an assignee)
+                let isAssigned = true // order always has assignedTo
                 timelineEventRow(
                     title: "Technician Assigned",
-                    time: order.createdAt.addingTimeInterval(300).formatted(date: .omitted, time: .shortened),
+                    time: order.createdAt.formatted(date: .abbreviated, time: .shortened),
                     desc: "Assigned technician: \(assignedTechnician?.fullName ?? "Maintenance Tech")",
                     isCompleted: isAssigned
                 )
                 
-                let isInspected = currentStepIndex >= 1
+                // Step 3: Cost Estimation & Approval
+                let isPending = order.workDescription.contains("[PENDING_APPROVAL]")
+                let isRejected = order.workDescription.contains("[REJECTED]")
+                let isInfoRequested = order.workDescription.contains("[INFO_REQUESTED]")
+                let isApproved = !isPending && !isRejected && !isInfoRequested && (order.status == .open || order.status == .inProgress || order.status == .completed)
+                
+                if isPending {
+                    timelineEventRow(
+                        title: "Awaiting Fleet Manager Approval",
+                        time: "Pending",
+                        desc: "Cost estimate submitted. Waiting for Fleet Manager to approve or reject.",
+                        isCompleted: false
+                    )
+                } else if isInfoRequested {
+                    timelineEventRow(
+                        title: "More Information Requested",
+                        time: "Action Required",
+                        desc: "Fleet Manager has requested additional details before approval.",
+                        isCompleted: false
+                    )
+                } else if isRejected {
+                    timelineEventRow(
+                        title: "Work Order Rejected",
+                        time: "Declined",
+                        desc: "Fleet Manager has declined this work order.",
+                        isCompleted: true
+                    )
+                } else if isApproved {
+                    timelineEventRow(
+                        title: "Approved by Fleet Manager",
+                        time: "Approved",
+                        desc: "Cost estimate approved. Work order is scheduled for repairs.",
+                        isCompleted: true
+                    )
+                }
+                
+                // Step 4: Repair In Progress
+                let isRepairing = order.status == .inProgress || order.status == .completed
                 timelineEventRow(
-                    title: "Initial Inspection Completed",
-                    time: order.createdAt.addingTimeInterval(1800).formatted(date: .omitted, time: .shortened),
-                    desc: "Technician finished physical safety inspection checks.",
-                    isCompleted: isInspected
+                    title: "Repair In Progress",
+                    time: isRepairing ? "Active" : "--:--",
+                    desc: isRepairing ? "Technician is performing the repair work." : "Repair has not started yet.",
+                    isCompleted: isRepairing
                 )
                 
+                // Step 5: Maintenance Completed
                 let isCompleted = order.status == .completed
                 timelineEventRow(
                     title: "Maintenance Completed",
-                    time: order.completedAt?.formatted(date: .omitted, time: .shortened) ?? "--:--",
-                    desc: "Repairs finalized, parts logged, and vehicle returned to service.",
+                    time: order.completedAt?.formatted(date: .abbreviated, time: .shortened) ?? "--:--",
+                    desc: isCompleted ? "Repairs finalized, parts logged, and vehicle returned to service." : "Awaiting completion.",
                     isCompleted: isCompleted
                 )
             }
@@ -1237,19 +1206,7 @@ struct WorkOrderDetailedView: View {
     
     // MARK: - Core Operations (Real Database Sync)
     
-    private func fetchGeminiPredictiveAlert() async {
-        isLoadingAlert = true
-        do {
-            let alerts = try await SupabaseManager.shared.fetchPredictiveAlerts(onlyActive: true)
-            await MainActor.run {
-                self.predictiveAlert = alerts.first { $0.vehicleId == order.vehicleId }
-                self.isLoadingAlert = false
-            }
-        } catch {
-            print("Failed to load Gemini predictions: \(error)")
-            self.isLoadingAlert = false
-        }
-    }
+
     
     private func buildApprovalHistory() {
         var history = [

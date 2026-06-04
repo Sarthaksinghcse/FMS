@@ -78,17 +78,6 @@ struct MaintenanceTaskDetailView: View {
         return "₹" + String(format: "%.2f", cost * 0.6)
     }
 
-    private var simulatedParts: [String] {
-        let all = [
-            ["Brake pads (front)", "Rotor disc (x2)", "Brake caliper"],
-            ["Engine oil filter", "Synthetic oil 5W-30 (4L)", "Drain plug washer"],
-            ["Air filter", "Spark plugs (x4)", "Ignition coil"],
-            ["Coolant 5L", "Radiator cap", "Overflow tank hose"],
-            ["Transmission fluid (2L)", "Gasket set", "Seal ring kit"],
-            ["Battery (12V)", "Terminal connectors", "Battery tray"]
-        ]
-        return all[abs(order.id.hashValue) % all.count]
-    }
 
     var body: some View {
         ZStack {
@@ -166,42 +155,6 @@ struct MaintenanceTaskDetailView: View {
                                 )
                             }
                         }
-                    }
-
-                    // ── Parts list ───────────────────────────────────────────
-                    DetailSection(
-                        title: "Parts & Materials",
-                        icon: "cube.box.fill",
-                        accentColor: AppTheme.Brand.amber
-                    ) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ForEach(Array(simulatedParts.enumerated()), id: \.offset) { idx, part in
-                                HStack(spacing: 12) {
-                                    Text("\(idx + 1)")
-                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
-                                        .foregroundColor(.white)
-                                        .frame(width: 22, height: 22)
-                                        .background(AppTheme.Brand.amber.opacity(0.8))
-                                        .clipShape(Circle())
-
-                                    Text(part)
-                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
-                                        .foregroundColor(AppTheme.Text.primary)
-
-                                    Spacer()
-
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
-                                        .foregroundColor(AppTheme.Status.success)
-                                }
-                                .padding(.horizontal, 16)
-
-                                if idx < simulatedParts.count - 1 {
-                                    Divider().padding(.horizontal, 16)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 12)
                     }
 
                     // ── Assignment ───────────────────────────────────────────
