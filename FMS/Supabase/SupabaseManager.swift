@@ -70,10 +70,20 @@ final class SupabaseManager {
     var showResetPasswordSheet = false
     
     private init() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
         self.client = SupabaseClient(
             supabaseURL: Self.supabaseURL,
             supabaseKey: Self.supabaseAnonKey,
             options: SupabaseClientOptions(
+                db: .init(
+                    encoder: encoder,
+                    decoder: decoder
+                ),
                 auth: .init(
                     emitLocalSessionAsInitialSession: true
                 )
@@ -981,6 +991,7 @@ final class SupabaseManager {
                         local.email = rd.email
                         local.phoneNumber = rd.phoneNumber ?? ""
                         local.role = rd.role.asLocalRole
+                        local.profileImageURL = rd.profileImage
                         local.isActive = rd.isActive
                     } else {
                         context.insert(rd.asLocalUser)
@@ -1007,6 +1018,7 @@ final class SupabaseManager {
                         local.email = rm.email
                         local.phoneNumber = rm.phoneNumber ?? ""
                         local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
                         local.isActive = rm.isActive
                     } else {
                         context.insert(rm.asLocalUser)
@@ -1033,6 +1045,7 @@ final class SupabaseManager {
                         local.email = rm.email
                         local.phoneNumber = rm.phoneNumber ?? ""
                         local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
                         local.isActive = rm.isActive
                     } else {
                         context.insert(rm.asLocalUser)

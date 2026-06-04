@@ -303,7 +303,7 @@ struct FleetDashboardView: View {
                 }
                 .scrollIndicators(.hidden)
                 .safeAreaPadding(.top)
-                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .scrollBounceBehavior(.always, axes: .vertical)
                 .refreshable {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -680,38 +680,45 @@ struct FleetDashboardView: View {
             let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
             let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
             
-            try? await channel.subscribeWithError()
+            do {
+                try await channel.subscribeWithError()
+                print("🟢 [FleetDashboardView Realtime] Subscribed successfully to channel: \(channel.topic)")
+            } catch {
+                print("❌ [FleetDashboardView Realtime] Subscription failed: \(error.localizedDescription)")
+            }
             
-            async let _ : () = handleStream(tripsStream)
-            async let _ : () = handleStream(sosStream)
-            async let _ : () = handleStream(defectStream)
-            async let _ : () = handleStream(workOrderStream)
-            async let _ : () = handleStream(notifStream)
-            async let _ : () = handleStream(taskStream)
-            async let _ : () = handleStream(vehicleStream)
-            async let _ : () = handleStream(fuelStream)
-            async let _ : () = handleStream(complianceStream)
-            async let _ : () = handleRouteDevStream(routeDevStream)
+            Task { await handleStream(tripsStream, tableName: "trips") }
+            Task { await handleStream(sosStream, tableName: "sos_alerts") }
+            Task { await handleStream(defectStream, tableName: "defect_reports") }
+            Task { await handleStream(workOrderStream, tableName: "work_orders") }
+            Task { await handleStream(notifStream, tableName: "notifications") }
+            Task { await handleStream(taskStream, tableName: "maintenance_tasks") }
+            Task { await handleStream(vehicleStream, tableName: "vehicles") }
+            Task { await handleStream(fuelStream, tableName: "fuel_logs") }
+            Task { await handleStream(complianceStream, tableName: "compliance_alerts") }
+            Task { await handleRouteDevStream(routeDevStream) }
         }
     }
     
     private func handleRouteDevStream<S: AsyncSequence>(_ stream: S) async {
         do {
-            for try await _ in stream {
+            for try await action in stream {
+                print("🔔 [Realtime - FleetDashboardView] Received change on route_deviation_alerts: \(action)")
                 fetchActiveGeofenceAlerts()
             }
         } catch {
-            print("Route dev stream error: \(error)")
+            print("❌ [Realtime - FleetDashboardView] Route dev stream error: \(error.localizedDescription)")
         }
     }
     
-    private func handleStream<S: AsyncSequence>(_ stream: S) async {
+    private func handleStream<S: AsyncSequence>(_ stream: S, tableName: String) async {
         do {
-            for try await _ in stream {
+            for try await action in stream {
+                print("🔔 [Realtime - FleetDashboardView] Received change on '\(tableName)': \(action)")
                 await SupabaseManager.shared.syncAllData(context: modelContext)
             }
         } catch {
-            print("Stream error: \(error)")
+            print("❌ [Realtime - FleetDashboardView] Stream error on '\(tableName)': \(error.localizedDescription)")
         }
     }
 }

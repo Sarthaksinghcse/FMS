@@ -1,7 +1,9 @@
 
 
 import SwiftUI
+import SwiftData
 struct DriverHomeTab: View {
+    @Environment(\.modelContext) private var modelContext
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTab: Int
     @State private var selectedTripForAddress: DBTrip?
@@ -109,7 +111,7 @@ struct DriverHomeTab: View {
                     Spacer(minLength: 100)
                 }
             }
-            .refreshable { await vm.load() }
+            .refreshable { await vm.load(context: modelContext) }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationBarHidden(true)
             .sheet(item: $selectedTripForAddress) { trip in
@@ -182,16 +184,33 @@ private struct DashboardInlineHeader: View {
             // ── Gap between bell and avatar ───────────────────────────
             Spacer().frame(width: 12)
 
-            // ── Driver initials avatar ──────────────────────────────
+            // ── Driver profile avatar ──────────────────────────────
             Button {
                 vm.showProfile = true
             } label: {
-                Text(initials)
-                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Color.fmsIndigo)
-                    .clipShape(Circle())
+                ZStack {
+                    if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                       let imageURL = URL(string: imageURLString) {
+                        CachedAsyncImage(url: imageURL) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                    } else {
+                        Text(initials)
+                            .font(.system(size: 14, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.fmsIndigo)
+                            .clipShape(Circle())
+                    }
+                }
             }
             .buttonStyle(.plain)
         }

@@ -151,7 +151,7 @@ struct AIReportsView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(Theme.fmsRed)
+                    .foregroundColor(Theme.royalBlue)
                     .font(.system(.body, design: .rounded))
                 }
             }

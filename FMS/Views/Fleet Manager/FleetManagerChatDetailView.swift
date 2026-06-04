@@ -12,8 +12,7 @@ struct FleetManagerChatDetailView: View {
     @State private var realtimeChannel: RealtimeChannelV2?
     @Environment(\.dismiss) private var dismiss
     @State private var forwardSuccess = false
-    @State private var selectedImageData: Data? = nil
-    @State private var selectedItem: PhotosPickerItem? = nil
+
 
     private var conversationMessages: [DBMessage] {
         messages.filter {
@@ -154,7 +153,7 @@ struct FleetManagerChatDetailView: View {
                 }
             }
             
-            // Bottom Message Input Bar with Photo Picker
+            // Bottom Message Input Bar
             VStack(spacing: 0) {
                 if let imgData = selectedImageData, let uiImage = UIImage(data: imgData) {
                     HStack {
@@ -206,36 +205,9 @@ struct FleetManagerChatDetailView: View {
                     
                     Button(action: {
                         let sentText = messageText
-                        let imgData = selectedImageData
-                        selectedImageData = nil
                         messageText = ""
                         
                         Task {
-                            if let data = imgData {
-                                let msgId = UUID()
-                                do {
-                                    let urlString = try await supabase.uploadChatImage(messageId: msgId, imageData: data)
-                                    let imgMsg = DBMessage(
-                                        id: msgId,
-                                        senderId: currentUser.id,
-                                        receiverId: chatUser.id,
-                                        message: "[IMAGE: \(urlString)]",
-                                        timestamp: Date()
-                                    )
-                                    try await supabase.sendMessage(imgMsg)
-                                } catch {
-                                    let base64 = data.base64EncodedString()
-                                    let imgMsg = DBMessage(
-                                        id: msgId,
-                                        senderId: currentUser.id,
-                                        receiverId: chatUser.id,
-                                        message: "[IMAGE_BASE64: \(base64)]",
-                                        timestamp: Date()
-                                    )
-                                    try await supabase.sendMessage(imgMsg)
-                                }
-                            }
-                            
                             let text = sentText.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !text.isEmpty {
                                 let dbMsg = DBMessage(
@@ -255,10 +227,10 @@ struct FleetManagerChatDetailView: View {
                             .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(Color.white)
                             .padding(10)
-                            .background((messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil) ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
+                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
                             .clipShape(Circle())
                     }
-                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil)
+                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .padding()
                 .background(Color.white)
@@ -285,16 +257,7 @@ struct FleetManagerChatDetailView: View {
                 realtimeChannel = nil
             }
         }
-        .onChange(of: selectedItem) { _, newValue in
-            Task {
-                if let data = try? await newValue?.loadTransferable(type: Data.self) {
-                    await MainActor.run {
-                        self.selectedImageData = data
-                        self.selectedItem = nil
-                    }
-                }
-            }
-        }
+
     }
     
     @ViewBuilder

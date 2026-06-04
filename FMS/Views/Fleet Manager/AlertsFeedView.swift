@@ -13,6 +13,7 @@ struct AlertsFeedView: View {
     
     @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]
     @Query(sort: \DefectReport.createdAt, order: .reverse) private var defectReports: [DefectReport]
+    @Query(sort: \AppNotification.createdAt, order: .reverse) private var notifications: [AppNotification]
     @Query private var users: [User]
     @Query private var vehicles: [Vehicle]
     @Query private var trips: [Trip]
@@ -32,6 +33,7 @@ struct AlertsFeedView: View {
         case sos = "SOS"
         case defects = "Defects"
         case geofence = "Geofence"
+        case queries = "Queries"
         
         var id: String { self.rawValue }
     }
@@ -49,6 +51,25 @@ struct AlertsFeedView: View {
         return "Unknown Vehicle"
     }
     
+    private func parseDriverName(from message: String) -> String {
+        if message.hasPrefix("Driver ") {
+            let start = message.index(message.startIndex, offsetBy: 7)
+            if let range = message.range(of: " raised a query") {
+                return String(message[start..<range.lowerBound])
+            }
+        }
+        return "Unknown Driver"
+    }
+
+    private func parseVehicleName(from message: String) -> String {
+        let drName = parseDriverName(from: message)
+        if let driver = users.first(where: { $0.fullName.lowercased() == drName.lowercased() }) {
+            if let trip = trips.first(where: { $0.driverId == driver.id && ($0.tripStatus == .started || $0.tripStatus == .assigned) }) {
+                return vehicleName(for: trip.vehicleId)
+            }
+        }
+        return "N/A"
+    }
     
     struct DisplayAlert: Identifiable {
         let id: UUID
@@ -69,6 +90,7 @@ struct AlertsFeedView: View {
             case sos
             case defect
             case routeDeviation
+            case query
         }
     }
     
@@ -154,6 +176,25 @@ struct AlertsFeedView: View {
             ))
         }
         
+        for notif in notifications {
+            if notif.title.contains("Query") || notif.type == .general {
+                list.append(DisplayAlert(
+                    id: notif.id,
+                    type: .query,
+                    title: notif.title,
+                    description: notif.message,
+                    severityText: "INFO",
+                    severityColor: .white,
+                    severityBgColor: AppTheme.Brand.royalBlue,
+                    date: notif.createdAt,
+                    statusText: notif.isRead ? "Resolved" : "Open",
+                    statusColor: notif.isRead ? AppTheme.Status.success : AppTheme.Brand.amber,
+                    driverName: parseDriverName(from: notif.message),
+                    vehicleName: parseVehicleName(from: notif.message),
+                    rawObject: notif
+                ))
+            }
+        }
         
         list.sort { $0.date > $1.date }
         return list
@@ -172,6 +213,8 @@ struct AlertsFeedView: View {
                 return alert.type == .defect
             case .geofence:
                 return alert.type == .routeDeviation
+            case .queries:
+                return alert.type == .query
             }
         }
         
@@ -316,6 +359,15 @@ struct AlertsFeedView: View {
                     }
                 )
             }
+            .sheet(item: $selectedDefectForAssignment) { defect in
+                AssignTechnicianSheet(
+                    defect: defect,
+                    users: users,
+                    viewModel: viewModel,
+                    context: modelContext,
+                    defectReports: defectReports
+                )
+            }
         }
     }
     
@@ -436,6 +488,7 @@ struct AlertFeedCard: View {
                             case .sos: return "exclamationmark.shield.fill"
                             case .routeDeviation: return "map.fill"
                             case .defect: return "exclamationmark.triangle.fill"
+                            case .query: return "questionmark.bubble.fill"
                             }
                         }()
                         
@@ -444,6 +497,7 @@ struct AlertFeedCard: View {
                             case .sos: return AppTheme.Status.danger
                             case .routeDeviation: return AppTheme.Brand.amber
                             case .defect: return AppTheme.Brand.amber
+                            case .query: return Color.orange
                             }
                         }()
                         
@@ -459,6 +513,7 @@ struct AlertFeedCard: View {
                             case .sos: return "SOS EMERGENCY ALERT"
                             case .routeDeviation: return "GEOFENCE ALERT"
                             case .defect: return "DEFECT REPORT"
+                            case .query: return "DRIVER QUERY"
                             }
                         }()
                         
@@ -609,6 +664,36 @@ struct AlertFeedCard: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
+                        .padding(.top, 4)
+                    } else {
+                        resolvedBanner
+                    }
+                }
+            } else if alert.type == .query {
+                if let notif = alert.rawObject as? AppNotification {
+                    if !notif.isRead {
+                        Button {
+                            notif.isRead = true
+                            try? context.save()
+                            Task {
+                                try? await SupabaseManager.shared.updateNotification(notif.asDBNotification)
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Spacer()
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption)
+                                Text("Mark Read")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                Spacer()
+                            }
+                            .padding(.vertical, 10)
+                            .foregroundColor(.white)
+                            .background(AppTheme.Status.success)
+                            .cornerRadius(AppTheme.Radius.small - 2)
+                            .shadow(color: AppTheme.Status.success.opacity(0.15), radius: 3, x: 0, y: 1.5)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                         .padding(.top, 4)
                     } else {
                         resolvedBanner
@@ -1238,7 +1323,7 @@ struct SOSAlertDetailView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(Theme.fmsRed)
+                    .foregroundColor(Theme.royalBlue)
                 }
             }
             .onAppear {

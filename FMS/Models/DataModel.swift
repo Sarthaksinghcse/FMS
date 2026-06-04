@@ -473,6 +473,7 @@ struct DBUser: Codable, Identifiable {
             phoneNumber: phoneNumber ?? "",
             passwordHash: "",
             role: role.asLocalRole,
+            profileImageURL: profileImage,
             isActive: isActive
         )
     }

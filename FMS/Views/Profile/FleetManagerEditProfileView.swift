@@ -185,7 +185,7 @@ struct FleetManagerEditProfileView: View {
                         
                         Button {
                             let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
-                            guard trimmedPhone.isValidPhoneNumber else {
+                            if !trimmedPhone.isEmpty && !trimmedPhone.isValidPhoneNumber {
                                 errorAlertMessage = "Please enter a valid 10-digit phone number."
                                 showErrorAlert = true
                                 return

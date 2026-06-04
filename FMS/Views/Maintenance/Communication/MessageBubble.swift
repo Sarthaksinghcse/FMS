@@ -51,13 +51,16 @@ struct MessageBubble: View {
                 CachedAsyncImage(url: url) { image in
                     image
                         .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 220, maxHeight: 220)
+                        .scaledToFill()
+                        .frame(width: 200, height: 150)
                         .cornerRadius(12)
+                        .clipped()
                 } placeholder: {
                     ProgressView()
                         .tint(isSender ? .white : AppTheme.Brand.primary)
+                        .frame(width: 200, height: 150)
                 }
+                .frame(width: 200, height: 150)
                 .padding(4)
                 .background(isSender ? AppTheme.Brand.primary : Color(UIColor.secondarySystemBackground))
                 .cornerRadius(16)
@@ -69,9 +72,10 @@ struct MessageBubble: View {
             if let data = Data(base64Encoded: base64String), let uiImage = UIImage(data: data) {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 220, maxHeight: 220)
+                    .scaledToFill()
+                    .frame(width: 200, height: 150)
                     .cornerRadius(12)
+                    .clipped()
                     .padding(4)
                     .background(isSender ? AppTheme.Brand.primary : Color(UIColor.secondarySystemBackground))
                     .cornerRadius(16)

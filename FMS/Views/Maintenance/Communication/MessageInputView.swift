@@ -1,14 +1,10 @@
 import SwiftUI
-import PhotosUI
 
 struct MessageInputView: View {
     @Binding var textMessage: String
-    @Binding var selectedImageData: Data?
     var onSend: () -> Void
     var onAttachWorkOrder: () -> Void = {}
     
-    @State private var selectedItem: PhotosPickerItem? = nil
-
     var body: some View {
         VStack(spacing: 0) {
             if let imgData = selectedImageData, let uiImage = UIImage(data: imgData) {
@@ -63,7 +59,7 @@ struct MessageInputView: View {
                 Button(action: onSend) {
                     ZStack {
                         Circle()
-                            .fill((textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil) ? AppTheme.Brand.primary.opacity(0.15) : AppTheme.Brand.primary)
+                            .fill(textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.15) : AppTheme.Brand.primary)
                             .frame(width: 34, height: 34)
                         
                         Image(systemName: "arrow.up")
@@ -71,26 +67,16 @@ struct MessageInputView: View {
                             .foregroundColor(.white)
                     }
                 }
-                .disabled(textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil)
+                .disabled(textMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .buttonStyle(ScaleButtonStyle())
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
             .background(AppTheme.Background.card)
         }
-        .onChange(of: selectedItem) { _, newValue in
-            Task {
-                if let data = try? await newValue?.loadTransferable(type: Data.self) {
-                    await MainActor.run {
-                        self.selectedImageData = data
-                        self.selectedItem = nil
-                    }
-                }
-            }
-        }
     }
 }
 
 #Preview {
-    MessageInputView(textMessage: .constant("Hello World"), selectedImageData: .constant(nil), onSend: {})
+    MessageInputView(textMessage: .constant("Hello World"), onSend: {})
 }

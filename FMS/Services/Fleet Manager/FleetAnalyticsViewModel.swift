@@ -302,6 +302,14 @@ final class FleetAnalyticsViewModel {
 
     // MARK: - PDF Generation
 
+    private let primaryBlue = UIColor(red: 0.15, green: 0.38, blue: 0.90, alpha: 1.0)
+    private let darkOrange = UIColor(red: 0.93, green: 0.46, blue: 0.0, alpha: 1.0)
+    private let lightBlueBg = UIColor(red: 0.95, green: 0.97, blue: 1.0, alpha: 1.0)
+    private let borderGray = UIColor(red: 0.88, green: 0.90, blue: 0.93, alpha: 1.0)
+    private let textPrimary = UIColor(red: 0.11, green: 0.14, blue: 0.19, alpha: 1.0)
+    private let textSecondary = UIColor.secondaryLabel
+    private let textMuted = UIColor.tertiaryLabel
+
     func generatePDFData(
         vehicles: [Vehicle],
         users: [User],
@@ -322,26 +330,51 @@ final class FleetAnalyticsViewModel {
         dateFormatter.timeStyle = .short
 
         let data = renderer.pdfData { context in
-            context.beginPage()
+            let cgContext = context.cgContext
+            
             var y: CGFloat = margin
+            
+            // Helper to start a new page and draw background/footer elements
+            func startNewPage() {
+                context.beginPage()
+                drawPageFooter(context: context, pageHeight: pageHeight, margin: margin, dateFormatter: dateFormatter)
+                y = margin
+            }
+            
+            startNewPage()
 
-            // --- Title ---
-            let titleFont  = UIFont.systemFont(ofSize: 22, weight: .bold)
-            let titleAttrs: [NSAttributedString.Key: Any] = [.font: titleFont, .foregroundColor: UIColor.label]
-            let title = "Fleet Analytics Report"
-            (title as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: titleAttrs)
-            y += 32
-
-            // --- Subtitle: period + date ---
-            let subFont  = UIFont.systemFont(ofSize: 12, weight: .regular)
-            let subAttrs: [NSAttributedString.Key: Any] = [.font: subFont, .foregroundColor: UIColor.secondaryLabel]
-            let sub = "Period: \(selectedPeriod.rawValue)  •  Generated: \(dateFormatter.string(from: Date()))"
-            (sub as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: subAttrs)
-            y += 28
-
-            // Divider
-            y = drawDivider(context: context, y: y, x: margin, width: contentWidth)
-            y += 12
+            // ─── HEADER BANNER ───────────────────────────────────────────
+            let rect = CGRect(x: margin, y: y, width: contentWidth, height: 80)
+            let path = UIBezierPath(roundedRect: rect, cornerRadius: 10)
+            cgContext.saveGState()
+            lightBlueBg.setFill()
+            path.fill()
+            
+            // Draw primary blue left accent bar
+            let leftBarRect = CGRect(x: margin, y: y, width: 6, height: 80)
+            let leftBarPath = UIBezierPath(roundedRect: leftBarRect, byRoundingCorners: [.topLeft, .bottomLeft], cornerRadii: CGSize(width: 10, height: 10))
+            primaryBlue.setFill()
+            leftBarPath.fill()
+            cgContext.restoreGState()
+            
+            // Title Text
+            let titleFont = UIFont.systemFont(ofSize: 18, weight: .bold)
+            let titleAttrs: [NSAttributedString.Key: Any] = [
+                .font: titleFont,
+                .foregroundColor: primaryBlue
+            ]
+            ("FLEET ANALYTICS REPORT" as NSString).draw(at: CGPoint(x: margin + 20, y: y + 18), withAttributes: titleAttrs)
+            
+            // Subtitle Details
+            let detailsFont = UIFont.systemFont(ofSize: 10, weight: .medium)
+            let detailsAttrs: [NSAttributedString.Key: Any] = [
+                .font: detailsFont,
+                .foregroundColor: textSecondary
+            ]
+            let subStr = "Period: \(selectedPeriod.rawValue.uppercased())  •  Generated: \(dateFormatter.string(from: Date()))"
+            (subStr as NSString).draw(at: CGPoint(x: margin + 20, y: y + 44), withAttributes: detailsAttrs)
+            
+            y += 80 + 20
 
             // --- Overview KPIs ---
             y = drawSectionHeader("Overview", context: context, y: y, x: margin)
@@ -374,28 +407,33 @@ final class FleetAnalyticsViewModel {
                 ("Vehicles Used (\(periodLabel))", "\(vehUsed)")
             ]
             y = drawTable(vehicleRows, context: context, y: y, x: margin, width: contentWidth)
-            y += 8
+            y += 12
 
             let typeData = vehicleTypeBreakdown(vehicles: vehicles)
             if !typeData.isEmpty {
+                if y > pageHeight - 140 {
+                    startNewPage()
+                }
                 y = drawSubHeader("By Type", context: context, y: y, x: margin)
                 let typeRows = typeData.map { ($0.label, "\($0.count)") }
                 y = drawTable(typeRows, context: context, y: y, x: margin, width: contentWidth)
-                y += 8
+                y += 12
             }
 
             let fuelData = fuelTypeBreakdown(vehicles: vehicles)
             if !fuelData.isEmpty {
+                if y > pageHeight - 140 {
+                    startNewPage()
+                }
                 y = drawSubHeader("By Fuel", context: context, y: y, x: margin)
                 let fuelRows = fuelData.map { ($0.label, "\($0.count)") }
                 y = drawTable(fuelRows, context: context, y: y, x: margin, width: contentWidth)
-                y += 8
+                y += 12
             }
 
             // Check if we need a new page
-            if y > pageHeight - 300 {
-                context.beginPage()
-                y = margin
+            if y > pageHeight - 180 {
+                startNewPage()
             }
 
             // --- Driver Analytics ---
@@ -411,20 +449,22 @@ final class FleetAnalyticsViewModel {
                 ("Driver Trips (\(periodLabel))", "\(totalDriverTrips(users: users, trips: trips))")
             ]
             y = drawTable(driverRows, context: context, y: y, x: margin, width: contentWidth)
-            y += 8
+            y += 12
 
             let driverBreakdown = driverTripBreakdown(users: users, trips: trips)
             if !driverBreakdown.isEmpty {
+                if y > pageHeight - 180 {
+                    startNewPage()
+                }
                 y = drawSubHeader("Driver Trip Breakdown (\(periodLabel))", context: context, y: y, x: margin)
                 let dRows = driverBreakdown.map { ("\($0.driverName)", "\($0.tripCount) trips  •  \(formatDistance($0.completedDistance)) km") }
                 y = drawTable(dRows, context: context, y: y, x: margin, width: contentWidth)
-                y += 8
+                y += 12
             }
 
             // Check if we need a new page
-            if y > pageHeight - 300 {
-                context.beginPage()
-                y = margin
+            if y > pageHeight - 180 {
+                startNewPage()
             }
 
             // --- Maintenance Analytics ---
@@ -447,21 +487,23 @@ final class FleetAnalyticsViewModel {
                 ("Maintenance Cost (\(periodLabel))", maintCost)
             ]
             y = drawTable(maintRows, context: context, y: y, x: margin, width: contentWidth)
-            y += 8
+            y += 12
 
             let priorities = workOrderPriorities(workOrders: workOrders)
             let activePriorities = priorities.filter { $0.count > 0 }
             if !activePriorities.isEmpty {
+                if y > pageHeight - 140 {
+                    startNewPage()
+                }
                 y = drawSubHeader("Active Work Order Priorities", context: context, y: y, x: margin)
                 let priRows = activePriorities.map { ($0.label, "\($0.count)") }
                 y = drawTable(priRows, context: context, y: y, x: margin, width: contentWidth)
-                y += 8
+                y += 12
             }
 
             // Check if we need a new page
-            if y > pageHeight - 200 {
-                context.beginPage()
-                y = margin
+            if y > pageHeight - 180 {
+                startNewPage()
             }
 
             // --- Trip Analytics ---
@@ -480,20 +522,16 @@ final class FleetAnalyticsViewModel {
                 ("Completion Rate", compRate)
             ]
             y = drawTable(tripRows, context: context, y: y, x: margin, width: contentWidth)
-            y += 8
+            y += 12
 
             if !statusBreakdown.isEmpty {
+                if y > pageHeight - 140 {
+                    startNewPage()
+                }
                 y = drawSubHeader("Trip Status Breakdown", context: context, y: y, x: margin)
                 let statusRows = statusBreakdown.map { ($0.label, "\($0.count)") }
                 y = drawTable(statusRows, context: context, y: y, x: margin, width: contentWidth)
             }
-
-            // Footer
-            y = pageHeight - margin - 20
-            let footerFont  = UIFont.systemFont(ofSize: 9, weight: .regular)
-            let footerAttrs: [NSAttributedString.Key: Any] = [.font: footerFont, .foregroundColor: UIColor.tertiaryLabel]
-            let footer = "Fleet Management System  •  Report generated on \(dateFormatter.string(from: Date()))"
-            (footer as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: footerAttrs)
         }
 
         return data
@@ -501,65 +539,164 @@ final class FleetAnalyticsViewModel {
 
     // MARK: - PDF Drawing Helpers
 
+    private func drawPageFooter(
+        context: UIGraphicsPDFRendererContext,
+        pageHeight: CGFloat,
+        margin: CGFloat,
+        dateFormatter: DateFormatter
+    ) {
+        let y = pageHeight - margin + 10
+        let footerFont = UIFont.systemFont(ofSize: 8, weight: .regular)
+        let footerAttrs: [NSAttributedString.Key: Any] = [
+            .font: footerFont,
+            .foregroundColor: textMuted
+        ]
+        let footerStr = "Fleet Management System  •  Confidential Analytics Report  •  Generated: \(dateFormatter.string(from: Date()))"
+        (footerStr as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: footerAttrs)
+    }
+
     private func drawSectionHeader(_ text: String, context: UIGraphicsPDFRendererContext, y: CGFloat, x: CGFloat) -> CGFloat {
-        let font  = UIFont.systemFont(ofSize: 16, weight: .bold)
-        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor.label]
-        (text as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: attrs)
+        let cgContext = context.cgContext
+        
+        // Draw colored indicator bar on the left of section header
+        let indicatorRect = CGRect(x: x, y: y + 2, width: 4, height: 16)
+        let indicatorPath = UIBezierPath(roundedRect: indicatorRect, cornerRadius: 2)
+        cgContext.saveGState()
+        primaryBlue.setFill()
+        indicatorPath.fill()
+        cgContext.restoreGState()
+
+        let font  = UIFont.systemFont(ofSize: 13, weight: .bold)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textPrimary]
+        (text.uppercased() as NSString).draw(at: CGPoint(x: x + 12, y: y + 3), withAttributes: attrs)
         return y + 26
     }
 
     private func drawSubHeader(_ text: String, context: UIGraphicsPDFRendererContext, y: CGFloat, x: CGFloat) -> CGFloat {
-        let font  = UIFont.systemFont(ofSize: 12, weight: .semibold)
-        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor.secondaryLabel]
-        (text as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: attrs)
-        return y + 20
+        let font  = UIFont.systemFont(ofSize: 11, weight: .bold)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: primaryBlue]
+        (text.uppercased() as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: attrs)
+        return y + 18
     }
 
     private func drawDivider(context: UIGraphicsPDFRendererContext, y: CGFloat, x: CGFloat, width: CGFloat) -> CGFloat {
         let cgContext = context.cgContext
-        cgContext.setStrokeColor(UIColor.separator.cgColor)
+        cgContext.saveGState()
+        cgContext.setStrokeColor(borderGray.withAlphaComponent(0.8).cgColor)
         cgContext.setLineWidth(0.5)
         cgContext.move(to: CGPoint(x: x, y: y))
         cgContext.addLine(to: CGPoint(x: x + width, y: y))
         cgContext.strokePath()
+        cgContext.restoreGState()
         return y
     }
 
     private func drawKPIGrid(_ items: [(String, String)], context: UIGraphicsPDFRendererContext, y: CGFloat, x: CGFloat, width: CGFloat) -> CGFloat {
-        let labelFont = UIFont.systemFont(ofSize: 10, weight: .medium)
+        let cgContext = context.cgContext
+        
+        let titleFont = UIFont.systemFont(ofSize: 9, weight: .semibold)
         let valueFont = UIFont.systemFont(ofSize: 18, weight: .bold)
-        let labelAttrs: [NSAttributedString.Key: Any] = [.font: labelFont, .foregroundColor: UIColor.secondaryLabel]
-        let valueAttrs: [NSAttributedString.Key: Any] = [.font: valueFont, .foregroundColor: UIColor.label]
-
-        let colWidth = width / 2
+        
+        let titleAttrs: [NSAttributedString.Key: Any] = [.font: titleFont, .foregroundColor: textSecondary]
+        
+        let cardColors: [UIColor] = [
+            primaryBlue,
+            darkOrange,
+            UIColor(red: 0.10, green: 0.28, blue: 0.70, alpha: 1.0), // Deep Blue
+            UIColor(red: 0.45, green: 0.25, blue: 0.90, alpha: 1.0)  // Violet/Purple
+        ]
+        
+        let gap: CGFloat = 16
+        let cardWidth = (width - gap) / 2
+        let cardHeight: CGFloat = 65
+        
         var currentY = y
         for row in stride(from: 0, to: items.count, by: 2) {
             for col in 0..<2 where row + col < items.count {
                 let item = items[row + col]
-                let xPos = x + CGFloat(col) * colWidth
-                (item.0 as NSString).draw(at: CGPoint(x: xPos, y: currentY), withAttributes: labelAttrs)
-                (item.1 as NSString).draw(at: CGPoint(x: xPos, y: currentY + 14), withAttributes: valueAttrs)
+                let xPos = x + CGFloat(col) * (cardWidth + gap)
+                let yPos = currentY
+                
+                let rect = CGRect(x: xPos, y: yPos, width: cardWidth, height: cardHeight)
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: 8)
+                
+                let themeColor = cardColors[(row + col) % cardColors.count]
+                
+                // Draw card background (tinted fill)
+                cgContext.saveGState()
+                themeColor.withAlphaComponent(0.04).setFill()
+                path.fill()
+                
+                // Draw card border (tinted stroke)
+                cgContext.setStrokeColor(themeColor.withAlphaComponent(0.18).cgColor)
+                cgContext.setLineWidth(1)
+                path.stroke()
+                cgContext.restoreGState()
+                
+                // Draw Card Title
+                (item.0 as NSString).draw(at: CGPoint(x: xPos + 12, y: yPos + 12), withAttributes: titleAttrs)
+                
+                // Draw Card Value
+                let valueAttrs: [NSAttributedString.Key: Any] = [
+                    .font: valueFont,
+                    .foregroundColor: themeColor
+                ]
+                (item.1 as NSString).draw(at: CGPoint(x: xPos + 12, y: yPos + 28), withAttributes: valueAttrs)
             }
-            currentY += 44
+            currentY += cardHeight + gap
         }
         return currentY
     }
 
     private func drawTable(_ rows: [(String, String)], context: UIGraphicsPDFRendererContext, y: CGFloat, x: CGFloat, width: CGFloat) -> CGFloat {
-        let labelFont = UIFont.systemFont(ofSize: 11, weight: .medium)
-        let valueFont = UIFont.systemFont(ofSize: 11, weight: .semibold)
-        let labelAttrs: [NSAttributedString.Key: Any] = [.font: labelFont, .foregroundColor: UIColor.secondaryLabel]
-        let valueAttrs: [NSAttributedString.Key: Any] = [.font: valueFont, .foregroundColor: UIColor.label]
-
-        var currentY = y
-        for (label, value) in rows {
-            (label as NSString).draw(at: CGPoint(x: x + 4, y: currentY), withAttributes: labelAttrs)
-
+        if rows.isEmpty { return y }
+        let cgContext = context.cgContext
+        
+        let labelFont = UIFont.systemFont(ofSize: 10, weight: .medium)
+        let valueFont = UIFont.systemFont(ofSize: 10, weight: .bold)
+        let labelAttrs: [NSAttributedString.Key: Any] = [.font: labelFont, .foregroundColor: textSecondary]
+        let valueAttrs: [NSAttributedString.Key: Any] = [.font: valueFont, .foregroundColor: textPrimary]
+        
+        let rowHeight: CGFloat = 24
+        let tableHeight = CGFloat(rows.count) * rowHeight + 8
+        let rect = CGRect(x: x, y: y, width: width, height: tableHeight)
+        let path = UIBezierPath(roundedRect: rect, cornerRadius: 6)
+        
+        cgContext.saveGState()
+        // Draw soft grey/blue container background
+        UIColor(red: 0.97, green: 0.98, blue: 0.99, alpha: 1.0).setFill()
+        path.fill()
+        
+        // Draw container border
+        cgContext.setStrokeColor(borderGray.cgColor)
+        cgContext.setLineWidth(0.8)
+        path.stroke()
+        cgContext.restoreGState()
+        
+        var currentY = y + 4
+        for i in 0..<rows.count {
+            let (label, value) = rows[i]
+            
+            // Draw horizontal separator line for all but the last row
+            if i > 0 {
+                cgContext.saveGState()
+                cgContext.setStrokeColor(borderGray.withAlphaComponent(0.5).cgColor)
+                cgContext.setLineWidth(0.5)
+                cgContext.move(to: CGPoint(x: x + 12, y: currentY))
+                cgContext.addLine(to: CGPoint(x: x + width - 12, y: currentY))
+                cgContext.strokePath()
+                cgContext.restoreGState()
+            }
+            
+            // Draw text centered vertically in the row
+            (label as NSString).draw(at: CGPoint(x: x + 12, y: currentY + (rowHeight - 12) / 2), withAttributes: labelAttrs)
+            
             let valueSize = (value as NSString).size(withAttributes: valueAttrs)
-            (value as NSString).draw(at: CGPoint(x: x + width - valueSize.width - 4, y: currentY), withAttributes: valueAttrs)
-
-            currentY += 20
+            (value as NSString).draw(at: CGPoint(x: x + width - valueSize.width - 12, y: currentY + (rowHeight - 12) / 2), withAttributes: valueAttrs)
+            
+            currentY += rowHeight
         }
-        return currentY
+        
+        return y + tableHeight
     }
 }
