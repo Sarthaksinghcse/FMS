@@ -514,10 +514,16 @@ struct VehicleCardView: View {
                     Text(vehicle.registrationNumber)
                         .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Spacer()
                     HStack(spacing: 4) {
                         Image(systemName: vehicle.status.statusIcon).font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
-                        Text(vehicle.status.displayName).font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).tracking(0.3)
+                        Text(vehicle.status.displayName)
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
+                            .tracking(0.3)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundColor(vehicle.status.statusColor)
                     .padding(.horizontal, 10).padding(.vertical, 5)
@@ -526,11 +532,16 @@ struct VehicleCardView: View {
                 }
                 Text("\(vehicle.make) \(vehicle.model) · \(String(vehicle.year))")
                     .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded)).foregroundColor(.gray)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
                 HStack(spacing: 8) {
                     HStack(spacing: 4) {
                         Image(systemName: vehicle.vehicleType.icon).font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
-                        Text(vehicle.vehicleType.displayName).font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+                        Text(vehicle.vehicleType.displayName)
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundColor(vehicle.vehicleType.iconColor)
                     .padding(.horizontal, 8).padding(.vertical, 4)
@@ -538,7 +549,10 @@ struct VehicleCardView: View {
 
                     HStack(spacing: 4) {
                         Image(systemName: vehicle.fuelType.icon).font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
-                        Text(vehicle.fuelType.displayName).font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+                        Text(vehicle.fuelType.displayName)
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundColor(.gray.opacity(0.8))
                     .padding(.horizontal, 8).padding(.vertical, 4)
@@ -547,7 +561,10 @@ struct VehicleCardView: View {
                     Spacer()
                     HStack(spacing: 3) {
                         Image(systemName: "gauge.with.needle").font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
-                        Text("\(formattedOdometer) km").font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
+                        Text("\(formattedOdometer) km")
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundColor(.gray.opacity(0.7))
                 }
@@ -1223,8 +1240,9 @@ struct MaintenanceStaffListView: View {
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(AppTheme.Glass.border, lineWidth: 1))
             .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
 
-            if orders > 0 {
-                Text("\(orders)")
+            let orderCount = workOrderCount(for: staff.id)
+            if orderCount > 0 {
+                Text("\(orderCount)")
                     .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded)).foregroundColor(.white)
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(Capsule().fill(AppTheme.Brand.royalBlue)
