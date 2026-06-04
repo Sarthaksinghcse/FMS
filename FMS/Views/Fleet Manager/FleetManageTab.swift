@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import AVFoundation
 
 struct CardMetric: Identifiable {
     var id: String { label }
@@ -56,14 +57,14 @@ struct ManagementHubView: View {
                 title: "Vehicle Management",
                 subtitle: "Manage all fleet vehicles",
                 icon: "truck.box.fill",
-                accentColor: AppTheme.Brand.royalBlue,
+                accentColor: Theme.royalBlue,
                 metrics: [
                     CardMetric(label: "Total",   value: "\(vehicles.count)",
-                               systemIcon: "car.fill",                       iconColor: AppTheme.Brand.royalBlue),
+                               systemIcon: "car.fill",                       iconColor: Theme.royalBlue),
                     CardMetric(label: "Available", value: "\(vehicles.filter { $0.status == .active }.count)",
-                               systemIcon: "checkmark.circle.fill",          iconColor: .green),
+                               systemIcon: "checkmark.circle.fill",          iconColor: Theme.royalBlue),
                     CardMetric(label: "Maintenance",  value: "\(vehicles.filter { $0.status == .inMaintenance }.count)",
-                               systemIcon: "exclamationmark.triangle.fill",  iconColor: AppTheme.Brand.accent)
+                               systemIcon: "exclamationmark.triangle.fill",  iconColor: Theme.darkOrange.opacity(0.8))
                 ],
                 destination: .vehicleList
             ),
@@ -71,14 +72,14 @@ struct ManagementHubView: View {
                 title: "Driver Management",
                 subtitle: "Manage drivers & assignments",
                 icon: "person.fill",
-                accentColor: Color(red: 0.30, green: 0.70, blue: 0.46),
+                accentColor: Color(red: 0.12, green: 0.60, blue: 0.35),
                 metrics: [
                     CardMetric(label: "Total",   value: "\(driverCount)",
-                               systemIcon: "person.2.fill",  iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)),
+                               systemIcon: "person.2.fill",  iconColor: Color(red: 0.12, green: 0.60, blue: 0.35)),
                     CardMetric(label: "Active",  value: "\(users.filter { $0.role == .driver && $0.isActive }.count)",
-                               systemIcon: "checkmark.circle.fill",    iconColor: .green),
+                               systemIcon: "checkmark.circle.fill",    iconColor: Color(red: 0.12, green: 0.60, blue: 0.35)),
                     CardMetric(label: "Inactive", value: "\(users.filter { $0.role == .driver && !$0.isActive }.count)",
-                               systemIcon: "xmark.circle.fill",    iconColor: .gray)
+                               systemIcon: "xmark.circle.fill",    iconColor: Color(red: 0.12, green: 0.60, blue: 0.35).opacity(0.6))
                 ],
                 destination: .driverList
             ),
@@ -86,14 +87,14 @@ struct ManagementHubView: View {
                 title: "Maintenance Team",
                 subtitle: "Manage technicians & tasks",
                 icon: "wrench.and.screwdriver.fill",
-                accentColor: AppTheme.Brand.accent,
+                accentColor: Theme.darkOrange,
                 metrics: [
                     CardMetric(label: "Staff",        value: "\(maintenanceCount)",
-                               systemIcon: "person.3.fill",      iconColor: AppTheme.Brand.accent),
+                               systemIcon: "person.3.fill",      iconColor: Theme.darkOrange),
                     CardMetric(label: "Active Orders", value: "\(workOrders.filter { $0.status == .open || $0.status == .inProgress }.count)",
-                               systemIcon: "doc.text.fill",      iconColor: .orange),
+                               systemIcon: "doc.text.fill",      iconColor: Theme.darkOrange),
                     CardMetric(label: "Done Orders",  value: "\(workOrders.filter { $0.status == .completed }.count)",
-                               systemIcon: "checkmark.seal.fill", iconColor: .green)
+                               systemIcon: "checkmark.seal.fill", iconColor: Theme.darkOrange)
                 ],
                 destination: .maintenanceStaff
             )
@@ -232,22 +233,13 @@ struct ManagementCardView: View {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(.ultraThinMaterial)
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(LinearGradient(
-                            colors: [card.accentColor.opacity(0.08), card.accentColor.opacity(0.01)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ))
+                        .fill(card.accentColor.opacity(0.08))
                 }
             )
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [card.accentColor.opacity(0.25), card.accentColor.opacity(0.05), Color.white.opacity(0.1)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.5
-                    )
+                    .stroke(card.accentColor.opacity(0.2), lineWidth: 1.5)
             )
             .shadow(color: Color.black.opacity(0.03), radius: 12, x: 0, y: 6)
         }
@@ -380,11 +372,13 @@ struct VehicleListView: View {
         .sheet(isPresented: $showAddVehicle) {
             if #available(iOS 26.0, *) {
                 AddVehicleFormView()
+                    .interactiveDismissDisabled()
             }
         }
         .sheet(item: $editingVehicle) { v in
             if #available(iOS 26.0, *) {
                 EditVehicleFormView(vehicle: v)
+                    .interactiveDismissDisabled()
             }
         }
     }
@@ -470,6 +464,8 @@ struct FilterChipView: View {
             HStack(spacing: 6) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 if count > 0 {
                     Text("\(count)")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
@@ -595,8 +591,8 @@ enum DriverStatusFilter: String, CaseIterable, Identifiable {
     var chipColor: Color {
         switch self {
         case .all: return AppTheme.Brand.royalBlue
-        case .online: return .green
-        case .offline: return .gray
+        case .online: return AppTheme.Status.success
+        case .offline: return AppTheme.Brand.primary.opacity(0.4)
         }
     }
 }
@@ -624,10 +620,11 @@ struct DriverListView: View {
 
     private var filteredDrivers: [User] {
         let baseDrivers = drivers.filter { d in
+            let isOnline = d.isActive || activeTripForDriver(d)?.tripStatus == .started || activeTripForDriver(d)?.tripStatus == .inProgress
             switch selectedFilter {
             case .all: return true
-            case .online: return d.isActive
-            case .offline: return !d.isActive
+            case .online: return isOnline
+            case .offline: return !isOnline
             }
         }
         guard !searchText.isEmpty else { return baseDrivers }
@@ -636,7 +633,14 @@ struct DriverListView: View {
     }
 
     private func vehicleForDriver(_ d: User) -> Vehicle? {
-        vehicles.first { $0.assignedDriverId == d.id }
+        if let v = vehicles.first(where: { $0.assignedDriverId == d.id }) {
+            return v
+        }
+        if let activeTrip = activeTripForDriver(d),
+           let v = vehicles.first(where: { $0.id == activeTrip.vehicleId }) {
+            return v
+        }
+        return nil
     }
 
     private func activeTripForDriver(_ d: User) -> Trip? {
@@ -698,7 +702,7 @@ struct DriverListView: View {
             }
         }
         .refreshable {
-            await syncDrivers()
+            await syncDriverAssignments()
         }
         .navigationTitle("Driver Management")
         .navigationBarTitleDisplayMode(.large)
@@ -711,12 +715,18 @@ struct DriverListView: View {
                 } label: { Image(systemName: "plus") }
             }
         }
-        .sheet(isPresented: $showAddDriver) { AddDriverFormView() }
-        .sheet(item: $selectedDriverForEdit) { d in EditDriverFormView(driver: d) }
+        .sheet(isPresented: $showAddDriver) {
+            AddDriverFormView()
+                .interactiveDismissDisabled()
+        }
+        .sheet(item: $selectedDriverForEdit) { d in
+            EditDriverFormView(driver: d)
+                .interactiveDismissDisabled()
+        }
         .task {
             triggerCardAnimations()
             while !Task.isCancelled {
-                await syncDrivers()
+                await syncDriverAssignments()
                 try? await Task.sleep(for: .seconds(5))
             }
         }
@@ -748,8 +758,12 @@ struct DriverListView: View {
     private func countForFilter(_ filter: DriverStatusFilter) -> Int {
         switch filter {
         case .all: return drivers.count
-        case .online: return drivers.filter { $0.isActive }.count
-        case .offline: return drivers.filter { !$0.isActive }.count
+        case .online: return drivers.filter { d in
+            d.isActive || activeTripForDriver(d)?.tripStatus == .started || activeTripForDriver(d)?.tripStatus == .inProgress
+        }.count
+        case .offline: return drivers.filter { d in
+            !(d.isActive || activeTripForDriver(d)?.tripStatus == .started || activeTripForDriver(d)?.tripStatus == .inProgress)
+        }.count
         }
     }
 
@@ -766,7 +780,11 @@ struct DriverListView: View {
                             .frame(width: 56, height: 56)
                             .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 8, x: 0, y: 4)
                         Text(initials(for: driver.fullName))
-                            .font(.system(size: 20, weight: .bold, design: .rounded)).foregroundColor(.white)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 56, height: 56, alignment: .center)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -828,21 +846,21 @@ struct DriverListView: View {
         HStack(spacing: 4) {
             Image(systemName: isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(isActive ? Color.green : Color.gray)
+                .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
             Text(isActive ? "Active" : "Inactive")
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .tracking(0.3)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .foregroundColor(isActive ? .green : .gray)
+        .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(isActive ? Color.green.opacity(0.08) : Color.gray.opacity(0.08))
+        .background(isActive ? AppTheme.Status.success.opacity(0.08) : AppTheme.Brand.primary.opacity(0.08))
         .cornerRadius(6)
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(isActive ? Color.green.opacity(0.2) : Color.gray.opacity(0.2), lineWidth: 1)
+                .stroke(isActive ? AppTheme.Status.success.opacity(0.2) : AppTheme.Brand.primary.opacity(0.2), lineWidth: 1)
         )
     }
 
@@ -854,12 +872,16 @@ struct DriverListView: View {
         }
     }
 
-    private func syncDrivers() async {
+    private func syncDriverAssignments() async {
         isLoading = true
         defer { isLoading = false }
         do {
             let dbDrivers = try await SupabaseManager.shared.fetchDrivers()
+            let dbVehicles = try await SupabaseManager.shared.fetchVehicles()
+            let dbTrips = try await SupabaseManager.shared.fetchTrips()
+            
             await MainActor.run {
+                // Sync drivers
                 for dbd in dbDrivers {
                     if let localDriver = allUsers.first(where: { $0.id == dbd.id }) {
                         localDriver.fullName = dbd.name
@@ -872,7 +894,6 @@ struct DriverListView: View {
                         modelContext.insert(newDriver)
                     }
                 }
-                
                 if SupabaseManager.shared.currentUser?.role == .fleetManager {
                     let remoteIds = Set(dbDrivers.map { $0.id })
                     let localDrivers = allUsers.filter { $0.role == .driver }
@@ -883,10 +904,62 @@ struct DriverListView: View {
                     }
                 }
                 
+                // Sync vehicles
+                for dbv in dbVehicles {
+                    if let localVehicle = vehicles.first(where: { $0.id == dbv.id }) {
+                        localVehicle.registrationNumber = dbv.vehicleNumber
+                        localVehicle.vinNumber = dbv.vin
+                        localVehicle.make = dbv.manufacturer
+                        localVehicle.model = dbv.model
+                        localVehicle.year = dbv.year
+                        localVehicle.status = dbv.status.toLocalStatus
+                        localVehicle.assignedDriverId = dbv.assignedDriverId
+                        localVehicle.lastServiceDate = dbv.lastServiceDate
+                    } else {
+                        let newVehicle = dbv.asLocalVehicle
+                        modelContext.insert(newVehicle)
+                    }
+                }
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbVehicles.map { $0.id })
+                    for localVehicle in vehicles {
+                        if !remoteIds.contains(localVehicle.id) {
+                            modelContext.delete(localVehicle)
+                        }
+                    }
+                }
+                
+                // Sync trips
+                for dbt in dbTrips {
+                    if let localTrip = trips.first(where: { $0.id == dbt.id }) {
+                        localTrip.vehicleId = dbt.vehicleId
+                        localTrip.driverId = dbt.driverId
+                        localTrip.startLocation = dbt.source
+                        localTrip.endLocation = dbt.destination
+                        localTrip.scheduledStartTime = dbt.startTime ?? Date()
+                        localTrip.scheduledEndTime = dbt.endTime ?? Date().addingTimeInterval(7200)
+                        localTrip.actualStartTime = dbt.startTime
+                        localTrip.actualEndTime = dbt.endTime
+                        localTrip.distanceKm = dbt.distance
+                        localTrip.tripStatus = dbt.status.toLocalStatus
+                        localTrip.notes = dbt.notes
+                    } else {
+                        modelContext.insert(dbt.asLocalTrip)
+                    }
+                }
+                if SupabaseManager.shared.currentUser?.role == .fleetManager {
+                    let remoteIds = Set(dbTrips.map { $0.id })
+                    for localTrip in trips {
+                        if !remoteIds.contains(localTrip.id) {
+                            modelContext.delete(localTrip)
+                        }
+                    }
+                }
+                
                 try? modelContext.save()
             }
         } catch {
-            print("Failed to sync drivers: \(error)")
+            print("Failed to sync driver assignments: \(error)")
         }
     }
 }
@@ -966,7 +1039,12 @@ struct EditDriverStubView: View {
                             ))
                             .frame(width: 80, height: 80)
                             .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 12, x: 0, y: 6)
-                        Text(initials).font(.system(size: 28, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        Text(initials)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 80, height: 80, alignment: .center)
                     }
                     VStack(spacing: 8) {
                         Text("Edit Driver Profile").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
@@ -1053,9 +1131,12 @@ struct MaintenanceStaffListView: View {
                     } else {
                         LazyVStack(spacing: 16) {
                             ForEach(filteredStaff) { staff in
-                                staffCard(for: staff)
-                                    .opacity(cardAnimations[staff.id] == true ? 1 : 0)
-                                    .offset(y: cardAnimations[staff.id] == true ? 0 : 30)
+                                NavigationLink(destination: TechnicianWorkDetailsView(technician: staff).environment(\.modelContext, modelContext)) {
+                                    staffCard(for: staff)
+                                }
+                                .buttonStyle(.plain)
+                                .opacity(cardAnimations[staff.id] == true ? 1 : 0)
+                                .offset(y: cardAnimations[staff.id] == true ? 0 : 30)
                             }
                         }
                         .padding(.horizontal, 24)
@@ -1079,8 +1160,14 @@ struct MaintenanceStaffListView: View {
                 } label: { Image(systemName: "plus") }
             }
         }
-        .sheet(isPresented: $showAddStaffSheet) { AddMaintenanceFormView() }
-        .sheet(item: $selectedStaffForEdit) { s in EditMaintenanceFormView(staff: s) }
+        .sheet(isPresented: $showAddStaffSheet) {
+            AddMaintenanceFormView()
+                .interactiveDismissDisabled()
+        }
+        .sheet(item: $selectedStaffForEdit) { s in
+            EditMaintenanceFormView(staff: s)
+                .interactiveDismissDisabled()
+        }
         .onAppear {
             triggerCardAnimations()
             Task {
@@ -1091,8 +1178,7 @@ struct MaintenanceStaffListView: View {
     }
 
     private func staffCard(for staff: User) -> some View {
-        let orders = workOrderCount(for: staff.id)
-        return ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topTrailing) {
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
@@ -1103,7 +1189,11 @@ struct MaintenanceStaffListView: View {
                         .frame(width: 56, height: 56)
                         .shadow(color: AppTheme.Brand.accent.opacity(0.3), radius: 8, x: 0, y: 4)
                     Text(initials(for: staff.fullName))
-                        .font(.system(size: 18, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: 56, height: 56, alignment: .center)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -1148,25 +1238,18 @@ struct MaintenanceStaffListView: View {
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(AppTheme.Glass.border, lineWidth: 1))
             .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
 
-            if orders > 0 {
-                Text("\(orders)")
-                    .font(.system(size: 12, weight: .bold, design: .rounded)).foregroundColor(.white)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(Capsule().fill(AppTheme.Brand.royalBlue)
-                        .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 6, x: 0, y: 3))
-                    .offset(x: -12, y: -8)
-            }
+            // Badge count removed per user request
         }
     }
 
     private func staffStatusBadge(isActive: Bool) -> some View {
         HStack(spacing: 5) {
-            Circle().fill(isActive ? Color.green : AppTheme.Brand.accent).frame(width: 7, height: 7)
+            Circle().fill(isActive ? AppTheme.Status.success : AppTheme.Brand.accent).frame(width: 7, height: 7)
             Text(isActive ? "Available" : "Busy").font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundColor(isActive ? Color.green : AppTheme.Brand.accent)
+                .foregroundColor(isActive ? AppTheme.Status.success : AppTheme.Brand.accent)
         }
         .padding(.horizontal, 10).padding(.vertical, 4)
-        .background(Capsule().fill((isActive ? Color.green : AppTheme.Brand.accent).opacity(0.12)))
+        .background(Capsule().fill((isActive ? AppTheme.Status.success : AppTheme.Brand.accent).opacity(0.12)))
     }
 
     private var staffRoleBadge: some View {
@@ -1285,7 +1368,12 @@ struct EditStaffSheetView: View {
                             ))
                             .frame(width: 80, height: 80)
                             .shadow(color: AppTheme.Brand.accent.opacity(0.3), radius: 10, x: 0, y: 6)
-                        Text(staffInitials).font(.system(size: 26, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        Text(staffInitials)
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 80, height: 80, alignment: .center)
                     }
                     VStack(spacing: 8) {
                         Text(staff.fullName).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
@@ -1325,7 +1413,7 @@ enum TripCategoryFilter: String, CaseIterable, Identifiable {
 
 
 @available(iOS 26.0, *)
-struct TripListView: View {
+struct TripListContentView: View {
 
     @State private var searchText = ""
     @State private var selectedFilter: TripCategoryFilter = .all
@@ -1342,6 +1430,7 @@ struct TripListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Trip.scheduledStartTime, order: .reverse) private var allTrips: [Trip]
     @Query(sort: \User.fullName) private var allUsers: [User]
+    @Query private var vehicles: [Vehicle]
 
     private var filteredTrips: [Trip] {
         var trips = allTrips
@@ -1384,9 +1473,15 @@ struct TripListView: View {
         allUsers.first(where: { $0.id == driverId && $0.role == UserRole.driver })?.fullName
     }
 
+    private func vehicleName(for vehicleId: UUID) -> String? {
+        if let vehicle = vehicles.first(where: { $0.id == vehicleId }) {
+            return "\(vehicle.make) \(vehicle.model) · \(vehicle.registrationNumber)"
+        }
+        return nil
+    }
+
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
             AppTheme.Background.page.ignoresSafeArea()
             VStack(spacing: 0) {
                 filterChips.padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 8)
@@ -1429,14 +1524,19 @@ struct TripListView: View {
                 } label: { Image(systemName: "plus") }
             }
         }
-        .sheet(isPresented: $showAddTrip) { AddTripFormView() }
-        .sheet(item: $editingTrip) { t in EditTripFormView(trip: t) }
+        .sheet(isPresented: $showAddTrip) {
+            AddTripFormView()
+                .interactiveDismissDisabled()
+        }
+        .sheet(item: $editingTrip) { t in
+            EditTripFormView(trip: t)
+                .interactiveDismissDisabled()
+        }
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) { appearAnimation = true }
             Task {
                 await syncTrips()
             }
-        }
         }
     }
 
@@ -1447,10 +1547,10 @@ struct TripListView: View {
                     let isSelected = selectedFilter == filter
                     let chipColor: Color = {
                         switch filter {
-                        case .all:      return AppTheme.Brand.accent 
-                        case .active:   return Color(red: 0.30, green: 0.70, blue: 0.46) 
-                        case .upcoming: return Color(red: 0.15, green: 0.38, blue: 0.90) 
-                        case .completed: return Color(red: 0.55, green: 0.58, blue: 0.62) 
+                        case .all:      return Color.gray 
+                        case .active:   return AppTheme.Brand.primary 
+                        case .upcoming: return Theme.darkOrange 
+                        case .completed: return Theme.royalBlue.opacity(0.5) 
                         }
                     }()
                     
@@ -1461,6 +1561,8 @@ struct TripListView: View {
                         HStack(spacing: 6) {
                             Text(filter.rawValue)
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                             let count = countForFilter(filter)
                             if count > 0 {
                                 Text("\(count)")
@@ -1494,8 +1596,9 @@ struct TripListView: View {
                         TripCardView(
                             trip: trip,
                             driverName: driverName(for: trip.driverId),
+                            vehicleName: vehicleName(for: trip.vehicleId),
                             accentColor: trip.tripStatus.badgeColor,
-                            onEdit: {
+                            onEdit: (trip.tripStatus == .completed || trip.tripStatus == .cancelled) ? nil : {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 editingTrip = trip
                             }
@@ -1556,14 +1659,30 @@ struct TripListView: View {
     }
 }
 
+@available(iOS 26.0, *)
+struct TripListView: View {
+    var initialFilter: TripCategoryFilter = .all
+
+    init(initialFilter: TripCategoryFilter = .all) {
+        self.initialFilter = initialFilter
+    }
+
+    var body: some View {
+        NavigationStack {
+            TripListContentView(initialFilter: initialFilter)
+        }
+    }
+}
+
 
 
 @available(iOS 26.0, *)
 struct TripCardView: View {
     let trip: Trip
     let driverName: String?
+    let vehicleName: String?
     let accentColor: Color
-    let onEdit: () -> Void
+    var onEdit: (() -> Void)? = nil
 
     private static let dateFmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "dd MMM yyyy · hh:mm a"; return f }()
     private static let timeFmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "hh:mm a"; return f }()
@@ -1590,19 +1709,21 @@ struct TripCardView: View {
                 }
                 Spacer()
                 tripStatusBadge
-                Button(action: onEdit) {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 26)).foregroundColor(.gray.opacity(0.35))
+                if let onEdit {
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 26)).foregroundColor(.gray.opacity(0.35))
+                    }
+                    .buttonStyle(ScaleButtonStyle())
                 }
-                .buttonStyle(ScaleButtonStyle())
             }
 
             
             HStack(spacing: 8) {
-                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(.green.opacity(0.7))
+                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(AppTheme.Status.success.opacity(0.7))
                 Text(trip.startLocation).font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
                 Image(systemName: "arrow.right").font(.system(size: 11, weight: .bold)).foregroundColor(.gray.opacity(0.5))
-                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(.red.opacity(0.7))
+                Image(systemName: "mappin.circle.fill").font(.system(size: 14)).foregroundColor(AppTheme.Status.danger.opacity(0.7))
                 Text(trip.endLocation).font(.system(size: 13, weight: .medium, design: .rounded)).foregroundColor(.black.opacity(0.8)).lineLimit(1)
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
@@ -1622,14 +1743,27 @@ struct TripCardView: View {
             
             if let name = driverName {
                 Divider().background(AppTheme.Glass.border)
-                HStack(spacing: 10) {
-                    Image(systemName: "person.circle.fill").font(.system(size: 18)).foregroundColor(accentColor.opacity(0.7))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("ASSIGNED DRIVER")
-                            .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
-                        Text(name).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                HStack(spacing: 16) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "person.circle.fill").font(.system(size: 18)).foregroundColor(accentColor.opacity(0.7))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("ASSIGNED DRIVER")
+                                .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                            Text(name).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                        }
                     }
-                    Spacer()
+                    
+                    if let carName = vehicleName {
+                        Spacer()
+                        HStack(spacing: 10) {
+                            Image(systemName: "car.fill").font(.system(size: 16)).foregroundColor(accentColor.opacity(0.7))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("ASSIGNED VEHICLE")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.gray.opacity(0.7)).tracking(0.8)
+                                Text(carName).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(.black)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1761,6 +1895,7 @@ struct TripDetailView: View {
 
     @Query private var vehicles: [Vehicle]
     @Query private var users: [User]
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     private var assignedVehicle: Vehicle? {
         vehicles.first(where: { $0.id == trip.vehicleId })
@@ -1771,6 +1906,8 @@ struct TripDetailView: View {
     }
 
     @State private var position: MapCameraPosition = .automatic
+    @State private var voiceLogs: [DBTripLog] = []
+    @State private var isLoadingLogs = false
 
     var body: some View {
         ZStack {
@@ -1794,6 +1931,9 @@ struct TripDetailView: View {
                     // ── Distance & Instructions ────────────────
                     additionalInfoCard
 
+                    // ── Voice Logs ─────────────────────────────
+                    voiceLogsCard
+
                     Spacer().frame(height: 20)
                 }
                 .padding(16)
@@ -1816,18 +1956,53 @@ struct TripDetailView: View {
             )
             position = .region(MKCoordinateRegion(center: center, span: span))
         }
+        .task {
+            isLoadingLogs = true
+            do {
+                voiceLogs = try await SupabaseManager.shared.fetchTripLogs(for: trip.id)
+            } catch {
+                print("Failed to fetch trip voice logs: \(error)")
+            }
+            isLoadingLogs = false
+        }
     }
 
     // MARK: - Map Card
     private var mapCard: some View {
         VStack(spacing: 0) {
-            Map(position: $position) {
-                Marker("Start", systemImage: "play.circle.fill", coordinate: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
-                    .tint(.green)
-                Marker("End", systemImage: "flag.fill", coordinate: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
-                    .tint(.red)
+            ZStack(alignment: .bottomTrailing) {
+                Map(position: $position) {
+                    Marker("Start", systemImage: "play.circle.fill", coordinate: CLLocationCoordinate2D(latitude: trip.startLatitude, longitude: trip.startLongitude))
+                        .tint(AppTheme.Status.success)
+                    Marker("End", systemImage: "flag.fill", coordinate: CLLocationCoordinate2D(latitude: trip.endLatitude, longitude: trip.endLongitude))
+                        .tint(AppTheme.Status.danger)
+                }
+                .frame(height: 220)
+                
+                if trip.tripStatus == .started || trip.tripStatus == .inProgress {
+                    NavigationLink {
+                        LiveTripTrackingView(
+                            trip: trip,
+                            driverName: assignedDriver?.fullName ?? "Unknown Driver",
+                            driverPhone: assignedDriver?.phoneNumber,
+                            vehicleName: assignedVehicle != nil ? "\(assignedVehicle!.make) \(assignedVehicle!.model) · \(assignedVehicle!.registrationNumber)" : "Unknown Vehicle"
+                        )
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "location.fill")
+                            Text("Track Live Location")
+                        }
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(AppTheme.Brand.primary)
+                        .cornerRadius(8)
+                        .shadow(radius: 4)
+                    }
+                    .padding(12)
+                }
             }
-            .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
         }
         .background(AppTheme.Background.card)
@@ -1844,7 +2019,7 @@ struct TripDetailView: View {
 
             HStack(spacing: 12) {
                 Image(systemName: "mappin.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppTheme.Status.success)
                     .font(.system(size: 18))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("START LOCATION")
@@ -1860,7 +2035,7 @@ struct TripDetailView: View {
 
             HStack(spacing: 12) {
                 Image(systemName: "flag.circle.fill")
-                    .foregroundColor(.red)
+                    .foregroundColor(AppTheme.Status.danger)
                     .font(.system(size: 18))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("END LOCATION")
@@ -1904,15 +2079,15 @@ struct TripDetailView: View {
                 // Vertical Timeline Line
                 VStack(spacing: 0) {
                     Circle()
-                        .fill(Color.green)
+                        .fill(AppTheme.Status.success)
                         .frame(width: 10, height: 10)
                     
                     Rectangle()
-                        .fill(Color.gray.opacity(0.15))
+                        .fill(AppTheme.Brand.primary.opacity(0.15))
                         .frame(width: 2, height: 75)
                     
                     Circle()
-                        .fill(trip.tripStatus == .completed ? Color.gray : Color.red)
+                        .fill(trip.tripStatus == .completed ? AppTheme.Brand.primary.opacity(0.4) : AppTheme.Status.danger)
                         .frame(width: 10, height: 10)
                 }
                 .padding(.top, 5)
@@ -1923,7 +2098,7 @@ struct TripDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("DEPARTURE")
                             .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundColor(.green)
+                            .foregroundColor(AppTheme.Status.success)
                             .tracking(0.8)
                         
                         Text(trip.scheduledStartTime.formatted(date: .long, time: .shortened))
@@ -1934,7 +2109,7 @@ struct TripDetailView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 10))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppTheme.Status.success)
                                 Text("Actual: \(actualStart.formatted(date: .long, time: .shortened))")
                                     .font(.system(size: 11))
                                     .foregroundColor(AppTheme.Text.secondary)
@@ -1946,7 +2121,7 @@ struct TripDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("ARRIVAL")
                             .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundColor(trip.tripStatus == .completed ? .gray : .red)
+                            .foregroundColor(trip.tripStatus == .completed ? AppTheme.Brand.primary.opacity(0.4) : AppTheme.Status.danger)
                             .tracking(0.8)
                         
                         Text(trip.scheduledEndTime.formatted(date: .long, time: .shortened))
@@ -1957,7 +2132,7 @@ struct TripDetailView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 10))
-                                    .foregroundColor(trip.tripStatus == .completed ? .gray : .red)
+                                    .foregroundColor(trip.tripStatus == .completed ? AppTheme.Brand.primary.opacity(0.4) : AppTheme.Status.danger)
                                 Text("Actual: \(actualEnd.formatted(date: .long, time: .shortened))")
                                     .font(.system(size: 11))
                                     .foregroundColor(AppTheme.Text.secondary)
@@ -2022,6 +2197,9 @@ struct TripDetailView: View {
                         Text(initials(for: driver.fullName))
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(AppTheme.Brand.royalBlue)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 40, height: 40, alignment: .center)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -2082,6 +2260,185 @@ struct TripDetailView: View {
             return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
         }
         return String(name.prefix(2)).uppercased()
+    }
+    
+    private func speak(_ text: String) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        // Check if rate property is available or just let it use default
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        let synthesizer = AVSpeechSynthesizer()
+        synthesizer.speak(utterance)
+    }
+
+    // MARK: - Voice Logs Card
+    private var voiceLogsCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "mic.fill")
+                        .foregroundColor(AppTheme.Brand.primary)
+                        .font(.system(size: 16))
+                    Text("Voice Logs")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.primary)
+                }
+                Spacer()
+                
+                if !voiceLogs.isEmpty {
+                    Text("\(voiceLogs.count)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(AppTheme.Brand.primary)
+                        .clipShape(Capsule())
+                }
+            }
+            
+            if isLoadingLogs {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(AppTheme.Brand.primary)
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+            } else if voiceLogs.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "mic.slash.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        Text("No voice logs recorded for this trip")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 16)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(voiceLogs) { log in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Label {
+                                    HStack(spacing: 4) {
+                                        Text(log.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        if log.isEdited == true {
+                                            Text("·")
+                                            Text("Edited")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.orange)
+                                            if let editDate = log.updatedAt {
+                                                Text("at \(editDate.formatted(date: .abbreviated, time: .shortened))")
+                                            }
+                                        }
+                                    }
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                                } icon: {
+                                    Image(systemName: "clock")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(AppTheme.Text.tertiary)
+                                }
+                                Spacer()
+                                
+                                if accessibility.fleetSpeakLogs {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "speaker.wave.2.fill")
+                                            .font(.system(size: 10))
+                                        Text("Tap to Listen")
+                                            .font(.system(size: 9, weight: .bold))
+                                    }
+                                    .foregroundColor(AppTheme.Brand.primary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(AppTheme.Brand.primary.opacity(0.1))
+                                    .clipShape(Capsule())
+                                }
+                            }
+                            
+                            // Transcript block
+                            Text(log.transcript)
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(AppTheme.Text.primary)
+                                .lineSpacing(3)
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(UIColor.secondarySystemFill))
+                                .cornerRadius(8)
+                                .onTapGesture {
+                                    if accessibility.fleetSpeakLogs {
+                                        speak(log.transcript)
+                                    }
+                                }
+                            
+                            // Parsed Metadata if present
+                            let hasMetadata = (log.mileage != nil) || (log.startLocation != nil) || (log.endLocation != nil) || (log.startTime != nil) || (log.endTime != nil)
+                            if hasMetadata {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 6) {
+                                        if let mileage = log.mileage {
+                                            MetadataChip(icon: "road.lanes", label: "Mileage", value: String(format: "%.1f km", mileage))
+                                        }
+                                        if let start = log.startLocation, !start.isEmpty {
+                                            MetadataChip(icon: "mappin.circle.fill", label: "Start", value: start)
+                                        }
+                                        if let end = log.endLocation, !end.isEmpty {
+                                            MetadataChip(icon: "flag.circle.fill", label: "End", value: end)
+                                        }
+                                        if let startT = log.startTime, !startT.isEmpty {
+                                            MetadataChip(icon: "clock.fill", label: "Dep", value: startT)
+                                        }
+                                        if let endT = log.endTime, !endT.isEmpty {
+                                            MetadataChip(icon: "clock.badge.checkmark.fill", label: "Arr", value: endT)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(12)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color(UIColor.separator).opacity(0.4), lineWidth: 1)
+                        )
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+    }
+}
+
+@available(iOS 26.0, *)
+private struct MetadataChip: View {
+    let icon: String
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundColor(AppTheme.Brand.primary)
+            Text("\(label):")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(AppTheme.Text.secondary)
+            Text(value)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(AppTheme.Text.primary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(AppTheme.Brand.primary.opacity(0.08))
+        .clipShape(Capsule())
     }
 }
 

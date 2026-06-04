@@ -52,9 +52,9 @@ struct AIReportsView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .foregroundColor(.white)
-                        .background(LinearGradient(colors: [Color.purple, Color.purple.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .background(LinearGradient(colors: [Theme.royalBlue, Theme.royalBlue.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .cornerRadius(18)
-                        .shadow(color: Color.purple.opacity(0.2), radius: 6, x: 0, y: 3)
+                        .shadow(color: Theme.royalBlue.opacity(0.2), radius: 6, x: 0, y: 3)
                     }
                     .disabled(viewModel.isGenerating)
                 }
@@ -66,7 +66,7 @@ struct AIReportsView: View {
                     Spacer()
                     VStack(spacing: 16) {
                         ProgressView()
-                            .tint(.purple)
+                            .tint(Theme.royalBlue)
                             .scaleEffect(1.2)
                         Text("Running AI analytics engines...")
                             .font(.system(size: 14, weight: .bold, design: .rounded))
@@ -118,7 +118,7 @@ struct AIReportsView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "sparkles")
                             .font(.system(size: 40))
-                            .foregroundColor(.purple.opacity(0.5))
+                            .foregroundColor(Theme.royalBlue.opacity(0.5))
                         
                         Text("No Fleet Report Generated")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -150,7 +150,7 @@ struct AIReportsView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
+                    .foregroundColor(Theme.royalBlue)
                     .font(.system(.body, design: .rounded))
                 }
             }

@@ -51,11 +51,11 @@ struct MaintenanceHeaderView: View {
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.primary)
                 
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(AppTheme.Text.secondary)
-                }
+//                if !subtitle.isEmpty {
+//                    Text(subtitle)
+//                        .font(.system(size: 13, weight: .medium, design: .rounded))
+//                        .foregroundColor(AppTheme.Text.secondary)
+//                }
             }
             
             Spacer()
@@ -129,11 +129,9 @@ struct CustomCenteredHeaderView: View {
             Button(action: { dismiss() }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.black)
+                    .foregroundColor(AppTheme.Brand.primary)
                     .frame(width: 44, height: 44)
-                    .background(Color.white)
-                    .clipShape(Circle())
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .contentShape(Rectangle())
             }
             
             Spacer()
@@ -326,45 +324,63 @@ struct MaintenanceRowCard: View {
 // MARK: - Work Order Row
 
 struct WorkOrderRow: View {
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     let order: WorkOrder
     var action: (() -> Void)? = nil
 
     var body: some View {
+        let isOutdoor = accessibility.maintenanceOutdoorContrast
         let content = HStack(spacing: 14) {
             // Icon + Priority badge matching the screenshot layout
             VStack(spacing: 4) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(.systemGray6))
+                        .fill(isOutdoor ? Color.white : Color(.systemGray6))
                         .frame(width: 44, height: 44)
+                        .overlay(
+                            Group {
+                                if isOutdoor {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(Color.black, lineWidth: 2)
+                                }
+                            }
+                        )
                     Image(systemName: "doc.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(order.priority.detailColor)
+                        .foregroundColor(isOutdoor ? Color.black : order.priority.detailColor)
                 }
                 
                 Text(order.priority.shortLabel)
                     .font(.system(size: 8, weight: .bold, design: .rounded))
-                    .foregroundColor(order.priority.detailColor)
+                    .foregroundColor(isOutdoor ? Color.black : order.priority.detailColor)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(order.priority.detailColor.opacity(0.08))
+                    .background(isOutdoor ? Color.white : order.priority.detailColor.opacity(0.08))
                     .cornerRadius(4)
+                    .overlay(
+                        Group {
+                            if isOutdoor {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.black, lineWidth: 1)
+                            }
+                        }
+                    )
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(order.title)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.primary)
+                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.primary)
                     .lineLimit(1)
                 
                 Text(order.workDescription)
                     .font(.system(size: 13))
-                    .foregroundColor(AppTheme.Text.secondary)
+                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.secondary)
                     .lineLimit(1)
                 
                 Text("Created: \(order.createdAt.formatted(date: .abbreviated, time: .omitted))\nMaintenance Personnel")
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.Text.tertiary)
+                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.tertiary)
                     .lineLimit(2)
             }
 
@@ -379,12 +395,21 @@ struct WorkOrderRow: View {
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
+                    .foregroundColor(isOutdoor ? Color.black : AppTheme.Text.tertiary.opacity(0.5))
             }
         }
         .contentShape(Rectangle())
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        .background(isOutdoor ? Color.white : Color.clear)
+        .overlay(
+            Group {
+                if isOutdoor {
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                        .stroke(Color.black, lineWidth: 2)
+                }
+            }
+        )
 
         Group {
             if let action = action {
@@ -402,17 +427,19 @@ struct WorkOrderRow: View {
 // MARK: - Status Badge
 
 struct WorkOrderStatusBadge: View {
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     let statusLabel: String
     let statusColor: Color
 
     var body: some View {
+        let isOutdoor = accessibility.maintenanceOutdoorContrast
         Text(statusLabel)
             .font(.system(size: 11, weight: .bold, design: .rounded))
-            .foregroundColor(statusColor)
+            .foregroundColor(isOutdoor ? Color.black : statusColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Capsule().fill(statusColor.opacity(0.12)))
-            .overlay(Capsule().stroke(statusColor.opacity(0.25), lineWidth: 1))
+            .background(Capsule().fill(isOutdoor ? Color.white : statusColor.opacity(0.12)))
+            .overlay(Capsule().stroke(isOutdoor ? Color.black : statusColor.opacity(0.25), lineWidth: isOutdoor ? 2 : 1))
     }
 }
 
@@ -457,8 +484,8 @@ extension WorkOrderStatus {
         switch self {
         case .open:       return AppTheme.Brand.accent // Cohesive Amber/Accent
         case .inProgress: return AppTheme.Brand.primary // Cohesive Brand Blue
-        case .completed:  return AppTheme.Status.success // Soft clean Green
-        case .cancelled:  return .gray
+        case .completed:  return AppTheme.Status.success // Soft clean success (royal blue)
+        case .cancelled:  return AppTheme.Brand.primary.opacity(0.4)
         }
     }
 }
@@ -466,7 +493,7 @@ extension WorkOrderStatus {
 extension WorkOrderPriority {
     var color: Color {
         switch self {
-        case .low:    return .gray
+        case .low:    return AppTheme.Brand.primary.opacity(0.5)
         case .medium: return AppTheme.Brand.primary
         case .high:   return AppTheme.Brand.primaryDeep
         case .urgent: return AppTheme.Brand.accent

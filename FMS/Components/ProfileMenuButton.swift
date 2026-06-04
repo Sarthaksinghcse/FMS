@@ -1,21 +1,5 @@
 
-
-
-
-
-
-
-
 import SwiftUI
-
-
-
-
-
-
-
-
-
 struct ProfileMenuButton: View {
 
     let initials: String
@@ -36,6 +20,8 @@ struct ProfileMenuButton: View {
                 Text(initials)
                     .font(.system(size: size * 0.32, weight: .bold))
                     .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
         }
         .buttonStyle(PlainButtonStyle())

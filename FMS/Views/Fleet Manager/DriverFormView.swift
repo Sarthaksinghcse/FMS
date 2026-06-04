@@ -32,7 +32,7 @@ struct AddDriverFormView: View {
                     VStack(spacing: 24) {
 
                         
-                        formSection(title: "Personal Information", icon: "person.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
+                        formSection(title: "Personal Information", icon: "person.fill", iconColor: AppTheme.Brand.primary) {
                             UserFormField(label: "Full Name", placeholder: "e.g. John Doe",
                                          text: $fullName, keyboardType: .default, focus: $focusedField, tag: .fullName)
                             FormDivider()
@@ -63,7 +63,7 @@ struct AddDriverFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(Color.red)
+                        .foregroundColor(AppTheme.Brand.accent)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
@@ -278,7 +278,7 @@ struct EditDriverFormView: View {
                         driverBadge
 
                         
-                        formSection(title: "Personal Information", icon: "person.fill", iconColor: Color(red: 0.30, green: 0.70, blue: 0.46)) {
+                        formSection(title: "Personal Information", icon: "person.fill", iconColor: AppTheme.Brand.primary) {
                             UserFormField(label: "Full Name", placeholder: "e.g. John Doe",
                                          text: $fullName, keyboardType: .default, focus: $focusedField, tag: .fullName)
                             FormDivider()
@@ -307,7 +307,7 @@ struct EditDriverFormView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(Color.red)
+                        .foregroundColor(AppTheme.Brand.accent)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
@@ -343,14 +343,17 @@ struct EditDriverFormView: View {
             ZStack {
                 Circle()
                     .fill(LinearGradient(
-                        colors: [Color(red: 0.30, green: 0.70, blue: 0.46).opacity(0.8), Color(red: 0.30, green: 0.70, blue: 0.46)],
+                        colors: [AppTheme.Brand.primary.opacity(0.8), AppTheme.Brand.primary],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ))
                     .frame(width: 60, height: 60)
-                    .shadow(color: Color(red: 0.30, green: 0.70, blue: 0.46).opacity(0.35), radius: 10, y: 4)
+                    .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 10, y: 4)
                 Text(initials(for: driver.fullName))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: 60, height: 60, alignment: .center)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(driver.fullName)
@@ -401,18 +404,18 @@ struct EditDriverFormView: View {
             HStack(spacing: 8) {
                 if isDeleting {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.15, blue: 0.15)))
+                        .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Status.danger))
                 } else {
                     Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
                 }
                 Text(isDeleting ? "Deleting..." : "Delete Driver").font(.system(size: 15, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(Color(red: 0.85, green: 0.15, blue: 0.15))
+            .foregroundColor(AppTheme.Status.danger)
             .frame(maxWidth: .infinity).frame(height: 50)
-            .background(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.08))
+            .background(AppTheme.Status.danger.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color(red: 0.85, green: 0.15, blue: 0.15).opacity(0.25), lineWidth: 1))
+                .stroke(AppTheme.Status.danger.opacity(0.25), lineWidth: 1))
         }
         .disabled(isSaving || isDeleting)
     }

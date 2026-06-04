@@ -54,8 +54,8 @@ final class SupabaseManager {
     
     
     
-    private static let supabaseURL = URL(string: "https://trkurrtlyzfsssnptdsc.supabase.co")!
-    private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRya3VycnRseXpmc3NzbnB0ZHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTI0NTgsImV4cCI6MjA5NDkyODQ1OH0.380Es9QbO6ppO9bFUiFV3qmNKpgWzf3fzBKR9S9Ajuo"
+    private static let supabaseURL = URL(string: "https://coybhztpseusfcbckcqg.supabase.co/")!
+    private static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNveWJoenRwc2V1c2ZjYmNrY3FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDYzNzQsImV4cCI6MjA5NTg4MjM3NH0.eYXYqfXQL9drk-6bGezvkc5f3B0UyS6z9pTkL2KWO7Q"
     
     
     let client: SupabaseClient
@@ -67,11 +67,23 @@ final class SupabaseManager {
     
     var authError: String?
     
+    var showResetPasswordSheet = false
+    
     private init() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
         self.client = SupabaseClient(
             supabaseURL: Self.supabaseURL,
             supabaseKey: Self.supabaseAnonKey,
             options: SupabaseClientOptions(
+                db: .init(
+                    encoder: encoder,
+                    decoder: decoder
+                ),
                 auth: .init(
                     emitLocalSessionAsInitialSession: true
                 )
@@ -248,6 +260,17 @@ final class SupabaseManager {
                     isActive: true,
                     createdAt: Date()
                 )
+                
+                // CRITICAL: We must upsert this fallback user into the database, otherwise 
+                // the current_user_role() SQL function will return NULL and all RLS policies will fail!
+                do {
+                    try await client
+                        .from("users")
+                        .upsert(dbUser)
+                        .execute()
+                } catch {
+                    print("Failed to upsert fallback user profile: \(error)")
+                }
             }
             
             
@@ -757,8 +780,10 @@ final class SupabaseManager {
     
     func fetchLatestVehicleLocations() async throws -> [DBVehicleLocation] {
         return try await client
-            .from("v_latest_vehicle_location")
+            .from("vehicle_locations")
             .select()
+            .order("timestamp", ascending: false)
+            .limit(100)
             .execute()
             .value
     }
@@ -782,6 +807,31 @@ final class SupabaseManager {
     func updateSOSAlert(_ alert: DBSOSAlert) async throws {
         try await client
             .from("sos_alerts")
+            .update(alert)
+            .eq("id", value: alert.id.uuidString)
+            .execute()
+    }
+    
+    // Route Deviation Alerts
+    func fetchRouteDeviationAlerts() async throws -> [DBRouteDeviationAlert] {
+        let response: [DBRouteDeviationAlert] = try await client
+            .from("route_deviation_alerts")
+            .select()
+            .execute()
+            .value
+        return response
+    }
+    
+    func createRouteDeviationAlert(_ alert: DBRouteDeviationAlert) async throws {
+        try await client
+            .from("route_deviation_alerts")
+            .insert(alert)
+            .execute()
+    }
+    
+    func updateRouteDeviationAlert(_ alert: DBRouteDeviationAlert) async throws {
+        try await client
+            .from("route_deviation_alerts")
             .update(alert)
             .eq("id", value: alert.id.uuidString)
             .execute()
@@ -879,6 +929,21 @@ final class SupabaseManager {
         
         return url.absoluteString
     }
+
+    func uploadChatImage(messageId: UUID, imageData: Data) async throws -> String {
+        let path = "chat_\(messageId.uuidString).jpg"
+        _ = try await client.storage
+            .from("maintenance-images")
+            .upload(
+                path,
+                data: imageData,
+                options: FileOptions(contentType: "image/jpeg", upsert: true)
+            )
+        let url = try client.storage
+            .from("maintenance-images")
+            .getPublicURL(path: path)
+        return url.absoluteString
+    }
     
     
     
@@ -926,6 +991,7 @@ final class SupabaseManager {
                         local.email = rd.email
                         local.phoneNumber = rd.phoneNumber ?? ""
                         local.role = rd.role.asLocalRole
+                        local.profileImageURL = rd.profileImage
                         local.isActive = rd.isActive
                     } else {
                         context.insert(rd.asLocalUser)
@@ -952,6 +1018,7 @@ final class SupabaseManager {
                         local.email = rm.email
                         local.phoneNumber = rm.phoneNumber ?? ""
                         local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
                         local.isActive = rm.isActive
                     } else {
                         context.insert(rm.asLocalUser)
@@ -964,6 +1031,33 @@ final class SupabaseManager {
                     for localStaff in localMaintenance {
                         if !remoteIds.contains(localStaff.id) {
                             context.delete(localStaff)
+                        }
+                    }
+                }
+            }
+            
+            if let remoteManagers = try? await fetchFleetManagers() {
+                let descriptor = FetchDescriptor<User>()
+                let localUsers = (try? context.fetch(descriptor)) ?? []
+                for rm in remoteManagers {
+                    if let local = localUsers.first(where: { $0.id == rm.id }) {
+                        local.fullName = rm.name
+                        local.email = rm.email
+                        local.phoneNumber = rm.phoneNumber ?? ""
+                        local.role = rm.role.asLocalRole
+                        local.profileImageURL = rm.profileImage
+                        local.isActive = rm.isActive
+                    } else {
+                        context.insert(rm.asLocalUser)
+                    }
+                }
+                
+                if currentUser?.role == .fleetManager {
+                    let remoteIds = Set(remoteManagers.map { $0.id })
+                    let localManagers = localUsers.filter { $0.role == .fleetManager }
+                    for localManager in localManagers {
+                        if !remoteIds.contains(localManager.id) {
+                            context.delete(localManager)
                         }
                     }
                 }
@@ -1020,6 +1114,7 @@ final class SupabaseManager {
                         local.priority = rwo.priority.toLocalPriority
                         local.workDescription = rwo.issueDescription
                         local.status = rwo.status.toLocalStatus
+                        local.estimatedCost = rwo.estimatedCost
                     } else {
                         context.insert(rwo.asLocalWorkOrder)
                     }
@@ -1202,6 +1297,14 @@ final class SupabaseManager {
             .value
     }
 
+    func updatePredictiveAlert(_ alert: DBPredictiveAlert) async throws {
+        try await client
+            .from("predictive_alerts")
+            .update(alert)
+            .eq("id", value: alert.id.uuidString)
+            .execute()
+    }
+
     func fetchVehicleHealthScores() async throws -> [DBVehicleHealthScore] {
         return try await client.from("vehicle_health_scores")
             .select()
@@ -1224,6 +1327,42 @@ final class SupabaseManager {
             .execute()
             .value
         return reports.first
+    }
+    
+    // Trip Logs (Voice Log)
+    func createTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .insert(log)
+            .execute()
+    }
+    
+    func fetchTripLogs() async throws -> [DBTripLog] {
+        return try await client
+            .from("trip_logs")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(500)
+            .execute()
+            .value
+    }
+    
+    func fetchTripLogs(for tripId: UUID) async throws -> [DBTripLog] {
+        return try await client
+            .from("trip_logs")
+            .select()
+            .eq("trip_id", value: tripId.uuidString)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+    }
+    
+    func updateTripLog(_ log: DBTripLog) async throws {
+        try await client
+            .from("trip_logs")
+            .update(log)
+            .eq("id", value: log.id.uuidString)
+            .execute()
     }
     
     // Fuel Logs
@@ -1258,6 +1397,18 @@ final class SupabaseManager {
             .from("messages")
             .insert(messages)
             .execute()
+    }
+    
+    func updatePassword(newPassword: String) async throws {
+        try await client.auth.update(user: UserAttributes(password: newPassword))
+    }
+    
+    func handleRecoveryLink(_ url: URL) async throws {
+        let session = try await client.auth.session(from: url)
+        await fetchProfile(userId: session.user.id)
+        await MainActor.run {
+            self.showResetPasswordSheet = true
+        }
     }
 }
 

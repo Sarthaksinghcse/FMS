@@ -2,13 +2,26 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDisplayName</key>
+	<string>Carwaan</string>
+	<key>CFBundleName</key>
+	<string>Carwaan</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.fms.carwaan</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>carwaan</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
 	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>FMS needs camera access to capture photos of vehicle defects and repair notes.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>FMS needs photo library access to upload images of vehicle defects and repair notes.</string>
 </dict>
 </plist>

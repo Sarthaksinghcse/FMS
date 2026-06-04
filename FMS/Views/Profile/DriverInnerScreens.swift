@@ -82,6 +82,9 @@ struct DriverEditProfileView: View {
                                             Text(initials.isEmpty ? "DR" : initials)
                                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                                 .foregroundColor(.white)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.5)
+                                                .frame(width: 80, height: 80, alignment: .center)
                                         }
                                     }
                                     .frame(width: 80, height: 80)
@@ -90,6 +93,9 @@ struct DriverEditProfileView: View {
                                     Text(initials.isEmpty ? "DR" : initials)
                                         .font(.system(size: 28, weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.5)
+                                        .frame(width: 80, height: 80, alignment: .center)
                                 }
                             }
 
@@ -139,7 +145,7 @@ struct DriverEditProfileView: View {
                         
                         Button {
                             let trimmedPhone = phoneNumber.trimmingCharacters(in: .whitespaces)
-                            guard trimmedPhone.isValidPhoneNumber else {
+                            if !trimmedPhone.isEmpty && !trimmedPhone.isValidPhoneNumber {
                                 errorAlertMessage = "Please enter a valid 10-digit phone number."
                                 showErrorAlert = true
                                 return
@@ -528,6 +534,7 @@ struct DriverNotificationSettingsView: View {
 
 @available(iOS 26.0, *)
 struct DriverSecuritySettingsView: View {
+    @Environment(SupabaseManager.self) private var supabaseManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var currentPassword = ""
@@ -536,6 +543,8 @@ struct DriverSecuritySettingsView: View {
     @State private var biometricEnabled = true
     @State private var isSaving = false
     @State private var showSaved = false
+    @State private var showErrorAlert = false
+    @State private var errorAlertMessage = ""
 
     var body: some View {
         NavigationStack {
@@ -561,11 +570,11 @@ struct DriverSecuritySettingsView: View {
                                 .padding(.bottom, 8)
 
                             VStack(spacing: 0) {
-                                ProfileSecureField(label: "Current Password", text: $currentPassword)
+                                ProfileSecureFormField(icon: "lock.fill", label: "Current Password", text: $currentPassword, placeholder: "Your current password")
                                 Divider().padding(.leading, 16)
-                                ProfileSecureField(label: "New Password", text: $newPassword)
+                                ProfileSecureFormField(icon: "key.fill", label: "New Password", text: $newPassword, placeholder: "At least 6 characters")
                                 Divider().padding(.leading, 16)
-                                ProfileSecureField(label: "Confirm New Password", text: $confirmPassword)
+                                ProfileSecureFormField(icon: "key.fill", label: "Confirm New Password", text: $confirmPassword, placeholder: "Confirm new password")
                             }
                             .background(AppTheme.Background.card)
                             .cornerRadius(AppTheme.Radius.card)
@@ -585,8 +594,8 @@ struct DriverSecuritySettingsView: View {
                                 ProfileToggleRow(
                                     icon: "faceid",
                                     iconColor: AppTheme.Brand.primary,
-                                    title: "Face ID / Touch ID",
-                                    subtitle: "Use biometrics to unlock",
+                                    title: "Face ID",
+                                    subtitle: "",
                                     isOn: $biometricEnabled
                                 )
                             }
@@ -597,8 +606,7 @@ struct DriverSecuritySettingsView: View {
 
                         // Update Password button
                         Button {
-                            isSaving = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { isSaving = false; showSaved = true }
+                            updatePassword()
                         } label: {
                             HStack(spacing: 8) {
                                 if isSaving { ProgressView().tint(.white) }
@@ -628,9 +636,61 @@ struct DriverSecuritySettingsView: View {
                 }
             }
             .alert("Password Updated", isPresented: $showSaved) {
-                Button("OK") { dismiss() }
+                Button("OK") {
+                    Task {
+                        try? await supabaseManager.signOut()
+                    }
+                }
             } message: {
-                Text("Your password has been changed successfully.")
+                Text("Your password has been changed successfully. Please log in again with your new password.")
+            }
+            .alert("Error", isPresented: $showErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorAlertMessage)
+            }
+        }
+    }
+
+    private func updatePassword() {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+
+        let trimmedPassword = newPassword.trimmingCharacters(in: .whitespaces)
+        guard trimmedPassword.count >= 6 else {
+            errorAlertMessage = "Password must be at least 6 characters long."
+            showErrorAlert = true
+            let notif = UINotificationFeedbackGenerator()
+            notif.notificationOccurred(.error)
+            return
+        }
+
+        guard trimmedPassword == confirmPassword else {
+            errorAlertMessage = "Passwords do not match."
+            showErrorAlert = true
+            let notif = UINotificationFeedbackGenerator()
+            notif.notificationOccurred(.error)
+            return
+        }
+
+        isSaving = true
+        Task {
+            do {
+                try await supabaseManager.updatePassword(newPassword: trimmedPassword)
+                await MainActor.run {
+                    isSaving = false
+                    showSaved = true
+                    let notif = UINotificationFeedbackGenerator()
+                    notif.notificationOccurred(.success)
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    errorAlertMessage = error.localizedDescription
+                    showErrorAlert = true
+                    let notif = UINotificationFeedbackGenerator()
+                    notif.notificationOccurred(.error)
+                }
             }
         }
     }

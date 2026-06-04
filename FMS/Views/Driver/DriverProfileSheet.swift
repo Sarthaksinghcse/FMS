@@ -8,169 +8,136 @@ struct DriverProfileSheet: View {
     @Environment(\.modelContext) private var modelContext
 
     @Environment(SupabaseManager.self) private var supabase
+    @State private var showEditProfile = false
+    @State private var showLicenseDetails = false
+    @State private var showNotificationSettings = false
+    @State private var showSecuritySettings = false
+    @State private var showAccessibilitySettings = false
+    @State private var showHelpSupport = false
+    @State private var showPerformanceStats = false
     @State private var showSignOutConfirm = false
-    @State private var showNotificationsFromProfile = false
+    @State private var signOutError: String?
+    @State private var isSigningOut = false
 
-    
+    private var user: DBUser? { supabase.currentUser }
+
+    private var initials: String {
+        let name = user?.name ?? vm.driverName
+        guard !name.isEmpty else { return "DR" }
+        let parts = name.split(separator: " ")
+        if parts.count >= 2 {
+            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        }
+        return String(name.prefix(2)).uppercased()
+    }
+
     private var totalTrips: Int {
         vm.completedTrips.count
     }
+
     private var totalKmDriven: Double {
         vm.completedTrips.reduce(0.0) { $0 + $1.distanceKm }
     }
-    private let joinDate      = "March 2023"
-    private let employeeId    = "DRV-00412"
-    private let licenseNo     = "TN-24-2019-0041823"
+
+    private var hoursOnRoad: Int {
+        let totalSeconds = vm.completedTrips.reduce(0) { $0 + $1.elapsedSeconds }
+        return totalSeconds / 3600
+    }
+
+    private var safetyScore: Int {
+        94
+    }
+
+    private var onTimeDelivery: Int {
+        97
+    }
+
+    private var avgFuelEfficiency: Double {
+        12.4
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    // ── Hero: Avatar + Name + ID ───────────────────────────
-                    HeroHeader(vm: vm, employeeId: employeeId)
-                        .padding(.top, 8)
-                        .padding(.bottom, 28)
-                    
-                    // ── Stats strip (2 key numbers) ────────────────────────
-                    StatsStrip(
-                        totalTrips: totalTrips,
-                        totalKm:    totalKmDriven
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 28)
-                    // ── Status row ─────────────────────────────────────────
-                    ProfileSection(header: "Status") {
-                        HStack(spacing: 14) {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(vm.driverStatus.dot)
-                                .frame(width: 32, height: 32)
-                                .overlay(
-                                    Image(systemName: "dot.radiowaves.left.and.right")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(.white)
-                                )
-                            
-                            Toggle("Status", isOn: Binding(
-                                get: { vm.driverStatus != .offline },
-                                set: { newValue in
-                                    withAnimation {
-                                        vm.driverStatus = newValue ? .idle : .offline
-                                    }
-                                    Task {
-                                        await vm.updateDriverActiveStatus(isActive: newValue)
-                                    }
-                                }
-                            ))
-                            .font(.system(size: 16))
-                            .foregroundStyle(.primary)
-                            .tint(AppTheme.Status.success)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 13)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+            ZStack {
+                AppTheme.Background.page.ignoresSafeArea()
 
-                    // ── Account info rows ──────────────────────────────────
-                    ProfileSection(header: "Account") {
-                        ProfileRow(icon: "person.fill",
-                                   iconBg: AppTheme.Brand.primaryDeep,
-                                   label: "Name",
-                                   value: vm.driverFirstName)
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "creditcard.fill",
-                                   iconBg: AppTheme.Brand.primaryDeep,
-                                   label: "Employee ID",
-                                   value: employeeId)
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "doc.text.fill",
-                                   iconBg: Color(red: 0.35, green: 0.55, blue: 0.95),
-                                   label: "License No.",
-                                   value: licenseNo)
-                        Divider().padding(.leading, 56)
-                        ProfileRow(icon: "calendar",
-                                   iconBg: AppTheme.Brand.teal,
-                                   label: "Joined",
-                                   value: joinDate)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        profileHeaderCard
+                        statsSection
+                        accountSection
+                        signOutSection
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-
-                    // ── Navigation Links (Settings) ───────────────────────────
-                    ProfileSection(header: "Settings") {
-                        NavigationLink {
-                            DriverNotificationsSheet(vm: vm)
-                        } label: {
-                            ProfileRow(icon: "bell.fill",
-                                       iconBg: AppTheme.Brand.accent,
-                                       label: "Notifications",
-                                       showChevron: false)  // NavigationLink adds its own
-                        }
-                        .buttonStyle(.plain)
-                        Divider().padding(.leading, 56)
-                        NavigationLink {
-                            DriverSecuritySettingsView()
-                        } label: {
-                            ProfileRow(icon: "lock.fill",
-                                       iconBg: AppTheme.Brand.amber,
-                                       label: "Privacy & Security",
-                                       showChevron: false)
-                        }
-                        .buttonStyle(.plain)
-                        Divider().padding(.leading, 56)
-                        NavigationLink {
-                            DriverHelpSupportView()
-                        } label: {
-                            ProfileRow(icon: "questionmark.circle.fill",
-                                       iconBg: Color(UIColor.systemGray),
-                                       label: "Help & Support",
-                                       showChevron: false)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 28)
-                    // ── Sign out ───────────────────────────────────────────
-                    Button {
-                        showSignOutConfirm = true
-                    } label: {
-                        Text("Sign Out")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(AppTheme.Status.danger)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(AppTheme.Status.danger.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
                     .padding(.bottom, 40)
                 }
             }
-            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Driver Profile")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
+                            .foregroundColor(AppTheme.Status.success)
                     }
-                    .buttonStyle(.plain)
                 }
             }
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .sheet(isPresented: $showEditProfile) {
+                DriverEditProfileView()
+            }
+            .sheet(isPresented: $showLicenseDetails) {
+                DriverLicenseDetailView()
+            }
+            .sheet(isPresented: $showNotificationSettings) {
+                DriverNotificationSettingsView()
+            }
+            .sheet(isPresented: $showSecuritySettings) {
+                DriverSecuritySettingsView()
+            }
+            .sheet(isPresented: $showAccessibilitySettings) {
+                AccessibilitySettingsView(role: .driver)
+            }
+            .sheet(isPresented: $showHelpSupport) {
+                DriverHelpSupportView()
+            }
+            .sheet(isPresented: $showPerformanceStats) {
+                DriverPerformanceStatsView(
+                    safetyScore: safetyScore,
+                    onTimeDelivery: onTimeDelivery,
+                    avgFuelEfficiency: avgFuelEfficiency,
+                    tripsCompleted: totalTrips,
+                    totalKmDriven: totalKmDriven,
+                    hoursOnRoad: hoursOnRoad
+                )
             }
             .alert("Sign Out", isPresented: $showSignOutConfirm) {
                 Button("Sign Out", role: .destructive) {
+                    isSigningOut = true
                     dismiss()
                     Task {
                         try? await Task.sleep(for: .milliseconds(350))
-                        try? await supabase.signOut()
+                        do {
+                            try await supabase.signOut()
+                        } catch {
+                            await MainActor.run {
+                                signOutError = error.localizedDescription
+                                isSigningOut = false
+                            }
+                        }
                     }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to sign out of your Driver account?")
+            }
+            .alert("Sign Out Failed", isPresented: Binding(
+                get: { signOutError != nil },
+                set: { if !$0 { signOutError = nil } }
+            )) {
+                Button("OK", role: .cancel) { signOutError = nil }
+            } message: {
+                Text(signOutError ?? "")
             }
             .task {
                 await vm.load(context: modelContext)
@@ -178,184 +145,257 @@ struct DriverProfileSheet: View {
         }
     }
 
+    // MARK: - Header Card
+    private var profileHeaderCard: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 16) {
+                ZStack(alignment: .bottomTrailing) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [AppTheme.Status.success, AppTheme.Brand.teal],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 90, height: 90)
+                            .shadow(color: AppTheme.Status.success.opacity(0.35), radius: 16, y: 6)
 
+                        if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
+                            CachedAsyncImage(url: imageURL) { image in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            } placeholder: {
+                                Text(initials)
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .frame(width: 90, height: 90, alignment: .center)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [AppTheme.Status.success, AppTheme.Brand.teal],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                            }
+                            .frame(width: 90, height: 90)
+                            .clipShape(Circle())
+                        } else {
+                            Text(initials)
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 90, height: 90, alignment: .center)
+                        }
+                    }
 
-
-@available(iOS 26.0, *)
-private struct HeroHeader: View {
-    @ObservedObject var vm: DriverDashboardViewModel
-    let employeeId: String
-
-    var body: some View {
-        VStack(spacing: 14) {
-            
-            ZStack(alignment: .bottomTrailing) {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [AppTheme.Brand.primaryDeep, AppTheme.Brand.primary],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                    // Active status badge
+                    Circle()
+                        .fill(vm.driverStatus != .offline ? AppTheme.Status.success : AppTheme.Status.neutral)
+                        .frame(width: 20, height: 20)
+                        .overlay(
+                            Circle()
+                                .stroke(AppTheme.Background.card, lineWidth: 3)
                         )
-                    )
-                    .frame(width: 90, height: 90)
-                    .overlay(
-                        Text(String(vm.driverFirstName.prefix(1)))
-                            .font(.system(size: 38, weight: .bold))
-                            .foregroundStyle(.white)
-                    )
-                    .shadow(color: AppTheme.Brand.primaryDeep.opacity(0.30), radius: 12, y: 6)
+                }
 
-                
-                Circle()
-                    .fill(vm.driverStatus.dot)
-                    .frame(width: 20, height: 20)
-                    .overlay(Circle().stroke(Color(UIColor.systemGroupedBackground), lineWidth: 3))
-            }
+                VStack(spacing: 6) {
+                    Text(user?.name ?? vm.driverName)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.primary)
 
-            
-            VStack(spacing: 4) {
-                Text(vm.driverName)
-                    .font(.system(size: 24, weight: .bold))
-                HStack(spacing: 6) {
-                    Text(vm.driverStatus.displayLabel)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(vm.driverStatus.dot)
-                    Text("·")
-                        .foregroundStyle(.tertiary)
-                    Text(employeeId)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                    Text(user?.email ?? "driver@fms.com")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppTheme.Text.secondary)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "steeringwheel")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Driver")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Status.success)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.Status.success.opacity(0.10))
+                    .clipShape(Capsule())
+                    .padding(.top, 4)
                 }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+
+            Button {
+                showEditProfile = true
+            } label: {
+                Image(systemName: "pencil.circle.fill")
+                    .font(.system(size: 28))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundColor(AppTheme.Status.success)
+            }
+            .padding(12)
         }
-        .frame(maxWidth: .infinity)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
     }
-}
 
-
-
-private struct StatsStrip: View {
-    let totalTrips: Int
-    let totalKm:    Double
-
-    var body: some View {
-        HStack(spacing: 10) {
-            StatPill(value: "\(totalTrips)", label: "Trips",  icon: "map.fill",          color: AppTheme.Brand.primaryDeep)
-            StatPill(value: String(format: "%.1f km", totalKm), label: "Driven", icon: "arrow.left.arrow.right", color: AppTheme.Brand.teal)
+    // MARK: - Stats Section
+    private var statsSection: some View {
+        HStack(spacing: 12) {
+            ProfileStatCard(
+                icon: "road.lanes",
+                iconColor: AppTheme.Brand.primary,
+                iconBg: AppTheme.IconBg.blue,
+                title: "Total Distance",
+                value: String(format: "%.1f km", totalKmDriven),
+                subtitle: "Accumulated travel"
+            )
+            ProfileStatCard(
+                icon: "map.fill",
+                iconColor: AppTheme.Status.success,
+                iconBg: AppTheme.IconBg.green,
+                title: "Trips",
+                value: "\(totalTrips)",
+                subtitle: "Completed jobs"
+            )
         }
     }
-}
 
-private struct StatPill: View {
-    let value: String
-    let label: String
-    let icon:  String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundStyle(color)
-            Text(value)
-                .font(.system(size: 15, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(color.opacity(0.07))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(color.opacity(0.15), lineWidth: 1)
-        )
-    }
-}
-
-
-
-
-
-private struct ProfileSection<Content: View>: View {
-    let header: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(header)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
+    // MARK: - Account & Settings
+    private var accountSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Account & Settings")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(AppTheme.Text.primary)
                 .padding(.leading, 4)
 
             VStack(spacing: 0) {
-                content
-            }
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-        }
-    }
-}
-
-
-
-private struct ProfileRow: View {
-    let icon: String
-    let iconBg: Color
-    let label: String
-    var value: String = ""
-    var valueColor: Color = .secondary
-    var showChevron: Bool = false
-
-    var body: some View {
-        HStack(spacing: 14) {
-            
-            RoundedRectangle(cornerRadius: 8)
-                .fill(iconBg)
-                .frame(width: 32, height: 32)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white)
+                ProfileToggleRow(
+                    icon: "checkmark.circle.fill",
+                    iconColor: vm.driverStatus != .offline ? AppTheme.Status.success : AppTheme.Status.neutral,
+                    title: "Duty Status",
+                    subtitle: vm.driverStatus != .offline ? "You are online & active" : "You are currently offline",
+                    isOn: Binding(
+                        get: { vm.driverStatus != .offline },
+                        set: { newValue in
+                            withAnimation {
+                                vm.driverStatus = newValue ? .idle : .offline
+                            }
+                            Task {
+                                await vm.updateDriverActiveStatus(isActive: newValue)
+                            }
+                        }
+                    ),
+                    tintColor: AppTheme.Status.success
                 )
 
-            Text(label)
-                .font(.system(size: 16))
-                .foregroundStyle(.primary)
+                Divider().padding(.leading, 66)
 
-            Spacer()
+                ProfileSettingsRow(
+                    icon: "chart.bar.xaxis",
+                    iconColor: AppTheme.Status.success,
+                    iconBg: AppTheme.IconBg.green,
+                    title: "Performance & Stats",
+                    subtitle: "View driving scores & history stats"
+                ) {
+                    showPerformanceStats = true
+                }
 
-            if !value.isEmpty {
-                Text(value)
-                    .font(.system(size: 14))
-                    .foregroundStyle(valueColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "creditcard.fill",
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.IconBg.indigo,
+                    title: "License Details",
+                    subtitle: "View driving license & validity"
+                ) {
+                    showLicenseDetails = true
+                }
+
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "bell.badge.fill",
+                    iconColor: AppTheme.Status.success,
+                    iconBg: AppTheme.IconBg.indigo,
+                    title: "Notifications",
+                    subtitle: "Manage alert preferences"
+                ) {
+                    showNotificationSettings = true
+                }
+
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "lock.shield.fill",
+                    iconColor: AppTheme.Brand.primaryDeep,
+                    iconBg: AppTheme.IconBg.indigo,
+                    title: "Security",
+                    subtitle: "Password & authentication"
+                ) {
+                    showSecuritySettings = true
+                }
+
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "accessibility.fill",
+                    iconColor: AppTheme.Brand.primary,
+                    iconBg: AppTheme.Brand.primary.opacity(0.12),
+                    title: "Accessibility",
+                    subtitle: "Speech, Contrast, Layout settings"
+                ) {
+                    showAccessibilitySettings = true
+                }
+
+                Divider().padding(.leading, 66)
+
+                ProfileSettingsRow(
+                    icon: "questionmark.circle.fill",
+                    iconColor: AppTheme.Brand.teal,
+                    iconBg: AppTheme.IconBg.teal,
+                    title: "Help & Support",
+                    subtitle: "FAQs, contact support"
+                ) {
+                    showHelpSupport = true
+                }
             }
-
-            if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color(UIColor.systemGray3))
-            }
+            .background(AppTheme.Background.card)
+            .cornerRadius(AppTheme.Radius.card)
+            .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
+    }
+
+    // MARK: - Sign Out Section
+    private var signOutSection: some View {
+        Button {
+            showSignOutConfirm = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 16, weight: .medium))
+                Text("Sign Out")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(AppTheme.Status.success)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(AppTheme.Status.success.opacity(0.08))
+            .cornerRadius(AppTheme.Radius.medium)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
-
-
 
 @available(iOS 26.0, *)
 #Preview("Driver Profile") {
     DriverProfileSheet(vm: DriverDashboardViewModel())
         .environment(SupabaseManager.shared)
 }
-
-

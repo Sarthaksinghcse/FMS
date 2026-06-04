@@ -46,10 +46,10 @@ enum VehicleType: String, Codable, CaseIterable {
     }
     var iconColor: Color {
         switch self {
-        case .truck: return AppTheme.Brand.royalBlue
-        case .van:   return Color(red: 0.58, green: 0.39, blue: 0.87)
-        case .car:   return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .bike:  return AppTheme.Brand.accent
+        case .truck: return Theme.royalBlue
+        case .van:   return Theme.royalBlue.opacity(0.70)
+        case .car:   return Theme.royalBlue.opacity(0.85)
+        case .bike:  return Theme.darkOrange
         }
     }
 }
@@ -94,10 +94,26 @@ enum VehicleStatus: String, Codable {
         }
     }
     var statusColor: Color {
-        switch self {
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
+        if AccessibilityManager.shared.isHighContrastEnabled {
+            return Color.primary
+        }
+        switch AccessibilityManager.shared.colorBlindMode {
+        case .deuteranopia, .protanopia:
+            switch self {
+            case .active: return Color.blue
+            case .inactive, .inMaintenance: return Color.orange
+            }
+        case .tritanopia:
+            switch self {
+            case .active: return Color.red
+            case .inactive, .inMaintenance: return Color.teal
+            }
+        case .none:
+            switch self {
+            case .active:        return Theme.royalBlue
+            case .inactive:      return Theme.darkOrange
+            case .inMaintenance: return Theme.darkOrange.opacity(0.80)
+            }
         }
     }
     var statusIcon: String {
@@ -127,12 +143,41 @@ enum TripStatus: String, Codable {
         }
     }
     var badgeColor: Color {
-        switch self {
-        case .assigned:   return Color(red: 0.15, green: 0.38, blue: 0.90) 
-        case .started:    return Color(red: 0.30, green: 0.70, blue: 0.46) 
-        case .inProgress: return Color(red: 0.30, green: 0.70, blue: 0.46) 
-        case .completed:  return Color(red: 0.55, green: 0.58, blue: 0.62) 
-        case .cancelled:  return Color(red: 0.85, green: 0.25, blue: 0.25) 
+        if AccessibilityManager.shared.isHighContrastEnabled {
+            return Color.primary
+        }
+        
+        switch AccessibilityManager.shared.colorBlindMode {
+        case .deuteranopia, .protanopia:
+            switch self {
+            case .assigned: return Color.blue.opacity(0.6)
+            case .started, .inProgress: return Color.blue
+            case .completed: return Color.blue.opacity(0.8)
+            case .cancelled: return Color.orange
+            }
+        case .tritanopia:
+            switch self {
+            case .assigned: return Color.red.opacity(0.6)
+            case .started, .inProgress: return Color.red
+            case .completed: return Color.red.opacity(0.8)
+            case .cancelled: return Color.teal
+            }
+        case .none:
+            if AccessibilityManager.shared.fleetColorFilterStatus {
+                switch self {
+                case .assigned: return Color.blue.opacity(0.6)
+                case .started, .inProgress: return Color.blue
+                case .completed: return Color.blue.opacity(0.8)
+                case .cancelled: return Color.orange
+                }
+            }
+            switch self {
+            case .assigned:   return Theme.royalBlue.opacity(0.60)
+            case .started:    return Theme.royalBlue.opacity(0.85)
+            case .inProgress: return Theme.royalBlue
+            case .completed:  return Theme.royalBlue.opacity(0.75)
+            case .cancelled:  return Theme.darkOrange
+            }
         }
     }
     var badgeIcon: String {
@@ -230,9 +275,9 @@ enum ComplianceAlertType: String, Codable, CaseIterable {
 
     var color: Color {
         switch self {
-        case .insurance: return Color(red: 0.15, green: 0.38, blue: 0.90)
-        case .permit:    return Color(red: 0.58, green: 0.39, blue: 0.87)
-        case .servicing: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        case .insurance: return Theme.royalBlue
+        case .permit:    return Theme.royalBlue.opacity(0.70)
+        case .servicing: return Theme.darkOrange
         }
     }
 }
@@ -253,9 +298,9 @@ enum ComplianceAlertStatus: String, Codable {
 
     var color: Color {
         switch self {
-        case .upcoming: return Color(red: 0.90, green: 0.65, blue: 0.15)
-        case .overdue:  return Color(red: 0.85, green: 0.25, blue: 0.25)
-        case .resolved: return Color(red: 0.30, green: 0.70, blue: 0.46)
+        case .upcoming: return Theme.darkOrange.opacity(0.70)
+        case .overdue:  return Theme.darkOrange
+        case .resolved: return Theme.royalBlue
         }
     }
 }
@@ -283,10 +328,10 @@ enum VehicleStatusFilter: String, CaseIterable, Identifiable {
     }
     var chipColor: Color {
         switch self {
-        case .all:           return AppTheme.Brand.accent
-        case .active:        return Color(red: 0.30, green: 0.70, blue: 0.46)
-        case .inactive:      return AppTheme.Brand.accent
-        case .inMaintenance: return Color(red: 0.85, green: 0.25, blue: 0.25)
+        case .all:           return Theme.darkOrange
+        case .active:        return Theme.royalBlue
+        case .inactive:      return Theme.darkOrange.opacity(0.80)
+        case .inMaintenance: return Theme.darkOrange
         }
     }
 }
@@ -379,15 +424,24 @@ struct DashboardActivity: Identifiable {
 import MapKit
 
 struct MappedVehicle: Identifiable, Hashable {
-    let id = UUID()
+    var id: UUID { vehicle.id }
     let vehicle: DBVehicle
-    let coordinate: CLLocationCoordinate2D
+    let coordinate: CLLocationCoordinate2D?
+    let lastUpdated: Date?
+    var trip: DBTrip?
+    var driver: DBUser?
 
     static func == (lhs: MappedVehicle, rhs: MappedVehicle) -> Bool {
-        lhs.id == rhs.id
+        lhs.id == rhs.id &&
+        lhs.lastUpdated == rhs.lastUpdated &&
+        lhs.coordinate?.latitude == rhs.coordinate?.latitude &&
+        lhs.coordinate?.longitude == rhs.coordinate?.longitude
     }
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(lastUpdated)
+        hasher.combine(coordinate?.latitude)
+        hasher.combine(coordinate?.longitude)
     }
     var statusColor: Color {
         switch vehicle.status {
@@ -457,6 +511,7 @@ struct DBUser: Codable, Identifiable {
             phoneNumber: phoneNumber ?? "",
             passwordHash: "",
             role: role.asLocalRole,
+            profileImageURL: profileImage,
             isActive: isActive
         )
     }
@@ -930,6 +985,7 @@ struct DBWorkOrder: Codable, Identifiable {
     var priority: DBWorkOrderPriority
     var issueDescription: String
     var status: DBWorkOrderStatus
+    var estimatedCost: Double? = nil
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -940,6 +996,7 @@ struct DBWorkOrder: Codable, Identifiable {
         case priority
         case issueDescription = "issue_description"
         case status
+        case estimatedCost = "estimated_cost"
         case createdAt = "created_at"
     }
 }
@@ -968,8 +1025,51 @@ enum DBNotificationType: String, Codable {
     case maintenance
     case trip
     case emergency
+    case general
+    case defectAlert
+    case maintenanceAlert
+    case tripAssigned
+    case sosAlert
 }
 
+
+struct DateParser {
+    static func parse(_ dateStr: String) -> Date? {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: dateStr) {
+            return date
+        }
+        
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = isoFormatter.date(from: dateStr) {
+            return date
+        }
+        
+        let fallbackFormats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSZZZZZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SZZZZZ",
+            "yyyy-MM-dd HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd HH:mm:ss.SSS",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd"
+        ]
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        for format in fallbackFormats {
+            dateFormatter.dateFormat = format
+            if let date = dateFormatter.date(from: dateStr) {
+                return date
+            }
+        }
+        return nil
+    }
+}
 
 struct DBNotification: Codable, Identifiable {
     let id: UUID
@@ -988,6 +1088,48 @@ struct DBNotification: Codable, Identifiable {
         case type
         case isRead = "is_read"
         case createdAt = "created_at"
+    }
+
+    init(id: UUID = UUID(), userId: UUID, title: String, message: String, type: DBNotificationType, isRead: Bool, createdAt: Date = Date()) {
+        self.id = id
+        self.userId = userId
+        self.title = title
+        self.message = message
+        self.type = type
+        self.isRead = isRead
+        self.createdAt = createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.userId = try container.decode(UUID.self, forKey: .userId)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.message = try container.decode(String.self, forKey: .message)
+        self.type = try container.decode(DBNotificationType.self, forKey: .type)
+        self.isRead = try container.decode(Bool.self, forKey: .isRead)
+        
+        if let date = try? container.decode(Date.self, forKey: .createdAt) {
+            self.createdAt = date
+        } else {
+            let dateStr = try container.decode(String.self, forKey: .createdAt)
+            if let date = DateParser.parse(dateStr) {
+                self.createdAt = date
+            } else {
+                throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Invalid date format: \(dateStr)")
+            }
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(userId, forKey: .userId)
+        try container.encode(title, forKey: .title)
+        try container.encode(message, forKey: .message)
+        try container.encode(type, forKey: .type)
+        try container.encode(isRead, forKey: .isRead)
+        try container.encode(createdAt, forKey: .createdAt)
     }
 }
 
@@ -1017,19 +1159,17 @@ struct DBDefectReport: Codable, Identifiable {
 }
 
 
-struct DBVehicleLocation: Codable, Identifiable {
+struct DBVehicleLocation: Codable, Identifiable, Hashable {
     let id: UUID
-    var vehicleId: UUID
-    var latitude: Double
-    var longitude: Double
-    var timestamp: Date
+    let vehicleId: UUID
+    let latitude: Double
+    let longitude: Double
+    let timestamp: Date
 
     enum CodingKeys: String, CodingKey {
         case id
         case vehicleId = "vehicle_id"
-        case latitude
-        case longitude
-        case timestamp
+        case latitude, longitude, timestamp
     }
 }
 
@@ -1046,6 +1186,7 @@ extension WorkOrder {
             priority: priority.toDBPriority,
             issueDescription: workDescription.isEmpty ? title : workDescription,
             status: status.toDBStatus,
+            estimatedCost: estimatedCost,
             createdAt: createdAt
         )
     }
@@ -1106,7 +1247,7 @@ extension DBWorkOrder {
             workDescription: issueDescription,
             priority: priority.toLocalPriority,
             status: status.toLocalStatus,
-            estimatedCost: nil,
+            estimatedCost: estimatedCost,
             completedAt: status == .completed ? Date() : nil,
             createdAt: createdAt
         )
@@ -1116,11 +1257,11 @@ extension DBWorkOrder {
 extension DBNotificationType {
     var toLocalType: NotificationType {
         switch self {
-        case .info: return .general
-        case .warning: return .defectAlert
-        case .maintenance: return .maintenanceAlert
-        case .trip: return .tripAssigned
-        case .emergency: return .sosAlert
+        case .info, .general: return .general
+        case .warning, .defectAlert: return .defectAlert
+        case .maintenance, .maintenanceAlert: return .maintenanceAlert
+        case .trip, .tripAssigned: return .tripAssigned
+        case .emergency, .sosAlert: return .sosAlert
         }
     }
 }
@@ -2096,6 +2237,8 @@ struct DBVehicleHealthScore: Codable, Identifiable {
     }
 }
 
+
+
 struct AIAnalyticsReport: Codable, Identifiable {
     let id: UUID
     let reportText: String
@@ -2109,3 +2252,34 @@ struct AIAnalyticsReport: Codable, Identifiable {
 }
 
 
+// MARK: - Trip Log (Voice Log Persistence)
+
+struct DBTripLog: Codable, Identifiable {
+    let id: UUID
+    var driverId: UUID
+    var tripId: UUID?
+    var transcript: String
+    var startLocation: String?
+    var endLocation: String?
+    var startTime: String?
+    var endTime: String?
+    var mileage: Double?
+    var createdAt: Date
+    var isEdited: Bool?
+    var updatedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case driverId       = "driver_id"
+        case tripId         = "trip_id"
+        case transcript
+        case startLocation  = "start_location"
+        case endLocation    = "end_location"
+        case startTime      = "start_time"
+        case endTime        = "end_time"
+        case mileage
+        case createdAt      = "created_at"
+        case isEdited       = "is_edited"
+        case updatedAt      = "updated_at"
+    }
+}

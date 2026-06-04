@@ -41,9 +41,9 @@ struct VehicleHealthAnalysisView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .foregroundColor(.white)
-                        .background(LinearGradient(colors: [Color.purple, Color.purple.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .background(LinearGradient(colors: [Color.fmsIndigo, Color.fmsIndigo.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .cornerRadius(18)
-                        .shadow(color: Color.purple.opacity(0.2), radius: 6, x: 0, y: 3)
+                        .shadow(color: Color.fmsIndigo.opacity(0.2), radius: 6, x: 0, y: 3)
                     }
                     .disabled(viewModel.isGenerating || viewModel.isLoading)
                 }
@@ -68,7 +68,7 @@ struct VehicleHealthAnalysisView: View {
                     }
                     Spacer()
                 } else {
-                    ScrollView {
+                    ScrollView(.vertical, showsIndicators: false) {
                         LazyVStack(spacing: 16) {
                             ForEach(viewModel.healthScores) { score in
                                 vehicleHealthCard(score)
@@ -81,11 +81,13 @@ struct VehicleHealthAnalysisView: View {
         }
         .navigationTitle("Vehicle Health")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .onAppear {
             Task {
                 await viewModel.loadHealth()
             }
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var fleetHealthStatusText: String {
@@ -101,11 +103,11 @@ struct VehicleHealthAnalysisView: View {
     private func vehicleHealthCard(_ score: VehicleHealthScore) -> some View {
         let healthColor: Color
         switch score.grade {
-        case .excellent: healthColor = .green
-        case .good:      healthColor = .teal
-        case .fair:      healthColor = .yellow
-        case .poor:      healthColor = .orange
-        case .critical:  healthColor = .red
+        case .excellent: healthColor = AppTheme.Status.success
+        case .good:      healthColor = AppTheme.Brand.teal
+        case .fair:      healthColor = AppTheme.Status.warning.opacity(0.7)
+        case .poor:      healthColor = AppTheme.Status.warning
+        case .critical:  healthColor = AppTheme.Status.danger
         }
 
         return VStack(alignment: .leading, spacing: 14) {
@@ -146,10 +148,10 @@ struct VehicleHealthAnalysisView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "sparkles")
                             .font(.system(size: 11))
-                            .foregroundColor(.purple)
+                            .foregroundColor(Color.fmsIndigo)
                         Text("AI DIAGNOSTICS")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundColor(.purple)
+                            .foregroundColor(Color.fmsIndigo)
                             .tracking(0.5)
                     }
 
@@ -162,11 +164,11 @@ struct VehicleHealthAnalysisView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
-                .background(Color.purple.opacity(0.03))
+                .background(Color.fmsIndigo.opacity(0.03))
                 .cornerRadius(10)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.purple.opacity(0.1), lineWidth: 1)
+                        .stroke(Color.fmsIndigo.opacity(0.1), lineWidth: 1)
                 )
             }
 
@@ -179,7 +181,7 @@ struct VehicleHealthAnalysisView: View {
                     
                     ForEach(score.issueFlags, id: \.self) { issue in
                         HStack(spacing: 6) {
-                            Circle().fill(Color.red).frame(width: 4, height: 4)
+                            Circle().fill(AppTheme.Status.danger).frame(width: 4, height: 4)
                             Text(issue)
                                 .font(.system(size: 11, weight: .medium, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)

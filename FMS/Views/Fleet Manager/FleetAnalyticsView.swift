@@ -38,7 +38,7 @@ struct FleetAnalyticsView: View {
                         vehicleDistributionSection
 
                         // ── Driver Analytics ────────────────
-                        sectionLabel(icon: "person.fill", title: "Driver Analytics", color: Color(red: 0.30, green: 0.70, blue: 0.46))
+                        sectionLabel(icon: "person.fill", title: "Driver Analytics", color: AppTheme.Brand.accent)
                         driverOverviewSection
                         driverTripBreakdownSection
 
@@ -121,7 +121,7 @@ struct FleetAnalyticsView: View {
                 .foregroundStyle(AppTheme.Text.tertiary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(Color.gray.opacity(0.08))
+                .background(AppTheme.Brand.primary.opacity(0.08))
                 .clipShape(Capsule())
         }
         .padding(.horizontal, 16)
@@ -170,7 +170,7 @@ struct FleetAnalyticsView: View {
                 subtitle: viewModel.selectedPeriod.rawValue,
                 icon: "checkmark.circle.fill",
                 color: AppTheme.Status.success,
-                bgColor: AppTheme.IconBg.green
+                bgColor: AppTheme.IconBg.blue
             )
 
             AnalyticsKPICard(
@@ -224,7 +224,7 @@ struct FleetAnalyticsView: View {
                         }
                         if counts.inactive > 0 {
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(Color.gray.opacity(0.4))
+                                .fill(AppTheme.Brand.primary.opacity(0.3))
                                 .frame(width: max(4, max(0, inactiveW)))
                         }
                     }
@@ -236,7 +236,7 @@ struct FleetAnalyticsView: View {
                     Spacer()
                     fleetStatusPill(label: "Maintenance", count: counts.maintenance, color: AppTheme.Status.danger)
                     Spacer()
-                    fleetStatusPill(label: "Inactive", count: counts.inactive, color: Color.gray)
+                    fleetStatusPill(label: "Inactive", count: counts.inactive, color: AppTheme.Brand.primary.opacity(0.4))
                 }
             }
         }
@@ -319,7 +319,7 @@ struct FleetAnalyticsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(Color.gray.opacity(0.04))
+        .background(AppTheme.Brand.primary.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
@@ -462,15 +462,18 @@ struct FleetAnalyticsView: View {
                                 Circle()
                                     .fill(
                                         stat.tripCount > 0
-                                            ? Color(red: 0.30, green: 0.70, blue: 0.46).opacity(0.12)
-                                            : Color.gray.opacity(0.08)
+                                            ? AppTheme.Brand.primary.opacity(0.12)
+                                            : AppTheme.Brand.primary.opacity(0.06)
                                     )
                                     .frame(width: 36, height: 36)
                                 Text(driverInitials(stat.driverName))
                                     .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .frame(width: 36, height: 36, alignment: .center)
                                     .foregroundStyle(
                                         stat.tripCount > 0
-                                            ? Color(red: 0.30, green: 0.70, blue: 0.46)
+                                            ? AppTheme.Brand.primary
                                             : AppTheme.Text.tertiary
                                     )
                             }
@@ -694,7 +697,7 @@ struct FleetAnalyticsView: View {
                         title: "Completed (\(viewModel.periodLabel))",
                         value: "\(viewModel.completedWorkOrdersInPeriod(workOrders: workOrders))",
                         icon: "checkmark.seal.fill",
-                        color: Color(red: 0.30, green: 0.70, blue: 0.46)
+                        color: AppTheme.Brand.primary
                     )
                 }
 
@@ -764,7 +767,7 @@ struct FleetAnalyticsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color.gray.opacity(0.04))
+        .background(AppTheme.Brand.primary.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
@@ -787,7 +790,7 @@ struct FleetAnalyticsView: View {
                         .foregroundStyle(AppTheme.Text.tertiary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Color.gray.opacity(0.08))
+                        .background(AppTheme.Brand.primary.opacity(0.08))
                         .clipShape(Capsule())
                 }
             }

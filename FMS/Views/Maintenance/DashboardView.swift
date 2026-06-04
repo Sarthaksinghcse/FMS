@@ -18,6 +18,7 @@ struct MaintenanceDashboardTab: View {
     @Query private var allWorkOrders: [WorkOrder]
     @Query private var allInventory: [InventoryItem]
     @Query private var allNotifications: [AppNotification]
+    @Query private var allUsers: [User]
 
     // Navigation trigger or tab switching binding if needed
     @Binding var selectedTab: Int
@@ -92,39 +93,126 @@ struct MaintenanceDashboardTab: View {
             .map { $0 }
     }
 
+    private var managerChannel: CommunicationChannel? {
+        guard let manager = allUsers.first(where: { $0.role == .fleetManager }) else { return nil }
+        
+        let parts = manager.fullName.split(separator: " ")
+        let initials: String
+        if parts.count >= 2 {
+            initials = String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        } else {
+            initials = String(manager.fullName.prefix(2)).uppercased()
+        }
+        
+        return CommunicationChannel(
+            id: manager.id,
+            senderName: manager.fullName,
+            textPreview: "Chat with Manager",
+            timestamp: "",
+            unreadCount: 0,
+            initials: initials,
+            avatarColor: AppTheme.Brand.violet,
+            category: .managers,
+            autoReplies: []
+        )
+    }
+
     var body: some View {
-        // ── NavigationStack for smooth push transitions ───────────────────────
         NavigationStack {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Premium header
-                        MaintenanceHeaderView(
-                            title: personnelFirstName,
-                            subtitle: "",
-                            greeting: getGreetingTime() + ",",
-                            initials: initials,
-                            avatarColor: AppTheme.Brand.primaryDeep,
-                            notificationCount: unreadNotifications.count,
-                            onNotificationTap: { showingNotifications = true },
-                            onProfileTap: { showingProfile = true },
-                            showChat: false,
-                            onChatTap: { showChat = true }
-                        )
-                        .padding(.top, 8)
+                    VStack(alignment: .leading, spacing: 22) {
+                        // ── Greeting Header ────────────────────────
+                        HStack(alignment: .center, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(getGreetingTime() + ",")
+                                    .font(.system(size: 17, weight: .regular))
+                                    .foregroundStyle(.secondary)
+                                Text(personnelFirstName)
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(.primary)
+                            }
+
+                            Spacer()
+
+                            // Bell Button
+                            Button {
+                                showingNotifications = true
+                            } label: {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Color(UIColor.label))
+                                        .frame(width: 40, height: 40)
+                                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                                        .clipShape(Circle())
+                                    
+                                    if unreadNotifications.count > 0 {
+                                        Circle()
+                                            .fill(AppTheme.Status.danger)
+                                            .frame(width: 10, height: 10)
+                                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                            .offset(x: 2, y: -2)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+
+                            Spacer().frame(width: 12)
+
+                            // Avatar Button
+                            Button {
+                                showingProfile = true
+                            } label: {
+                                ZStack {
+                                    if let imageURLString = currentUser.profileImageURL,
+                                       let imageURL = URL(string: imageURLString) {
+                                        CachedAsyncImage(url: imageURL) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                    } else {
+                                        ZStack {
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                                .frame(width: 40, height: 40)
+                                            Text(initials)
+                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.5)
+                                                .frame(width: 40, height: 40, alignment: .center)
+                                        }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
 
                         overviewSection
+
                         quickActionsSection
-                        aiInsightsSection
                         recentWorkOrdersSection
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 12)
                     .padding(.bottom, 32)
                 }
-                .safeAreaPadding(.top)
-                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .scrollBounceBehavior(.always, axes: .vertical)
                 .refreshable {
                     await SupabaseManager.shared.syncAllData(context: modelContext)
                 }
@@ -136,11 +224,23 @@ struct MaintenanceDashboardTab: View {
             .sheet(isPresented: $showingNotifications) {
                 MaintenanceNotificationsSheet(currentUser: currentUser)
             }
-            .navigationDestination(isPresented: $showChat) {
-                CommunicationView()
+            .sheet(isPresented: $showChat) {
+                NavigationStack {
+                    CommunicationView()
+                }
             }
         }
     }
+
+
+
+
+
+
+
+
+
+
 
     // MARK: - Overview Cards (fully tappable via NavigationLink)
 
@@ -158,14 +258,15 @@ struct MaintenanceDashboardTab: View {
                     iconColor: AppTheme.Text.secondary,
                     iconBg: Color(.systemGray6),
                     gradient: [Color.clear, Color.clear],
-                    title: "Scheduling",
+                    title: "Scheduled",
                     value: "\(scheduledToday.count)",
                     footnote: scheduledToday.count == 1 ? "1 open work order" : "\(scheduledToday.count) open work orders",
                     valueColor: Color(red: 0.08, green: 0.12, blue: 0.22)
                 ) {
                     ScheduledTasksView(
                         currentUser: currentUser,
-                        allWorkOrders: allWorkOrders
+                        allWorkOrders: allWorkOrders,
+                        hidesTabBar: true
                     )
                 }
 
@@ -182,7 +283,8 @@ struct MaintenanceDashboardTab: View {
                 ) {
                     CompletedTasksView(
                         currentUserId: currentUser.id,
-                        allWorkOrders: allWorkOrders
+                        allWorkOrders: allWorkOrders,
+                        hidesTabBar: true
                     )
                 }
 
@@ -199,7 +301,8 @@ struct MaintenanceDashboardTab: View {
                 ) {
                     InProgressTasksView(
                         currentUserId: currentUser.id,
-                        allWorkOrders: allWorkOrders
+                        allWorkOrders: allWorkOrders,
+                        hidesTabBar: true
                     )
                 }
 
@@ -250,179 +353,41 @@ struct MaintenanceDashboardTab: View {
                 
                 GridQuickActionButton(
                     icon: "camera.fill",
-                    label: "Upload Repair Notes",
+                    label: "Report an issue",
                     destination: ReportIssueView()
                 )
                 
-                GridQuickActionButton(
-                    icon: "bubble.left.and.bubble.right.fill",
-                    label: "Chat",
-                    destination: CommunicationView()
-                )
+                Button {
+                    showChat = true
+                } label: {
+                    VStack(spacing: 8) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(AppTheme.Brand.primary.opacity(0.08))
+                                .frame(width: 56, height: 56)
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(AppTheme.Brand.royalBlue)
+                        }
+                        
+                        Text("Chat")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .minimumScaleFactor(0.8)
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(AppTheme.Text.primary)
+                            .frame(height: 32, alignment: .top)
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
         }
     }
 
-    // MARK: - AI Insights
 
-    private var aiInsightsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "AI Insights")
-            
-            NavigationLink(destination: PredictiveAlertDetailView()) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppTheme.Brand.royalBlue)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text("Predictive Maintenance Alert")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Text.primary)
-                            
-                            Text("SMART")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(AppTheme.Brand.royalBlue)
-                                .cornerRadius(4)
-                        }
-                        
-                        Text("Brake pads on Truck 12 may run below safety threshold levels within 7 days. Tap to inspect...")
-                            .font(.system(size: 11))
-                            .foregroundColor(AppTheme.Text.secondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
-                }
-                .padding(14)
-                .background(AppTheme.Background.card)
-                .cornerRadius(AppTheme.Radius.card)
-                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                        .stroke(AppTheme.Glass.border, lineWidth: 1)
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            NavigationLink(destination: SparePartsForecastView()) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.purple.opacity(0.08))
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "box.truck.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.purple)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text("AI Parts Demand Forecasting")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Text.primary)
-                            
-                            Text("PREDICT")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color.purple)
-                                .cornerRadius(4)
-                        }
-                        
-                        Text("Calculate upcoming parts consumption & reorder recommendations...")
-                            .font(.system(size: 11))
-                            .foregroundColor(AppTheme.Text.secondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
-                }
-                .padding(14)
-                .background(AppTheme.Background.card)
-                .cornerRadius(AppTheme.Radius.card)
-                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                        .stroke(AppTheme.Glass.border, lineWidth: 1)
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            NavigationLink(destination: VehicleHealthAnalysisView()) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.teal.opacity(0.08))
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "heart.text.square.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.teal)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text("AI Vehicle Health Analytics")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundColor(AppTheme.Text.primary)
-                            
-                            Text("HEALTH")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color.teal)
-                                .cornerRadius(4)
-                        }
-                        
-                        Text("Assess fleet vehicle health grades, issue flags and repair tasks...")
-                            .font(.system(size: 11))
-                            .foregroundColor(AppTheme.Text.secondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
-                }
-                .padding(14)
-                .background(AppTheme.Background.card)
-                .cornerRadius(AppTheme.Radius.card)
-                .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                        .stroke(AppTheme.Glass.border, lineWidth: 1)
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-        }
-        .padding(.horizontal)
-    }
 
     // MARK: - Recent Work Orders
 
@@ -432,7 +397,7 @@ struct MaintenanceDashboardTab: View {
                 SectionHeader(title: "Recent Work Orders")
                 Spacer()
                 Button("See All") {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { selectedTab = 2 }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { selectedTab = 1 }
                 }
                 .font(.subheadline).foregroundColor(AppTheme.Brand.primary)
             }
@@ -544,20 +509,20 @@ struct GridQuickActionButton<Destination: View>: View {
         NavigationLink(destination: destination) {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(AppTheme.Brand.primary.opacity(0.08))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 56, height: 56)
                     Image(systemName: icon)
-                        .font(.system(size: 20))
+                        .font(.system(size: 24))
                         .foregroundColor(AppTheme.Brand.royalBlue)
                 }
                 
                 Text(label)
-                    .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.75)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.Text.primary)
-                    .frame(height: 28, alignment: .top)
+                    .frame(height: 32, alignment: .top)
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity)
@@ -565,4 +530,3 @@ struct GridQuickActionButton<Destination: View>: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
-

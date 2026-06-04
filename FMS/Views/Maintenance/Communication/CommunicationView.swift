@@ -32,6 +32,7 @@ struct CommunicationChannel: Identifiable, Hashable {
 
 struct CommunicationView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Query private var allUsers: [User]
     
     @Environment(SupabaseManager.self) private var supabase
@@ -44,7 +45,14 @@ struct CommunicationView: View {
     private var computedChannels: [CommunicationChannel] {
         guard let currentUserId = supabase.currentUser?.id else { return [] }
         
-        let otherUsers = allUsers.filter { $0.id != currentUserId }
+        let otherUsers: [User]
+        if supabase.currentUser?.role == .fleetManager {
+            otherUsers = allUsers.filter { $0.id != currentUserId }
+        } else if supabase.currentUser?.role == .maintenance {
+            otherUsers = allUsers.filter { $0.id != currentUserId && ($0.role == .fleetManager || $0.role == .driver) }
+        } else {
+            otherUsers = allUsers.filter { $0.id != currentUserId && $0.role == .fleetManager }
+        }
         var list: [CommunicationChannel] = []
         
         for user in otherUsers {
@@ -140,16 +148,16 @@ struct CommunicationView: View {
         ZStack(alignment: .bottomTrailing) {
             AppTheme.Background.page.ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                CustomCenteredHeaderView(title: "Communication")
-                
+            VStack(spacing: 12) {
                 // Search Bar
                 TaskSearchBar(text: $searchText, placeholder: "Search messages...")
                     .padding(.horizontal)
 
                 // Category filters
-                MessageFilterView(selectedCategory: $selectedCategory)
-                    .padding(.bottom, 8)
+                if supabase.currentUser?.role == .fleetManager || supabase.currentUser?.role == .maintenance {
+                    MessageFilterView(selectedCategory: $selectedCategory)
+                        .padding(.bottom, 8)
+                }
 
                 if filteredChannels.isEmpty {
                     Spacer()
@@ -184,21 +192,37 @@ struct CommunicationView: View {
                 }
             }
             
-            // New Chat Floating Action Button
-            Button(action: {
-                // Start new chat action
-            }) {
-                Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-                    .background(AppTheme.Brand.primary)
-                    .clipShape(Circle())
-                    .shadow(color: AppTheme.Brand.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+            if supabase.currentUser?.role == .fleetManager {
+                // New Chat Floating Action Button
+                Button(action: {
+                    // Start new chat action
+                }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(AppTheme.Brand.primary)
+                        .clipShape(Circle())
+                        .shadow(color: AppTheme.Brand.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+                }
+                .padding(20)
             }
-            .padding(20)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Messages")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(AppTheme.Brand.primary)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+            }
+        }
         .task {
             await loadMessages()
             startRealtimeListener()
@@ -262,6 +286,9 @@ private struct CommunicationRow: View {
                 Text(channel.initials)
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(channel.avatarColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: 36, height: 36, alignment: .center)
             }
             
             VStack(alignment: .leading, spacing: 2) {
@@ -291,7 +318,7 @@ private struct CommunicationRow: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(Color.red.opacity(0.85))
+                            .background(AppTheme.Status.danger)
                             .clipShape(Circle())
                     }
                 }

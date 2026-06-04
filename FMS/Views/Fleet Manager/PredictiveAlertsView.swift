@@ -43,10 +43,10 @@ struct PredictiveAlertsView: View {
                         .padding(.vertical, 10)
                         .foregroundColor(.white)
                         .background(
-                            LinearGradient(colors: [Color.purple, Color.purple.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            LinearGradient(colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing)
                         )
                         .cornerRadius(20)
-                        .shadow(color: Color.purple.opacity(0.3), radius: 6, x: 0, y: 3)
+                        .shadow(color: AppTheme.Brand.primary.opacity(0.3), radius: 6, x: 0, y: 3)
                     }
                     .disabled(viewModel.isGenerating || viewModel.isLoading)
                 }
@@ -64,11 +64,11 @@ struct PredictiveAlertsView: View {
                     VStack(spacing: 16) {
                         ZStack {
                             Circle()
-                                .fill(Color.green.opacity(0.1))
+                                .fill(AppTheme.Status.success.opacity(0.1))
                                 .frame(width: 80, height: 80)
                             Image(systemName: "checkmark.shield.fill")
                                 .font(.system(size: 40))
-                                .foregroundColor(.green)
+                                .foregroundColor(AppTheme.Status.success)
                         }
 
                         Text("Your Fleet is Healthy")
@@ -133,7 +133,7 @@ struct PredictiveAlertsView: View {
             riskBg = AppTheme.IconBg.orange.opacity(0.3)
         default:
             riskColor = AppTheme.Status.success
-            riskBg = AppTheme.IconBg.teal
+            riskBg = AppTheme.Brand.primary.opacity(0.12)
         }
 
         return VStack(alignment: .leading, spacing: 14) {
@@ -165,7 +165,7 @@ struct PredictiveAlertsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 10))
-                    Text(String(format: "Risk: %.0f%%", alert.riskScore))
+                    Text(String(format: "Risk: %.0f%%", alert.riskScore * 100))
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                 }
                 .foregroundColor(riskColor)
@@ -180,10 +180,10 @@ struct PredictiveAlertsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 12))
-                        .foregroundColor(.purple)
+                        .foregroundColor(AppTheme.Brand.primary)
                     Text("AI PREDICTION")
                         .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundColor(.purple)
+                        .foregroundColor(AppTheme.Brand.primary)
                         .tracking(0.5)
                 }
 
@@ -194,11 +194,11 @@ struct PredictiveAlertsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(12)
-            .background(Color.purple.opacity(0.04))
+            .background(AppTheme.Brand.primary.opacity(0.04))
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.purple.opacity(0.1), lineWidth: 1)
+                    .stroke(AppTheme.Brand.primary.opacity(0.1), lineWidth: 1)
             )
 
             // Recommended Action

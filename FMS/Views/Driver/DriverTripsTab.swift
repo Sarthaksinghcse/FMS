@@ -2,6 +2,7 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import AVFoundation
 
 
 
@@ -132,11 +133,15 @@ struct DriverTripsTab: View {
                 } else {
                     // ── COMPLETED TRIPS ───────────────────────────────────────
                     if vm.completedTrips.isEmpty {
-                        Spacer()
-                        EmptyTripsCell(icon: "checkmark.seal",
-                                       message: "No completed trips yet",
-                                       subtitle: "Trips you finish will appear here with full details.")
-                        Spacer()
+                        ScrollView {
+                            VStack {
+                                Spacer().frame(height: 80)
+                                EmptyTripsCell(icon: "checkmark.seal",
+                                               message: "No completed trips yet",
+                                               subtitle: "Trips you finish will appear here with full details.")
+                                Spacer()
+                            }
+                        }
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 14) {
@@ -151,7 +156,7 @@ struct DriverTripsTab: View {
                     }
                 }
             }
-            .refreshable { await vm.load() }
+            .refreshable { await vm.load(context: modelContext) }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trips")
             .navigationBarTitleDisplayMode(.large)
@@ -301,6 +306,10 @@ private struct CompletedTripCard: View {
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showDetail = true
+        }
         .sheet(isPresented: $showDetail) {
             TripDetailSheet(record: record)
         }
@@ -337,6 +346,11 @@ struct TripDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     let record: CompletedTripRecord
     @State private var showingFullAddressSheet = false
+    @State private var voiceLogs: [DBTripLog] = []
+    @State private var isLoadingLogs = false
+    @State private var editingLog: DBTripLog? = nil
+    @State private var editedTranscript = ""
+    @State private var showEditSheet = false
 
     private var dateLabel: String {
         let f = DateFormatter()
@@ -401,7 +415,7 @@ struct TripDetailSheet: View {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(alignment: .top, spacing: 10) {
                                 Circle()
-                                    .fill(Color(UIColor.systemGray3))
+                                    .fill(Color.fmsIndigo.opacity(0.4))
                                     .frame(width: 8, height: 8)
                                     .padding(.top, 4)
                                 Text(record.trip.source)
@@ -562,6 +576,9 @@ struct TripDetailSheet: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
                     }
+                    
+                    // Voice Logs Section
+                    voiceLogsSection
                 }
                 .padding(16)
                 .padding(.bottom, 30)
@@ -570,6 +587,26 @@ struct TripDetailSheet: View {
             .sheet(isPresented: $showingFullAddressSheet) {
                 FullAddressSheet(source: record.trip.source, destination: record.trip.destination, tripCode: record.trip.tripCode)
             }
+            .sheet(isPresented: $showEditSheet) {
+                if let log = editingLog {
+                    EditVoiceLogSheet(log: log, transcript: $editedTranscript) { updatedLog in
+                        if let index = voiceLogs.firstIndex(where: { $0.id == updatedLog.id }) {
+                            voiceLogs[index] = updatedLog
+                        }
+                        editingLog = nil
+                        showEditSheet = false
+                    }
+                }
+            }
+            .task {
+                isLoadingLogs = true
+                do {
+                    voiceLogs = try await SupabaseManager.shared.fetchTripLogs(for: record.trip.id)
+                } catch {
+                    print("Failed to fetch trip voice logs: \(error)")
+                }
+                isLoadingLogs = false
+            }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trip Details")
             .navigationBarTitleDisplayMode(.inline)
@@ -577,6 +614,96 @@ struct TripDetailSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .foregroundStyle(Color.fmsIndigo)
+                }
+            }
+        }
+    }
+
+    private var voiceLogsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("VOICE LOGS")
+            
+            if isLoadingLogs {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(Color.fmsIndigo)
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+            } else if voiceLogs.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "mic.slash.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.secondary)
+                        Text("No voice logs recorded for this trip")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 16)
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(voiceLogs) { log in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Label {
+                                    HStack(spacing: 4) {
+                                        Text(log.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        if log.isEdited == true {
+                                            Text("·")
+                                            Text("Edited")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.orange)
+                                            if let editDate = log.updatedAt {
+                                                Text("at \(editDate.formatted(date: .abbreviated, time: .shortened))")
+                                            }
+                                        }
+                                    }
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                } icon: {
+                                    Image(systemName: "clock")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(Color(UIColor.tertiaryLabel))
+                                }
+                                
+                                Spacer()
+                                
+                                // Pencil edit button
+                                Button {
+                                    editingLog = log
+                                    editedTranscript = log.transcript
+                                    showEditSheet = true
+                                } label: {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(Color.fmsIndigo)
+                                        .padding(6)
+                                        .background(Color.fmsIndigo.opacity(0.1))
+                                        .clipShape(Circle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
+                            Text(log.transcript)
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.primary)
+                                .lineSpacing(3)
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(UIColor.secondarySystemFill))
+                                .cornerRadius(8)
+                        }
+                        .padding(12)
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .cornerRadius(14)
+                    }
                 }
             }
         }
@@ -635,12 +762,12 @@ private struct ActiveTripCell: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(.red)
+                            .fill(Color.fmsIndigo)
                             .frame(width: 6, height: 6)
-                            .shadow(color: .red.opacity(0.5), radius: 3)
+                            .shadow(color: Color.fmsIndigo.opacity(0.5), radius: 3)
                         Text("In Progress")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.fmsIndigo)
                     }
                     Text(vm.elapsedFormatted)
                         .font(.system(size: 40, weight: .bold, design: .monospaced))
@@ -651,9 +778,9 @@ private struct ActiveTripCell: View {
                 
                 Label(String(format: "%.0f%%", vm.fuelLevel * 100), systemImage: "fuelpump.fill")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(vm.fuelLevel < 0.25 ? .red : Color.fmsIndigo)
+                    .foregroundStyle(vm.fuelLevel < 0.25 ? AppTheme.Status.danger : Color.fmsIndigo)
                     .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background((vm.fuelLevel < 0.25 ? Color.red : Color.fmsIndigo).opacity(0.08))
+                    .background((vm.fuelLevel < 0.25 ? AppTheme.Status.danger : Color.fmsIndigo).opacity(0.08))
                     .clipShape(Capsule())
             }
 
@@ -711,7 +838,7 @@ private struct TripRow: View {
         switch trip.status {
         case .assigned:  return Color.fmsIndigo
         case .started:   return AppTheme.Status.success
-        case .completed: return Color(UIColor.systemGray)
+        case .completed: return Color.fmsIndigo
         case .cancelled: return AppTheme.Status.danger
         }
     }
@@ -845,14 +972,16 @@ private struct TripActionButton: View {
     let icon: String
     let style: TripActionStyle
     let action: () -> Void
+    
+    @ObservedObject var manager = AccessibilityManager.shared
 
     var body: some View {
         Button(action: action) {
             Label(label, systemImage: icon)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: manager.driverLargeTapTargets ? 16 : 13, weight: .semibold))
                 .foregroundStyle(foregroundColor)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .frame(height: manager.driverLargeTapTargets ? 64 : 44)
                 .background(backgroundContent)
                 .clipShape(RoundedRectangle(cornerRadius: 11))
         }
@@ -873,7 +1002,7 @@ private struct TripActionButton: View {
         case .primary:     return AnyShapeStyle(Color.fmsIndigo.gradient)
         case .glass:       return AnyShapeStyle(Color.fmsIndigo.opacity(0.08))
         case .warning:     return AnyShapeStyle(AppTheme.Brand.accent.opacity(0.10))
-        case .destructive: return AnyShapeStyle(Color.red.gradient)
+        case .destructive: return AnyShapeStyle(AppTheme.Status.danger.gradient)
         }
     }
 }
@@ -901,8 +1030,15 @@ struct TripNavigationView: View {
     @State private var timeSavedMin      = 0
     @State private var rerouteDismissed  = false
 
+    // ── Drowsiness detection ────────────────────────────────────────────────
+    @StateObject private var drowsiness = DrowsinessDetector()
+
     // ── Computed ─────────────────────────────────────────────────────────────
     private var isActiveTrip: Bool { vm.isTripActive && vm.activeTrip?.id == trip.id }
+    
+    // ── Local Geofence Alert ─────────────────────────────────────────────────
+    @State private var localShowGeofenceAlert = false
+    @State private var localGeofenceAlertMessage = ""
 
     // ─────────────────────────────────────────────────────────────────────────
     var body: some View {
@@ -917,14 +1053,14 @@ struct TripNavigationView: View {
                         Annotation("Driver", coordinate: loc) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.blue.opacity(0.3))
+                                    .fill(Color.fmsIndigo.opacity(0.3))
                                     .frame(width: 44, height: 44)
                                 Circle()
                                     .fill(.white)
                                     .frame(width: 22, height: 22)
                                     .shadow(radius: 3)
                                 Circle()
-                                    .fill(Color.blue)
+                                    .fill(Color.fmsIndigo)
                                     .frame(width: 14, height: 14)
                             }
                         }
@@ -936,7 +1072,7 @@ struct TripNavigationView: View {
                     ForEach(nav.alternateRoutes, id: \.name) { alt in
                         MapPolyline(alt.polyline)
                             .stroke(
-                                Color.gray.opacity(0.35),
+                                Color.fmsIndigo.opacity(0.25),
                                 style: StrokeStyle(lineWidth: 4, lineCap: .round,
                                                    lineJoin: .round, dash: [8, 6])
                             )
@@ -980,6 +1116,22 @@ struct TripNavigationView: View {
                     .padding(.bottom, 320)
                 }
 
+                // ── Drowsiness monitor HUD ───────────────────────────────────
+                if isActiveTrip {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            DrowsinessMonitorHUD(detector: drowsiness)
+                                .padding(.top, 64)
+                                .padding(.trailing, 16)
+                        }
+                        Spacer()
+                    }
+                    .ignoresSafeArea(edges: .top)
+                    .allowsHitTesting(true)
+                    .zIndex(20)
+                }
+
                 // ── Reroute banner ───────────────────────────────────────────
                 if showRerouteBanner && !rerouteDismissed && !nav.isNavigating {
                     VStack {
@@ -997,14 +1149,26 @@ struct TripNavigationView: View {
                     ActiveNavigationOverlay(
                         nav: nav,
                         onEndTrip: {
-                            nav.endNavigation()
-                            dismiss()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                vm.showPostTripOnEnd = true
-                                vm.showPostTrip = true
+                            Task {
+                                let validation = await vm.validateCanEndTrip(vm.activeTrip ?? vm.currentTrip, endCoord: nav.destinationCoordinate, userLocation: nav.userLocation)
+                                if !validation.isValid {
+                                    await MainActor.run {
+                                        localGeofenceAlertMessage = validation.message ?? "Cannot end trip."
+                                        localShowGeofenceAlert = true
+                                    }
+                                } else {
+                                    await MainActor.run {
+                                        nav.endNavigation()
+                                        dismiss()
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                            Task { await vm.requestEndTrip(endCoord: nav.destinationCoordinate) }
+                                        }
+                                    }
+                                }
                             }
                         },
-                        onSOS: { vm.showSOSCountdown = true }
+                        onSOS: { vm.showSOSCountdown = true },
+                        onVoiceLog: { vm.showVoiceLog = true }
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.spring(response: 0.45), value: nav.isNavigating)
@@ -1068,9 +1232,17 @@ struct TripNavigationView: View {
 
             // ── Sheets ───────────────────────────────────────────────────────
             .sheet(isPresented: $showPreTripNav) {
-                InspectionFormSheet(isPreTrip: true) { passed, _, _ in
+                InspectionFormSheet(isPreTrip: true, vehicleId: trip.vehicleId, initialVehicleNumber: vm.vehicleForTrip(trip)?.vehicleNumber) { passed, _, _ in
                     preTripPassed = passed
                 }
+            }
+            .sheet(isPresented: $vm.showVoiceLog) {
+                VoiceLogSheet(tripId: vm.activeTrip?.id ?? vm.currentTrip?.id)
+            }
+            .alert("Geofence Restriction", isPresented: $localShowGeofenceAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(localGeofenceAlertMessage)
             }
         }
         .alert("🚨 SOS Triggered", isPresented: $vm.sosSentAlert) {
@@ -1087,7 +1259,6 @@ struct TripNavigationView: View {
         }
         .onAppear {
             if viewRouteOnly {
-                // View Route mode — skip inspection, just show the map
                 preTripPassed = true
             } else if !isActiveTrip {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
@@ -1095,7 +1266,27 @@ struct TripNavigationView: View {
                 }
             } else {
                 nav.beginNavigation()
+                drowsiness.start()
             }
+        }
+        .onDisappear {
+            nav.endNavigation()
+            drowsiness.stop()
+        }
+        .onChange(of: vm.isTripActive) { _, active in
+            if active && vm.activeTrip?.id == trip.id {
+                drowsiness.start()
+            } else {
+                drowsiness.stop()
+            }
+        }
+        // ── Full-screen Drowsiness Alarm ─────────────────────────────────────
+        .fullScreenCover(isPresented: Binding(
+            get: { drowsiness.state == .alarm },
+            set: { if !$0 { drowsiness.dismissAlarm() } }
+        )) {
+            DrowsinessAlarmView(detector: drowsiness)
+                .ignoresSafeArea()
         }
     }
 
@@ -1178,9 +1369,20 @@ struct TripNavigationView: View {
             // START NOW
             Button {
                 guard preTripPassed else { showPreTripNav = true; return }
-                vm.beginTrip(trip: trip)
-                withAnimation(.spring(response: 0.5)) {
-                    nav.beginNavigation()
+                Task {
+                    let result = await vm.beginTrip(trip: trip, startCoord: nav.sourceCoordinate, userLocation: nav.userLocation, triggerGlobalAlert: false)
+                    if result.success {
+                        await MainActor.run {
+                            withAnimation(.spring(response: 0.5)) {
+                                nav.beginNavigation()
+                            }
+                        }
+                    } else {
+                        await MainActor.run {
+                            localGeofenceAlertMessage = result.message ?? "Cannot start trip."
+                            localShowGeofenceAlert = true
+                        }
+                    }
                 }
             } label: {
                 HStack(spacing: 8) {
@@ -1197,7 +1399,7 @@ struct TripNavigationView: View {
                 .background(
                     preTripPassed
                         ? AnyShapeStyle(Color.fmsIndigo.gradient)
-                        : AnyShapeStyle(Color(UIColor.systemGray3).gradient)
+                        : AnyShapeStyle(Color.fmsIndigo.opacity(0.3).gradient)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
@@ -1322,13 +1524,15 @@ struct MapActionButton: View {
     let icon: String
     let style: MapActionStyle
     let action: () -> Void
+    
+    @ObservedObject var manager = AccessibilityManager.shared
 
     private var color: Color {
         switch style {
         case .primary:     return Color.fmsIndigo
         case .glass:       return Color.fmsIndigo
         case .warning:     return AppTheme.Brand.accent
-        case .destructive: return .red
+        case .destructive: return AppTheme.Status.danger
         }
     }
 
@@ -1336,9 +1540,9 @@ struct MapActionButton: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: manager.driverLargeTapTargets ? 22 : 18, weight: .medium))
                     .foregroundStyle((style == .primary || style == .destructive) ? .white : color)
-                    .frame(width: 46, height: 46)
+                    .frame(width: manager.driverLargeTapTargets ? 58 : 46, height: manager.driverLargeTapTargets ? 58 : 46)
                     .background(
                         (style == .primary || style == .destructive)
                         ? AnyShapeStyle(color.gradient)
@@ -1346,7 +1550,7 @@ struct MapActionButton: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: manager.driverLargeTapTargets ? 12 : 10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
@@ -1432,6 +1636,99 @@ private struct ActiveTripMetaCell: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
+    }
+}
+
+@available(iOS 26.0, *)
+struct EditVoiceLogSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let log: DBTripLog
+    @Binding var transcript: String
+    var onSave: (DBTripLog) -> Void
+    
+    @State private var isSaving = false
+    @State private var errorMessage: String? = nil
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Text("Edit the transcript of your voice log below:")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                
+                TextEditor(text: $transcript)
+                    .font(.system(size: 14))
+                    .padding(10)
+                    .frame(maxHeight: .infinity)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(UIColor.separator).opacity(0.4), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 20)
+                
+                if let err = errorMessage {
+                    Text(err)
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.Status.danger)
+                        .padding(.horizontal, 20)
+                }
+                
+                Button(action: saveChange) {
+                    HStack {
+                        if isSaving {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("Save Changes")
+                        }
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.fmsIndigo.gradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+                }
+                .disabled(isSaving || transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .navigationTitle("Edit Voice Log")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.fmsIndigo)
+                }
+            }
+        }
+    }
+    
+    private func saveChange() {
+        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isSaving = true
+        errorMessage = nil
+        
+        var updatedLog = log
+        updatedLog.transcript = transcript
+        updatedLog.isEdited = true
+        updatedLog.updatedAt = Date()
+        
+        Task {
+            do {
+                try await SupabaseManager.shared.updateTripLog(updatedLog)
+                onSave(updatedLog)
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                isSaving = false
+            }
+        }
     }
 }
 

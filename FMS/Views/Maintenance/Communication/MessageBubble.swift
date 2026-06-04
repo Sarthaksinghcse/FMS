@@ -19,13 +19,7 @@ struct MessageBubble: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text(text)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(AppTheme.Brand.primary)
-                        .cornerRadius(18)
+                    messageContent
                     
                     Text(timestamp.formatted(date: .omitted, time: .shortened))
                         .font(.system(size: 9))
@@ -35,13 +29,7 @@ struct MessageBubble: View {
                 .padding(.leading, 60)
             } else {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(text)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(AppTheme.Text.primary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(18)
+                    messageContent
                     
                     Text(timestamp.formatted(date: .omitted, time: .shortened))
                         .font(.system(size: 9))
@@ -53,6 +41,60 @@ struct MessageBubble: View {
                 Spacer()
             }
         }
+    }
+
+    @ViewBuilder
+    private var messageContent: some View {
+        if text.hasPrefix("[IMAGE:"), text.hasSuffix("]") {
+            let urlString = String(text.dropFirst(7).dropLast())
+            if let url = URL(string: urlString) {
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 200, height: 150)
+                        .cornerRadius(12)
+                        .clipped()
+                } placeholder: {
+                    ProgressView()
+                        .tint(isSender ? .white : AppTheme.Brand.primary)
+                        .frame(width: 200, height: 150)
+                }
+                .frame(width: 200, height: 150)
+                .padding(4)
+                .background(isSender ? AppTheme.Brand.primary : Color(UIColor.secondarySystemBackground))
+                .cornerRadius(16)
+            } else {
+                fallbackText
+            }
+        } else if text.hasPrefix("[IMAGE_BASE64:"), text.hasSuffix("]") {
+            let base64String = String(text.dropFirst(14).dropLast())
+            if let data = Data(base64Encoded: base64String), let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 200, height: 150)
+                    .cornerRadius(12)
+                    .clipped()
+                    .padding(4)
+                    .background(isSender ? AppTheme.Brand.primary : Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(16)
+            } else {
+                fallbackText
+            }
+        } else {
+            fallbackText
+        }
+    }
+
+    private var fallbackText: some View {
+        Text(text)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(isSender ? .white : AppTheme.Text.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isSender ? AppTheme.Brand.primary : Color(UIColor.secondarySystemBackground))
+            .cornerRadius(18)
     }
 }
 

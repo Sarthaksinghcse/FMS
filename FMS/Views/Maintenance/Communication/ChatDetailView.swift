@@ -2,12 +2,10 @@
 //  ChatDetailView.swift
 //  FMS
 //
-//  Created by Gauri Verma on 26/05/26.
-//
-
 
 import SwiftUI
 import Supabase
+import PhotosUI
 
 struct MessageThreadItem: Identifiable, Hashable {
     let id: UUID
@@ -24,45 +22,38 @@ struct ChatDetailView: View {
     let channel: CommunicationChannel
     
     @Environment(SupabaseManager.self) private var supabase
+    @Environment(\.dismiss) private var dismiss
     
     @State private var textMessage: String = ""
     @State private var messages: [MessageThreadItem] = []
     @State private var realtimeChannel: RealtimeChannelV2? = nil
 
+
     var body: some View {
         VStack(spacing: 0) {
             
-            // Header Info Bar
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(channel.avatarColor.opacity(0.12))
-                        .frame(width: 38, height: 38)
-                    
-                    Text(channel.initials)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(channel.avatarColor)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(channel.senderName)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.Text.primary)
-                    
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                        Text("Active Coordination")
-                            .font(.system(size: 10))
-                            .foregroundColor(AppTheme.Text.secondary)
+            // Redesigned Custom Header to match the reference mockup
+            ZStack {
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.primary)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
                     }
+                    .padding(.leading, 16)
+                    
+                    Spacer()
                 }
                 
-                Spacer()
+                Text("Chat with \(channel.senderName)")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.primary)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
             .background(AppTheme.Background.card)
             .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
 
@@ -95,11 +86,11 @@ struct ChatDetailView: View {
             MessageInputView(
                 textMessage: $textMessage,
                 onSend: sendMessage,
-                onAttachPhoto: simulatePhotoAttachment,
                 onAttachWorkOrder: simulateWorkOrderAttachment
             )
         }
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .navigationBarHidden(true)
         .task {
             await loadMessages()
             startRealtimeListener()
@@ -170,26 +161,25 @@ struct ChatDetailView: View {
         let sentText = textMessage
         textMessage = ""
         
-        let dbMsg = DBMessage(
-            id: UUID(),
-            senderId: currentUserId,
-            receiverId: channel.id,
-            message: sentText,
-            timestamp: Date()
-        )
-        
         Task {
             do {
-                try await supabase.sendMessage(dbMsg)
+                let textTrimmed = sentText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !textTrimmed.isEmpty {
+                    let textMsg = DBMessage(
+                        id: UUID(),
+                        senderId: currentUserId,
+                        receiverId: channel.id,
+                        message: textTrimmed,
+                        timestamp: Date()
+                    )
+                    try await supabase.sendMessage(textMsg)
+                }
+                
                 await loadMessages()
             } catch {
                 print("Failed to send message: \(error)")
             }
         }
-    }
-
-    private func simulatePhotoAttachment() {
-        textMessage = "[ATTACHED REPAIR EVIDENCE: Spark Plug wear level analysis]"
     }
 
     private func simulateWorkOrderAttachment() {

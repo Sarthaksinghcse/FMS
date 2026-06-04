@@ -1,10 +1,13 @@
 
 
 import SwiftUI
+import SwiftData
 struct DriverHomeTab: View {
+    @Environment(\.modelContext) private var modelContext
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTab: Int
     @State private var selectedTripForAddress: DBTrip?
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     var body: some View {
         NavigationStack {
@@ -108,7 +111,7 @@ struct DriverHomeTab: View {
                     Spacer(minLength: 100)
                 }
             }
-            .refreshable { await vm.load() }
+            .refreshable { await vm.load(context: modelContext) }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationBarHidden(true)
             .sheet(item: $selectedTripForAddress) { trip in
@@ -170,7 +173,7 @@ private struct DashboardInlineHeader: View {
                     let unread = vm.notificationsList.filter { !$0.isRead }.count
                     if unread > 0 {
                         Circle()
-                            .fill(Color.red)
+                            .fill(AppTheme.Status.danger)
                             .frame(width: 10, height: 10)
                             .offset(x: 1, y: 1)
                     }
@@ -181,16 +184,33 @@ private struct DashboardInlineHeader: View {
             // ── Gap between bell and avatar ───────────────────────────
             Spacer().frame(width: 12)
 
-            // ── Driver initials avatar ──────────────────────────────
+            // ── Driver profile avatar ──────────────────────────────
             Button {
                 vm.showProfile = true
             } label: {
-                Text(initials)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Color.fmsIndigo)
-                    .clipShape(Circle())
+                ZStack {
+                    if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                       let imageURL = URL(string: imageURLString) {
+                        CachedAsyncImage(url: imageURL) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                    } else {
+                        Text(initials)
+                            .font(.system(size: 14, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.fmsIndigo)
+                            .clipShape(Circle())
+                    }
+                }
             }
             .buttonStyle(.plain)
         }
@@ -230,6 +250,7 @@ private struct VerticalDashedLine: View {
 private struct LiveTripCard: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Binding var selectedTripForAddress: DBTrip?
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     private func formatTime(_ date: Date) -> String {
         let f = DateFormatter()
@@ -266,10 +287,10 @@ private struct LiveTripCard: View {
                         Spacer()
                         Text("IN PROGRESS")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(AppTheme.Status.danger)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color.red.opacity(0.10))
+                            .background(AppTheme.Status.danger.opacity(0.10))
                             .cornerRadius(6)
                     }
                     if let notes = trip.notes, !notes.isEmpty {
@@ -279,9 +300,9 @@ private struct LiveTripCard: View {
                             Text(notes)
                                 .font(.system(size: 11, weight: .semibold))
                         }
-                        .foregroundStyle(.red)
+                        .foregroundStyle(AppTheme.Status.danger)
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.red.opacity(0.08))
+                        .background(AppTheme.Status.danger.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }
@@ -383,30 +404,49 @@ private struct LiveTripCard: View {
                         .foregroundStyle(.primary)
                         .contentTransition(.numericText())
 
-                    HStack(spacing: 10) {
-                        Button {
-                            vm.mapActiveTrip = vm.activeTrip
-                            vm.showMaps = true
-                        } label: {
-                            Label("Navigate", systemImage: "location.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color.fmsIndigo)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 48)
-                                .background(Color.fmsIndigo.opacity(0.10))
-                                .cornerRadius(12)
+                    VStack(spacing: 10) {
+                        let largeTap = accessibility.driverLargeTapTargets
+                        let btnHeight: CGFloat = largeTap ? 64 : 48
+                        let btnFontSize: CGFloat = largeTap ? 17 : 14
+                        
+                        HStack(spacing: 10) {
+                            Button {
+                                vm.mapActiveTrip = vm.activeTrip
+                                vm.showMaps = true
+                            } label: {
+                                Label("Navigate", systemImage: "location.fill")
+                                    .font(.system(size: btnFontSize, weight: .bold))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: btnHeight)
+                                    .background(Color.fmsIndigo.opacity(0.10))
+                                    .cornerRadius(12)
+                            }
+
+                            Button {
+                                vm.showVoiceLog = true
+                            } label: {
+                                Label("Voice Log", systemImage: "mic.fill")
+                                    .font(.system(size: btnFontSize, weight: .bold))
+                                    .foregroundStyle(Color.fmsIndigo)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: btnHeight)
+                                    .background(Color.fmsIndigo.opacity(0.10))
+                                    .cornerRadius(12)
+                            }
                         }
 
                         Button {
-                            vm.showPostTripOnEnd = true
-                            vm.showPostTrip = true
+                            Task {
+                                await vm.requestEndTrip()
+                            }
                         } label: {
                             Label("End Trip", systemImage: "stop.fill")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: btnFontSize, weight: .bold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 48)
-                                .background(Color.red.gradient)
+                                .frame(height: btnHeight)
+                                .background(AppTheme.Brand.accent.gradient)
                                 .cornerRadius(12)
                         }
                     }
@@ -498,6 +538,7 @@ private struct AssignedTripCard: View {
 
     // ── State for collapsible vehicle details ─────────────────────────────────
     @State private var showVehicleDetails = false
+    @State private var isAccepted = false
 
     /// The actual vehicle assigned to this specific trip
     private var tripVehicle: DBVehicle? {
@@ -755,72 +796,62 @@ private struct AssignedTripCard: View {
 
             Divider()
 
-            // ── 6. Secondary buttons: Raise a Query  |  Message ──────────────
-            HStack(spacing: 10) {
+            // ── 6. Actions: Raise Query & Confirm Trip adjacent ──────────────
+            HStack(spacing: 12) {
                 // Raise a Query
                 Button {
                     vm.queryTrip = trip
                     vm.showRaiseQuery = true
                 } label: {
                     Label("Raise Query", systemImage: "questionmark.bubble.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
+                        .frame(height: 52)
                         .background(Color.orange.opacity(0.09))
-                        .clipShape(RoundedRectangle(cornerRadius: 11))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 11)
+                            RoundedRectangle(cornerRadius: 14)
                                 .stroke(Color.orange.opacity(0.25), lineWidth: 1)
                         )
                 }
 
-                // Message
+                // Confirm CTA / Start Trip
                 Button {
-                    vm.showMessaging = true
+                    if !isAccepted {
+                        withAnimation(.spring(response: 0.4)) { isAccepted = true }
+                    } else {
+                        vm.showRaiseQuery = false
+                        vm.queryTrip = nil
+                        vm.mapActiveTrip = trip
+                    }
                 } label: {
-                    Label("Message", systemImage: "bubble.left.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.fmsIndigo)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.fmsIndigo.opacity(0.07))
-                        .clipShape(RoundedRectangle(cornerRadius: 11))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 11)
-                                .stroke(Color.fmsIndigo.opacity(0.22), lineWidth: 1)
+                    HStack(spacing: 8) {
+                        Image(systemName: isAccepted ? "play.fill" : "checkmark.circle.fill")
+                            .font(.system(size: 15, weight: .bold))
+                        Text(isAccepted ? "Start Trip" : "Confirm Trip")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(
+                        isAccepted ?
+                        LinearGradient(
+                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                            startPoint: .leading, endPoint: .trailing
+                        ) :
+                        LinearGradient(
+                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.7)],
+                            startPoint: .leading, endPoint: .trailing
                         )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: isAccepted ? AppTheme.Status.success.opacity(0.3) : AppTheme.Brand.primary.opacity(0.28), radius: 10, y: 4)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 14)
-
-            // ── 7. Confirm CTA ─────────────────────────────────────────────
-            Button {
-                vm.showRaiseQuery = false
-                vm.queryTrip = nil
-                vm.mapActiveTrip = trip
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .bold))
-                    Text("Confirm")
-                        .font(.system(size: 16, weight: .bold))
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(
-                    LinearGradient(
-                        colors: [Color.fmsIndigo, Color(red: 0.25, green: 0.35, blue: 0.85)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: Color.fmsIndigo.opacity(0.28), radius: 10, y: 4)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 10)
             .padding(.bottom, 18)
         }
         .background(Color(UIColor.systemBackground))

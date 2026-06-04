@@ -18,32 +18,44 @@ struct SparePartsSelectorView: View {
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(AppTheme.Text.secondary)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(inStockInventory, id: \.id) { item in
-                        Button {
-                            if !partsList.contains(item.partName) {
-                                partsList.append(item.partName)
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "shippingbox.fill")
-                                    .font(.system(size: 10))
-                                Text(item.partName)
-                                    .font(.system(size: 11, weight: .bold))
-                                Text("(\(item.quantityInStock))")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(AppTheme.Text.secondary)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(AppTheme.Brand.primary.opacity(0.12))
-                            .foregroundColor(AppTheme.Brand.primary)
-                            .cornerRadius(20)
+            Menu {
+                ForEach(inStockInventory, id: \.id) { item in
+                    Button {
+                        if !partsList.contains(item.partName) {
+                            partsList.append(item.partName)
+                        }
+                    } label: {
+                        HStack {
+                            Text(item.partName)
+                            Spacer()
+                            Text("(\(item.quantityInStock) available)")
                         }
                     }
                 }
-                .padding(.bottom, 6)
+            } label: {
+                HStack {
+                    Image(systemName: "shippingbox.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(AppTheme.Brand.primary)
+                    
+                    Text("Select In-Stock Part...")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(AppTheme.Text.primary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color.black.opacity(0.04))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                )
             }
         }
     }
@@ -159,24 +171,6 @@ struct MaintenanceEditSheet: View {
                                 SparePartsSelectorView(inStockInventory: inStockInventory, partsList: $partsList)
                             }
 
-                            HStack {
-                                TextField("Add part e.g. Spark Plug, Air Filter", text: $currentPart)
-                                    .padding(12)
-                                    .background(Color.black.opacity(0.04))
-                                    .cornerRadius(8)
-                                
-                                Button {
-                                    if !currentPart.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                        partsList.append(currentPart)
-                                        currentPart = ""
-                                    }
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(AppTheme.Brand.primary)
-                                }
-                            }
-
                             if !partsList.isEmpty {
                                 ForEach(partsList, id: \.self) { part in
                                     HStack {
@@ -189,8 +183,9 @@ struct MaintenanceEditSheet: View {
                                             partsList.removeAll(where: { $0 == part })
                                         } label: {
                                             Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(.red.opacity(0.7))
+                                                .foregroundColor(AppTheme.Status.danger)
                                         }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                     .padding(.vertical, 6)
                                 }
@@ -239,6 +234,12 @@ struct MaintenanceEditSheet: View {
                     if matchedItem.quantityInStock > 0 {
                         matchedItem.quantityInStock -= 1
                         
+                        // Sync stock deduction to database
+                        let dbItem = matchedItem.asDBItem
+                        Task {
+                            try? await SupabaseManager.shared.updateInventoryItem(dbItem)
+                        }
+                        
                         // Trigger Alert Notification if stock becomes low (Criterion 4)
                         if matchedItem.quantityInStock <= matchedItem.reorderThreshold {
                             let alertNotification = AppNotification(
@@ -251,6 +252,12 @@ struct MaintenanceEditSheet: View {
                                 createdAt: Date()
                             )
                             modelContext.insert(alertNotification)
+                            
+                            // Sync notification to database
+                            let dbNotif = alertNotification.asDBNotification
+                            Task {
+                                try? await SupabaseManager.shared.createNotification(dbNotif)
+                            }
                         }
                     }
                 }
@@ -259,7 +266,9 @@ struct MaintenanceEditSheet: View {
             order.workDescription = notesInput
         }
 
-        if order.status == .completed {
+        let isCompleted = order.status == .completed
+
+        if isCompleted {
             order.completedAt = Date()
             
             // Create MaintenanceRecord
@@ -275,14 +284,44 @@ struct MaintenanceEditSheet: View {
             )
             modelContext.insert(record)
             
+            // Sync maintenance record to database
+            let dbRecord = record.asDBRecord
+            Task {
+                try? await SupabaseManager.shared.createMaintenanceRecord(dbRecord)
+            }
+            
             // Update associated vehicle
             if let vehicle = allVehicles.first(where: { $0.id == order.vehicleId }) {
                 vehicle.status = .active
                 vehicle.lastServiceDate = Date()
                 vehicle.nextServiceDate = Calendar.current.date(byAdding: .month, value: 3, to: Date())
+                
+                // Sync vehicle update to database
+                let dbVehicle = vehicle.asDBVehicle
+                Task {
+                    try? await SupabaseManager.shared.updateVehicle(dbVehicle)
+                }
+            }
+        } else if order.status == .cancelled {
+            // Update associated vehicle
+            if let vehicle = allVehicles.first(where: { $0.id == order.vehicleId }) {
+                vehicle.status = .active
+                
+                // Sync vehicle update to database
+                let dbVehicle = vehicle.asDBVehicle
+                Task {
+                    try? await SupabaseManager.shared.updateVehicle(dbVehicle)
+                }
             }
         }
         
+        // Sync WorkOrder update to database
+        let dbOrder = order.asDBWorkOrder
+        Task {
+            try? await SupabaseManager.shared.updateWorkOrder(dbOrder)
+        }
+        
+        try? modelContext.save()
         onSave()
         dismiss()
     }

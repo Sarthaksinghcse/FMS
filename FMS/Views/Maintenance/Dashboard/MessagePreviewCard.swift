@@ -71,7 +71,7 @@ struct MessagePreviewCard: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(
-                                Circle().fill(Color(red: 0.95, green: 0.30, blue: 0.30))
+                                Circle().fill(Theme.darkOrange)
                             )
                     }
                 }
@@ -93,7 +93,7 @@ struct MessagePreviewCard: View {
             timestamp: "2m ago",
             unreadCount: 1,
             initials: "AJ",
-            avatarBg: Color.blue
+            avatarBg: Theme.royalBlue
         )
     )
     .padding()

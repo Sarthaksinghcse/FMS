@@ -2,6 +2,7 @@
 import SwiftUI
 import SwiftData
 import Combine
+import MapKit
 
 struct AlertsFeedView: View {
     @Environment(\.modelContext) private var modelContext
@@ -12,18 +13,27 @@ struct AlertsFeedView: View {
     
     @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]
     @Query(sort: \DefectReport.createdAt, order: .reverse) private var defectReports: [DefectReport]
+    @Query(sort: \AppNotification.createdAt, order: .reverse) private var notifications: [AppNotification]
     @Query private var users: [User]
     @Query private var vehicles: [Vehicle]
+    @Query private var trips: [Trip]
     
+    @Binding var showTracking: Bool
+    @Binding var selectedVehicleToTrack: UUID?
+    
+    @State private var routeDeviations: [DBRouteDeviationAlert] = []
     
     @State private var selectedFilter: AlertFilterType = .all
     @State private var searchQuery: String = ""
     @State private var selectedDefectForAssignment: DefectReport? = nil
+    @State private var selectedSOSAlert: SOSAlert? = nil
     
     enum AlertFilterType: String, CaseIterable, Identifiable {
         case all = "All"
         case sos = "SOS"
         case defects = "Defects"
+        case geofence = "Geofence"
+        case queries = "Queries"
         
         var id: String { self.rawValue }
     }
@@ -41,6 +51,25 @@ struct AlertsFeedView: View {
         return "Unknown Vehicle"
     }
     
+    private func parseDriverName(from message: String) -> String {
+        if message.hasPrefix("Driver ") {
+            let start = message.index(message.startIndex, offsetBy: 7)
+            if let range = message.range(of: " raised a query") {
+                return String(message[start..<range.lowerBound])
+            }
+        }
+        return "Unknown Driver"
+    }
+
+    private func parseVehicleName(from message: String) -> String {
+        let drName = parseDriverName(from: message)
+        if let driver = users.first(where: { $0.fullName.lowercased() == drName.lowercased() }) {
+            if let trip = trips.first(where: { $0.driverId == driver.id && ($0.tripStatus == .started || $0.tripStatus == .assigned) }) {
+                return vehicleName(for: trip.vehicleId)
+            }
+        }
+        return "N/A"
+    }
     
     struct DisplayAlert: Identifiable {
         let id: UUID
@@ -60,6 +89,8 @@ struct AlertsFeedView: View {
         enum AlertType {
             case sos
             case defect
+            case routeDeviation
+            case query
         }
     }
     
@@ -85,6 +116,23 @@ struct AlertsFeedView: View {
             ))
         }
         
+        for deviation in routeDeviations {
+            list.append(DisplayAlert(
+                id: deviation.id,
+                type: .routeDeviation,
+                title: "ROUTE DEVIATION",
+                description: "Driver drifted \(Int(deviation.deviationDistanceMeters)) meters off the planned route.",
+                severityText: "WARNING",
+                severityColor: .white,
+                severityBgColor: AppTheme.Status.warning,
+                date: deviation.createdAt,
+                statusText: deviation.status == .active ? "Active" : "Resolved",
+                statusColor: deviation.status == .active ? AppTheme.Status.warning : AppTheme.Status.success,
+                driverName: driverName(for: deviation.driverId),
+                vehicleName: vehicleName(for: deviation.vehicleId),
+                rawObject: deviation
+            ))
+        }
         
         for defect in defectReports {
             let sevColor: Color
@@ -128,6 +176,25 @@ struct AlertsFeedView: View {
             ))
         }
         
+        for notif in notifications {
+            if notif.title.contains("Query") || notif.type == .general {
+                list.append(DisplayAlert(
+                    id: notif.id,
+                    type: .query,
+                    title: notif.title,
+                    description: notif.message,
+                    severityText: "INFO",
+                    severityColor: .white,
+                    severityBgColor: AppTheme.Brand.royalBlue,
+                    date: notif.createdAt,
+                    statusText: notif.isRead ? "Resolved" : "Open",
+                    statusColor: notif.isRead ? AppTheme.Status.success : AppTheme.Brand.amber,
+                    driverName: parseDriverName(from: notif.message),
+                    vehicleName: parseVehicleName(from: notif.message),
+                    rawObject: notif
+                ))
+            }
+        }
         
         list.sort { $0.date > $1.date }
         return list
@@ -136,17 +203,20 @@ struct AlertsFeedView: View {
     private var filteredAlerts: [DisplayAlert] {
         let alerts = allDisplayAlerts
         
-        
-        let typedAlerts: [DisplayAlert]
-        switch selectedFilter {
-        case .all:
-            typedAlerts = alerts
-        case .sos:
-            typedAlerts = alerts.filter { $0.type == .sos }
-        case .defects:
-            typedAlerts = alerts.filter { $0.type == .defect }
+        let typedAlerts = alerts.filter { alert in
+            switch selectedFilter {
+            case .all:
+                return true
+            case .sos:
+                return alert.type == .sos
+            case .defects:
+                return alert.type == .defect
+            case .geofence:
+                return alert.type == .routeDeviation
+            case .queries:
+                return alert.type == .query
+            }
         }
-        
         
         if searchQuery.isEmpty {
             return typedAlerts
@@ -237,7 +307,13 @@ struct AlertsFeedView: View {
                                 .padding(.vertical, 40)
                             } else {
                                 ForEach(filteredAlerts) { alert in
-                                    AlertFeedCard(alert: alert, viewModel: viewModel, context: modelContext, sosAlerts: sosAlerts, defectReports: defectReports, selectedDefectForAssignment: $selectedDefectForAssignment)
+                                    AlertFeedCard(alert: alert, viewModel: viewModel, context: modelContext, sosAlerts: sosAlerts, defectReports: defectReports, trips: trips, selectedDefectForAssignment: $selectedDefectForAssignment, showTracking: $showTracking, selectedVehicleToTrack: $selectedVehicleToTrack)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            if alert.type == .sos, let sosAlert = alert.rawObject as? SOSAlert {
+                                                selectedSOSAlert = sosAlert
+                                            }
+                                        }
                                 }
                             }
                         }
@@ -249,31 +325,48 @@ struct AlertsFeedView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    NavigationLink {
-                        PredictiveAlertsView()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 13, weight: .bold))
-                            Text("Predictive")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                        }
-                        .foregroundColor(.purple)
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismiss()
                     } label: {
                         Text("Close")
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(.red)
+                            .foregroundColor(Theme.royalBlue)
                     }
                 }
+
+
+            }
+            .task {
+                do {
+                    routeDeviations = try await SupabaseManager.shared.fetchRouteDeviationAlerts()
+                } catch {
+                    print("Failed to fetch route deviations: \(error)")
+                }
+            }
+            .sheet(item: $selectedSOSAlert) { sosAlert in
+                SOSAlertDetailView(
+                    sosAlert: sosAlert,
+                    viewModel: viewModel,
+                    context: modelContext,
+                    sosAlerts: sosAlerts,
+                    users: users,
+                    vehicles: vehicles,
+                    trips: trips,
+                    showTracking: $showTracking,
+                    selectedVehicleToTrack: $selectedVehicleToTrack,
+                    onTrackLive: {
+                        dismiss()
+                    }
+                )
             }
             .sheet(item: $selectedDefectForAssignment) { defect in
-                AssignTechnicianSheet(defect: defect, users: users, viewModel: viewModel, context: modelContext, defectReports: defectReports)
+                AssignTechnicianSheet(
+                    defect: defect,
+                    users: users,
+                    viewModel: viewModel,
+                    context: modelContext,
+                    defectReports: defectReports
+                )
             }
         }
     }
@@ -368,7 +461,11 @@ struct AlertFeedCard: View {
     let context: ModelContext
     let sosAlerts: [SOSAlert]
     let defectReports: [DefectReport]
+    let trips: [Trip]
     @Binding var selectedDefectForAssignment: DefectReport?
+    @Binding var showTracking: Bool
+    @Binding var selectedVehicleToTrack: UUID?
+    @Environment(\.dismiss) private var dismiss
     
     @State private var isPulsing = false
     
@@ -386,14 +483,41 @@ struct AlertFeedCard: View {
                                 .scaleEffect(isPulsing ? 1.25 : 0.95)
                         }
                         
-                        Image(systemName: alert.type == .sos ? "exclamationmark.shield.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Brand.amber)
+                        let headerIcon: String = {
+                            switch alert.type {
+                            case .sos: return "exclamationmark.shield.fill"
+                            case .routeDeviation: return "map.fill"
+                            case .defect: return "exclamationmark.triangle.fill"
+                            case .query: return "questionmark.bubble.fill"
+                            }
+                        }()
+                        
+                        let headerColor: Color = {
+                            switch alert.type {
+                            case .sos: return AppTheme.Status.danger
+                            case .routeDeviation: return AppTheme.Brand.amber
+                            case .defect: return AppTheme.Brand.amber
+                            case .query: return Color.orange
+                            }
+                        }()
+                        
+                        Image(systemName: headerIcon)
+                            .foregroundColor(headerColor)
                             .font(.system(size: alert.type == .sos ? 16 : 14, weight: .bold))
                     }
                     .frame(width: 32, height: 32)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(alert.type == .sos ? "SOS EMERGENCY ALERT" : "DEFECT REPORT")
+                        let headerTitle: String = {
+                            switch alert.type {
+                            case .sos: return "SOS EMERGENCY ALERT"
+                            case .routeDeviation: return "GEOFENCE ALERT"
+                            case .defect: return "DEFECT REPORT"
+                            case .query: return "DRIVER QUERY"
+                            }
+                        }()
+                        
+                        Text(headerTitle)
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Text.secondary)
                             .tracking(0.5)
@@ -497,40 +621,7 @@ struct AlertFeedCard: View {
             }
             .padding(.vertical, 2)
             
-            // Buttons block
-            if alert.type == .sos {
-                if let sosAlert = alert.rawObject as? SOSAlert, sosAlert.status == .active {
-                    Button {
-                        let impact = UIImpactFeedbackGenerator(style: .medium)
-                        impact.impactOccurred()
-                        _ = viewModel.resolveSOSAlert(alertId: sosAlert.id, context: context, alerts: sosAlerts)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Spacer()
-                            Image(systemName: "checkmark.shield.fill")
-                                .font(.system(size: 14, weight: .bold))
-                            Text("Resolve SOS Alert")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                            Spacer()
-                        }
-                        .padding(.vertical, 12)
-                        .foregroundColor(.white)
-                        .background(
-                            LinearGradient(
-                                colors: [AppTheme.Status.success, AppTheme.Status.success.opacity(0.85)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(AppTheme.Radius.small)
-                        .shadow(color: AppTheme.Status.success.opacity(0.35), radius: 8, x: 0, y: 4)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.top, 4)
-                } else {
-                    resolvedBanner
-                }
-            } else if alert.type == .defect {
+            if alert.type == .defect {
                 if let defect = alert.rawObject as? DefectReport {
                     if defect.status != .resolved {
                         HStack(spacing: 10) {
@@ -576,6 +667,81 @@ struct AlertFeedCard: View {
                         .padding(.top, 4)
                     } else {
                         resolvedBanner
+                    }
+                }
+            } else if alert.type == .query {
+                if let notif = alert.rawObject as? AppNotification {
+                    if !notif.isRead {
+                        Button {
+                            notif.isRead = true
+                            try? context.save()
+                            Task {
+                                try? await SupabaseManager.shared.updateNotification(notif.asDBNotification)
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Spacer()
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption)
+                                Text("Mark Read")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                Spacer()
+                            }
+                            .padding(.vertical, 10)
+                            .foregroundColor(.white)
+                            .background(AppTheme.Status.success)
+                            .cornerRadius(AppTheme.Radius.small - 2)
+                            .shadow(color: AppTheme.Status.success.opacity(0.15), radius: 3, x: 0, y: 1.5)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.top, 4)
+                    } else {
+                        resolvedBanner
+                    }
+                }
+            } else if alert.type == .routeDeviation {
+                if let deviation = alert.rawObject as? DBRouteDeviationAlert {
+                    if isVehicleLive(vehicleId: deviation.vehicleId) {
+                        Button {
+                            dismiss()
+                            selectedVehicleToTrack = deviation.vehicleId
+                            showTracking = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Spacer()
+                                Image(systemName: "map.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                Text("View on Map")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                Spacer()
+                            }
+                            .padding(.vertical, 12)
+                            .foregroundColor(.white)
+                            .background(
+                                LinearGradient(
+                                    colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.85)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(AppTheme.Radius.small)
+                            .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 8, x: 0, y: 4)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.top, 4)
+                    } else {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(AppTheme.Text.tertiary)
+                            Text("Trip Ended")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.tertiary)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.black.opacity(0.04))
+                        .cornerRadius(AppTheme.Radius.small)
+                        .padding(.top, 4)
                     }
                 }
             }
@@ -633,6 +799,13 @@ struct AlertFeedCard: View {
         .background(AppTheme.Status.success.opacity(0.08))
         .cornerRadius(8)
         .padding(.top, 4)
+    }
+    
+    private func isVehicleLive(vehicleId: UUID) -> Bool {
+        trips.contains { trip in
+            trip.vehicleId == vehicleId &&
+            (trip.tripStatus == .started || trip.tripStatus == .inProgress)
+        }
     }
 }
 
@@ -792,5 +965,372 @@ struct AssignTechnicianSheet: View {
 }
 
 #Preview {
-    AlertsFeedView()
+    AlertsFeedView(showTracking: .constant(false), selectedVehicleToTrack: .constant(nil))
+}
+
+struct SOSAlertDetailView: View {
+    let sosAlert: SOSAlert
+    let viewModel: AlertsFeedViewModel
+    let context: ModelContext
+    let sosAlerts: [SOSAlert]
+    let users: [User]
+    let vehicles: [Vehicle]
+    let trips: [Trip]
+    
+    @Binding var showTracking: Bool
+    @Binding var selectedVehicleToTrack: UUID?
+    var onTrackLive: () -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var isPulsing = false
+    
+    private var driverName: String {
+        users.first(where: { $0.id == sosAlert.driverId })?.fullName ?? "Unknown Driver"
+    }
+    
+    private var driverPhone: String {
+        users.first(where: { $0.id == sosAlert.driverId })?.phoneNumber ?? "+91 9452404531"
+    }
+    
+    private var vehicleName: String {
+        guard let vehicleId = sosAlert.vehicleId else { return "No Assigned Vehicle" }
+        if let vehicle = vehicles.first(where: { $0.id == vehicleId }) {
+            return "\(vehicle.registrationNumber) (\(vehicle.make) \(vehicle.model))"
+        }
+        return "Unknown Vehicle"
+    }
+    
+    private var vehicleModel: String {
+        guard let vehicleId = sosAlert.vehicleId else { return "" }
+        if let vehicle = vehicles.first(where: { $0.id == vehicleId }) {
+            return "\(vehicle.make) \(vehicle.model)"
+        }
+        return ""
+    }
+    
+    private var vehicleCode: String {
+        guard let vehicleId = sosAlert.vehicleId else { return "N/A" }
+        return vehicles.first(where: { $0.id == vehicleId })?.registrationNumber ?? "Unknown"
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Background.page.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Pulsing alert icon & header
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Theme.darkOrange.opacity(isPulsing ? 0.25 : 0.12))
+                                    .frame(width: 80, height: 80)
+                                    .scaleEffect(isPulsing ? 1.15 : 0.95)
+                                
+                                Circle()
+                                    .fill(Theme.darkOrange.gradient)
+                                    .frame(width: 56, height: 56)
+                                    .shadow(color: Theme.darkOrange.opacity(0.4), radius: 8, x: 0, y: 4)
+                                
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.top, 10)
+                            
+                            VStack(spacing: 4) {
+                                Text("SOS EMERGENCY ALERT")
+                                    .font(.system(size: 11, weight: .black, design: .rounded))
+                                    .foregroundColor(Theme.darkOrange)
+                                    .tracking(2.0)
+                                
+                                Text(sosAlert.status == .active ? "CRITICAL ACTIVE STATUS" : "RESOLVED")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(sosAlert.status == .active ? Theme.darkOrange : AppTheme.Status.success)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background((sosAlert.status == .active ? Theme.darkOrange : AppTheme.Status.success).opacity(0.1))
+                                    .cornerRadius(6)
+                            }
+                        }
+                        
+                        // Driver and Vehicle Details
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Person & Vehicle Information")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.secondary)
+                                .textCase(.uppercase)
+                                .tracking(0.5)
+                            
+                            // Driver Card
+                            HStack(spacing: 12) {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .frame(width: 44, height: 44)
+                                    .foregroundColor(AppTheme.Text.secondary.opacity(0.6))
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(driverName)
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(AppTheme.Text.primary)
+                                    
+                                    HStack(spacing: 6) {
+                                        Text("Driver")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                        Text("•")
+                                            .foregroundColor(AppTheme.Text.tertiary)
+                                        
+                                        Button {
+                                            let cleanPhone = driverPhone.replacingOccurrences(of: " ", with: "")
+                                            if let url = URL(string: "tel:\(cleanPhone)") {
+                                                UIApplication.shared.open(url)
+                                            }
+                                        } label: {
+                                            Text(driverPhone)
+                                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                                .foregroundColor(AppTheme.Brand.primary)
+                                                .underline()
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                Spacer()
+                                
+                                // Direct Call Button
+                                Button {
+                                    let cleanPhone = driverPhone.replacingOccurrences(of: " ", with: "")
+                                    if let url = URL(string: "tel:\(cleanPhone)") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                } label: {
+                                    Image(systemName: "phone.fill")
+                                        .foregroundColor(.white)
+                                        .frame(width: 36, height: 36)
+                                        .background(AppTheme.Brand.primary)
+                                        .clipShape(Circle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
+                            Divider()
+                                .background(Color.black.opacity(0.06))
+                            
+                            // Vehicle Card
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(AppTheme.Brand.primary.opacity(0.1))
+                                        .frame(width: 44, height: 44)
+                                    Image(systemName: "motorcycle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(AppTheme.Brand.primary)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(vehicleCode)
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(AppTheme.Text.primary)
+                                    Text(vehicleModel.isEmpty ? "Assigned Vehicle" : vehicleModel)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(AppTheme.Text.secondary)
+                                }
+                                Spacer()
+                            }
+                        }
+                        .padding(18)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(AppTheme.Radius.card)
+                        .shadow(color: AppTheme.Shadow.card, radius: 10, y: 5)
+                        .padding(.horizontal)
+                        
+                        // Incident description card
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Emergency Message")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.secondary)
+                                .textCase(.uppercase)
+                                .tracking(0.5)
+                            
+                            Text(sosAlert.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately.")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .foregroundColor(AppTheme.Text.primary)
+                                .lineSpacing(4)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(18)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(AppTheme.Radius.card)
+                        .shadow(color: AppTheme.Shadow.card, radius: 10, y: 5)
+                        .padding(.horizontal)
+                        
+                        // Map card
+                        let centerCoord = CLLocationCoordinate2D(latitude: sosAlert.latitude, longitude: sosAlert.longitude)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Location Coordinates")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.Text.secondary)
+                                .textCase(.uppercase)
+                                .tracking(0.5)
+                            
+                            HStack {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .foregroundColor(Theme.darkOrange)
+                                Text(String(format: "%.5f, %.5f", sosAlert.latitude, sosAlert.longitude))
+                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .foregroundColor(AppTheme.Text.primary)
+                                Spacer()
+                             }
+                            
+                            Map(initialPosition: .region(MKCoordinateRegion(
+                                center: centerCoord,
+                                span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                            ))) {
+                                Annotation(driverName, coordinate: centerCoord) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Theme.darkOrange.opacity(0.25))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Circle()
+                                            .fill(Theme.darkOrange)
+                                            .frame(width: 22, height: 22)
+                                            .shadow(color: Theme.darkOrange.opacity(0.4), radius: 5, x: 0, y: 2)
+                                            .overlay(
+                                                Image(systemName: "exclamationmark.triangle.fill")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            )
+                                    }
+                                }
+                            }
+                            .frame(height: 160)
+                            .cornerRadius(10)
+                            
+                            HStack(spacing: 12) {
+                                // Open Apple Maps
+                                Button {
+                                    if let url = URL(string: "maps://?q=\(sosAlert.latitude),\(sosAlert.longitude)") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "map.fill")
+                                        Text("Open in Maps")
+                                            .font(.system(size: 12, weight: .bold))
+                                    }
+                                    .foregroundColor(sosAlert.status == .active ? .white : AppTheme.Text.tertiary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(sosAlert.status == .active ? AppTheme.Brand.primary : Color.gray.opacity(0.15))
+                                    .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(sosAlert.status != .active)
+                                
+                                // Live Track
+                                if let vehicleId = sosAlert.vehicleId {
+                                    Button {
+                                        selectedVehicleToTrack = vehicleId
+                                        showTracking = true
+                                        dismiss()
+                                        onTrackLive()
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "location.fill")
+                                            Text("Track Live")
+                                                .font(.system(size: 12, weight: .bold))
+                                        }
+                                        .foregroundColor(sosAlert.status == .active ? Theme.darkOrange : AppTheme.Text.tertiary)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(sosAlert.status == .active ? Theme.darkOrange.opacity(0.12) : Color.gray.opacity(0.08))
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(sosAlert.status == .active ? Theme.darkOrange.opacity(0.25) : Color.gray.opacity(0.15), lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(sosAlert.status != .active)
+                                }
+                            }
+                        }
+                        .padding(18)
+                        .background(AppTheme.Background.card)
+                        .cornerRadius(AppTheme.Radius.card)
+                        .shadow(color: AppTheme.Shadow.card, radius: 10, y: 5)
+                        .padding(.horizontal)
+                        
+                        // Resolution Action / Banner
+                        VStack(spacing: 12) {
+                            if sosAlert.status == .active {
+                                Button {
+                                    let impact = UIImpactFeedbackGenerator(style: .medium)
+                                    impact.impactOccurred()
+                                    if viewModel.resolveSOSAlert(alertId: sosAlert.id, context: context, alerts: sosAlerts) {
+                                        dismiss()
+                                    }
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Spacer()
+                                        Image(systemName: "checkmark.shield.fill")
+                                            .font(.system(size: 16, weight: .bold))
+                                        Text("Mark Issue as Resolved")
+                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 14)
+                                    .foregroundColor(.white)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [AppTheme.Status.success, AppTheme.Status.success.opacity(0.85)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(12)
+                                    .shadow(color: AppTheme.Status.success.opacity(0.3), radius: 8, x: 0, y: 4)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                HStack(spacing: 8) {
+                                    Spacer()
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .foregroundColor(AppTheme.Status.success)
+                                        .font(.system(size: 16))
+                                    Text("This issue is fully resolved")
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .foregroundColor(AppTheme.Status.success)
+                                    Spacer()
+                                }
+                                .padding(.vertical, 14)
+                                .background(AppTheme.Status.success.opacity(0.08))
+                                .cornerRadius(12)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 30)
+                    }
+                }
+            }
+            .navigationTitle("SOS Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                    .foregroundColor(Theme.royalBlue)
+                }
+            }
+            .onAppear {
+                withAnimation(Animation.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    isPulsing = true
+                }
+            }
+        }
+    }
 }

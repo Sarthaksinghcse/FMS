@@ -3,20 +3,25 @@
 import SwiftUI
 import SwiftData
 import Supabase
+import MapKit
+import AVFoundation
 
 struct FleetContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
     @State private var selectedTab = 0
     
-    
     @Query(sort: \SOSAlert.createdAt, order: .reverse) private var sosAlerts: [SOSAlert]
-    @State private var acknowledgedAlertIds: Set<UUID> = []
     
     @State private var showRedSplash = false
     @State private var sosMessage = ""
     @State private var isPulsing = false
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var usersRealtimeChannel: RealtimeChannelV2?
+    @State private var generalRealtimeChannel: RealtimeChannelV2?
+    @State private var activeSOSAlert: DBSOSAlert?
+    @State private var pollingTask: Task<Void, Never>?
+    @State private var acknowledgedAlertIds = Set<UUID>()
     
     var body: some View {
         ZStack {
@@ -48,83 +53,178 @@ struct FleetContentView: View {
             .tint(AppTheme.Brand.primary)
             
             
-            if showRedSplash {
+            if showRedSplash, let alert = activeSOSAlert {
+                let driver = activeDriver(for: alert)
+                let driverPhone = driver?.phoneNumber ?? "+91 9452404531"
+                let driverName = driver?.fullName ?? "Sanskaar Yadav"
+                
+                let vehicle = activeVehicle(for: alert)
+                let vehicleCode = vehicle?.registrationNumber ?? "BKE-001"
+                let vehicleModel = vehicle != nil ? "\(vehicle!.make) \(vehicle!.model)" : "Harley-Davidson LiveWire One"
+                
                 ZStack {
-                    
-                    Color.red
-                        .opacity(isPulsing ? 0.35 : 0.15)
+                    // Full screen solid dark backdrop
+                    Color.black.opacity(0.92)
                         .ignoresSafeArea()
-                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isPulsing)
                     
+                    // Outer orange warning glowing border shadow
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(Theme.darkOrange.opacity(0.35), lineWidth: 20)
+                        .blur(radius: 12)
+                        .ignoresSafeArea()
                     
-                    VStack(spacing: 24) {
-                        
-                        ZStack {
-                            Circle()
-                                .fill(Color.red.opacity(0.15))
-                                .frame(width: 80, height: 80)
-                                .scaleEffect(isPulsing ? 1.2 : 0.95)
-                                .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: isPulsing)
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 20) {
+                            Spacer().frame(height: 20)
                             
-                            Circle()
-                                .fill(Color.red.gradient)
-                                .frame(width: 56, height: 56)
-                                .shadow(color: .red.opacity(0.4), radius: 10, x: 0, y: 4)
-                            
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 26, weight: .bold))
-                                .foregroundColor(.white)
-                                .symbolEffect(.bounce.up, options: .repeating)
-                        }
-                        
-                        VStack(spacing: 8) {
-                            Text("EMERGENCY PANIC SIGNAL")
-                                .font(.system(size: 13, weight: .black, design: .rounded))
-                                .foregroundColor(.red)
-                                .tracking(2.0)
-                            
-                            Text("🚨 CRITICAL SOS")
-                                .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundColor(.black)
-                        }
-                        
-                        Text(sosMessage)
-                            .font(.system(size: 15, weight: .medium, design: .rounded))
-                            .foregroundColor(.black.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                            .lineLimit(4)
-                        
-                        Button {
-                            let activeAlerts = sosAlerts.filter { $0.status == .active }
-                            for alert in activeAlerts {
-                                acknowledgedAlertIds.insert(alert.id)
+                            // Pulsing exclamation alarm icon
+                            ZStack {
+                                Circle()
+                                    .fill(Theme.darkOrange.opacity(0.15))
+                                    .frame(width: 90, height: 90)
+                                    .scaleEffect(isPulsing ? 1.2 : 0.95)
+                                    .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: isPulsing)
+                                
+                                Circle()
+                                    .fill(Theme.darkOrange.gradient)
+                                    .frame(width: 64, height: 64)
+                                    .shadow(color: Theme.darkOrange.opacity(0.4), radius: 10, x: 0, y: 4)
+                                
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 30, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .symbolEffect(.bounce.up, options: .repeating)
                             }
-                            withAnimation(.easeIn(duration: 0.25)) {
-                                showRedSplash = false
+                            
+                            // Title Header
+                            VStack(spacing: 6) {
+                                Text("CRITICAL EMERGENCY ALERT")
+                                    .font(.system(size: 13, weight: .black, design: .rounded))
+                                    .foregroundColor(Theme.darkOrange)
+                                    .tracking(2.0)
+                                
+                                Text("Driver SOS Triggered")
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
                             }
-                        } label: {
-                            Text("Acknowledge Alarm")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 28)
-                                .padding(.vertical, 12)
-                                .background(Color.red.gradient)
-                                .clipShape(Capsule())
-                                .shadow(color: .red.opacity(0.3), radius: 6, x: 0, y: 3)
+                            
+                            // Translucent Glassmorphism Card
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "person.crop.circle.fill")
+                                        .resizable()
+                                        .frame(width: 44, height: 44)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(driverName)
+                                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                                            .foregroundColor(.white)
+                                        Text("Driver • \(driverPhone)")
+                                            .font(.system(size: 13, design: .rounded))
+                                            .foregroundColor(.white.opacity(0.6))
+                                    }
+                                }
+                                
+                                HStack(spacing: 14) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Theme.darkOrange.opacity(0.15))
+                                            .frame(width: 44, height: 44)
+                                        Image(systemName: "motorcycle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(Theme.darkOrange)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(vehicleCode)
+                                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                                            .foregroundColor(.white)
+                                        Text(vehicleModel)
+                                            .font(.system(size: 13, design: .rounded))
+                                            .foregroundColor(.white.opacity(0.6))
+                                    }
+                                }
+                                
+                                Divider()
+                                    .background(Color.white.opacity(0.12))
+                                
+                                // Emergency message text
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("EMERGENCY MESSAGE")
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .foregroundColor(Theme.darkOrange)
+                                        .tracking(1.0)
+                                    
+                                    Text(alert.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately.")
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.95))
+                                        .lineSpacing(4)
+                                }
+                            }
+                            .padding(20)
+                            .background(Color.white.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1.5)
+                            )
+                            .padding(.horizontal, 20)
+                            
+                            // MapView card showing coordinates
+                            let centerCoord = CLLocationCoordinate2D(latitude: alert.latitude, longitude: alert.longitude)
+                            Map(initialPosition: .region(MKCoordinateRegion(
+                                center: centerCoord,
+                                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+                            ))) {
+                                Annotation(driverName, coordinate: centerCoord) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Theme.darkOrange.opacity(0.25))
+                                            .frame(width: 44, height: 44)
+                                        
+                                        Circle()
+                                            .fill(Theme.darkOrange)
+                                            .frame(width: 26, height: 26)
+                                            .shadow(color: Theme.darkOrange.opacity(0.4), radius: 6, x: 0, y: 3)
+                                            .overlay(
+                                                Image(systemName: "exclamationmark.triangle.fill")
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            )
+                                    }
+                                }
+                            }
+                            .frame(height: 180)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 1.5)
+                            )
+                            .overlay(
+                                Text("LIVE GEOFENCE COORDINATES")
+                                    .font(.system(size: 8, weight: .black, design: .rounded))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.black.opacity(0.85))
+                                    .cornerRadius(4)
+                                    .padding(8),
+                                alignment: .bottomTrailing
+                            )
+                            .padding(.horizontal, 20)
+                            
+                            Spacer().frame(height: 10)
+                            
+                            // Custom Slide to Acknowledge gesture track
+                            SlideToAcknowledgeView {
+                                acknowledgeSOS(alert: alert)
+                            }
+                            .padding(.horizontal, 20)
+                            
+                            Spacer().frame(height: 20)
                         }
-                        .buttonStyle(ScaleButtonStyle())
                     }
-                    .padding(.vertical, 32)
-                    .padding(.horizontal, 24)
-                    .frame(maxWidth: 320)
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppTheme.Radius.modal, style: .continuous)
-                            .stroke(Color.red.opacity(0.3), lineWidth: 1.5)
-                    )
-                    .shadow(color: .black.opacity(0.12), radius: 30, x: 0, y: 15)
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 .zIndex(9999)
@@ -133,15 +233,33 @@ struct FleetContentView: View {
                 }
             }
         }
-        .onChange(of: sosAlerts) { _, _ in
-            checkActiveSOSAlerts()
-        }
         .task {
-            checkActiveSOSAlerts()
             startRealtimeSOSListener()
             startRealtimeUsersListener()
+            startRealtimeGeneralListener()
+            
+            // Sync immediately on startup to get the latest online/offline active SOS
+            await SupabaseManager.shared.syncAllData(context: modelContext)
+            checkForActiveAlerts()
+            
+            // Start background polling loop to sync all dashboard data and SOS alerts every 8 seconds
+            pollingTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 8_000_000_000)
+                    if Task.isCancelled { break }
+                    print("🔄 [Fleet Manager Dashboard Polling] Syncing latest database changes...")
+                    await SupabaseManager.shared.syncAllData(context: modelContext)
+                    await syncActiveSOSAlerts()
+                }
+            }
+        }
+        .onChange(of: sosAlerts) { _, _ in
+            checkForActiveAlerts()
         }
         .onDisappear {
+            pollingTask?.cancel()
+            pollingTask = nil
+            
             let client = SupabaseManager.shared.client
             if let activeChannel = realtimeChannel {
                 Task {
@@ -154,6 +272,12 @@ struct FleetContentView: View {
                     await client.removeChannel(activeUsersChannel)
                 }
                 usersRealtimeChannel = nil
+            }
+            if let activeGeneralChannel = generalRealtimeChannel {
+                Task {
+                    await client.removeChannel(activeGeneralChannel)
+                }
+                generalRealtimeChannel = nil
             }
         }
     }
@@ -180,56 +304,28 @@ struct FleetContentView: View {
             
             for await change in changes {
                 do {
-                    let decoder = JSONDecoder()
-                    decoder.dateDecodingStrategy = .custom { decoder in
-                        let container = try decoder.singleValueContainer()
-                        let dateString = try container.decode(String.self)
-                        
-                        let formatters = [
-                            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ",
-                            "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ",
-                            "yyyy-MM-dd'T'HH:mm:ssZZZZZ",
-                            "yyyy-MM-dd HH:mm:ss.SSSSSSZZZZZ",
-                            "yyyy-MM-dd HH:mm:ss.SSSZZZZZ",
-                            "yyyy-MM-dd HH:mm:ssZZZZZ",
-                            "yyyy-MM-dd HH:mm:ss"
-                        ].map { fmt -> DateFormatter in
-                            let f = DateFormatter()
-                            f.dateFormat = fmt
-                            f.locale = Locale(identifier: "en_US_POSIX")
-                            return f
-                        }
-                        
-                        for formatter in formatters {
-                            if let date = formatter.date(from: dateString) {
-                                return date
-                            }
-                        }
-                        
-                        // Lenient ISO8601 Fallbacks
-                        let isoFormatter = ISO8601DateFormatter()
-                        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                        if let date = isoFormatter.date(from: dateString) {
-                            return date
-                        }
-                        
-                        isoFormatter.formatOptions = [.withInternetDateTime]
-                        if let date = isoFormatter.date(from: dateString) {
-                            return date
-                        }
-                        
-                        print("⚠️ [Realtime SOS] Lenient date parsing fallback to now for date: \(dateString)")
-                        return Date()
-                    }
-                    
-                    let data = try JSONEncoder().encode(change.record)
-                    let alert = try decoder.decode(DBSOSAlert.self, from: data)
-                    
+                    let alert = try change.record.decode(as: DBSOSAlert.self)
                     if alert.status == .active {
                         triggerEmergencySOS(alert: alert)
                     }
                 } catch {
                     print("❌ Failed to decode DBSOSAlert in Realtime SOS listener: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func checkForActiveAlerts() {
+        if let active = sosAlerts.first(where: { $0.status == .active }) {
+            if !showRedSplash && !acknowledgedAlertIds.contains(active.id) {
+                triggerEmergencySOS(alert: active.asDBSOSAlert)
+            }
+        } else {
+            if showRedSplash {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    showRedSplash = false
+                    activeSOSAlert = nil
                 }
             }
         }
@@ -245,24 +341,65 @@ struct FleetContentView: View {
         let driverName = localUsers.first(where: { $0.id == alert.driverId })?.fullName ?? "Driver"
         
         sosMessage = alert.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately."
+        activeSOSAlert = alert
         
-        let localSOS = alert.asLocalSOS
-        modelContext.insert(localSOS)
+        let alertId = alert.id
+        let sosDescriptor = FetchDescriptor<SOSAlert>()
+        let localSOSs = (try? modelContext.fetch(sosDescriptor)) ?? []
+        if !localSOSs.contains(where: { $0.id == alertId }) {
+            let localSOS = alert.asLocalSOS
+            modelContext.insert(localSOS)
+        }
         
-        let localNotif = AppNotification(
-            id: alert.id,
-            userId: SupabaseManager.shared.currentUser?.id ?? UUID(),
-            title: "🚨 EMERGENCY SOS SIGNAL",
-            message: sosMessage,
-            type: .sosAlert,
-            isRead: false,
-            createdAt: alert.createdAt
-        )
-        modelContext.insert(localNotif)
+        let notifDescriptor = FetchDescriptor<AppNotification>()
+        let localNotifs = (try? modelContext.fetch(notifDescriptor)) ?? []
+        if !localNotifs.contains(where: { $0.id == alertId }) {
+            let localNotif = AppNotification(
+                id: alert.id,
+                userId: SupabaseManager.shared.currentUser?.id ?? UUID(),
+                title: "🚨 EMERGENCY SOS SIGNAL",
+                message: sosMessage,
+                type: .sosAlert,
+                isRead: false,
+                createdAt: alert.createdAt
+            )
+            modelContext.insert(localNotif)
+        }
+        
         try? modelContext.save()
         
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
             showRedSplash = true
+        }
+        
+        SOSSoundManager.shared.playAlarm()
+    }
+    
+    private func activeDriver(for alert: DBSOSAlert) -> User? {
+        let descriptor = FetchDescriptor<User>()
+        let localUsers = (try? modelContext.fetch(descriptor)) ?? []
+        return localUsers.first(where: { $0.id == alert.driverId })
+    }
+    
+    private func activeVehicle(for alert: DBSOSAlert) -> Vehicle? {
+        guard let vId = alert.vehicleId else { return nil }
+        let descriptor = FetchDescriptor<Vehicle>()
+        let localVehicles = (try? modelContext.fetch(descriptor)) ?? []
+        return localVehicles.first(where: { $0.id == vId })
+    }
+    
+    @MainActor
+    private func acknowledgeSOS(alert: DBSOSAlert) {
+        // Simply record that this alert has been acknowledged locally by the manager
+        // We do NOT change the status to resolved in Supabase or SwiftData here.
+        // The status remains .active until resolved manually via the Alerts Feed detailed screen.
+        acknowledgedAlertIds.insert(alert.id)
+        
+        SOSSoundManager.shared.stopAlarm()
+        
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+            showRedSplash = false
+            activeSOSAlert = nil
         }
     }
     
@@ -325,34 +462,163 @@ struct FleetContentView: View {
         }
     }
     
-    @MainActor
-    private func checkActiveSOSAlerts() {
-        let active = sosAlerts.filter { $0.status == .active }
-        guard let firstActive = active.first else {
-            if showRedSplash {
-                withAnimation {
-                    showRedSplash = false
+    private func syncActiveSOSAlerts() async {
+        do {
+            let remoteSOS: [DBSOSAlert] = try await SupabaseManager.shared.client.from("sos_alerts")
+                .select()
+                .eq("status", value: DBSOSStatus.active.rawValue)
+                .execute()
+                .value
+            
+            await MainActor.run {
+                let descriptor = FetchDescriptor<SOSAlert>()
+                let localSOS = (try? modelContext.fetch(descriptor)) ?? []
+                
+                // 1. Update/insert active alerts
+                for rs in remoteSOS {
+                    if let local = localSOS.first(where: { $0.id == rs.id }) {
+                        local.driverId = rs.driverId
+                        local.vehicleId = rs.vehicleId
+                        local.tripId = rs.tripId
+                        local.latitude = rs.latitude
+                        local.longitude = rs.longitude
+                        local.message = rs.message
+                        local.status = rs.status.toLocalStatus
+                    } else {
+                        modelContext.insert(rs.asLocalSOS)
+                    }
                 }
+                
+                // 2. Resolve local alerts that are no longer active in Supabase
+                let remoteActiveIds = Set(remoteSOS.map { $0.id })
+                for localAlert in localSOS {
+                    if localAlert.status == .active && !remoteActiveIds.contains(localAlert.id) {
+                        localAlert.status = .resolved
+                        print("ℹ️ [SOS Polling] Local SOS \(localAlert.id) marked resolved because it is not active remotely.")
+                    }
+                }
+                
+                try? modelContext.save()
             }
-            return
+        } catch {
+            print("⚠️ [SOS Polling] Failed to fetch active SOS: \(error.localizedDescription)")
         }
+    }
+    
+    private func startRealtimeGeneralListener() {
+        guard generalRealtimeChannel == nil else { return }
+        let client = SupabaseManager.shared.client
+        let channel = client.channel("fleet_manager_general_realtime_channel")
+        self.generalRealtimeChannel = channel
         
-        if !acknowledgedAlertIds.contains(firstActive.id) {
-            let descriptor = FetchDescriptor<User>()
-            let localUsers = (try? modelContext.fetch(descriptor)) ?? []
-            let driverName = localUsers.first(where: { $0.id == firstActive.driverId })?.fullName ?? "Driver"
+        Task {
+            let tripsStream = channel.postgresChange(AnyAction.self, schema: "public", table: "trips")
+            let defectStream = channel.postgresChange(AnyAction.self, schema: "public", table: "defect_reports")
+            let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
+            let notifStream = channel.postgresChange(AnyAction.self, schema: "public", table: "notifications")
+            let taskStream = channel.postgresChange(AnyAction.self, schema: "public", table: "maintenance_tasks")
+            let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
+            let complianceStream = channel.postgresChange(AnyAction.self, schema: "public", table: "compliance_alerts")
+            let routeDevStream = channel.postgresChange(AnyAction.self, schema: "public", table: "route_deviation_alerts")
             
-            sosMessage = firstActive.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately."
-            
-            if !showRedSplash {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                    showRedSplash = true
-                }
+            do {
+                try await channel.subscribeWithError()
+                print("🟢 [FleetContentView Realtime] Subscribed successfully to general database changes.")
+            } catch {
+                print("❌ [FleetContentView Realtime] Subscription failed: \(error.localizedDescription)")
             }
+            
+            Task { await handleStream(tripsStream, tableName: "trips") }
+            Task { await handleStream(defectStream, tableName: "defect_reports") }
+            Task { await handleStream(workOrderStream, tableName: "work_orders") }
+            Task { await handleStream(notifStream, tableName: "notifications") }
+            Task { await handleStream(taskStream, tableName: "maintenance_tasks") }
+            Task { await handleStream(vehicleStream, tableName: "vehicles") }
+            Task { await handleStream(complianceStream, tableName: "compliance_alerts") }
+            Task { await handleStream(routeDevStream, tableName: "route_deviation_alerts") }
+        }
+    }
+    
+    private func handleStream<S: AsyncSequence>(_ stream: S, tableName: String) async {
+        do {
+            for try await action in stream {
+                print("🔔 [Realtime - FleetContentView] Received change on '\(tableName)': \(action)")
+                await SupabaseManager.shared.syncAllData(context: modelContext)
+            }
+        } catch {
+            print("❌ [Realtime - FleetContentView] Stream error on '\(tableName)': \(error.localizedDescription)")
         }
     }
 }
 
 #Preview {
     FleetContentView()
+}
+
+struct SlideToAcknowledgeView: View {
+    let onSwipeSuccess: () -> Void
+    @State private var dragOffset: CGFloat = 0
+    private let buttonWidth: CGFloat = 56
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let trackWidth = geometry.size.width
+            let maxOffset = trackWidth - buttonWidth
+            
+            ZStack(alignment: .leading) {
+                // Background Track
+                Capsule()
+                    .fill(Color.black.opacity(0.4))
+                    .frame(height: 56)
+                    .overlay(
+                        Capsule()
+                            .stroke(Theme.darkOrange.opacity(0.35), lineWidth: 1.5)
+                    )
+                
+                // Track Text
+                HStack {
+                    Spacer()
+                    Text("Slide to Acknowledge")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.darkOrange)
+                        .opacity(Double(1.0 - (dragOffset / maxOffset)))
+                    Spacer()
+                }
+                
+                // Sliding Button
+                ZStack {
+                    Circle()
+                        .fill(Theme.darkOrange.gradient)
+                        .frame(width: buttonWidth, height: buttonWidth)
+                        .shadow(color: Theme.darkOrange.opacity(0.4), radius: 6, x: 0, y: 3)
+                    
+                    Image(systemName: "chevron.right.2")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                .offset(x: dragOffset)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            let translation = value.translation.width
+                            dragOffset = min(max(0, translation), maxOffset)
+                        }
+                        .onEnded { value in
+                            if dragOffset >= maxOffset * 0.85 {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    dragOffset = maxOffset
+                                }
+                                onSwipeSuccess()
+                            } else {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                    dragOffset = 0
+                                }
+                            }
+                        }
+                )
+            }
+            .frame(height: 56)
+        }
+        .frame(height: 56)
+    }
 }

@@ -1,6 +1,6 @@
-
 import SwiftUI
 import Supabase
+import PhotosUI
 
 struct FleetManagerChatDetailView: View {
     let currentUser: DBUser
@@ -12,7 +12,8 @@ struct FleetManagerChatDetailView: View {
     @State private var realtimeChannel: RealtimeChannelV2?
     @Environment(\.dismiss) private var dismiss
     @State private var forwardSuccess = false
-    
+
+
     private var conversationMessages: [DBMessage] {
         messages.filter {
             $0.senderId == chatUser.id || $0.receiverId == chatUser.id
@@ -21,8 +22,19 @@ struct FleetManagerChatDetailView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header bar containing user status and info
+            // Header bar containing user status, info and mockup Close button
             HStack(spacing: 12) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(AppTheme.Brand.primary)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+                .padding(.leading, 4)
+                
                 // Avatar with online status
                 ZStack(alignment: .bottomTrailing) {
                     Circle()
@@ -31,9 +43,12 @@ struct FleetManagerChatDetailView: View {
                     Text(String(chatUser.name.prefix(2)).uppercased())
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(roleColor(for: chatUser.role))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: 36, height: 36, alignment: .center)
                     
                     Circle()
-                        .fill(chatUser.isActive ? Color.green : Color.gray)
+                        .fill(chatUser.isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))
                         .frame(width: 10, height: 10)
                         .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
                         .offset(x: 1, y: 1)
@@ -45,7 +60,7 @@ struct FleetManagerChatDetailView: View {
                         .foregroundColor(.primary)
                     Text(chatUser.isActive ? "Online" : "Offline")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(chatUser.isActive ? .green : .secondary)
+                        .foregroundColor(chatUser.isActive ? AppTheme.Status.success : .secondary)
                 }
                 
                 Spacer()
@@ -86,13 +101,7 @@ struct FleetManagerChatDetailView: View {
                                     if isMe {
                                         Spacer()
                                         VStack(alignment: .trailing, spacing: 4) {
-                                            Text(message.message)
-                                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 10)
-                                                .background(AppTheme.Brand.primary)
-                                                .cornerRadius(16)
+                                            messageBubbleContent(text: message.message, isMe: true)
                                                 .contextMenu {
                                                     Button {
                                                         forwardToAll(messageText: message.message)
@@ -107,13 +116,7 @@ struct FleetManagerChatDetailView: View {
                                         }
                                     } else {
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text(message.message)
-                                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                .foregroundColor(.black)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 10)
-                                                .background(Color(.systemGray6))
-                                                .cornerRadius(16)
+                                            messageBubbleContent(text: message.message, isMe: false)
                                                 .contextMenu {
                                                     Button {
                                                         forwardToAll(messageText: message.message)
@@ -141,7 +144,7 @@ struct FleetManagerChatDetailView: View {
                         proxy.scrollTo(lastMsg.id, anchor: .bottom)
                     }
                 }
-                .onChange(of: conversationMessages.count) { oldValue, newValue in
+                .onChange(of: conversationMessages.count) {
                     if let lastMsg = conversationMessages.last {
                         withAnimation {
                             proxy.scrollTo(lastMsg.id, anchor: .bottom)
@@ -151,39 +154,58 @@ struct FleetManagerChatDetailView: View {
             }
             
             // Bottom Message Input Bar
-            HStack(spacing: 12) {
-                TextField("Type a message...", text: $messageText)
-                    .font(.system(size: 15))
-                    .padding(10)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(20)
+            VStack(spacing: 0) {
+                Divider()
                 
-                Button(action: {
-                    let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !text.isEmpty {
-                        sendMessage(text)
+                HStack(spacing: 12) {
+                    TextField("Type a message...", text: $messageText)
+                        .font(.system(size: 15))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(20)
+                    
+                    Button(action: {
+                        let sentText = messageText
+                        messageText = ""
+                        
+                        Task {
+                            let text = sentText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !text.isEmpty {
+                                let dbMsg = DBMessage(
+                                    id: UUID(),
+                                    senderId: currentUser.id,
+                                    receiverId: chatUser.id,
+                                    message: text,
+                                    timestamp: Date()
+                                )
+                                try await supabase.sendMessage(dbMsg)
+                            }
+                            
+                            await loadMessages()
+                        }
+                    }) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(Color.white)
+                            .padding(10)
+                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
+                            .clipShape(Circle())
                     }
-                }) {
-                    Image(systemName: "paperplane.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(Color.white)
-                        .padding(10)
-                        .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : AppTheme.Brand.primary)
-                        .clipShape(Circle())
+                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .padding()
+                .background(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
             }
-            .padding()
-            .background(Color.white)
-            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
         }
+        .navigationBarBackButtonHidden(true)
+        .navigationBarHidden(true)
         .alert("Forwarded Successfully", isPresented: $forwardSuccess) {
             Button("OK") {}
         } message: {
             Text("This message has been successfully broadcast to all drivers and maintenance staff.")
         }
-        .navigationTitle(chatUser.name)
-        .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadMessages()
             startRealtimeListener()
@@ -197,16 +219,66 @@ struct FleetManagerChatDetailView: View {
                 realtimeChannel = nil
             }
         }
+
     }
     
+    @ViewBuilder
+    private func messageBubbleContent(text: String, isMe: Bool) -> some View {
+        if text.hasPrefix("[IMAGE:"), text.hasSuffix("]") {
+            let urlString = String(text.dropFirst(7).dropLast())
+            if let url = URL(string: urlString) {
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 220, maxHeight: 220)
+                        .cornerRadius(12)
+                } placeholder: {
+                    ProgressView().tint(isMe ? .white : AppTheme.Brand.primary)
+                }
+                .padding(4)
+                .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+                .cornerRadius(16)
+            } else {
+                fallbackText(text, isMe: isMe)
+            }
+        } else if text.hasPrefix("[IMAGE_BASE64:"), text.hasSuffix("]") {
+            let base64String = String(text.dropFirst(14).dropLast())
+            if let data = Data(base64Encoded: base64String), let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .cornerRadius(12)
+                    .padding(4)
+                    .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+                    .cornerRadius(16)
+            } else {
+                fallbackText(text, isMe: isMe)
+            }
+        } else {
+            fallbackText(text, isMe: isMe)
+        }
+    }
+
+    private func fallbackText(_ text: String, isMe: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundColor(isMe ? .white : .black)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+            .cornerRadius(16)
+    }
+
     private func roleColor(for role: DBUserRole) -> Color {
         switch role {
         case .driver:
             return AppTheme.Brand.royalBlue
         case .maintenance:
-            return Color(red: 236/255, green: 110/255, blue: 37/255)
+            return AppTheme.Brand.accent
         case .fleetManager:
-            return .purple
+            return AppTheme.Brand.primaryDeep
         }
     }
     
@@ -221,29 +293,6 @@ struct FleetManagerChatDetailView: View {
             self.messages = try await supabase.fetchMessages()
         } catch {
             print("Failed to load Fleet Manager chat messages: \(error)")
-        }
-    }
-    
-    private func sendMessage(_ text: String) {
-        let dbMsg = DBMessage(
-            id: UUID(),
-            senderId: currentUser.id,
-            receiverId: chatUser.id,
-            message: text,
-            timestamp: Date()
-        )
-        Task {
-            do {
-                try await supabase.sendMessage(dbMsg)
-                await MainActor.run {
-                    self.messageText = ""
-                    Task {
-                        await loadMessages()
-                    }
-                }
-            } catch {
-                print("Failed to send message from Fleet Manager: \(error)")
-            }
         }
     }
     

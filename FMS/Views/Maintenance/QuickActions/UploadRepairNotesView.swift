@@ -200,7 +200,7 @@ struct UploadRepairNotesView: View {
                                                         selectedItems.remove(at: index)
                                                     } label: {
                                                         Image(systemName: "xmark.circle.fill")
-                                                            .foregroundColor(.red)
+                                                            .foregroundColor(AppTheme.Status.danger)
                                                             .background(Circle().fill(.white))
                                                     }
                                                     .offset(x: 5, y: -5)
@@ -237,7 +237,7 @@ struct UploadRepairNotesView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                             .background(
-                                isFormValid && !isUploading ? AppTheme.Brand.primary : Color.gray.opacity(0.5)
+                                isFormValid && !isUploading ? AppTheme.Brand.primary : AppTheme.Brand.primary.opacity(0.15)
                             )
                             .cornerRadius(12)
                             .shadow(color: isFormValid && !isUploading ? AppTheme.Brand.primary.opacity(0.3) : Color.clear, radius: 8, y: 3)
@@ -267,6 +267,7 @@ struct UploadRepairNotesView: View {
                 }
             }
             .navigationBarHidden(true)
+            .toolbar(.hidden, for: .tabBar)
             .alert("Upload Error", isPresented: $showErrorAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
