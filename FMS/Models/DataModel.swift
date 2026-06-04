@@ -948,6 +948,7 @@ struct DBWorkOrder: Codable, Identifiable {
     var issueDescription: String
     var status: DBWorkOrderStatus
     var estimatedCost: Double? = nil
+    var completedAt: Date? = nil
     var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -959,6 +960,7 @@ struct DBWorkOrder: Codable, Identifiable {
         case issueDescription = "issue_description"
         case status
         case estimatedCost = "estimated_cost"
+        case completedAt = "completed_at"
         case createdAt = "created_at"
     }
 }
@@ -1149,6 +1151,7 @@ extension WorkOrder {
             issueDescription: workDescription.isEmpty ? title : workDescription,
             status: status.toDBStatus,
             estimatedCost: estimatedCost,
+            completedAt: completedAt,
             createdAt: createdAt
         )
     }
@@ -1210,7 +1213,7 @@ extension DBWorkOrder {
             priority: priority.toLocalPriority,
             status: status.toLocalStatus,
             estimatedCost: estimatedCost,
-            completedAt: status == .completed ? Date() : nil,
+            completedAt: completedAt,
             createdAt: createdAt
         )
     }

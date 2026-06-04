@@ -119,19 +119,7 @@ struct UpdateMaintenanceView: View {
         .navigationTitle("Update Maintenance")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .toolbar {
-            if filterStatus == 1 {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showDirectRecordSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
-                            .foregroundColor(AppTheme.Brand.amber)
-                    }
-                }
-            }
-        }
+
         .sheet(item: $selectedOrder) { order in
             MaintenanceEditSheet(order: order, currentUser: currentUser, allVehicles: allVehicles, onSave: {
                 try? modelContext.save()

@@ -314,12 +314,29 @@ struct EditInventoryView: View {
         item.supplierName = supplierName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : supplierName.trimmingCharacters(in: .whitespacesAndNewlines)
         item.updatedAt = Date()
 
+        let dbItem = item.asDBItem
+        Task {
+            do {
+                try await SupabaseManager.shared.updateInventoryItem(dbItem)
+            } catch {
+                print("Failed to update inventory item in backend: \(error)")
+            }
+        }
+
         showingSuccess = true
     }
 
     private func deleteItem() {
+        let itemId = item.id
         modelContext.delete(item)
         try? modelContext.save()
+        Task {
+            do {
+                try await SupabaseManager.shared.deleteInventoryItem(id: itemId)
+            } catch {
+                print("Failed to delete inventory item in backend: \(error)")
+            }
+        }
         onDelete?()
         dismiss()
     }

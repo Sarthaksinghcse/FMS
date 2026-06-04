@@ -81,6 +81,8 @@ struct MaintenanceDashboardView: View {
         Task {
             let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
             let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
+            let inventoryStream = channel.postgresChange(AnyAction.self, schema: "public", table: "inventory_items")
+            let notificationStream = channel.postgresChange(AnyAction.self, schema: "public", table: "notifications")
             
             do {
                 try await channel.subscribeWithError()
@@ -91,6 +93,8 @@ struct MaintenanceDashboardView: View {
             
             async let _ : () = handleStream(workOrderStream, tableName: "work_orders")
             async let _ : () = handleStream(vehicleStream, tableName: "vehicles")
+            async let _ : () = handleStream(inventoryStream, tableName: "inventory_items")
+            async let _ : () = handleStream(notificationStream, tableName: "notifications")
         }
     }
     

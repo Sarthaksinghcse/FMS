@@ -282,15 +282,7 @@ struct DriverBottomTabBar: View {
             tabButton(index: 1, icon: "road.lanes", label: "Trips")
         }
         .padding(6)
-        .background(
-            Capsule()
-                .fill(Color(UIColor.systemBackground).opacity(0.95))
-                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 5)
-        )
-        .overlay(
-            Capsule()
-                .stroke(Color.black.opacity(0.04), lineWidth: 1)
-        )
+        .glassEffect(.regular, in: Capsule())
     }
 
     private func tabButton(index: Int, icon: String, label: String) -> some View {

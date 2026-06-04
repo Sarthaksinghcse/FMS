@@ -100,15 +100,7 @@ struct CompletedTasksView: View {
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                         Section {
-                            // Summary banner
-                            if !vm.filteredTasks.isEmpty {
-                                CompletedSummaryBanner(
-                                    count: vm.filteredTasks.count,
-                                    totalCost: vm.totalLaborCost
-                                )
-                                .padding(.horizontal)
-                                .padding(.top, 8)
-                            }
+
                             
                             if vm.filteredTasks.isEmpty {
                                 DetailEmptyState(

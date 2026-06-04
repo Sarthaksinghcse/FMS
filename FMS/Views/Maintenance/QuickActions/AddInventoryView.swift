@@ -270,6 +270,16 @@ struct AddInventoryView: View {
         )
 
         modelContext.insert(item)
+        
+        let dbItem = item.asDBItem
+        Task {
+            do {
+                try await SupabaseManager.shared.createInventoryItem(dbItem)
+            } catch {
+                print("Failed to save inventory item to backend: \(error)")
+            }
+        }
+        
         showingSuccess = true
     }
 }

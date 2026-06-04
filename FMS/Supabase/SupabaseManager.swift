@@ -1118,6 +1118,7 @@ final class SupabaseManager {
                         local.workDescription = rwo.issueDescription
                         local.status = rwo.status.toLocalStatus
                         local.estimatedCost = rwo.estimatedCost
+                        local.completedAt = rwo.completedAt
                     } else {
                         context.insert(rwo.asLocalWorkOrder)
                     }
