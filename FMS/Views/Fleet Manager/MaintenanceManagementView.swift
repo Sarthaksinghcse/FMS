@@ -8,11 +8,48 @@
 import SwiftUI
 import SwiftData
 import Combine
+import Supabase
 
-
-
-
-
+struct MaintenanceSummaryCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.12))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(color)
+                }
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundColor(.black)
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.secondary)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.Background.card)
+        .cornerRadius(16)
+        .shadow(color: AppTheme.Shadow.card, radius: 4, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(color.opacity(0.15), lineWidth: 1)
+        )
+    }
+}
 
 struct MaintenanceManagementView: View {
     @Environment(\.modelContext) private var modelContext
@@ -20,11 +57,11 @@ struct MaintenanceManagementView: View {
     
     @StateObject private var viewModel = MaintenanceManagementViewModel()
     
-    
     @Query(sort: \WorkOrder.createdAt, order: .reverse) private var workOrders: [WorkOrder]
     @Query(sort: \Vehicle.registrationNumber) private var vehicles: [Vehicle]
     @Query(sort: \User.fullName) private var allUsers: [User]
     @Query private var defectReports: [DefectReport]
+    @Query(sort: \MaintenanceRecord.serviceDate, order: .reverse) private var maintenanceRecords: [MaintenanceRecord]
     
     @State private var showingScheduler = false
     @State private var showingCompletionDialog = false
@@ -32,6 +69,9 @@ struct MaintenanceManagementView: View {
     @State private var finalCostString: String = ""
     @State private var selectedTab: Int = 0 
     @State private var sortByAIPriority = false
+    
+    @State private var predictiveAlerts: [DBPredictiveAlert] = []
+    @State private var isLoadingAlerts = false
     
     private var maintenanceStaff: [User] {
         allUsers.filter { $0.role == .maintenance }
@@ -64,6 +104,73 @@ struct MaintenanceManagementView: View {
         allUsers.first(where: { $0.id == id })?.fullName ?? "Unknown Staff"
     }
     
+    private func getPredictiveAlert(for vehicleId: UUID) -> DBPredictiveAlert? {
+        predictiveAlerts.first { $0.vehicleId == vehicleId }
+    }
+    
+    private func currentStatusText(for order: WorkOrder) -> String {
+        if order.workDescription.contains("[PENDING_APPROVAL]") {
+            return "Awaiting Approval"
+        } else if order.workDescription.contains("[REJECTED]") {
+            return "Rejected"
+        } else if order.workDescription.contains("[INFO_REQUESTED]") {
+            return "Info Requested"
+        }
+        
+        switch order.status {
+        case .open: return "Assigned"
+        case .inProgress: return "Repair In Progress"
+        case .completed: return "Completed"
+        case .cancelled: return "Cancelled"
+        }
+    }
+    
+    private func currentStepIndex(for order: WorkOrder) -> Int {
+        if order.status == .completed { return 6 }
+        if order.workDescription.contains("[PENDING_APPROVAL]") { return 3 }
+        
+        switch order.status {
+        case .open:
+            return 0
+        case .inProgress:
+            let desc = order.workDescription.lowercased()
+            if desc.contains("inspection") { return 1 }
+            if desc.contains("diagnos") { return 2 }
+            if desc.contains("parts") { return 4 }
+            if desc.contains("quality") || desc.contains("check") { return 5 }
+            return 4
+        default:
+            return 0
+        }
+    }
+    
+    private func getDowntimeString(for order: WorkOrder) -> String {
+        let endDate = order.completedAt ?? Date()
+        let interval = endDate.timeIntervalSince(order.createdAt)
+        let days = Int(interval / 86400)
+        let hours = Int((interval.truncatingRemainder(dividingBy: 86400)) / 3600)
+        
+        if days == 0 {
+            return "\(hours) Hours"
+        } else {
+            return "\(days) Day \(hours) Hours"
+        }
+    }
+    
+    private func fetchAllPredictiveAlerts() async {
+        isLoadingAlerts = true
+        do {
+            let alerts = try await SupabaseManager.shared.fetchPredictiveAlerts(onlyActive: true)
+            await MainActor.run {
+                self.predictiveAlerts = alerts
+                self.isLoadingAlerts = false
+            }
+        } catch {
+            print("Failed to load Gemini predictions: \(error)")
+            self.isLoadingAlerts = false
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -78,32 +185,12 @@ struct MaintenanceManagementView: View {
                             .padding(.top, 12)
                     }
                     
-                    
                     HStack(spacing: 12) {
                         Picker("Orders", selection: $selectedTab) {
                             Text("Active (\(activeWorkOrders.count))").tag(0)
                             Text("History (\(historicWorkOrders.count))").tag(1)
                         }
                         .pickerStyle(.segmented)
-                        
-                        Button {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                sortByAIPriority.toggle()
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: sortByAIPriority ? "sparkles" : "sparkles.left")
-                                    .font(.system(size: 11, weight: .bold))
-                                Text("AI Sort")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                            .foregroundColor(sortByAIPriority ? .white : Theme.darkOrange)
-                            .background(sortByAIPriority ? Theme.darkOrange : Theme.darkOrange.opacity(0.1))
-                            .cornerRadius(10)
-                        }
-                        .buttonStyle(PlainButtonStyle())
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -112,6 +199,38 @@ struct MaintenanceManagementView: View {
                     
                     ScrollView(.vertical, showsIndicators: false) {
                         LazyVStack(spacing: 16) {
+                            // Top Summary Cards Grid
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                                MaintenanceSummaryCard(
+                                    title: "Active Orders",
+                                    value: "\(workOrders.filter { $0.status == .open || $0.status == .inProgress }.count)",
+                                    icon: "wrench.and.screwdriver.fill",
+                                    color: AppTheme.Brand.primary
+                                )
+                                
+                                MaintenanceSummaryCard(
+                                    title: "Awaiting Approval",
+                                    value: "\(workOrders.filter { $0.status == .open && $0.workDescription.contains("[PENDING_APPROVAL]") }.count)",
+                                    icon: "checkmark.shield.fill",
+                                    color: AppTheme.Brand.amber
+                                )
+                                
+                                MaintenanceSummaryCard(
+                                    title: "In Workshop",
+                                    value: "\(vehicles.filter { $0.status == .inMaintenance }.count)",
+                                    icon: "box.truck.fill",
+                                    color: AppTheme.Brand.teal
+                                )
+                                
+                                MaintenanceSummaryCard(
+                                    title: "Critical Alerts",
+                                    value: "\(workOrders.filter { ($0.status == .open || $0.status == .inProgress) && $0.priority == .urgent }.count)",
+                                    icon: "exclamationmark.triangle.fill",
+                                    color: AppTheme.Status.danger
+                                )
+                            }
+                            .padding(.bottom, 8)
+                            
                             let items = selectedTab == 0 ? activeWorkOrders : historicWorkOrders
                             
                             if items.isEmpty {
@@ -134,33 +253,6 @@ struct MaintenanceManagementView: View {
                         .padding(16)
                     }
                 }
-                
-                
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button {
-                            viewModel.resetForm()
-                            showingScheduler = true
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .bold))
-                                Text("New Order")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .foregroundColor(.white)
-                            .background(AppTheme.Brand.primary)
-                            .cornerRadius(28)
-                            .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 8, x: 0, y: 4)
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 20)
-                    }
-                }
             }
             .navigationTitle("Maintenance Hub")
             .navigationBarTitleDisplayMode(.inline)
@@ -169,15 +261,29 @@ struct MaintenanceManagementView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
+                    .foregroundColor(Theme.fmsRed)
                     .font(.system(.body, design: .rounded))
                 }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.resetForm()
+                        showingScheduler = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.primary)
+                    }
+                }
             }
-            
+            .task {
+                await SupabaseManager.shared.syncAllData(context: modelContext)
+                await fetchAllPredictiveAlerts()
+            }
             .sheet(isPresented: $showingScheduler) {
                 ScheduleWorkOrderSheet(viewModel: viewModel, vehicles: vehicles, staff: maintenanceStaff, isPresented: $showingScheduler)
+                    .interactiveDismissDisabled()
             }
-            
             .sheet(isPresented: $showingCompletionDialog) {
                 if let wo = selectedWorkOrderForCompletion {
                     CompleteWorkOrderSheet(viewModel: viewModel, workOrder: wo, finalCostString: $finalCostString, isPresented: $showingCompletionDialog) { cost in
@@ -186,12 +292,11 @@ struct MaintenanceManagementView: View {
                             selectedWorkOrderForCompletion = nil
                         }
                     }
+                    .interactiveDismissDisabled()
                 }
             }
         }
     }
-    
-    
     
     private func workOrderCard(_ order: WorkOrder) -> some View {
         let priColor: Color
@@ -211,33 +316,21 @@ struct MaintenanceManagementView: View {
             priBg = AppTheme.IconBg.red
         }
         
-        let isPendingApproval = order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]")
+        let localRecord = maintenanceRecords.first { $0.workOrderId == order.id }
+        let currentCost = localRecord?.cost ?? order.estimatedCost ?? 0.0
         
-        let statColor: Color
-        let statText: String
-        if isPendingApproval {
-            statColor = AppTheme.Brand.amber
-            statText = "Approval Pending"
-        } else {
-            switch order.status {
-            case .open:
-                statColor = AppTheme.Status.danger
-                statText = "Open"
-            case .inProgress:
-                statColor = AppTheme.Status.warning
-                statText = "In Progress"
-            case .completed:
-                statColor = AppTheme.Status.success
-                statText = "Completed"
-            case .cancelled:
-                statColor = .gray
-                statText = "Cancelled"
-            }
-        }
+        let alert = getPredictiveAlert(for: order.vehicleId)
+        let riskScorePercent = alert != nil ? Int(alert!.riskScore * 100) : 0
+        let suggestedAction = alert?.suggestedAction ?? "Schedule standard inspection"
         
-        return VStack(alignment: .leading, spacing: 12) {
+        let step = currentStepIndex(for: order) + 1
+        let totalSteps = 7
+        let percent = Double(step) / Double(totalSteps)
+        
+        let isPending = order.workDescription.contains("[PENDING_APPROVAL]")
+        
+        let cardContent = VStack(alignment: .leading, spacing: 12) {
             HStack {
-                
                 Text(order.priority.rawValue.uppercased())
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundColor(priColor)
@@ -246,53 +339,75 @@ struct MaintenanceManagementView: View {
                     .background(priBg)
                     .cornerRadius(6)
                 
-                let localDefect = defectReports.first(where: { $0.vehicleId == order.vehicleId })
-                let localVehicle = vehicles.first(where: { $0.id == order.vehicleId })
-                let score = AIWorkOrderService.shared.computePriorityScore(workOrder: order, defect: localDefect, vehicle: localVehicle)
-                
-                HStack(spacing: 4) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 9))
-                    Text(String(format: "AI Score: %.0f", score))
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                }
-                .foregroundColor(Theme.darkOrange)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Theme.darkOrange.opacity(0.1))
-                .cornerRadius(6)
+                Text("WO-\(order.id.uuidString.prefix(4).uppercased())")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.Text.secondary)
                 
                 Spacer()
                 
-                
-                Text(statText)
+                Text(currentStatusText(for: order))
                     .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundColor(statColor)
+                    .foregroundColor(order.workDescription.contains("[PENDING_APPROVAL]") ? AppTheme.Brand.amber : priColor)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(order.title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(getVehicleName(for: order.vehicleId))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 
-                Text(order.workDescription)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                Text(order.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
+                    .lineLimit(1)
             }
+            
+            HStack(alignment: .top, spacing: 10) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.orange.opacity(0.1), lineWidth: 3)
+                        .frame(width: 38, height: 38)
+                    
+                    Circle()
+                        .trim(from: 0, to: alert != nil ? CGFloat(alert!.riskScore) : 0.05)
+                        .stroke(
+                            alert?.riskLevel.localizedCaseInsensitiveCompare("critical") == .orderedSame ||
+                            alert?.riskLevel.localizedCaseInsensitiveCompare("high") == .orderedSame
+                            ? AppTheme.Status.danger
+                            : Theme.darkOrange,
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        )
+                        .frame(width: 38, height: 38)
+                        .rotationEffect(Angle(degrees: -90))
+                    
+                    Text("\(riskScorePercent)%")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                }
+                .padding(.top, 2)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Failure Risk")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(Theme.darkOrange)
+                    
+                    Text(suggestedAction)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(AppTheme.Text.primary)
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+            .padding(10)
+            .background(Theme.darkOrange.opacity(0.06))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Theme.darkOrange.opacity(0.15), lineWidth: 1)
+            )
             
             Divider().background(Color.black.opacity(0.06))
             
             VStack(spacing: 8) {
-                HStack {
-                    Label("Vehicle", systemImage: "truck.box.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(AppTheme.Text.tertiary)
-                    Spacer()
-                    Text(getVehicleName(for: order.vehicleId))
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundColor(.black)
-                }
-                
                 HStack {
                     Label("Assigned Tech", systemImage: "person.fill")
                         .font(.system(size: 11, weight: .bold))
@@ -303,89 +418,116 @@ struct MaintenanceManagementView: View {
                         .foregroundColor(.black)
                 }
                 
-                if let cost = order.estimatedCost {
-                    HStack {
-                        Label("Est. Cost", systemImage: "indianrupeesign.circle.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(AppTheme.Text.tertiary)
-                        Spacer()
-                        Text(String(format: "₹%.2f", cost))
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundColor(.black)
-                    }
+                HStack {
+                    Label("Downtime Tracker", systemImage: "clock.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    Text(getDowntimeString(for: order))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Status.danger)
+                }
+                
+                HStack {
+                    Label("Cost Estimate", systemImage: "indianrupeesign.circle.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    
+                    let estStr = order.estimatedCost != nil ? String(format: "₹%.2f", order.estimatedCost!) : "Awaiting"
+                    let actStr = localRecord != nil ? String(format: "₹%.2f", currentCost) : "Awaiting actual"
+                    
+                    Text("Est: \(estStr) | Act: \(actStr)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(.black)
+                }
+                
+                HStack {
+                    Label("Last Updated", systemImage: "calendar")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    Text(order.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.secondary)
                 }
             }
             
+            Divider().background(Color.black.opacity(0.06))
             
-            if isPendingApproval {
-                Button {
-                    approveWorkOrder(order)
-                } label: {
-                    HStack {
-                        Spacer()
-                        Image(systemName: "checkmark.shield.fill")
-                        Text("Approve Work Order")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                        Spacer()
-                    }
-                    .padding(.vertical, 10)
-                    .foregroundColor(.white)
-                    .background(AppTheme.Status.success)
-                    .cornerRadius(8)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Repair Progress Timeline")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(AppTheme.Text.tertiary)
+                    Spacer()
+                    Text("\(currentStatusText(for: order)) (\(step)/\(totalSteps))")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Brand.primary)
                 }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.top, 4)
-            } else if order.status == .open {
-                Button {
-                    _ = viewModel.startWork(workOrderId: order.id, context: modelContext, workOrders: workOrders)
-                } label: {
-                    HStack {
-                        Spacer()
-                        Image(systemName: "play.fill")
-                        Text("Start Maintenance Work")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                        Spacer()
+                
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.gray.opacity(0.1))
+                            .frame(height: 6)
+                        
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(AppTheme.Brand.primary)
+                            .frame(width: geo.size.width * CGFloat(percent), height: 6)
                     }
-                    .padding(.vertical, 10)
-                    .foregroundColor(.white)
-                    .background(AppTheme.Brand.primary)
-                    .cornerRadius(8)
                 }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.top, 4)
-            } else if order.status == .inProgress {
+                .frame(height: 6)
+            }
+            .padding(.top, 2)
+            
+            if isPending {
                 HStack(spacing: 8) {
                     Button {
-                        _ = viewModel.cancelWork(workOrderId: order.id, context: modelContext, workOrders: workOrders, vehicles: vehicles)
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Cancel Order")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
-                            Spacer()
-                        }
-                        .padding(.vertical, 10)
-                        .foregroundColor(AppTheme.Status.danger)
-                        .background(AppTheme.IconBg.red)
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    Button {
-                        selectedWorkOrderForCompletion = order
-                        finalCostString = order.estimatedCost != nil ? String(format: "%.0f", order.estimatedCost!) : ""
-                        showingCompletionDialog = true
+                        approveWorkOrder(order)
                     } label: {
                         HStack {
                             Spacer()
                             Image(systemName: "checkmark.circle.fill")
-                            Text("Complete Work")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                            Text("Approve")
+                                .font(.system(size: 11, weight: .bold))
                             Spacer()
                         }
                         .padding(.vertical, 10)
                         .foregroundColor(.white)
                         .background(AppTheme.Status.success)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    Button {
+                        declineWorkOrder(order)
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "xmark.circle.fill")
+                            Text("Decline")
+                                .font(.system(size: 11, weight: .bold))
+                            Spacer()
+                        }
+                        .padding(.vertical, 10)
+                        .foregroundColor(.white)
+                        .background(AppTheme.Status.danger)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    NavigationLink(destination: WorkOrderDetailedView(order: order).environment(\.modelContext, modelContext)) {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "eye.fill")
+                            Text("View")
+                                .font(.system(size: 11, weight: .bold))
+                            Spacer()
+                        }
+                        .padding(.vertical, 10)
+                        .foregroundColor(AppTheme.Brand.primary)
+                        .background(AppTheme.Brand.primary.opacity(0.1))
                         .cornerRadius(8)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -401,6 +543,17 @@ struct MaintenanceManagementView: View {
             RoundedRectangle(cornerRadius: AppTheme.Radius.card)
                 .stroke(order.status == .inProgress ? AppTheme.Status.warning.opacity(0.3) : AppTheme.Glass.border.opacity(0.3), lineWidth: 1.5)
         )
+        
+        return Group {
+            if isPending {
+                cardContent
+            } else {
+                NavigationLink(destination: WorkOrderDetailedView(order: order).environment(\.modelContext, modelContext)) {
+                    cardContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
     }
     
     private func errorBanner(_ message: String) -> some View {
@@ -425,6 +578,7 @@ struct MaintenanceManagementView: View {
     }
     
     private func approveWorkOrder(_ order: WorkOrder) {
+        order.status = .open
         order.workDescription = order.workDescription
             .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
             .replacingOccurrences(of: "[PENDING_APPROVAL]", with: "")
@@ -440,7 +594,7 @@ struct MaintenanceManagementView: View {
                     id: UUID(),
                     userId: order.assignedTo,
                     title: "✅ Work Order Approved",
-                    message: "Fleet Manager has approved work order \"\(order.title)\". You can now start work.",
+                    message: "Fleet Manager has approved work order \"\(order.title)\". It is now scheduled.",
                     type: .maintenance,
                     isRead: false,
                     createdAt: Date()
@@ -448,6 +602,62 @@ struct MaintenanceManagementView: View {
                 try await SupabaseManager.shared.createNotification(notif)
             } catch {
                 print("Failed to approve work order on Supabase: \(error)")
+            }
+        }
+    }
+    
+    private func declineWorkOrder(_ order: WorkOrder) {
+        order.status = .cancelled
+        order.workDescription = order.workDescription
+            .replacingOccurrences(of: "[PENDING_APPROVAL] ", with: "")
+            .replacingOccurrences(of: "[PENDING_APPROVAL]", with: "")
+        if !order.workDescription.contains("[REJECTED]") {
+            order.workDescription = "[REJECTED] " + order.workDescription
+        }
+        
+        if let vehicle = vehicles.first(where: { $0.id == order.vehicleId }) {
+            vehicle.status = .active
+            vehicle.updatedAt = Date()
+            
+            // Sync vehicle status to Supabase
+            let dbVehicle = DBVehicle(
+                id: vehicle.id,
+                vehicleNumber: vehicle.registrationNumber,
+                model: vehicle.model,
+                manufacturer: vehicle.make,
+                year: vehicle.year,
+                vin: vehicle.vinNumber,
+                licensePlate: vehicle.registrationNumber,
+                status: .available,
+                assignedDriverId: vehicle.assignedDriverId,
+                lastServiceDate: vehicle.lastServiceDate,
+                createdAt: vehicle.createdAt
+            )
+            Task {
+                try? await SupabaseManager.shared.updateVehicle(dbVehicle)
+            }
+        }
+        
+        try? modelContext.save()
+        
+        let dbWO = order.asDBWorkOrder
+        Task {
+            do {
+                try await SupabaseManager.shared.updateWorkOrder(dbWO)
+                
+                // Add a notification for the technician
+                let notif = DBNotification(
+                    id: UUID(),
+                    userId: order.assignedTo,
+                    title: "❌ Work Order Declined",
+                    message: "Fleet Manager has declined work order \"\(order.title)\".",
+                    type: .maintenance,
+                    isRead: false,
+                    createdAt: Date()
+                )
+                try await SupabaseManager.shared.createNotification(notif)
+            } catch {
+                print("Failed to decline work order on Supabase: \(error)")
             }
         }
     }
@@ -460,6 +670,7 @@ struct ScheduleWorkOrderSheet: View {
     let vehicles: [Vehicle]
     let staff: [User]
     @Binding var isPresented: Bool
+    var onScheduleSuccess: (() -> Void)? = nil
     
     var body: some View {
         NavigationStack {
@@ -588,6 +799,7 @@ struct ScheduleWorkOrderSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Schedule") {
                         if viewModel.scheduleWorkOrder(context: modelContext, vehicles: vehicles, staff: staff) {
+                            onScheduleSuccess?()
                             isPresented = false
                         }
                     }

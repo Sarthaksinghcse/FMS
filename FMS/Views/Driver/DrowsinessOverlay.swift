@@ -4,8 +4,8 @@
 //
 //  SwiftUI overlay views for the drowsiness detection system.
 //  - CameraPreviewPIP: small thumbnail of front camera (driver awareness)
-//  - DrowsinessStatusPill: monitoring / warning status indicator
-//  - DrowsinessAlarmView: full-screen red alarm when driver is asleep
+//  - DrowsinessAlarmView: full-screen native SOS-style alarm when driver is asleep
+//  - DrowsinessMonitorHUD: iOS native FaceTime-style PIP
 //  Target: iOS 26+
 //
 
@@ -33,239 +33,296 @@ struct CameraPreviewPIP: UIViewRepresentable {
     }
 }
 
-// MARK: - Status Pill
-
+// MARK: - Native Slide To Resume Button
 @available(iOS 26.0, *)
-struct DrowsinessStatusPill: View {
-    let state: DrowsinessState
-
-    private var icon: String {
-        switch state {
-        case .inactive:        return "eye.slash"
-        case .monitoring:      return "eye.fill"
-        case .eyesClosed:      return "exclamationmark.triangle.fill"
-        case .noFace:          return "person.fill.questionmark"
-        case .alarm:           return "exclamationmark.octagon.fill"
-        }
-    }
-
-    private var label: String {
-        switch state {
-        case .inactive:              return "Monitor Off"
-        case .monitoring:            return "Monitoring"
-        case .eyesClosed(let s):     return "Eyes Closed \(s)s"
-        case .noFace:                return "Face Not Found"
-        case .alarm:                 return "WAKE UP!"
-        }
-    }
-
-    private var pillColor: Color {
-        switch state {
-        case .inactive:      return Color.fmsIndigo.opacity(0.4)
-        case .monitoring:    return AppTheme.Status.success
-        case .eyesClosed:    return AppTheme.Status.warning
-        case .noFace:        return Color.fmsIndigo.opacity(0.2)
-        case .alarm:         return AppTheme.Status.danger
-        }
-    }
-
-    @State private var pulse = false
-
+struct SlideToResumeButton: View {
+    let action: () -> Void
+    @State private var offset: CGFloat = 0
+    let buttonWidth: CGFloat = 300
+    let knobSize: CGFloat = 64
+    
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .bold))
-                .scaleEffect(pulse && state == .alarm ? 1.3 : 1.0)
-            Text(label)
-                .font(.system(size: 11, weight: .bold))
+        ZStack(alignment: .leading) {
+            Capsule()
+                .fill(Color.white.opacity(0.15))
+            
+            Text("slide to resume")
+                .font(.system(size: 20, weight: .regular))
+                .foregroundColor(.white.opacity(0.5))
+                .frame(maxWidth: .infinity)
+            
+            Capsule()
+                .fill(Color.white.opacity(0.2))
+                .frame(width: offset + knobSize)
+            
+            Circle()
+                .fill(Color.white)
+                .frame(width: knobSize, height: knobSize)
+                .overlay(
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.black)
+                )
+                .offset(x: offset)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            if value.translation.width > 0 && value.translation.width < buttonWidth - knobSize {
+                                offset = value.translation.width
+                            }
+                        }
+                        .onEnded { value in
+                            if offset > buttonWidth - knobSize - 20 {
+                                // Trigger haptic and action
+                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                action()
+                                offset = 0
+                            } else {
+                                withAnimation(.spring()) {
+                                    offset = 0
+                                }
+                            }
+                        }
+                )
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(pillColor.opacity(0.92), in: Capsule())
-        .shadow(color: pillColor.opacity(0.4), radius: 6, y: 2)
-        .onChange(of: state) { _, new in
-            if new == .alarm {
-                withAnimation(.easeInOut(duration: 0.4).repeatForever(autoreverses: true)) {
-                    pulse = true
-                }
-            } else {
-                pulse = false
-            }
-        }
+        .frame(width: buttonWidth, height: knobSize)
     }
 }
+
 
 // MARK: - Full Screen Alarm View
 
 @available(iOS 26.0, *)
 struct DrowsinessAlarmView: View {
     @ObservedObject var detector: DrowsinessDetector
-    @State private var flashOn      = false
-    @State private var textScale    = 1.0
-    @State private var eyeScale     = 1.0
+    @State private var flashOn = false
 
     var body: some View {
         ZStack {
-            // Flashing red background
-            Color.black.ignoresSafeArea()
-
+            // Native dark glass background
             Rectangle()
-                .fill(AppTheme.Status.danger.opacity(flashOn ? 0.55 : 0.25))
+                .fill(.ultraThinMaterial)
+                .environment(\.colorScheme, .dark)
                 .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.35).repeatForever(autoreverses: true), value: flashOn)
+            
+            // Subtle red pulsing vignette
+            RadialGradient(
+                colors: [AppTheme.Status.danger.opacity(flashOn ? 0.35 : 0.0), .clear],
+                center: .center,
+                startRadius: 50,
+                endRadius: UIScreen.main.bounds.height / 1.5
+            )
+            .ignoresSafeArea()
 
-            VStack(spacing: 32) {
+            VStack(spacing: 24) {
                 Spacer()
 
-                // Animated eye icon
+                // Emergency SOS Style Icon
                 ZStack {
-                    ForEach(0..<3, id: \.self) { i in
-                        Circle()
-                            .stroke(AppTheme.Status.danger.opacity(0.2 - Double(i) * 0.06), lineWidth: 2)
-                            .frame(width: 130 + CGFloat(i) * 32,
-                                   height: 130 + CGFloat(i) * 32)
-                            .scaleEffect(eyeScale)
-                    }
                     Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [AppTheme.Status.danger.opacity(0.6), AppTheme.Status.danger.opacity(0.15)],
-                                center: .center,
-                                startRadius: 10, endRadius: 65
-                            )
-                        )
-                        .frame(width: 120, height: 120)
-
-                    Image(systemName: "eye.slash.fill")
-                        .font(.system(size: 44, weight: .bold))
-                        .foregroundStyle(.white)
-                        .symbolEffect(.pulse)
+                        .fill(AppTheme.Status.danger)
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 48, weight: .bold))
+                        .foregroundColor(.white)
                 }
+                .padding(.bottom, 16)
 
-                VStack(spacing: 12) {
-                    Text("⚠️ DROWSINESS DETECTED")
-                        .font(.system(size: 18, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .tracking(2)
-                        .scaleEffect(textScale)
+                // Native bold typography
+                Text("Drowsiness Detected")
+                    .font(.system(size: 34, weight: .bold, design: .default))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
 
-                    Text("Your eyes were closed for 5+ seconds")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.80))
-                        .multilineTextAlignment(.center)
-
-                    Text("Pull over safely at the nearest stop.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.60))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
+                Text("It looks like your eyes were closed. Please pull over safely if you are tired.")
+                    .font(.system(size: 17, weight: .regular, design: .default))
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
 
                 Spacer()
-
-                // Wake-up confirm button
-                Button {
+                
+                // Native slider
+                SlideToResumeButton {
                     withAnimation(.spring(response: 0.4)) {
                         detector.dismissAlarm()
                     }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "hand.wave.fill")
-                            .font(.system(size: 18, weight: .bold))
-                        Text("I'm Awake — Resume")
-                            .font(.system(size: 17, weight: .bold))
-                    }
-                    .foregroundStyle(AppTheme.Status.danger)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-                    .shadow(color: .white.opacity(0.25), radius: 12, y: 4)
                 }
-                .padding(.horizontal, 32)
-                .padding(.bottom, 50)
+                .padding(.bottom, 60)
             }
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.35).repeatForever(autoreverses: true)) {
+            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
                 flashOn = true
             }
-            withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
-                eyeScale = 1.10
-            }
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.5).repeatForever(autoreverses: true)) {
-                textScale = 1.05
-            }
+            // Trigger initial critical haptic
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }
 }
 
-// MARK: - Monitoring HUD (PIP + pill, sits top-right of map)
+// MARK: - Monitoring HUD — Draggable FaceTime-style PIP
 
 @available(iOS 26.0, *)
 struct DrowsinessMonitorHUD: View {
     @ObservedObject var detector: DrowsinessDetector
-    @State private var expanded = false
+
+    // Drag state
+    @State private var position: CGPoint = CGPoint(x: 300, y: 120)
+    @GestureState private var dragOffset: CGSize = .zero
+    @State private var isDragging = false
+
+    // UI state
+    @State private var isCollapsed = false
+    @State private var expanded   = false
+
+    private let pipW: CGFloat = 100 // Slightly wider for FaceTime aspect ratio
+    private let pipH: CGFloat = 150
+    private let collapsedSize: CGFloat = 38
+    private let padding: CGFloat = 16
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 8) {
-            // Camera PIP thumbnail (tap to toggle expand)
-            if let layer = detector.cameraPreviewLayer {
-                Button {
-                    withAnimation(.spring(response: 0.35)) { expanded.toggle() }
-                } label: {
-                    ZStack(alignment: .bottomTrailing) {
-                        CameraPreviewPIP(previewLayer: layer)
-                            .frame(
-                                width: expanded ? 120 : 68,
-                                height: expanded ? 160 : 90
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(
-                                        borderColor,
-                                        lineWidth: detector.state == .alarm ? 3 : 1.5
-                                    )
-                            )
-                            .shadow(color: .black.opacity(0.30), radius: 8, y: 3)
+        GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                if isCollapsed {
+                    // ── Collapsed: just a small eye badge ────────────────────
+                    collapsedBadge
+                        .position(clamp(position, in: geo.size, itemSize: CGSize(width: collapsedSize, height: collapsedSize)))
+                        .offset(dragOffset)
+                        .gesture(dragGesture(in: geo.size, itemSize: CGSize(width: collapsedSize, height: collapsedSize)))
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.35)) { isCollapsed = false }
+                        }
 
-                        // Eye icon overlay
-                        Image(systemName: eyeOverlayIcon)
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(5)
-                            .background(borderColor, in: Circle())
-                            .offset(x: 4, y: 4)
+                } else {
+                    // ── Expanded: Pure FaceTime PIP ──────────────────────────────────
+                    ZStack(alignment: .topTrailing) {
+                        if let layer = detector.cameraPreviewLayer {
+                            CameraPreviewPIP(previewLayer: layer)
+                                .frame(width: expanded ? 140 : pipW,
+                                       height: expanded ? 210 : pipH)
+                                .clipShape(RoundedRectangle(cornerRadius: expanded ? 24 : 16, style: .continuous))
+                                .shadow(color: .black.opacity(0.2), radius: 15, y: 8)
+                        } else {
+                            RoundedRectangle(cornerRadius: expanded ? 24 : 16, style: .continuous)
+                                .fill(Color.black.opacity(0.6))
+                                .frame(width: pipW, height: pipH)
+                        }
+                        
+                        // Tiny native privacy-style indicator dot instead of a loud pill
+                        if detector.state == .monitoring {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 8, height: 8)
+                                .padding(expanded ? 12 : 8)
+                        } else if case .eyesClosed = detector.state {
+                            // Yellow warning dot
+                            Circle()
+                                .fill(Color.yellow)
+                                .frame(width: 8, height: 8)
+                                .padding(expanded ? 12 : 8)
+                        }
                     }
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { expanded.toggle() }
+                    }
+                    // Drag to move
+                    .position(clamp(position, in: geo.size,
+                                    itemSize: CGSize(width: expanded ? 140 : pipW,
+                                                     height: expanded ? 210 : pipH)))
+                    .offset(dragOffset)
+                    .scaleEffect(isDragging ? 1.05 : 1.0)
+                    .shadow(color: isDragging ? .black.opacity(0.3) : .clear, radius: 20, y: 10)
+                    .gesture(
+                        dragGesture(in: geo.size,
+                                    itemSize: CGSize(width: expanded ? 140 : pipW,
+                                                     height: expanded ? 210 : pipH))
+                    )
+                    .simultaneousGesture(
+                        // Long-press to collapse to badge
+                        LongPressGesture(minimumDuration: 0.6).onEnded { _ in
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            withAnimation(.spring(response: 0.35)) { isCollapsed = true }
+                        }
+                    )
+                    .animation(.spring(response: 0.35, dampingFraction: 0.7), value: expanded)
                 }
-                .buttonStyle(.plain)
             }
+            .onAppear {
+                // Default: top-right corner with padding
+                position = CGPoint(x: geo.size.width - pipW / 2 - padding,
+                                   y: 120 + pipH / 2)
+            }
+        }
+        .allowsHitTesting(true)
+    }
 
-            // Status pill
-            DrowsinessStatusPill(state: detector.state)
+    // MARK: - Collapsed Badge
+    private var collapsedBadge: some View {
+        ZStack {
+            Circle()
+                .fill(Color(UIColor.systemGray6))
+                .frame(width: collapsedSize, height: collapsedSize)
+                .shadow(color: .black.opacity(0.15), radius: 6)
+            Image(systemName: "video.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color(UIColor.label))
         }
     }
 
-    private var borderColor: Color {
-        switch detector.state {
-        case .monitoring:   return AppTheme.Status.success
-        case .eyesClosed:   return AppTheme.Status.warning
-        case .alarm:        return AppTheme.Status.danger
-        default:            return Color.fmsIndigo.opacity(0.4)
-        }
+    // MARK: - Drag gesture with corner snapping
+    private func dragGesture(in size: CGSize, itemSize: CGSize) -> some Gesture {
+        DragGesture()
+            .updating($dragOffset) { value, state, _ in
+                state = value.translation
+            }
+            .onChanged { _ in
+                if !isDragging {
+                    withAnimation(.easeOut(duration: 0.15)) { isDragging = true }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+            }
+            .onEnded { value in
+                withAnimation(.easeOut(duration: 0.15)) { isDragging = false }
+                // Apply translation
+                let newX = position.x + value.translation.width
+                let newY = position.y + value.translation.height
+                // Snap to nearest corner
+                let corners = corners(for: size, itemSize: itemSize)
+                let nearest = corners.min(by: {
+                    dist($0, CGPoint(x: newX, y: newY)) < dist($1, CGPoint(x: newX, y: newY))
+                }) ?? corners[0]
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    position = nearest
+                }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
     }
 
-    private var eyeOverlayIcon: String {
-        switch detector.state {
-        case .monitoring:   return "eye.fill"
-        case .eyesClosed:   return "exclamationmark.triangle.fill"
-        case .alarm:        return "exclamationmark.octagon.fill"
-        case .noFace:       return "person.fill.questionmark"
-        case .inactive:     return "eye.slash"
-        }
+    // Four corner snap positions
+    private func corners(for screenSize: CGSize, itemSize: CGSize) -> [CGPoint] {
+        let hw = itemSize.width / 2 + padding
+        let hh = itemSize.height / 2 + padding
+        return [
+            CGPoint(x: hw,                      y: 110 + hh),           // top-left
+            CGPoint(x: screenSize.width - hw,   y: 110 + hh),           // top-right
+            CGPoint(x: hw,                      y: screenSize.height - hh - 220), // bottom-left
+            CGPoint(x: screenSize.width - hw,   y: screenSize.height - hh - 220)  // bottom-right
+        ]
+    }
+
+    // Clamp position within screen bounds
+    private func clamp(_ point: CGPoint, in size: CGSize, itemSize: CGSize) -> CGPoint {
+        let hw = itemSize.width / 2 + padding
+        let hh = itemSize.height / 2 + padding
+        return CGPoint(
+            x: max(hw, min(point.x + dragOffset.width, size.width - hw)),
+            y: max(hh + 60, min(point.y + dragOffset.height, size.height - hh - 200))
+        )
+    }
+
+    private func dist(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
+        sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2))
     }
 }
-
-

@@ -19,9 +19,9 @@ final class CompletedTasksViewModel: ObservableObject {
 
     @Published var searchText: String = ""
     @Published var selectedFilter: Int = 0   // 0=All, 1=High Value, 2=My Completions
+    @Published var allWorkOrders: [WorkOrder]
 
     let currentUserId: UUID
-    private let allWorkOrders: [WorkOrder]
 
     init(currentUserId: UUID, allWorkOrders: [WorkOrder]) {
         self.currentUserId = currentUserId
@@ -79,10 +79,13 @@ final class CompletedTasksViewModel: ObservableObject {
 // ─────────────────────────────────────────────────────────────────────────────
 
 struct CompletedTasksView: View {
-    
+    let hidesTabBar: Bool
+    let allWorkOrders: [WorkOrder]
     @StateObject private var vm: CompletedTasksViewModel
     
-    init(currentUserId: UUID, allWorkOrders: [WorkOrder]) {
+    init(currentUserId: UUID, allWorkOrders: [WorkOrder], hidesTabBar: Bool = false) {
+        self.hidesTabBar = hidesTabBar
+        self.allWorkOrders = allWorkOrders
         _vm = StateObject(wrappedValue: CompletedTasksViewModel(
             currentUserId: currentUserId,
             allWorkOrders: allWorkOrders
@@ -94,8 +97,6 @@ struct CompletedTasksView: View {
             AppTheme.Background.page.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                CustomCenteredHeaderView(title: "Completed Today")
-                
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                         Section {
@@ -146,10 +147,14 @@ struct CompletedTasksView: View {
                     }
                 }
             }
-            .navigationBarHidden(true)
-            .navigationBarBackButtonHidden(true)
+        }
+        .toolbar(hidesTabBar ? .hidden : .automatic, for: .tabBar)
+        .onChange(of: allWorkOrders) { _, newValue in
+            vm.allWorkOrders = newValue
         }
     }
+}
+
     
     // ─────────────────────────────────────────────────────────────────────────────
     // MARK: - Summary Banner
@@ -402,12 +407,5 @@ struct CompletedTasksView: View {
                 DispatchQueue.main.async { binding.wrappedValue = geo.size.height }
                 return Color.clear
             }
-        }
     }
-    //
-    //  CompleteTasksView.swift
-    //  FMS
-    //
-    //  Created by Gauri Verma on 26/05/26.
-    //
 }

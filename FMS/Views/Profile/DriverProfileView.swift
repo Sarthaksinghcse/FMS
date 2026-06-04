@@ -10,6 +10,7 @@ struct DriverProfileView: View {
 
 
     @Environment(SupabaseManager.self) private var supabase
+    @Environment(\.dismiss) private var dismiss
 
     @State private var showEditProfile = false
     @State private var showLicenseDetails = false
@@ -96,12 +97,10 @@ struct DriverProfileView: View {
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Edit") {
-                        showEditProfile = true
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
                     }
-                    .font(.system(size: 17))
-                    .foregroundColor(AppTheme.Status.success)
                 }
             }
             .sheet(isPresented: $showEditProfile) {
@@ -168,78 +167,90 @@ struct DriverProfileView: View {
     // MARK: - Header
 
     private var profileHeaderCard: some View {
-        VStack(spacing: 16) {
-            ZStack(alignment: .bottomTrailing) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [AppTheme.Status.success, AppTheme.Brand.teal],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 90, height: 90)
-                        .shadow(color: AppTheme.Status.success.opacity(0.35), radius: 16, y: 6)
-
-                    if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
-                        AsyncImage(url: imageURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            default:
-                                Text(initials)
-                                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .frame(width: 90, height: 90)
-                        .clipShape(Circle())
-                    } else {
-                        Text(initials)
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                    }
-                }
-
-                // Active duty status indicator
-                Circle()
-                    .fill(isDriverActive ? AppTheme.Status.success : AppTheme.Status.neutral)
-                    .frame(width: 20, height: 20)
-                    .overlay(
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 16) {
+                ZStack(alignment: .bottomTrailing) {
+                    ZStack {
                         Circle()
-                            .stroke(AppTheme.Background.card, lineWidth: 3)
-                    )
-                    .offset(x: -2, y: -2)
-            }
+                            .fill(
+                                LinearGradient(
+                                    colors: [AppTheme.Status.success, AppTheme.Brand.teal],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 90, height: 90)
+                            .shadow(color: AppTheme.Status.success.opacity(0.35), radius: 16, y: 6)
 
-            VStack(spacing: 6) {
-                Text(user?.name ?? "Driver")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(AppTheme.Text.primary)
+                        if let imageURLString = user?.profileImage, let imageURL = URL(string: imageURLString) {
+                            AsyncImage(url: imageURL) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                default:
+                                    Text(initials)
+                                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .frame(width: 90, height: 90)
+                            .clipShape(Circle())
+                        } else {
+                            Text(initials)
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                    }
 
-                Text(user?.email ?? "driver@fms.com")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(AppTheme.Text.secondary)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "steeringwheel")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Driver")
-                        .font(.system(size: 12, weight: .semibold))
+                    // Active duty status indicator
+                    Circle()
+                        .fill(isDriverActive ? AppTheme.Status.success : AppTheme.Status.neutral)
+                        .frame(width: 20, height: 20)
+                        .overlay(
+                            Circle()
+                                .stroke(AppTheme.Background.card, lineWidth: 3)
+                        )
+                        .offset(x: -2, y: -2)
                 }
-                .foregroundColor(AppTheme.Status.success)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(AppTheme.Status.success.opacity(0.10))
-                .clipShape(Capsule())
-                .padding(.top, 4)
+
+                VStack(spacing: 6) {
+                    Text(user?.name ?? "Driver")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.Text.primary)
+
+                    Text(user?.email ?? "driver@fms.com")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppTheme.Text.secondary)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "steeringwheel")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Driver")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.Status.success)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.Status.success.opacity(0.10))
+                    .clipShape(Capsule())
+                    .padding(.top, 4)
+                }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+
+            Button {
+                showEditProfile = true
+            } label: {
+                Image(systemName: "pencil.circle.fill")
+                    .font(.system(size: 28))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundColor(AppTheme.Status.success)
+            }
+            .padding(12)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
         .background(AppTheme.Background.card)
         .cornerRadius(AppTheme.Radius.card)
         .shadow(color: AppTheme.Shadow.card, radius: 8, x: 0, y: 4)

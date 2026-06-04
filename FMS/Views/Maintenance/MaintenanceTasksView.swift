@@ -9,12 +9,20 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 import Supabase
+import AVFoundation
 
 struct MaintenanceTaskDetailView: View {
     let order: WorkOrder
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+
+    @Query private var inventoryItems: [InventoryItem]
+    @Query private var allUsers: [User]
+    @Query private var allVehicles: [Vehicle]
+
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+    @State private var speechSynthesizer = AVSpeechSynthesizer()
 
     @State private var repairNotes: String = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
@@ -23,6 +31,19 @@ struct MaintenanceTaskDetailView: View {
     @State private var showSuccessAlert: Bool = false
     @State private var uploadError: String? = nil
 
+    @State private var laborCostText: String = ""
+    @State private var selectedParts: [UUID: Int] = [:]
+
+    private func speak(_ text: String) {
+        if speechSynthesizer.isSpeaking {
+            speechSynthesizer.stopSpeaking(at: .immediate)
+        }
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        speechSynthesizer.speak(utterance)
+    }
+
     private var statusColor: Color {
         if order.status == .open && order.workDescription.contains("[PENDING_APPROVAL]") {
             return AppTheme.Brand.amber
@@ -30,16 +51,18 @@ struct MaintenanceTaskDetailView: View {
         return order.status.color
     }
 
-    private var mechanicDisplayId: String {
-        "TECH-" + order.assignedTo.uuidString.prefix(8).uppercased()
+    private var mechanicName: String {
+        if let user = allUsers.first(where: { $0.id == order.assignedTo }) {
+            return user.fullName
+        }
+        return "Tech-" + order.assignedTo.uuidString.prefix(8).uppercased()
     }
 
-    private var vehicleDisplayId: String {
-        "VEH-" + order.vehicleId.uuidString.prefix(8).uppercased()
-    }
-
-    private var serviceBayDisplay: String {
-        "Bay \(abs(order.id.hashValue % 6) + 1)"
+    private var vehicleNameAndReg: String {
+        if let vehicle = allVehicles.first(where: { $0.id == order.vehicleId }) {
+            return "\(vehicle.make) \(vehicle.model) (\(vehicle.registrationNumber))"
+        }
+        return "Veh-" + order.vehicleId.uuidString.prefix(8).uppercased()
     }
 
     private var estimatedCostDisplay: String {
@@ -80,7 +103,14 @@ struct MaintenanceTaskDetailView: View {
                     DetailHeroCard(order: order)
 
                     // ── Work details ─────────────────────────────────────────
-                    DetailSection(title: "Work Order Details", icon: "doc.text.fill", accentColor: AppTheme.Brand.primary) {
+                    DetailSection(
+                        title: "Work Order Details",
+                        icon: "doc.text.fill",
+                        accentColor: AppTheme.Brand.primary,
+                        onSpeak: accessibility.maintenanceSpeakTasks ? {
+                            speak("Work Order: \(order.title). Description: \(order.workDescription.isEmpty ? "No description provided." : order.workDescription). Priority: \(order.priority.rawValue). Status: \(order.status.displayLabel).")
+                        } : nil
+                    ) {
                         VStack(spacing: 0) {
                             DetailInfoRow(label: "Work Order Title", value: order.title, icon: "wrench.fill", color: AppTheme.Brand.primary)
                             Divider().padding(.leading, 52)
@@ -110,15 +140,6 @@ struct MaintenanceTaskDetailView: View {
                                     value: completed.formatted(date: .complete, time: .shortened),
                                     icon: "checkmark.circle.fill",
                                     color: AppTheme.Status.success
-                                )
-                            } else {
-                                Divider().padding(.leading, 52)
-                                DetailInfoRow(
-                                    label: "Est. Completion",
-                                    value: (Calendar.current.date(byAdding: .hour, value: 3, to: order.createdAt) ?? .now)
-                                        .formatted(date: .omitted, time: .shortened),
-                                    icon: "clock.badge.exclamationmark",
-                                    color: AppTheme.Brand.amber
                                 )
                             }
                         }
@@ -153,7 +174,14 @@ struct MaintenanceTaskDetailView: View {
                     }
 
                     // ── Parts list ───────────────────────────────────────────
-                    DetailSection(title: "Parts & Materials", icon: "cube.box.fill", accentColor: AppTheme.Brand.amber) {
+                    DetailSection(
+                        title: "Parts & Materials",
+                        icon: "cube.box.fill",
+                        accentColor: AppTheme.Brand.amber,
+                        onSpeak: accessibility.maintenanceSpeakTasks ? {
+                            speak("Parts and Materials checklist: " + simulatedParts.joined(separator: ", "))
+                        } : nil
+                    ) {
                         VStack(alignment: .leading, spacing: 10) {
                             ForEach(Array(simulatedParts.enumerated()), id: \.offset) { idx, part in
                                 HStack(spacing: 12) {
@@ -188,22 +216,15 @@ struct MaintenanceTaskDetailView: View {
                     DetailSection(title: "Assignment", icon: "person.2.fill", accentColor: AppTheme.Brand.violet) {
                         VStack(spacing: 0) {
                             DetailInfoRow(
-                                label: "Mechanic ID",
-                                value: mechanicDisplayId,
+                                label: "Mechanic Name",
+                                value: mechanicName,
                                 icon: "person.badge.key.fill",
                                 color: AppTheme.Brand.violet
                             )
                             Divider().padding(.leading, 52)
                             DetailInfoRow(
-                                label: "Service Bay",
-                                value: serviceBayDisplay,
-                                icon: "mappin.circle.fill",
-                                color: AppTheme.Status.success
-                            )
-                            Divider().padding(.leading, 52)
-                            DetailInfoRow(
-                                label: "Vehicle ID",
-                                value: vehicleDisplayId,
+                                label: "Vehicle",
+                                value: vehicleNameAndReg,
                                 icon: "car.fill",
                                 color: AppTheme.Brand.primary
                             )
@@ -257,6 +278,120 @@ struct MaintenanceTaskDetailView: View {
                                 .padding(.vertical, 12)
                             } else if order.status == .inProgress {
                                 VStack(alignment: .leading, spacing: 14) {
+                                    // Labor Cost Input
+                                    VStack(alignment: .leading, spacing: 5) {
+                                        Text("Labor Cost (₹)")
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                        
+                                        TextField("e.g. 1500", text: $laborCostText)
+                                            .keyboardType(.decimalPad)
+                                            .padding(10)
+                                            .background(Color.black.opacity(0.04))
+                                            .cornerRadius(8)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.black.opacity(0.1), lineWidth: 1)
+                                            )
+                                    }
+                                    
+                                    // Parts Used Picker
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("Parts Used")
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(AppTheme.Text.secondary)
+                                        
+                                        if inventoryItems.isEmpty {
+                                            Text("No inventory items found.")
+                                                .font(.system(size: 12))
+                                                .italic()
+                                                .foregroundColor(.gray)
+                                        } else {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                ForEach(inventoryItems) { item in
+                                                    let isSelected = selectedParts[item.id] != nil
+                                                    let qty = selectedParts[item.id] ?? 0
+                                                    
+                                                    HStack {
+                                                        Button {
+                                                            if isSelected {
+                                                                selectedParts.removeValue(forKey: item.id)
+                                                            } else {
+                                                                if item.quantityInStock > 0 {
+                                                                    selectedParts[item.id] = 1
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            HStack(spacing: 8) {
+                                                                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                                                                    .foregroundColor(isSelected ? AppTheme.Brand.primary : .gray)
+                                                                    .font(.system(size: 16))
+                                                                
+                                                                VStack(alignment: .leading, spacing: 2) {
+                                                                    Text(item.partName)
+                                                                        .font(.system(size: 13, weight: .semibold))
+                                                                        .foregroundColor(.black)
+                                                                    Text("In stock: \(item.quantityInStock) · Price: ₹\(Int(item.unitCost))")
+                                                                        .font(.system(size: 11))
+                                                                        .foregroundColor(.gray)
+                                                                }
+                                                            }
+                                                        }
+                                                        .buttonStyle(PlainButtonStyle())
+                                                        .disabled(item.quantityInStock <= 0 && !isSelected)
+                                                        
+                                                        Spacer()
+                                                        
+                                                        if isSelected {
+                                                            HStack(spacing: 10) {
+                                                                Button {
+                                                                    if qty > 1 {
+                                                                        selectedParts[item.id] = qty - 1
+                                                                    }
+                                                                } label: {
+                                                                    Image(systemName: "minus.circle.fill")
+                                                                        .foregroundColor(AppTheme.Brand.primary)
+                                                                        .font(.system(size: 18))
+                                                                }
+                                                                
+                                                                Text("\(qty)")
+                                                                    .font(.system(size: 13, weight: .bold))
+                                                                    .frame(width: 20)
+                                                                    .multilineTextAlignment(.center)
+                                                                
+                                                                Button {
+                                                                    if qty < item.quantityInStock {
+                                                                        selectedParts[item.id] = qty + 1
+                                                                    }
+                                                                } label: {
+                                                                    Image(systemName: "plus.circle.fill")
+                                                                        .foregroundColor(AppTheme.Brand.primary)
+                                                                        .font(.system(size: 18))
+                                                                }
+                                                            }
+                                                        } else if item.quantityInStock <= 0 {
+                                                            Text("OUT OF STOCK")
+                                                                .font(.system(size: 9, weight: .bold))
+                                                                .foregroundColor(AppTheme.Status.danger)
+                                                                .padding(.horizontal, 6)
+                                                                .padding(.vertical, 2)
+                                                                .background(AppTheme.Status.danger.opacity(0.1))
+                                                                .cornerRadius(4)
+                                                        }
+                                                    }
+                                                    .padding(.vertical, 4)
+                                                }
+                                            }
+                                            .padding(10)
+                                            .background(Color.black.opacity(0.02))
+                                            .cornerRadius(8)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                                            )
+                                        }
+                                    }
+                                    
                                     Text("Repair Notes / Evidence")
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundColor(AppTheme.Text.secondary)
@@ -316,6 +451,9 @@ struct MaintenanceTaskDetailView: View {
                                             .foregroundColor(AppTheme.Status.danger)
                                     }
                                     
+                                    let isCostValid = Double(laborCostText) != nil
+                                    let canComplete = !repairNotes.isEmpty && !laborCostText.isEmpty && isCostValid && !isSubmitting
+                                    
                                     Button {
                                         completeTask()
                                     } label: {
@@ -331,10 +469,10 @@ struct MaintenanceTaskDetailView: View {
                                         .foregroundColor(.white)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(repairNotes.isEmpty ? AppTheme.Status.success.opacity(0.3) : AppTheme.Status.success)
+                                        .background(canComplete ? AppTheme.Status.success : AppTheme.Status.success.opacity(0.3))
                                         .cornerRadius(10)
                                     }
-                                    .disabled(repairNotes.isEmpty || isSubmitting)
+                                    .disabled(!canComplete)
                                 }
                                 .padding()
                             } else if order.status == .completed {
@@ -350,6 +488,7 @@ struct MaintenanceTaskDetailView: View {
                                             .font(.system(size: 12))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
+                                    Spacer()
                                 }
                                 .padding()
                             }
@@ -364,6 +503,7 @@ struct MaintenanceTaskDetailView: View {
         }
         .navigationTitle(order.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .alert("Repair Logged", isPresented: $showSuccessAlert) {
             Button("OK") {}
         } message: {
@@ -401,14 +541,38 @@ struct MaintenanceTaskDetailView: View {
                 }
             }
             
+            let laborCost = Double(laborCostText) ?? 0.0
+            var partsCost = 0.0
+            var partsSummary: [String] = []
+            
+            for (partId, qty) in selectedParts {
+                if let part = inventoryItems.first(where: { $0.id == partId }) {
+                    partsCost += part.unitCost * Double(qty)
+                    partsSummary.append("\(part.partName) (x\(qty))")
+                    
+                    // Deduct stock levels locally & on Supabase
+                    part.quantityInStock -= qty
+                    let dbItem = part.asDBItem
+                    do {
+                        try await SupabaseManager.shared.updateInventoryItem(dbItem)
+                    } catch {
+                        print("Failed to update inventory item on Supabase: \(error.localizedDescription)")
+                    }
+                }
+            }
+            
+            let totalCost = laborCost + partsCost
+            let partsString = partsSummary.isEmpty ? "None" : partsSummary.joined(separator: ", ")
+            let finalNotes = "Labor Cost: ₹\(String(format: "%.2f", laborCost)). Parts Used: \(partsString). Notes: \(repairNotes)"
+            
             let record = DBMaintenanceRecord(
                 id: UUID(),
                 vehicleId: order.vehicleId,
                 workOrderId: order.id,
                 serviceType: order.title,
                 serviceDate: Date(),
-                cost: order.estimatedCost ?? 0.0,
-                notes: repairNotes,
+                cost: totalCost,
+                notes: finalNotes,
                 repairImages: imageUrls.isEmpty ? nil : imageUrls,
                 performedBy: mechanicId,
                 createdAt: Date()
@@ -425,6 +589,13 @@ struct MaintenanceTaskDetailView: View {
                 await MainActor.run {
                     order.status = .completed
                     order.completedAt = Date()
+                    
+                    // Set local vehicle status to active
+                    if let localVehicle = (try? modelContext.fetch(FetchDescriptor<Vehicle>()))?.first(where: { $0.id == order.vehicleId }) {
+                        localVehicle.status = .active
+                        localVehicle.updatedAt = Date()
+                    }
+                    
                     try? modelContext.save()
                     
                     let dbOrder = order.asDBWorkOrder
@@ -517,12 +688,14 @@ private struct DetailSection<Content: View>: View {
     let title: String
     let icon: String
     let accentColor: Color
+    var onSpeak: (() -> Void)? = nil
     let content: () -> Content
 
-    init(title: String, icon: String, accentColor: Color, @ViewBuilder content: @escaping () -> Content) {
+    init(title: String, icon: String, accentColor: Color, onSpeak: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.title = title
         self.icon = icon
         self.accentColor = accentColor
+        self.onSpeak = onSpeak
         self.content = content
     }
 
@@ -535,6 +708,19 @@ private struct DetailSection<Content: View>: View {
                 Text(title)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
+                
+                if let onSpeak = onSpeak {
+                    Spacer()
+                    Button(action: onSpeak) {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(accentColor)
+                            .padding(6)
+                            .background(accentColor.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal)
 

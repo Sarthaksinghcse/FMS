@@ -18,11 +18,55 @@ struct FuelInsight: Codable {
     let estimatedSavings: Double
     let highConsumers: [VehicleInsight]
 
+    // Custom init to handle various response shapes from DB cache vs edge function
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: FlexKey.self)
+        
+        // insightsText could come as "insightsText" (after convertFromSnakeCase) or "insights_text"
+        insightsText = (try? c.decode(String.self, forKey: FlexKey(stringValue: "insightsText")))
+            ?? (try? c.decode(String.self, forKey: FlexKey(stringValue: "insights_text")))
+            ?? (try? c.decode(String.self, forKey: FlexKey(stringValue: "insights")))
+            ?? ""
+        
+        estimatedSavings = (try? c.decode(Double.self, forKey: FlexKey(stringValue: "estimatedSavings")))
+            ?? (try? c.decode(Double.self, forKey: FlexKey(stringValue: "estimated_savings")))
+            ?? 0
+        
+        highConsumers = (try? c.decode([VehicleInsight].self, forKey: FlexKey(stringValue: "highConsumers")))
+            ?? (try? c.decode([VehicleInsight].self, forKey: FlexKey(stringValue: "high_consumers")))
+            ?? (try? c.decode([VehicleInsight].self, forKey: FlexKey(stringValue: "vehicles")))
+            ?? []
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: FlexKey.self)
+        try c.encode(insightsText, forKey: FlexKey(stringValue: "insightsText"))
+        try c.encode(estimatedSavings, forKey: FlexKey(stringValue: "estimatedSavings"))
+        try c.encode(highConsumers, forKey: FlexKey(stringValue: "highConsumers"))
+    }
+
     struct VehicleInsight: Codable, Identifiable {
         var id: String { vehicleId }
         let vehicleId: String
         let issue: String
         let recommendation: String
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: FlexKey.self)
+            vehicleId = (try? c.decode(String.self, forKey: FlexKey(stringValue: "vehicleId")))
+                ?? (try? c.decode(String.self, forKey: FlexKey(stringValue: "vehicle_id")))
+                ?? "unknown"
+            issue = (try? c.decode(String.self, forKey: FlexKey(stringValue: "issue"))) ?? ""
+            recommendation = (try? c.decode(String.self, forKey: FlexKey(stringValue: "recommendation"))) ?? ""
+        }
+    }
+    
+    // Flexible CodingKey that accepts any string
+    private struct FlexKey: CodingKey {
+        var stringValue: String
+        init(stringValue: String) { self.stringValue = stringValue }
+        var intValue: Int? { nil }
+        init?(intValue: Int) { return nil }
     }
 }
 

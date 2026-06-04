@@ -195,146 +195,13 @@ struct PredictiveAlertDetailView: View {
                             .padding(.horizontal)
                             
                             // Telemetry & AI Diagnostic Input Factors Card
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("Telemetry & AI Diagnostic Input Factors")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(AppTheme.Text.primary)
-                                
-                                // Odometer & Runs
-                                HStack(alignment: .top, spacing: 12) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(AppTheme.Brand.royalBlue.opacity(0.1))
-                                            .frame(width: 36, height: 36)
-                                        Image(systemName: "speedometer")
-                                            .font(.system(size: 16))
-                                            .foregroundColor(AppTheme.Brand.royalBlue)
-                                    }
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Mileage & Fleet Runs")
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundColor(AppTheme.Text.primary)
-                                        
-                                        Text("Current Odometer: \(Int(associatedVehicle?.odometerReading ?? 0)) km")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(AppTheme.Text.secondary)
-                                        
-                                        Text("Recent Trip Activity: \(Int(recentTripDistance)) km completed run")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(AppTheme.Text.secondary)
-                                    }
-                                }
-                                
-                                Divider().background(Color.black.opacity(0.06))
-                                
-                                // Pre/Post-Trip Inspection & Defect Status
-                                HStack(alignment: .top, spacing: 12) {
-                                    let hasActiveDefects = !activeDefects.isEmpty
-                                    ZStack {
-                                        Circle()
-                                            .fill(hasActiveDefects ? AppTheme.Status.danger.opacity(0.1) : AppTheme.Status.success.opacity(0.1))
-                                            .frame(width: 36, height: 36)
-                                        Image(systemName: hasActiveDefects ? "exclamationmark.triangle.fill" : "checkmark.shield.fill")
-                                            .font(.system(size: 16))
-                                            .foregroundColor(hasActiveDefects ? AppTheme.Status.danger : AppTheme.Status.success)
-                                    }
-                                    
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("Inspection & Defect Status")
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundColor(AppTheme.Text.primary)
-                                        
-                                        if hasActiveDefects {
-                                            ForEach(activeDefects) { defect in
-                                                HStack(spacing: 6) {
-                                                    Circle()
-                                                        .fill(AppTheme.Status.danger)
-                                                        .frame(width: 4, height: 4)
-                                                    Text("\(defect.title) (\(defect.severity.rawValue.uppercased()))")
-                                                        .font(.system(size: 11, weight: .medium))
-                                                        .foregroundColor(AppTheme.Text.secondary)
-                                                }
-                                            }
-                                        } else {
-                                            Text("No active defects reported in pre/post-trip inspections.")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(AppTheme.Text.secondary)
-                                        }
-                                        
-                                        if let lastInspection = vehicleInspections.first {
-                                            let typeText = lastInspection.inspectionType == .preTrip ? "Pre-Trip" : "Post-Trip"
-                                            let dateText = lastInspection.createdAt.formatted(date: .abbreviated, time: .shortened)
-                                            Text("Last \(typeText) Checkup: \(dateText)")
-                                                .font(.system(size: 10, weight: .semibold))
-                                                .foregroundColor(AppTheme.Text.tertiary)
-                                            
-                                            if let remarks = lastInspection.remarks, !remarks.trimmingCharacters(in: .whitespaces).isEmpty {
-                                                Text("\"\(remarks)\"")
-                                                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                                                    .foregroundColor(AppTheme.Text.secondary)
-                                                    .italic()
-                                                    .padding(6)
-                                                    .background(Color.black.opacity(0.03))
-                                                    .cornerRadius(6)
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                Divider().background(Color.black.opacity(0.06))
-                                
-                                // Service Interval
-                                HStack(alignment: .top, spacing: 12) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(AppTheme.Brand.amber.opacity(0.1))
-                                            .frame(width: 36, height: 36)
-                                        Image(systemName: "wrench.and.screwdriver.fill")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(AppTheme.Brand.amber)
-                                    }
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Scheduled Service & Interval")
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundColor(AppTheme.Text.primary)
-                                        
-                                        if let nextService = associatedVehicle?.nextServiceDate {
-                                            Text("Next Scheduled Service: \(nextService.formatted(date: .abbreviated, time: .omitted))")
-                                                .font(.system(size: 11, weight: .semibold))
-                                                .foregroundColor(AppTheme.Brand.primary)
-                                        } else {
-                                            Text("No upcoming scheduled services.")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(AppTheme.Text.secondary)
-                                        }
-                                        
-                                        if let lastRecord = lastMaintenanceRecord {
-                                            Text("Last Completed Service: \(lastRecord.serviceType) on \(lastRecord.serviceDate.formatted(date: .abbreviated, time: .omitted))")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(AppTheme.Text.secondary)
-                                        } else if let lastService = associatedVehicle?.lastServiceDate {
-                                            Text("Last Completed Service: \(lastService.formatted(date: .abbreviated, time: .omitted))")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(AppTheme.Text.secondary)
-                                        } else {
-                                            Text("No completed service history logged.")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(AppTheme.Text.secondary)
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(16)
-                            .background(AppTheme.Background.card)
-                            .cornerRadius(AppTheme.Radius.card)
-                            .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppTheme.Radius.card)
-                                    .stroke(AppTheme.Glass.border, lineWidth: 1)
+                            TelemetryDiagnosticFactorsCard(
+                                associatedVehicle: associatedVehicle,
+                                recentTripDistance: recentTripDistance,
+                                activeDefects: activeDefects,
+                                vehicleInspections: vehicleInspections,
+                                lastMaintenanceRecord: lastMaintenanceRecord
                             )
-                            .padding(.horizontal)
                             
                             // Vehicle Info
                             VStack(alignment: .leading, spacing: 12) {
@@ -452,34 +319,6 @@ struct PredictiveAlertDetailView: View {
                                 .shadow(color: AppTheme.Brand.royalBlue.opacity(0.25), radius: 6, y: 3)
                             }
                         }
-                        
-                        Button {
-                            runAIDiagnostic()
-                        } label: {
-                            HStack {
-                                if isRunningAI {
-                                    ProgressView().tint(AppTheme.Brand.royalBlue)
-                                        .padding(.trailing, 8)
-                                    Text("Analyzing Telematics...")
-                                        .foregroundColor(AppTheme.Brand.royalBlue)
-                                } else {
-                                    Image(systemName: "sparkles")
-                                        .foregroundColor(AppTheme.Brand.royalBlue)
-                                    Text("Run AI Diagnostic Analysis")
-                                        .foregroundColor(AppTheme.Brand.royalBlue)
-                                }
-                            }
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(AppTheme.Brand.royalBlue.opacity(0.08))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(AppTheme.Brand.royalBlue.opacity(0.2), lineWidth: 1)
-                            )
-                        }
-                        .disabled(isRunningAI || isLoading)
                     }
                     .padding(.horizontal)
                     .padding(.top, 12)
@@ -491,15 +330,50 @@ struct PredictiveAlertDetailView: View {
                     viewModel: schedulerViewModel,
                     vehicles: vehicles,
                     staff: maintenanceStaff,
-                    isPresented: $showingScheduler
+                    isPresented: $showingScheduler,
+                    onScheduleSuccess: {
+                        if let alert = activeAlert {
+                            Task {
+                                var resolved = alert
+                                resolved.resolvedAt = Date()
+                                do {
+                                    try await SupabaseManager.shared.updatePredictiveAlert(resolved)
+                                    await fetchAlertsFromDatabase()
+                                } catch {
+                                    print("Failed to resolve predictive alert: \(error)")
+                                }
+                            }
+                        }
+                    }
                 )
+                .environment(\.modelContext, modelContext)
             }
         }
         .navigationTitle("AI Smart Diagnostic")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    Task {
+                        await fetchAlertsFromDatabase()
+                    }
+                } label: {
+                    if isLoading {
+                        ProgressView()
+                            .tint(AppTheme.Brand.royalBlue)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.royalBlue)
+                    }
+                }
+                .disabled(isLoading)
+            }
+        }
         .task {
             await fetchAlertsFromDatabase()
         }
+        .toolbar(.hidden, for: .tabBar)
     }
     
 
@@ -593,6 +467,7 @@ struct PredictionSelectorCard: View {
                     Text(regNo)
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(isSelected ? .white : AppTheme.Text.primary)
+                        .lineLimit(1)
                     
                     Spacer()
                     
@@ -616,7 +491,7 @@ struct PredictionSelectorCard: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .frame(width: 140)
+            .frame(width: 140, height: 78)
             .background(
                 isSelected
                     ? AnyView(LinearGradient(colors: [AppTheme.Brand.royalBlue, AppTheme.Brand.royalBlue.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -630,6 +505,157 @@ struct PredictionSelectorCard: View {
             .shadow(color: isSelected ? AppTheme.Brand.royalBlue.opacity(0.2) : Color.clear, radius: 4, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct TelemetryDiagnosticFactorsCard: View {
+    let associatedVehicle: Vehicle?
+    let recentTripDistance: Double
+    let activeDefects: [DefectReport]
+    let vehicleInspections: [VehicleInspection]
+    let lastMaintenanceRecord: MaintenanceRecord?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Telemetry & AI Diagnostic Input Factors")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.Text.primary)
+            
+            // Odometer & Runs
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.Brand.royalBlue.opacity(0.1))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "speedometer")
+                        .font(.system(size: 16))
+                        .foregroundColor(AppTheme.Brand.royalBlue)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Mileage & Fleet Runs")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.primary)
+                    
+                    Text("Current Odometer: \(Int(associatedVehicle?.odometerReading ?? 0)) km")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppTheme.Text.secondary)
+                    
+                    Text("Recent Trip Activity: \(Int(recentTripDistance)) km completed run")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppTheme.Text.secondary)
+                }
+            }
+            
+            Divider().background(Color.black.opacity(0.06))
+            
+            // Pre/Post-Trip Inspection & Defect Status
+            HStack(alignment: .top, spacing: 12) {
+                let hasActiveDefects = !activeDefects.isEmpty
+                ZStack {
+                    Circle()
+                        .fill(hasActiveDefects ? AppTheme.Status.danger.opacity(0.1) : AppTheme.Status.success.opacity(0.1))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: hasActiveDefects ? "exclamationmark.triangle.fill" : "checkmark.shield.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(hasActiveDefects ? AppTheme.Status.danger : AppTheme.Status.success)
+                }
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Inspection & Defect Status")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.primary)
+                    
+                    if hasActiveDefects {
+                        ForEach(activeDefects) { defect in
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(AppTheme.Status.danger)
+                                    .frame(width: 4, height: 4)
+                                Text("\(defect.title) (\(defect.severity.rawValue.uppercased()))")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(AppTheme.Text.secondary)
+                            }
+                        }
+                    } else {
+                        Text("No active defects reported in pre/post-trip inspections.")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
+                    
+                    if let lastInspection = vehicleInspections.first {
+                        let typeText = lastInspection.inspectionType == .preTrip ? "Pre-Trip" : "Post-Trip"
+                        let dateText = lastInspection.createdAt.formatted(date: .abbreviated, time: .shortened)
+                        Text("Last \(typeText) Checkup: \(dateText)")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(AppTheme.Text.tertiary)
+                        
+                        if let remarks = lastInspection.remarks, !remarks.trimmingCharacters(in: .whitespaces).isEmpty {
+                            Text("\"\(remarks)\"")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundColor(AppTheme.Text.secondary)
+                                .italic()
+                                .padding(6)
+                                .background(Color.black.opacity(0.03))
+                                .cornerRadius(6)
+                        }
+                    }
+                }
+            }
+            
+            Divider().background(Color.black.opacity(0.06))
+            
+            // Service Interval
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.Brand.amber.opacity(0.1))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "wrench.and.screwdriver.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(AppTheme.Brand.amber)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Scheduled Service & Interval")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.Text.primary)
+                    
+                    if let nextService = associatedVehicle?.nextServiceDate {
+                        Text("Next Scheduled Service: \(nextService.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(AppTheme.Brand.primary)
+                    } else {
+                        Text("No upcoming scheduled services.")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
+                    
+                    if let lastRecord = lastMaintenanceRecord {
+                        Text("Last Completed Service: \(lastRecord.serviceType) on \(lastRecord.serviceDate.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    } else if let lastService = associatedVehicle?.lastServiceDate {
+                        Text("Last Completed Service: \(lastService.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    } else {
+                        Text("No completed service history logged.")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.Text.secondary)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(AppTheme.Background.card)
+        .cornerRadius(AppTheme.Radius.card)
+        .shadow(color: AppTheme.Shadow.card, radius: 6, x: 0, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card)
+                .stroke(AppTheme.Glass.border, lineWidth: 1)
+        )
+        .padding(.horizontal)
     }
 }
 

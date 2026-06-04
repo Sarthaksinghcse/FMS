@@ -25,11 +25,13 @@ extension Color {
 @available(iOS 26.0, *)
 struct DriverDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var accessibility = AccessibilityManager.shared
 
     @StateObject private var vm = DriverDashboardViewModel()
     @State private var selectedTab = 0
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var realtimeMessagesChannel: RealtimeChannelV2?
+    @State private var showFuelLogPrompt = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -75,12 +77,12 @@ struct DriverDashboardView: View {
             }
         }
         
-        .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet() }
+        .sheet(isPresented: $vm.showVoiceLog)  { VoiceLogSheet(tripId: vm.activeTrip?.id ?? vm.currentTrip?.id) }
         .sheet(isPresented: $vm.showIssue)     { IssueReportSheet() }
         .sheet(isPresented: $vm.showPreTrip)   { InspectionFormSheet(isPreTrip: true) }
         .sheet(isPresented: $vm.showPostTrip, onDismiss: {
             if vm.showPostTripOnEnd {
-                vm.finishTrip()
+                showFuelLogPrompt = true
             }
         }) {
             InspectionFormSheet(isPreTrip: false) { passed, issues, remarks in
@@ -91,7 +93,7 @@ struct DriverDashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showDefect)    { DefectReportSheet() }
-        .sheet(isPresented: $vm.showMessaging) { ChatHubSheet(vm: vm) }
+        .sheet(isPresented: $vm.showMessaging) { ChatSheet(vm: vm) }
         .sheet(isPresented: $vm.showProfile)   { DriverProfileSheet(vm: vm) }
         .sheet(isPresented: $vm.showRaiseQuery, onDismiss: {
             vm.showRaiseQuery = false
@@ -131,6 +133,17 @@ struct DriverDashboardView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(vm.geofenceAlertMessage)
+        }
+        .alert("Log Refuel", isPresented: $showFuelLogPrompt) {
+            Button("Yes") {
+                vm.shouldEndTripAfterFuel = true
+                vm.showFuelLog = true
+            }
+            Button("Skip", role: .cancel) {
+                vm.finishTrip()
+            }
+        } message: {
+            Text("Would you like to log your fuel refuel data for this trip before completing it?")
         }
     }
 
@@ -460,11 +473,15 @@ struct ActionTile: View {
 
 
 struct VoiceLogSheet: View {
+    let tripId: UUID?
     @Environment(\.dismiss) private var dismiss
     @State private var voiceLogger = VoiceTripLogger()
     @State private var elapsed    = 0
     @State private var timer: Timer?
     @State private var saved      = false
+    @State private var isSaving   = false
+    @State private var saveError: String?
+    @State private var lastSavedTranscript: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -490,7 +507,7 @@ struct VoiceLogSheet: View {
                                         color: voiceLogger.isRecording ? AppTheme.Brand.accent.opacity(0.35) : Color.fmsIndigo.opacity(0.35),
                                         radius: 20, y: 6
                                     )
-                                Image(systemName: voiceLogger.isRecording ? "stop.fill" : "mic.fill")
+                                Image(systemName: voiceLogger.isRecording ? "pause.fill" : "mic.fill")
                                     .font(.system(size: 32, weight: .bold))
                                     .foregroundStyle(.white)
                                     .contentTransition(.symbolEffect(.replace))
@@ -503,7 +520,7 @@ struct VoiceLogSheet: View {
                         Text(
                             voiceLogger.isRecording
                             ? String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
-                            : "Tap to Record"
+                            : (elapsed > 0 ? "Paused" : "Tap to Record")
                         )
                         .font(.system(size: 30, weight: .bold, design: .monospaced))
                         .foregroundStyle(voiceLogger.isRecording ? AppTheme.Brand.accent : Color.fmsIndigo)
@@ -511,7 +528,7 @@ struct VoiceLogSheet: View {
 
                         Text(
                             voiceLogger.isRecording
-                            ? "Listening…"
+                            ? "Recording... Tap Pause to translate to text"
                             : "Voice-log your trip notes, delays, or ETA"
                         )
                         .font(.system(size: 14))
@@ -563,17 +580,43 @@ struct VoiceLogSheet: View {
 
                     Spacer()
 
-                    if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
-                        Button { saved = true } label: {
-                            Text("Save Log")
+                    if saved {
+                        HStack(spacing: 8) {
+                            Text("✓ Voice log saved successfully!")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(Color.fmsIndigo.gradient)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                                .padding(.horizontal, 24)
                         }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color(red: 0.18, green: 0.70, blue: 0.38).gradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 12)
+                    } else if !voiceLogger.transcribedText.isEmpty && !voiceLogger.isRecording {
+                        Button {
+                            guard !isSaving && !saved && voiceLogger.transcribedText != lastSavedTranscript else { return }
+                            isSaving = true
+                            Task {
+                                await saveLog()
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isSaving {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Text("Save Log")
+                                }
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.fmsIndigo.gradient)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .padding(.horizontal, 24)
+                        }
+                        .disabled(isSaving || saved || voiceLogger.transcribedText == lastSavedTranscript)
                         .padding(.bottom, 12)
                     }
                 }
@@ -588,9 +631,17 @@ struct VoiceLogSheet: View {
                 }
             }
             .alert("Log Saved", isPresented: $saved) {
-                Button("OK") { dismiss() }
+                Button("OK") {}
             } message: {
                 Text("Your voice log has been saved successfully.")
+            }
+            .alert("Save Failed", isPresented: .init(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
             }
         }
     }
@@ -600,10 +651,52 @@ struct VoiceLogSheet: View {
             voiceLogger.stopRecording()
             timer?.invalidate(); timer = nil
         } else {
+            saved = false
             elapsed = 0
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in elapsed += 1 }
             Task {
                 await voiceLogger.startRecording()
+            }
+        }
+    }
+
+    private func saveLog() async {
+        guard !voiceLogger.transcribedText.isEmpty && voiceLogger.transcribedText != lastSavedTranscript else { return }
+        await MainActor.run { isSaving = true }
+        defer {
+            Task { @MainActor in
+                isSaving = false
+            }
+        }
+
+        let driverId = await MainActor.run {
+            SupabaseManager.shared.currentUser?.id ?? UUID()
+        }
+
+        let logText = voiceLogger.transcribedText
+
+        let log = DBTripLog(
+            id: UUID(),
+            driverId: driverId,
+            tripId: tripId,
+            transcript: logText,
+            startLocation: voiceLogger.parsedData?.startLocation,
+            endLocation: voiceLogger.parsedData?.endLocation,
+            startTime: voiceLogger.parsedData?.startTime,
+            endTime: voiceLogger.parsedData?.endTime,
+            mileage: voiceLogger.parsedData?.mileage,
+            createdAt: Date()
+        )
+
+        do {
+            try await SupabaseManager.shared.createTripLog(log)
+            await MainActor.run {
+                lastSavedTranscript = logText
+                saved = true
+            }
+        } catch {
+            await MainActor.run {
+                saveError = error.localizedDescription
             }
         }
     }
@@ -1530,6 +1623,8 @@ struct ChatSheet: View {
     @ObservedObject var vm: DriverDashboardViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var messageText = ""
+    @State private var selectedImageData: Data? = nil
+    @State private var selectedItem: PhotosPickerItem? = nil
 
     var body: some View {
         NavigationStack {
@@ -1558,13 +1653,7 @@ struct ChatSheet: View {
                                         if message.isMe {
                                             Spacer()
                                             VStack(alignment: .trailing, spacing: 4) {
-                                                Text(message.preview)
-                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                    .foregroundColor(.white)
-                                                    .padding(.horizontal, 14)
-                                                    .padding(.vertical, 10)
-                                                    .background(AppTheme.Brand.primary)
-                                                    .cornerRadius(16)
+                                                messageBubbleContent(text: message.preview, isMe: true)
                                                 Text(message.time)
                                                     .font(.system(size: 9))
                                                     .foregroundColor(.gray)
@@ -1572,13 +1661,7 @@ struct ChatSheet: View {
                                             }
                                         } else {
                                             VStack(alignment: .leading, spacing: 4) {
-                                                Text(message.preview)
-                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                                                    .foregroundColor(.black)
-                                                    .padding(.horizontal, 14)
-                                                    .padding(.vertical, 10)
-                                                    .background(Color(.systemGray6))
-                                                    .cornerRadius(16)
+                                                messageBubbleContent(text: message.preview, isMe: false)
                                                 Text(message.time)
                                                     .font(.system(size: 9))
                                                     .foregroundColor(.gray)
@@ -1608,50 +1691,170 @@ struct ChatSheet: View {
                     }
                 }
                 
-                // Bottom Input Bar
-                HStack(spacing: 12) {
-                    TextField("Type a message...", text: $messageText)
-                        .font(.system(size: 15))
-                        .padding(10)
+                // Bottom Input Bar with Photos Picker & Preview
+                VStack(spacing: 0) {
+                    if let imgData = selectedImageData, let uiImage = UIImage(data: imgData) {
+                        HStack {
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 60, height: 60)
+                                    .cornerRadius(8)
+                                    .clipped()
+                                
+                                Button {
+                                    selectedImageData = nil
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(AppTheme.Status.danger)
+                                        .background(Circle().fill(Color.white))
+                                }
+                                .offset(x: 6, y: -6)
+                            }
+                            .padding(.leading, 16)
+                            .padding(.vertical, 8)
+                            
+                            Spacer()
+                        }
+                        .background(Color.white)
+                    }
+                    
+                    Divider()
+                    
+                    HStack(spacing: 12) {
+                        // Text Input Area with Photo Picker
+                        HStack(spacing: 10) {
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
+                                Image(systemName: "photo.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(AppTheme.Brand.primary)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            TextField("Type a message...", text: $messageText)
+                                .font(.system(size: 15))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                         .background(Color(.systemGray6))
                         .cornerRadius(20)
-                    
-                    Button(action: {
-                        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !text.isEmpty {
+                        
+                        Button(action: {
+                            let sentText = messageText
+                            let imgData = selectedImageData
+                            selectedImageData = nil
+                            messageText = ""
+                            
                             Task {
-                                await vm.sendMessage(text: text)
-                                await MainActor.run {
-                                    messageText = ""
+                                if let data = imgData {
+                                    let msgId = UUID()
+                                    do {
+                                        let urlString = try await SupabaseManager.shared.uploadChatImage(messageId: msgId, imageData: data)
+                                        await vm.sendMessage(text: "[IMAGE: \(urlString)]")
+                                    } catch {
+                                        let base64 = data.base64EncodedString()
+                                        await vm.sendMessage(text: "[IMAGE_BASE64: \(base64)]")
+                                    }
+                                }
+                                
+                                let textTrimmed = sentText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !textTrimmed.isEmpty {
+                                    await vm.sendMessage(text: textTrimmed)
                                 }
                             }
+                        }) {
+                            Image(systemName: "paperplane.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(Color.white)
+                                .padding(10)
+                                .background((messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil) ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
+                                .clipShape(Circle())
                         }
-                    }) {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(Color.white)
-                            .padding(10)
-                            .background(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AppTheme.Brand.primary.opacity(0.3) : AppTheme.Brand.primary)
-                            .clipShape(Circle())
+                        .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedImageData == nil)
                     }
-                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .padding()
+                    .background(Color.white)
+                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
                 }
-                .padding()
-                .background(Color.white)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
             }
             .navigationTitle("Chat with Manager")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(AppTheme.Brand.primary)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
                     }
-                    .foregroundColor(AppTheme.Brand.primary)
-                    .bold()
+                }
+            }
+            .onChange(of: selectedItem) { _, newValue in
+                Task {
+                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            self.selectedImageData = data
+                            self.selectedItem = nil
+                        }
+                    }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func messageBubbleContent(text: String, isMe: Bool) -> some View {
+        if text.hasPrefix("[IMAGE:"), text.hasSuffix("]") {
+            let urlString = String(text.dropFirst(7).dropLast())
+            if let url = URL(string: urlString) {
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 220, maxHeight: 220)
+                        .cornerRadius(12)
+                } placeholder: {
+                    ProgressView().tint(isMe ? .white : AppTheme.Brand.primary)
+                }
+                .padding(4)
+                .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+                .cornerRadius(16)
+            } else {
+                fallbackText(text, isMe: isMe)
+            }
+        } else if text.hasPrefix("[IMAGE_BASE64:"), text.hasSuffix("]") {
+            let base64String = String(text.dropFirst(14).dropLast())
+            if let data = Data(base64Encoded: base64String), let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .cornerRadius(12)
+                    .padding(4)
+                    .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+                    .cornerRadius(16)
+            } else {
+                fallbackText(text, isMe: isMe)
+            }
+        } else {
+            fallbackText(text, isMe: isMe)
+        }
+    }
+
+    private func fallbackText(_ text: String, isMe: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundColor(isMe ? .white : .black)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isMe ? AppTheme.Brand.primary : Color(.systemGray6))
+            .cornerRadius(16)
     }
 }
 

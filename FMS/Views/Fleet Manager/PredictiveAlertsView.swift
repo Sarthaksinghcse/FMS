@@ -165,7 +165,7 @@ struct PredictiveAlertsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 10))
-                    Text(String(format: "Risk: %.0f%%", alert.riskScore))
+                    Text(String(format: "Risk: %.0f%%", alert.riskScore * 100))
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                 }
                 .foregroundColor(riskColor)

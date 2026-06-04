@@ -4,29 +4,128 @@
 
 
 
-
+import Supabase
 import SwiftUI
+import AVKit
 
 @available(iOS 26.0, *)
 struct ContentView: View {
     @Environment(SupabaseManager.self) private var supabaseManager
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+    @State private var showSplash = true
 
     var body: some View {
         Group {
-            if let user = supabaseManager.currentUser {
-                switch user.role {
-                case .fleetManager:
-                    FleetContentView()
-                case .maintenance:
-                    
-                    MaintenanceDashboardView(currentUser: user.asLocalUser)
-                case .driver:
-                    DriverDashboardView()
-                }
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation(.easeOut(duration: 0.4)) {
+                                showSplash = false
+                            }
+                        }
+                    }
             } else {
-                AuthView()
+                if let user = supabaseManager.currentUser {
+                    switch user.role {
+                    case .fleetManager:
+                        FleetContentView()
+                    case .maintenance:
+                        
+                        MaintenanceDashboardView(currentUser: user.asLocalUser)
+                    case .driver:
+                        DriverDashboardView()
+                    }
+                } else {
+                    AuthView()
+                }
             }
         }
+        .dynamicTypeSize(accessibility.isLargeTextEnabled ? .xxLarge : .medium)
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
+        .sheet(isPresented: Bindable(supabaseManager).showResetPasswordSheet) {
+            ResetPasswordView()
+                .environment(supabaseManager)
+        }
+    }
+    
+    private func handleDeepLink(_ url: URL) {
+        print("🔗 App opened with URL: \(url.absoluteString)")
+        if url.scheme == "carwaan" && (url.host == "reset-password" || url.absoluteString.contains("type=recovery")) {
+            Task {
+                do {
+                    try await supabaseManager.handleRecoveryLink(url)
+                } catch {
+                    print("❌ Error restoring session from recovery link: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+struct SplashView: View {
+    @State private var player = AVPlayer()
+    
+    var body: some View {
+        ZStack {
+            Color.white.ignoresSafeArea()
+            
+            if let url = Bundle.main.url(forResource: "splash_video", withExtension: "mp4") {
+                PlayerView(player: player)
+                    .blendMode(.multiply) // Magically makes the video's white background transparent!
+                    .onAppear {
+                        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                        player.play()
+                    }
+                    .ignoresSafeArea()
+            } else {
+                // Fallback if video isn't found
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 300, height: 150)
+            }
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+class VideoUIView: UIView {
+    var playerLayer = AVPlayerLayer()
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.backgroundColor = .white // Changes letterbox bars to white
+        self.layer.addSublayer(playerLayer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        playerLayer.frame = bounds
+    }
+}
+
+@available(iOS 26.0, *)
+struct PlayerView: UIViewRepresentable {
+    let player: AVPlayer
+    
+    func makeUIView(context: Context) -> VideoUIView {
+        let view = VideoUIView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspectFill // Zoom to fill screen and hide bars
+        return view
+    }
+    
+    func updateUIView(_ uiView: VideoUIView, context: Context) {
+        uiView.playerLayer.player = player
     }
 }
 

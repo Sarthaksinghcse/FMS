@@ -68,7 +68,7 @@ struct VehicleHealthAnalysisView: View {
                     }
                     Spacer()
                 } else {
-                    ScrollView {
+                    ScrollView(.vertical, showsIndicators: false) {
                         LazyVStack(spacing: 16) {
                             ForEach(viewModel.healthScores) { score in
                                 vehicleHealthCard(score)
@@ -81,11 +81,13 @@ struct VehicleHealthAnalysisView: View {
         }
         .navigationTitle("Vehicle Health")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .onAppear {
             Task {
                 await viewModel.loadHealth()
             }
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var fleetHealthStatusText: String {

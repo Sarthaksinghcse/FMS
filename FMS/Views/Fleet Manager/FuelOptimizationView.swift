@@ -122,7 +122,7 @@ struct FuelOptimizationView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             // AI High Consumers
-                            if let insight = viewModel.insight, !insight.highConsumers.isEmpty {
+                            if !viewModel.activeInsights.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
                                     HStack(spacing: 6) {
                                         Image(systemName: "sparkles")
@@ -132,10 +132,10 @@ struct FuelOptimizationView: View {
                                             .foregroundColor(.black)
                                     }
                                     
-                                    ForEach(insight.highConsumers) { vehicle in
+                                    ForEach(viewModel.activeInsights) { target in
                                         VStack(alignment: .leading, spacing: 8) {
                                             HStack {
-                                                Text("Vehicle: " + vehicle.vehicleId.prefix(8).uppercased())
+                                                Text("Vehicle: " + target.vehicle.vehicleNumber)
                                                     .font(.system(size: 13, weight: .bold, design: .rounded))
                                                     .foregroundColor(.black)
                                                 Spacer()
@@ -148,11 +148,11 @@ struct FuelOptimizationView: View {
                                                     .cornerRadius(6)
                                             }
                                             
-                                            Text("Issue: " + vehicle.issue)
+                                            Text("Issue: " + target.insight.issue)
                                                 .font(.system(size: 12, weight: .medium, design: .rounded))
                                                 .foregroundColor(AppTheme.Text.secondary)
                                             
-                                            Text("Advice: " + vehicle.recommendation)
+                                            Text("Advice: " + target.insight.recommendation)
                                                 .font(.system(size: 11, design: .rounded))
                                                 .foregroundColor(Theme.darkOrange)
                                                 .padding(8)
@@ -174,56 +174,68 @@ struct FuelOptimizationView: View {
                             
                             // Fleet Stats list
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("Vehicle Consumption Stats")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(.black)
-                                    .padding(.horizontal, 16)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Vehicle Consumption Stats")
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .foregroundColor(.black)
+                                    Text("Tap a vehicle for AI-powered optimization analysis")
+                                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                                        .foregroundColor(AppTheme.Text.tertiary)
+                                }
+                                .padding(.horizontal, 16)
                                 
                                 ForEach(viewModel.fuelStats) { stats in
-                                    HStack(spacing: 12) {
-                                        ZStack {
-                                            Circle()
-                                                .fill(stats.isHighConsumer ? Theme.darkOrange.opacity(0.1) : Theme.royalBlue.opacity(0.1))
-                                                .frame(width: 36, height: 36)
-                                            Image(systemName: "fuelpump.fill")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(stats.isHighConsumer ? Theme.darkOrange : Theme.royalBlue)
-                                        }
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(stats.vehicleNumber)
-                                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                                .foregroundColor(.black)
-                                            Text("\(stats.logCount) Refuels · \(stats.fuelType)")
-                                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                                                .foregroundColor(.gray)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        VStack(alignment: .trailing, spacing: 2) {
-                                            Text(String(format: "₹%.0f", stats.totalSpend))
-                                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                                .foregroundColor(.black)
-                                            
-                                            if stats.percentAboveAverage > 0 {
-                                                Text(String(format: "+%.0f%% vs avg", stats.percentAboveAverage))
-                                                    .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                                    .foregroundColor(Theme.darkOrange)
-                                            } else {
-                                                Text("Optimal")
-                                                    .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                                    .foregroundColor(Theme.royalBlue)
+                                    NavigationLink(destination: VehicleFuelOptimizationDetailView(stats: stats)) {
+                                        HStack(spacing: 12) {
+                                            ZStack {
+                                                Circle()
+                                                    .fill(stats.isHighConsumer ? Theme.darkOrange.opacity(0.1) : Theme.royalBlue.opacity(0.1))
+                                                    .frame(width: 36, height: 36)
+                                                Image(systemName: "fuelpump.fill")
+                                                    .font(.system(size: 14))
+                                                    .foregroundColor(stats.isHighConsumer ? Theme.darkOrange : Theme.royalBlue)
                                             }
+                                            
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(stats.vehicleNumber)
+                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                    .foregroundColor(.black)
+                                                Text("\(stats.logCount) Refuels · \(stats.fuelType)")
+                                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                                    .foregroundColor(.gray)
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            VStack(alignment: .trailing, spacing: 2) {
+                                                Text(String(format: "₹%.0f", stats.totalSpend))
+                                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                                    .foregroundColor(.black)
+                                                
+                                                if stats.percentAboveAverage > 0 {
+                                                    Text(String(format: "+%.0f%% vs avg", stats.percentAboveAverage))
+                                                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                                        .foregroundColor(Theme.darkOrange)
+                                                } else {
+                                                    Text("Optimal")
+                                                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                                        .foregroundColor(Theme.royalBlue)
+                                                }
+                                            }
+                                            
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 11, weight: .semibold))
+                                                .foregroundColor(AppTheme.Text.tertiary)
                                         }
+                                        .padding(12)
+                                        .background(AppTheme.Background.card)
+                                        .cornerRadius(12)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(stats.isHighConsumer ? Theme.darkOrange.opacity(0.2) : AppTheme.Glass.border, lineWidth: 1)
+                                        )
                                     }
-                                    .padding(12)
-                                    .background(AppTheme.Background.card)
-                                    .cornerRadius(12)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(stats.isHighConsumer ? Theme.darkOrange.opacity(0.2) : AppTheme.Glass.border, lineWidth: 1)
-                                    )
+                                    .buttonStyle(.plain)
                                     .padding(.horizontal, 16)
                                 }
                             }
@@ -235,18 +247,16 @@ struct FuelOptimizationView: View {
         }
         .navigationTitle("Fuel Optimization")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Close") {
-                    dismiss()
-                }
-                .foregroundColor(Theme.darkOrange)
-            }
-        }
         .onAppear {
             Task {
+                // First, load stats + try cached insights from DB
                 await viewModel.loadFuelInsights(forceRefresh: false, loadOnlyFromCache: true)
+                // If we have fuel data but no AI insights yet, auto-generate
+                if viewModel.insight == nil && !viewModel.fuelStats.isEmpty {
+                    await viewModel.loadFuelInsights(forceRefresh: false, loadOnlyFromCache: false)
+                }
             }
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 }

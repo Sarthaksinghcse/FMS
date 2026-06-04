@@ -22,7 +22,7 @@ struct FleetDashboardView: View {
     @State private var showProfile  = false
     @State private var showChat     = false
     @State private var showTracking = false
-    @State private var showingFuelInsights = false
+    @State private var selectedVehicleToTrack: UUID? = nil
     @State private var showCompliance = false
     @State private var realtimeChannel: RealtimeChannelV2? = nil
     @State private var activeGeofenceAlertsCount = 0
@@ -68,83 +68,84 @@ struct FleetDashboardView: View {
             ZStack {
                 AppTheme.Background.page.ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 22) {
 
                         // ── Greeting ──────────────────────────────
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .center, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(viewModel.getGreetingTime() + ",")
                                     .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(.secondary)
-                                Text(managerFirstName)
+                                Text(SupabaseManager.shared.currentUser?.name ?? managerFirstName)
                                     .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(.primary)
                             }
 
                             Spacer()
 
-                            HStack(spacing: 16) {
-
-                                Button {
-                                    lastGeofenceAlertViewTime = Date().timeIntervalSince1970
-                                    activeGeofenceAlertsCount = 0
-                                    viewModel.activeQuickAction = .alerts
-                                } label: {
-                                    ZStack(alignment: .topTrailing) {
-                                        Image(systemName: "bell.fill")
-                                            .font(.system(size: 18))
-                                            .foregroundStyle(Color(UIColor.label))
-                                            .frame(width: 40, height: 40)
-                                            .background(Color(UIColor.secondarySystemGroupedBackground))
-                                            .clipShape(Circle())
-                                        
-                                        if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
-                                            Circle()
-                                                .fill(AppTheme.Status.danger)
-                                                .frame(width: 10, height: 10)
-                                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                                .offset(x: 2, y: -2)
-                                        }
+                            // Bell Button
+                            Button {
+                                lastGeofenceAlertViewTime = Date().timeIntervalSince1970
+                                activeGeofenceAlertsCount = 0
+                                viewModel.activeQuickAction = .alerts
+                            } label: {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Color(UIColor.label))
+                                        .frame(width: 40, height: 40)
+                                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                                        .clipShape(Circle())
+                                    
+                                    if !sosAlerts.filter({ $0.status == .active }).isEmpty || activeGeofenceAlertsCount > 0 {
+                                        Circle()
+                                            .fill(AppTheme.Status.danger)
+                                            .frame(width: 10, height: 10)
+                                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                            .offset(x: 2, y: -2)
                                     }
                                 }
-                                .buttonStyle(.plain)
-
-                                Button {
-                                    showProfile = true
-                                } label: {
-                                    ZStack {
-                                        if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
-                                           let imageURL = URL(string: imageURLString) {
-                                            CachedAsyncImage(url: imageURL) { image in
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                            } placeholder: {
-                                                ProgressView()
-                                            }
-                                            .frame(width: 40, height: 40)
-                                            .clipShape(Circle())
-                                        } else {
-                                            ZStack {
-                                                Circle()
-                                                    .fill(
-                                                        LinearGradient(
-                                                            colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
-                                                            startPoint: .topLeading,
-                                                            endPoint: .bottomTrailing
-                                                        )
-                                                    )
-                                                    .frame(width: 40, height: 40)
-                                                Text(managerInitials)
-                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                                    .foregroundColor(.white)
-                                            }
-                                        }
-                                    }
-                                }
-                                .buttonStyle(.plain)
                             }
+                            .buttonStyle(.plain)
+
+                            Spacer().frame(width: 12)
+
+                            // Avatar Button
+                            Button {
+                                showProfile = true
+                            } label: {
+                                ZStack {
+                                    if let imageURLString = SupabaseManager.shared.currentUser?.profileImage,
+                                       let imageURL = URL(string: imageURLString) {
+                                        CachedAsyncImage(url: imageURL) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                    } else {
+                                        ZStack {
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [AppTheme.Brand.primary, AppTheme.Brand.primary.opacity(0.8)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                                .frame(width: 40, height: 40)
+                                            Text(managerInitials)
+                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 24)
@@ -315,11 +316,12 @@ struct FleetDashboardView: View {
                         NavigationStack {
                             AIReportsView(isPresentedAsSheet: true)
                         }
-                    case .alerts:       AlertsFeedView()
+                    case .alerts:       AlertsFeedView(showTracking: $showTracking, selectedVehicleToTrack: $selectedVehicleToTrack)
                     case .maintenance:  MaintenanceManagementView()
                     }
                 }
                 .environment(\.modelContext, modelContext)
+                .interactiveDismissDisabled()
             }
             // See All sheet
             .sheet(isPresented: $viewModel.showAllActivities) {
@@ -327,15 +329,18 @@ struct FleetDashboardView: View {
                     handleActivityTap(activity)
                 }
                 .environment(\.modelContext, modelContext)
+                .interactiveDismissDisabled()
             }
             // Profile sheet
             .sheet(isPresented: $showProfile) {
                 FleetManagerProfileView()
                     .environment(\.modelContext, modelContext)
+                    .interactiveDismissDisabled()
             }
             // Chat sheet
             .sheet(isPresented: $showChat) {
                 FleetManagerChatListView()
+                    .interactiveDismissDisabled()
             }
             .task {
                 await SupabaseManager.shared.syncAllData(context: modelContext)
@@ -368,14 +373,14 @@ struct FleetDashboardView: View {
                         .environment(\.modelContext, modelContext)
                         .toolbar(.hidden, for: .tabBar)
                 case .liveTrips:
-                    TripListView(initialFilter: .active)
+                    TripListContentView(initialFilter: .active)
                         .environment(\.modelContext, modelContext)
                         .toolbar(.hidden, for: .tabBar)
                 }
             }
             // Tracking navigation push
             .navigationDestination(isPresented: $showTracking) {
-                FleetTrackingView()
+                FleetTrackingView(initialSelectedVehicleId: selectedVehicleToTrack)
                     .environment(\.modelContext, modelContext)
             }
             // Compliance navigation push
@@ -459,11 +464,11 @@ struct FleetDashboardView: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.purple.opacity(0.08))
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "box.truck.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.purple)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -477,7 +482,7 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.purple)
+                                .background(AppTheme.Brand.royalBlue)
                                 .cornerRadius(4)
                         }
                         
@@ -507,17 +512,15 @@ struct FleetDashboardView: View {
             .padding(.horizontal, 16)
             
             // 3. Fuel Insights & Optimization
-            Button {
-                showingFuelInsights = true
-            } label: {
+            NavigationLink(destination: FuelOptimizationView()) {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.green.opacity(0.08))
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "fuelpump.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.green)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -531,7 +534,7 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.green)
+                                .background(AppTheme.Brand.royalBlue)
                                 .cornerRadius(4)
                         }
                         
@@ -565,11 +568,11 @@ struct FleetDashboardView: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.teal.opacity(0.08))
+                            .fill(AppTheme.Brand.royalBlue.opacity(0.08))
                             .frame(width: 44, height: 44)
                         Image(systemName: "heart.text.square.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.teal)
+                            .foregroundColor(AppTheme.Brand.royalBlue)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -583,7 +586,7 @@ struct FleetDashboardView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.teal)
+                                .background(AppTheme.Brand.royalBlue)
                                 .cornerRadius(4)
                         }
                         
@@ -611,11 +614,6 @@ struct FleetDashboardView: View {
             }
             .buttonStyle(PlainButtonStyle())
             .padding(.horizontal, 16)
-        }
-        .sheet(isPresented: $showingFuelInsights) {
-            NavigationStack {
-                FuelOptimizationView()
-            }
         }
     }
 

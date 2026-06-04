@@ -302,6 +302,10 @@ private struct CompletedTripCard: View {
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showDetail = true
+        }
         .sheet(isPresented: $showDetail) {
             TripDetailSheet(record: record)
         }
@@ -338,6 +342,11 @@ struct TripDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     let record: CompletedTripRecord
     @State private var showingFullAddressSheet = false
+    @State private var voiceLogs: [DBTripLog] = []
+    @State private var isLoadingLogs = false
+    @State private var editingLog: DBTripLog? = nil
+    @State private var editedTranscript = ""
+    @State private var showEditSheet = false
 
     private var dateLabel: String {
         let f = DateFormatter()
@@ -563,6 +572,9 @@ struct TripDetailSheet: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
                     }
+                    
+                    // Voice Logs Section
+                    voiceLogsSection
                 }
                 .padding(16)
                 .padding(.bottom, 30)
@@ -571,6 +583,26 @@ struct TripDetailSheet: View {
             .sheet(isPresented: $showingFullAddressSheet) {
                 FullAddressSheet(source: record.trip.source, destination: record.trip.destination, tripCode: record.trip.tripCode)
             }
+            .sheet(isPresented: $showEditSheet) {
+                if let log = editingLog {
+                    EditVoiceLogSheet(log: log, transcript: $editedTranscript) { updatedLog in
+                        if let index = voiceLogs.firstIndex(where: { $0.id == updatedLog.id }) {
+                            voiceLogs[index] = updatedLog
+                        }
+                        editingLog = nil
+                        showEditSheet = false
+                    }
+                }
+            }
+            .task {
+                isLoadingLogs = true
+                do {
+                    voiceLogs = try await SupabaseManager.shared.fetchTripLogs(for: record.trip.id)
+                } catch {
+                    print("Failed to fetch trip voice logs: \(error)")
+                }
+                isLoadingLogs = false
+            }
             .background(Color.fmsBackground.ignoresSafeArea())
             .navigationTitle("Trip Details")
             .navigationBarTitleDisplayMode(.inline)
@@ -578,6 +610,96 @@ struct TripDetailSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .foregroundStyle(Color.fmsIndigo)
+                }
+            }
+        }
+    }
+
+    private var voiceLogsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("VOICE LOGS")
+            
+            if isLoadingLogs {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(Color.fmsIndigo)
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+            } else if voiceLogs.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "mic.slash.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.secondary)
+                        Text("No voice logs recorded for this trip")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 16)
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(voiceLogs) { log in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Label {
+                                    HStack(spacing: 4) {
+                                        Text(log.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        if log.isEdited == true {
+                                            Text("·")
+                                            Text("Edited")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.orange)
+                                            if let editDate = log.updatedAt {
+                                                Text("at \(editDate.formatted(date: .abbreviated, time: .shortened))")
+                                            }
+                                        }
+                                    }
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                } icon: {
+                                    Image(systemName: "clock")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(Color(UIColor.tertiaryLabel))
+                                }
+                                
+                                Spacer()
+                                
+                                // Pencil edit button
+                                Button {
+                                    editingLog = log
+                                    editedTranscript = log.transcript
+                                    showEditSheet = true
+                                } label: {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(Color.fmsIndigo)
+                                        .padding(6)
+                                        .background(Color.fmsIndigo.opacity(0.1))
+                                        .clipShape(Circle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
+                            Text(log.transcript)
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.primary)
+                                .lineSpacing(3)
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(UIColor.secondarySystemFill))
+                                .cornerRadius(8)
+                        }
+                        .padding(12)
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .cornerRadius(14)
+                    }
                 }
             }
         }
@@ -846,14 +968,16 @@ private struct TripActionButton: View {
     let icon: String
     let style: TripActionStyle
     let action: () -> Void
+    
+    @ObservedObject var manager = AccessibilityManager.shared
 
     var body: some View {
         Button(action: action) {
             Label(label, systemImage: icon)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: manager.driverLargeTapTargets ? 16 : 13, weight: .semibold))
                 .foregroundStyle(foregroundColor)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .frame(height: manager.driverLargeTapTargets ? 64 : 44)
                 .background(backgroundContent)
                 .clipShape(RoundedRectangle(cornerRadius: 11))
         }
@@ -1039,7 +1163,8 @@ struct TripNavigationView: View {
                                 }
                             }
                         },
-                        onSOS: { vm.showSOSCountdown = true }
+                        onSOS: { vm.showSOSCountdown = true },
+                        onVoiceLog: { vm.showVoiceLog = true }
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.spring(response: 0.45), value: nav.isNavigating)
@@ -1106,6 +1231,9 @@ struct TripNavigationView: View {
                 InspectionFormSheet(isPreTrip: true) { passed, _, _ in
                     preTripPassed = passed
                 }
+            }
+            .sheet(isPresented: $vm.showVoiceLog) {
+                VoiceLogSheet(tripId: vm.activeTrip?.id ?? vm.currentTrip?.id)
             }
             .alert("Geofence Restriction", isPresented: $localShowGeofenceAlert) {
                 Button("OK", role: .cancel) { }
@@ -1392,6 +1520,8 @@ struct MapActionButton: View {
     let icon: String
     let style: MapActionStyle
     let action: () -> Void
+    
+    @ObservedObject var manager = AccessibilityManager.shared
 
     private var color: Color {
         switch style {
@@ -1406,9 +1536,9 @@ struct MapActionButton: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: manager.driverLargeTapTargets ? 22 : 18, weight: .medium))
                     .foregroundStyle((style == .primary || style == .destructive) ? .white : color)
-                    .frame(width: 46, height: 46)
+                    .frame(width: manager.driverLargeTapTargets ? 58 : 46, height: manager.driverLargeTapTargets ? 58 : 46)
                     .background(
                         (style == .primary || style == .destructive)
                         ? AnyShapeStyle(color.gradient)
@@ -1416,7 +1546,7 @@ struct MapActionButton: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: manager.driverLargeTapTargets ? 12 : 10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
@@ -1502,6 +1632,99 @@ private struct ActiveTripMetaCell: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
+    }
+}
+
+@available(iOS 26.0, *)
+struct EditVoiceLogSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let log: DBTripLog
+    @Binding var transcript: String
+    var onSave: (DBTripLog) -> Void
+    
+    @State private var isSaving = false
+    @State private var errorMessage: String? = nil
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Text("Edit the transcript of your voice log below:")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                
+                TextEditor(text: $transcript)
+                    .font(.system(size: 14))
+                    .padding(10)
+                    .frame(maxHeight: .infinity)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(UIColor.separator).opacity(0.4), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 20)
+                
+                if let err = errorMessage {
+                    Text(err)
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.Status.danger)
+                        .padding(.horizontal, 20)
+                }
+                
+                Button(action: saveChange) {
+                    HStack {
+                        if isSaving {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("Save Changes")
+                        }
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.fmsIndigo.gradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+                }
+                .disabled(isSaving || transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .navigationTitle("Edit Voice Log")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.fmsIndigo)
+                }
+            }
+        }
+    }
+    
+    private func saveChange() {
+        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isSaving = true
+        errorMessage = nil
+        
+        var updatedLog = log
+        updatedLog.transcript = transcript
+        updatedLog.isEdited = true
+        updatedLog.updatedAt = Date()
+        
+        Task {
+            do {
+                try await SupabaseManager.shared.updateTripLog(updatedLog)
+                onSave(updatedLog)
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                isSaving = false
+            }
+        }
     }
 }
 

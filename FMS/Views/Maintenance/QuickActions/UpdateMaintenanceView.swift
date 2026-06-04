@@ -118,6 +118,7 @@ struct UpdateMaintenanceView: View {
         }
         .navigationTitle("Update Maintenance")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             if filterStatus == 1 {
                 ToolbarItem(placement: .topBarTrailing) {
