@@ -17,6 +17,8 @@ struct MaintenanceTaskDetailView: View {
     @Environment(\.modelContext) private var modelContext
 
     @Query private var inventoryItems: [InventoryItem]
+    @Query private var allUsers: [User]
+    @Query private var allVehicles: [Vehicle]
 
     @State private var repairNotes: String = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
@@ -35,16 +37,18 @@ struct MaintenanceTaskDetailView: View {
         return order.status.color
     }
 
-    private var mechanicDisplayId: String {
-        "TECH-" + order.assignedTo.uuidString.prefix(8).uppercased()
+    private var mechanicName: String {
+        if let user = allUsers.first(where: { $0.id == order.assignedTo }) {
+            return user.fullName
+        }
+        return "Tech-" + order.assignedTo.uuidString.prefix(8).uppercased()
     }
 
-    private var vehicleDisplayId: String {
-        "VEH-" + order.vehicleId.uuidString.prefix(8).uppercased()
-    }
-
-    private var serviceBayDisplay: String {
-        "Bay \(abs(order.id.hashValue % 6) + 1)"
+    private var vehicleNameAndReg: String {
+        if let vehicle = allVehicles.first(where: { $0.id == order.vehicleId }) {
+            return "\(vehicle.make) \(vehicle.model) (\(vehicle.registrationNumber))"
+        }
+        return "Veh-" + order.vehicleId.uuidString.prefix(8).uppercased()
     }
 
     private var estimatedCostDisplay: String {
@@ -116,15 +120,6 @@ struct MaintenanceTaskDetailView: View {
                                     icon: "checkmark.circle.fill",
                                     color: AppTheme.Status.success
                                 )
-                            } else {
-                                Divider().padding(.leading, 52)
-                                DetailInfoRow(
-                                    label: "Est. Completion",
-                                    value: (Calendar.current.date(byAdding: .hour, value: 3, to: order.createdAt) ?? .now)
-                                        .formatted(date: .omitted, time: .shortened),
-                                    icon: "clock.badge.exclamationmark",
-                                    color: AppTheme.Brand.amber
-                                )
                             }
                         }
                     }
@@ -193,22 +188,15 @@ struct MaintenanceTaskDetailView: View {
                     DetailSection(title: "Assignment", icon: "person.2.fill", accentColor: AppTheme.Brand.violet) {
                         VStack(spacing: 0) {
                             DetailInfoRow(
-                                label: "Mechanic ID",
-                                value: mechanicDisplayId,
+                                label: "Mechanic Name",
+                                value: mechanicName,
                                 icon: "person.badge.key.fill",
                                 color: AppTheme.Brand.violet
                             )
                             Divider().padding(.leading, 52)
                             DetailInfoRow(
-                                label: "Service Bay",
-                                value: serviceBayDisplay,
-                                icon: "mappin.circle.fill",
-                                color: AppTheme.Status.success
-                            )
-                            Divider().padding(.leading, 52)
-                            DetailInfoRow(
-                                label: "Vehicle ID",
-                                value: vehicleDisplayId,
+                                label: "Vehicle",
+                                value: vehicleNameAndReg,
                                 icon: "car.fill",
                                 color: AppTheme.Brand.primary
                             )
@@ -472,6 +460,7 @@ struct MaintenanceTaskDetailView: View {
                                             .font(.system(size: 12))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
+                                    Spacer()
                                 }
                                 .padding()
                             }

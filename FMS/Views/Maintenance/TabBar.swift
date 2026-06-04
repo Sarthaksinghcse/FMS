@@ -42,7 +42,7 @@ struct MaintenanceDashboardView: View {
                 }
                 .tag(2)
         }
-        .accentColor(AppTheme.Brand.primary)
+        .tint(AppTheme.Brand.primary)
         .task {
             await SupabaseManager.shared.syncAllData(context: modelContext)
             startRealtimeListener()
@@ -57,7 +57,7 @@ struct MaintenanceDashboardView: View {
             }
         }
     }
-
+    
     private func startRealtimeListener() {
         guard realtimeChannel == nil else { return }
         let client = SupabaseManager.shared.client
@@ -68,20 +68,27 @@ struct MaintenanceDashboardView: View {
             let workOrderStream = channel.postgresChange(AnyAction.self, schema: "public", table: "work_orders")
             let vehicleStream = channel.postgresChange(AnyAction.self, schema: "public", table: "vehicles")
             
-            try? await channel.subscribeWithError()
+            do {
+                try await channel.subscribeWithError()
+                print("🟢 [Maintenance Realtime] Subscribed successfully to channel: maintenance_dashboard_realtime")
+            } catch {
+                print("❌ [Maintenance Realtime] Subscription failed: \(error.localizedDescription)")
+            }
             
-            async let _ : () = handleStream(workOrderStream)
-            async let _ : () = handleStream(vehicleStream)
+            async let _ : () = handleStream(workOrderStream, tableName: "work_orders")
+            async let _ : () = handleStream(vehicleStream, tableName: "vehicles")
         }
     }
     
-    private func handleStream<S: AsyncSequence>(_ stream: S) async {
+    private func handleStream<S: AsyncSequence>(_ stream: S, tableName: String) async {
+        print("🟢 [Maintenance Realtime] Stream listener active for: \(tableName)")
         do {
-            for try await _ in stream {
+            for try await event in stream {
+                print("⚡️ [Maintenance Realtime] Event detected in \(tableName): \(event)")
                 await SupabaseManager.shared.syncAllData(context: modelContext)
             }
         } catch {
-            print("Stream error: \(error)")
+            print("❌ [Maintenance Realtime] Stream error in \(tableName): \(error)")
         }
     }
 }
