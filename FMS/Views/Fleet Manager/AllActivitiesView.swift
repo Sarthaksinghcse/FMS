@@ -129,7 +129,7 @@ struct AllActivitiesView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
-                        .foregroundColor(Theme.fmsRed)
+                        .foregroundColor(Theme.royalBlue)
                         .font(.system(.body, design: .rounded))
                 }
                 ToolbarItem(placement: .topBarTrailing) {

@@ -226,11 +226,7 @@ struct MaintenanceDashboardTab: View {
             }
             .sheet(isPresented: $showChat) {
                 NavigationStack {
-                    if let channel = managerChannel {
-                        ChatDetailView(channel: channel)
-                    } else {
-                        CommunicationView()
-                    }
+                    CommunicationView()
                 }
             }
         }
