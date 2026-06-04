@@ -38,26 +38,26 @@ struct TappableOverviewCard<Destination: View>: View {
                             .fill(iconBg)
                             .frame(width: 34, height: 34)
                         Image(systemName: icon)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundColor(iconColor)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                         .padding(.top, 4)
                 }
 
                 Text(title)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
 
                 Text(value)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(.system(size: 26 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(valueColor ?? Color(red: 0.08, green: 0.12, blue: 0.22))
 
                 Text(footnote)
-                    .font(.system(size: 10))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(1)
             }
@@ -96,15 +96,15 @@ struct DetailScreenHeader: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.system(size: 30 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                 Spacer()
                 Text("\(count)")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.system(size: 30 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(accentColor)
             }
             Text(subtitle)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
         }
         .padding(.horizontal)
@@ -124,11 +124,11 @@ struct TaskSearchBar: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.tertiary)
 
             TextField(placeholder, text: $text)
-                .font(.system(size: 15))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.primary)
                 .autocorrectionDisabled()
 
@@ -137,7 +137,7 @@ struct TaskSearchBar: View {
                     withAnimation(.easeOut(duration: 0.15)) { text = "" }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 15))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.tertiary)
                 }
             }
@@ -164,7 +164,7 @@ struct FilterChip: View {
     var body: some View {
         Button(action: onTap) {
             Text(label)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(isSelected ? .white : AppTheme.Text.secondary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
@@ -221,10 +221,10 @@ struct TaskStatusBadge: View {
         HStack(spacing: 4) {
             if let icon {
                 Image(systemName: icon)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
             }
             Text(label)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
         }
         .foregroundColor(color)
         .padding(.horizontal, 9)
@@ -243,7 +243,7 @@ struct PriorityBadge: View {
 
     var body: some View {
         Text(priority.rawValue.uppercased())
-            .font(.system(size: 9, weight: .bold))
+            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
             .foregroundColor(priority.detailColor)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -329,15 +329,15 @@ struct DetailEmptyState: View {
                     .fill(accentColor.opacity(0.1))
                     .frame(width: 80, height: 80)
                 Image(systemName: icon)
-                    .font(.system(size: 34, weight: .medium))
+                    .font(.system(size: 34 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(accentColor.opacity(0.6))
             }
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
                 Text(message)
-                    .font(.system(size: 13))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(AppTheme.Text.secondary)
                     .multilineTextAlignment(.center)
             }

@@ -19,17 +19,17 @@ struct FuelOptimizationView: View {
                                     .fill(Theme.royalBlue.opacity(0.12))
                                     .frame(width: 42, height: 42)
                                 Image(systemName: "indianrupeesign.circle.fill")
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(Theme.royalBlue)
                             }
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("ESTIMATED MONTHLY SAVINGS")
-                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.secondary)
                                     .tracking(0.5)
                                 Text(String(format: "₹%.0f", insight.estimatedSavings))
-                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                             }
                             
@@ -41,7 +41,7 @@ struct FuelOptimizationView: View {
                                 }
                             } label: {
                                 Image(systemName: "arrow.clockwise")
-                                    .font(.system(size: 14, weight: .bold))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Brand.primary)
                                     .padding(10)
                                     .background(AppTheme.Background.page)
@@ -51,7 +51,7 @@ struct FuelOptimizationView: View {
                         }
 
                         Text(insight.insightsText)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                             .lineSpacing(4)
                     }
@@ -79,16 +79,16 @@ struct FuelOptimizationView: View {
                                 .fill(Theme.royalBlue.opacity(0.08))
                                 .frame(width: 80, height: 80)
                             Image(systemName: "fuelpump.slash.fill")
-                                .font(.system(size: 34))
+                                .font(.system(size: 34 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(Theme.royalBlue.opacity(0.7))
                         }
                         
                         Text("No Fuel Logs Logged")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                         
                         Text("Start logging your trips and refuels to generate AI fuel optimization insights.")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
@@ -103,9 +103,9 @@ struct FuelOptimizationView: View {
                                     ProgressView().tint(.white)
                                 } else {
                                     Image(systemName: "arrow.clockwise")
-                                        .font(.system(size: 12, weight: .bold))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     Text("Reload Fuel Data")
-                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 }
                             }
                             .foregroundColor(.white)
@@ -128,7 +128,7 @@ struct FuelOptimizationView: View {
                                         Image(systemName: "sparkles")
                                             .foregroundColor(Theme.darkOrange)
                                         Text("AI Optimization Targets")
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.black)
                                     }
                                     
@@ -136,11 +136,11 @@ struct FuelOptimizationView: View {
                                         VStack(alignment: .leading, spacing: 8) {
                                             HStack {
                                                 Text("Vehicle: " + target.vehicle.vehicleNumber)
-                                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                     .foregroundColor(.black)
                                                 Spacer()
                                                 Text("High Consumption")
-                                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                     .foregroundColor(Theme.darkOrange)
                                                     .padding(.horizontal, 8)
                                                     .padding(.vertical, 4)
@@ -149,11 +149,11 @@ struct FuelOptimizationView: View {
                                             }
                                             
                                             Text("Issue: " + target.insight.issue)
-                                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                                 .foregroundColor(AppTheme.Text.secondary)
                                             
                                             Text("Advice: " + target.insight.recommendation)
-                                                .font(.system(size: 11, design: .rounded))
+                                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                                 .foregroundColor(Theme.darkOrange)
                                                 .padding(8)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -176,10 +176,10 @@ struct FuelOptimizationView: View {
                             VStack(alignment: .leading, spacing: 12) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Vehicle Consumption Stats")
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(.black)
                                     Text("Tap a vehicle for AI-powered optimization analysis")
-                                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                         .foregroundColor(AppTheme.Text.tertiary)
                                 }
                                 .padding(.horizontal, 16)
@@ -192,16 +192,16 @@ struct FuelOptimizationView: View {
                                                     .fill(stats.isHighConsumer ? Theme.darkOrange.opacity(0.1) : Theme.royalBlue.opacity(0.1))
                                                     .frame(width: 36, height: 36)
                                                 Image(systemName: "fuelpump.fill")
-                                                    .font(.system(size: 14))
+                                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                                     .foregroundColor(stats.isHighConsumer ? Theme.darkOrange : Theme.royalBlue)
                                             }
                                             
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(stats.vehicleNumber)
-                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                     .foregroundColor(.black)
                                                 Text("\(stats.logCount) Refuels · \(stats.fuelType)")
-                                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                                     .foregroundColor(.gray)
                                             }
                                             
@@ -209,22 +209,22 @@ struct FuelOptimizationView: View {
                                             
                                             VStack(alignment: .trailing, spacing: 2) {
                                                 Text(String(format: "₹%.0f", stats.totalSpend))
-                                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                     .foregroundColor(.black)
                                                 
                                                 if stats.percentAboveAverage > 0 {
                                                     Text(String(format: "+%.0f%% vs avg", stats.percentAboveAverage))
-                                                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                                         .foregroundColor(Theme.darkOrange)
                                                 } else {
                                                     Text("Optimal")
-                                                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                                         .foregroundColor(Theme.royalBlue)
                                                 }
                                             }
                                             
                                             Image(systemName: "chevron.right")
-                                                .font(.system(size: 11, weight: .semibold))
+                                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                                 .foregroundColor(AppTheme.Text.tertiary)
                                         }
                                         .padding(12)

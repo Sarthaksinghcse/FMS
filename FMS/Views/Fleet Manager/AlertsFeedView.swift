@@ -296,11 +296,11 @@ struct AlertsFeedView: View {
                             if filteredAlerts.isEmpty {
                                 VStack(spacing: 12) {
                                     Image(systemName: "bell.slash.fill")
-                                        .font(.system(size: 40))
+                                        .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
                                         .padding(.top, 40)
                                     Text(searchQuery.isEmpty ? "All alerts are cleared! Good job." : "No matching alerts found.")
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -329,8 +329,8 @@ struct AlertsFeedView: View {
                         dismiss()
                     } label: {
                         Text("Close")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(Theme.royalBlue)
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
+                            .foregroundColor(Theme.fmsRed)
                     }
                 }
 
@@ -377,10 +377,10 @@ struct AlertsFeedView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray.opacity(0.6))
-                .font(.system(size: 14))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
             
             TextField(placeholder, text: text)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
         }
         .padding(.horizontal, 10)
@@ -397,10 +397,10 @@ struct AlertsFeedView: View {
         HStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(AppTheme.Status.danger)
-                .font(.system(size: 16))
+                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
             
             Text(message)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(.black)
             
             Spacer()
@@ -429,16 +429,16 @@ struct MiniStatBadge: View {
                     .fill(color.opacity(0.12))
                     .frame(width: 32, height: 32)
                 Image(systemName: systemImage)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(color)
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
                 Text("\(count)")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
             }
             Spacer()
@@ -518,12 +518,12 @@ struct AlertFeedCard: View {
                         }()
                         
                         Text(headerTitle)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(alert.type == .sos ? AppTheme.Status.danger : AppTheme.Text.secondary)
                             .tracking(0.5)
                         
                         Text(alert.statusText.uppercased())
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(alert.statusColor)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -536,7 +536,7 @@ struct AlertFeedCard: View {
                 
                 // Severity Badge
                 Text(alert.severityText)
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -552,11 +552,11 @@ struct AlertFeedCard: View {
             // Content
             VStack(alignment: .leading, spacing: 6) {
                 Text(alert.title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
                 
                 Text(alert.description)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -573,15 +573,15 @@ struct AlertFeedCard: View {
                             .fill(Color.black.opacity(0.04))
                             .frame(width: 28, height: 28)
                         Image(systemName: "person.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("DRIVER")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text(alert.driverName)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(AppTheme.Text.primary)
                     }
                 }
@@ -594,15 +594,15 @@ struct AlertFeedCard: View {
                             .fill(Color.black.opacity(0.04))
                             .frame(width: 28, height: 28)
                         Image(systemName: "truck.box.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("VEHICLE")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text(alert.vehicleName)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(AppTheme.Text.primary)
                             .lineLimit(1)
                     }
@@ -612,10 +612,10 @@ struct AlertFeedCard: View {
                 // Time Detail Pill
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("REPORTED")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Text(alert.date.formatted(date: .omitted, time: .shortened))
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                 }
             }
@@ -634,7 +634,7 @@ struct AlertFeedCard: View {
                                         Image(systemName: "person.badge.plus")
                                             .font(.caption)
                                         Text("Assign Technician")
-                                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         Spacer()
                                     }
                                     .padding(.vertical, 10)
@@ -653,7 +653,7 @@ struct AlertFeedCard: View {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.caption)
                                     Text("Mark Resolved")
-                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     Spacer()
                                 }
                                 .padding(.vertical, 10)
@@ -710,9 +710,9 @@ struct AlertFeedCard: View {
                             HStack(spacing: 6) {
                                 Spacer()
                                 Image(systemName: "map.fill")
-                                    .font(.system(size: 14, weight: .bold))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 Text("View on Map")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 Spacer()
                             }
                             .padding(.vertical, 12)
@@ -734,7 +734,7 @@ struct AlertFeedCard: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(AppTheme.Text.tertiary)
                             Text("Trip Ended")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.tertiary)
                             Spacer()
                         }
@@ -791,7 +791,7 @@ struct AlertFeedCard: View {
             Image(systemName: "checkmark.seal.fill")
                 .foregroundColor(AppTheme.Status.success)
             Text("Issue Resolved")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Status.success)
             Spacer()
         }
@@ -837,16 +837,16 @@ struct AssignTechnicianSheet: View {
                         // Header info
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Defect details")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                             
                             Text(defect.title)
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
                             
                             Text(defect.defectDescription)
-                                .font(.system(size: 14))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(AppTheme.Text.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -861,7 +861,7 @@ struct AssignTechnicianSheet: View {
                             // Mechanic Selector
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Assign Technician")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 
                                 Picker("Technician", selection: $selectedMechanicId) {
@@ -881,7 +881,7 @@ struct AssignTechnicianSheet: View {
                             // Priority
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Priority Level")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 
                                 Picker("Priority", selection: $priority) {
@@ -896,11 +896,11 @@ struct AssignTechnicianSheet: View {
                             // Additional notes
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Assignment Notes")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 
                                 TextField("e.g. Please check engine sensor first...", text: $notes, axis: .vertical)
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .lineLimit(3...6)
                                     .padding(12)
                                     .background(Color.black.opacity(0.04))
@@ -1035,19 +1035,19 @@ struct SOSAlertDetailView: View {
                                     .shadow(color: Theme.darkOrange.opacity(0.4), radius: 8, x: 0, y: 4)
                                 
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 24, weight: .bold))
+                                    .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(.white)
                             }
                             .padding(.top, 10)
                             
                             VStack(spacing: 4) {
                                 Text("SOS EMERGENCY ALERT")
-                                    .font(.system(size: 11, weight: .black, design: .rounded))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                                     .foregroundColor(Theme.darkOrange)
                                     .tracking(2.0)
                                 
                                 Text(sosAlert.status == .active ? "CRITICAL ACTIVE STATUS" : "RESOLVED")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(sosAlert.status == .active ? Theme.darkOrange : AppTheme.Status.success)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
@@ -1059,7 +1059,7 @@ struct SOSAlertDetailView: View {
                         // Driver and Vehicle Details
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Person & Vehicle Information")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                                 .tracking(0.5)
@@ -1073,12 +1073,12 @@ struct SOSAlertDetailView: View {
                                 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(driverName)
-                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(AppTheme.Text.primary)
                                     
                                     HStack(spacing: 6) {
                                         Text("Driver")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Text.secondary)
                                         Text("•")
                                             .foregroundColor(AppTheme.Text.tertiary)
@@ -1090,7 +1090,7 @@ struct SOSAlertDetailView: View {
                                             }
                                         } label: {
                                             Text(driverPhone)
-                                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                                 .foregroundColor(AppTheme.Brand.primary)
                                                 .underline()
                                         }
@@ -1125,16 +1125,16 @@ struct SOSAlertDetailView: View {
                                         .fill(AppTheme.Brand.primary.opacity(0.1))
                                         .frame(width: 44, height: 44)
                                     Image(systemName: "motorcycle.fill")
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Brand.primary)
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(vehicleCode)
-                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(AppTheme.Text.primary)
                                     Text(vehicleModel.isEmpty ? "Assigned Vehicle" : vehicleModel)
-                                        .font(.system(size: 12))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 }
                                 Spacer()
@@ -1149,13 +1149,13 @@ struct SOSAlertDetailView: View {
                         // Incident description card
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Emergency Message")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                                 .tracking(0.5)
                             
                             Text(sosAlert.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately.")
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundColor(AppTheme.Text.primary)
                                 .lineSpacing(4)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1170,7 +1170,7 @@ struct SOSAlertDetailView: View {
                         let centerCoord = CLLocationCoordinate2D(latitude: sosAlert.latitude, longitude: sosAlert.longitude)
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Location Coordinates")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                                 .tracking(0.5)
@@ -1179,7 +1179,7 @@ struct SOSAlertDetailView: View {
                                 Image(systemName: "mappin.and.ellipse")
                                     .foregroundColor(Theme.darkOrange)
                                 Text(String(format: "%.5f, %.5f", sosAlert.latitude, sosAlert.longitude))
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                                     .foregroundColor(AppTheme.Text.primary)
                                 Spacer()
                              }
@@ -1200,7 +1200,7 @@ struct SOSAlertDetailView: View {
                                             .shadow(color: Theme.darkOrange.opacity(0.4), radius: 5, x: 0, y: 2)
                                             .overlay(
                                                 Image(systemName: "exclamationmark.triangle.fill")
-                                                    .font(.system(size: 10, weight: .bold))
+                                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                                     .foregroundColor(.white)
                                             )
                                     }
@@ -1219,7 +1219,7 @@ struct SOSAlertDetailView: View {
                                     HStack {
                                         Image(systemName: "map.fill")
                                         Text("Open in Maps")
-                                            .font(.system(size: 12, weight: .bold))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     }
                                     .foregroundColor(sosAlert.status == .active ? .white : AppTheme.Text.tertiary)
                                     .frame(maxWidth: .infinity)
@@ -1241,7 +1241,7 @@ struct SOSAlertDetailView: View {
                                         HStack {
                                             Image(systemName: "location.fill")
                                             Text("Track Live")
-                                                .font(.system(size: 12, weight: .bold))
+                                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         }
                                         .foregroundColor(sosAlert.status == .active ? Theme.darkOrange : AppTheme.Text.tertiary)
                                         .frame(maxWidth: .infinity)
@@ -1277,9 +1277,9 @@ struct SOSAlertDetailView: View {
                                     HStack(spacing: 8) {
                                         Spacer()
                                         Image(systemName: "checkmark.shield.fill")
-                                            .font(.system(size: 16, weight: .bold))
+                                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         Text("Mark Issue as Resolved")
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         Spacer()
                                     }
                                     .padding(.vertical, 14)
@@ -1300,9 +1300,9 @@ struct SOSAlertDetailView: View {
                                     Spacer()
                                     Image(systemName: "checkmark.seal.fill")
                                         .foregroundColor(AppTheme.Status.success)
-                                        .font(.system(size: 16))
+                                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     Text("This issue is fully resolved")
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(AppTheme.Status.success)
                                     Spacer()
                                 }

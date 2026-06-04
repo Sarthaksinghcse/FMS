@@ -16,16 +16,16 @@ struct CustomAddTextField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(isFocused ? AppTheme.Brand.primary : AppTheme.Text.secondary)
 
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 15))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(isFocused ? AppTheme.Brand.primary : AppTheme.Text.tertiary)
 
                 TextField(placeholder, text: $text)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     .foregroundColor(.black)
                     .focused($isFocused)
                     .keyboardType(keyboardType)
@@ -130,7 +130,7 @@ struct EditVehicleView: View {
                                     HStack {
                                         Image(systemName: "trash.fill")
                                         Text("Delete Vehicle")
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         Spacer()
                                     }
                                     .foregroundColor(.white)
@@ -189,7 +189,7 @@ struct EditVehicleView: View {
     
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             .foregroundColor(AppTheme.Brand.primary)
             .padding(.bottom, 2)
     }
@@ -198,10 +198,10 @@ struct EditVehicleView: View {
         HStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(AppTheme.Status.danger)
-                .font(.system(size: 16))
+                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
             
             Text(message)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(.black)
             
             Spacer()
@@ -219,7 +219,7 @@ struct EditVehicleView: View {
     private var typeSelector: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Vehicle Category")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(AppTheme.Text.secondary)
             
             HStack(spacing: 8) {
@@ -231,9 +231,9 @@ struct EditVehicleView: View {
                     } label: {
                         VStack(spacing: 6) {
                             Image(systemName: type.icon)
-                                .font(.system(size: 18))
+                                .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             Text(type.displayName)
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
@@ -250,7 +250,7 @@ struct EditVehicleView: View {
     private var fuelSelector: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Fuel Type")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(AppTheme.Text.secondary)
             
             Picker("Fuel Type", selection: $viewModel.fuelType) {
@@ -266,7 +266,7 @@ struct EditVehicleView: View {
     private var statusSelector: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Vehicle Status")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(AppTheme.Text.secondary)
             
             Picker("Vehicle Status", selection: $viewModel.status) {

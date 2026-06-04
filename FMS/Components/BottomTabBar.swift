@@ -94,7 +94,7 @@ struct DashboardBottomTabBar: View {
                 .frame(height: 48)
                 
                 Text(label)
-                    .font(.system(size: 11, weight: selectedTab == index ? .bold : .medium, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: selectedTab == index ? .bold : .medium, design: .rounded))
                     .foregroundColor(selectedTab == index ? AppTheme.Brand.primary : AppTheme.Text.secondary)
             }
             .frame(maxWidth: .infinity)

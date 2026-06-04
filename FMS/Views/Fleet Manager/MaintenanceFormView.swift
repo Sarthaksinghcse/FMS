@@ -97,10 +97,10 @@ struct AddMaintenanceFormView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
                 Text(isSaving ? "Saving..." : "Save Staff Member")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
@@ -337,15 +337,15 @@ struct EditMaintenanceFormView: View {
                     .frame(width: 60, height: 60)
                     .shadow(color: AppTheme.Brand.accent.opacity(0.35), radius: 10, y: 4)
                 Image(systemName: "wrench.and.screwdriver")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(.white)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(staff.fullName)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 Text(staff.email)
-                    .font(.system(size: 13, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(.secondary)
             }
             Spacer()
@@ -366,9 +366,9 @@ struct EditMaintenanceFormView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
-                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
@@ -391,9 +391,9 @@ struct EditMaintenanceFormView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: Theme.darkOrange))
                 } else {
-                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "trash.fill").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
-                Text(isDeleting ? "Deleting..." : "Delete Staff Member").font(.system(size: 15, weight: .semibold, design: .rounded))
+                Text(isDeleting ? "Deleting..." : "Delete Staff Member").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
             }
             .foregroundColor(Theme.darkOrange)
             .frame(maxWidth: .infinity).frame(height: 50)

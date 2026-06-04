@@ -204,13 +204,13 @@ struct CompletedTasksView: View {
         var body: some View {
             VStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(color)
                 Text(value)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.secondary)
             }
             .frame(maxWidth: .infinity)
@@ -232,12 +232,12 @@ struct CompletedTasksView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(order.title)
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                             .lineLimit(1)
                         if let completedAt = order.completedAt {
                             Text(completedAt.formatted(date: .omitted, time: .shortened))
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                 .foregroundColor(AppTheme.Text.secondary)
                         }
                     }
@@ -246,9 +246,9 @@ struct CompletedTasksView: View {
                     // Green completed badge
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 12))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         Text("Done")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     }
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
@@ -291,12 +291,12 @@ struct CompletedTasksView: View {
                 // ── Parts used ───────────────────────────────────────────────────
                 VStack(alignment: .leading, spacing: 7) {
                     Text("Parts Used")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.secondary)
                     
                     FlowLayout(items: parts) { part in
                         Text(part)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Status.success)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
@@ -311,11 +311,11 @@ struct CompletedTasksView: View {
                 // ── Footer ───────────────────────────────────────────────────────
                 HStack {
                     Text(order.priority.rawValue.capitalized + " Priority")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(order.priority.detailColor)
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
                 }
                 .padding(.horizontal, 16)
@@ -347,15 +347,15 @@ struct CompletedTasksView: View {
         var body: some View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(color)
                     .frame(width: 20)
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.secondary)
                     .frame(width: 80, alignment: .leading)
                 Text(value)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Text.primary)
                     .lineLimit(1)
                 Spacer()

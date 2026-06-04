@@ -91,7 +91,7 @@ struct FleetContentView: View {
                                     .shadow(color: Theme.darkOrange.opacity(0.4), radius: 10, x: 0, y: 4)
                                 
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 30, weight: .bold))
+                                    .font(.system(size: 30 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(.white)
                                     .symbolEffect(.bounce.up, options: .repeating)
                             }
@@ -99,12 +99,12 @@ struct FleetContentView: View {
                             // Title Header
                             VStack(spacing: 6) {
                                 Text("CRITICAL EMERGENCY ALERT")
-                                    .font(.system(size: 13, weight: .black, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                                     .foregroundColor(Theme.darkOrange)
                                     .tracking(2.0)
                                 
                                 Text("Driver SOS Triggered")
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                             }
                             
@@ -118,10 +118,10 @@ struct FleetContentView: View {
                                     
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(driverName)
-                                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                                            .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.white)
                                         Text("Driver • \(driverPhone)")
-                                            .font(.system(size: 13, design: .rounded))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                             .foregroundColor(.white.opacity(0.6))
                                     }
                                 }
@@ -132,16 +132,16 @@ struct FleetContentView: View {
                                             .fill(Theme.darkOrange.opacity(0.15))
                                             .frame(width: 44, height: 44)
                                         Image(systemName: "motorcycle.fill")
-                                            .font(.system(size: 20))
+                                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(Theme.darkOrange)
                                     }
                                     
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(vehicleCode)
-                                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                                            .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.white)
                                         Text(vehicleModel)
-                                            .font(.system(size: 13, design: .rounded))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                             .foregroundColor(.white.opacity(0.6))
                                     }
                                 }
@@ -152,12 +152,12 @@ struct FleetContentView: View {
                                 // Emergency message text
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("EMERGENCY MESSAGE")
-                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(Theme.darkOrange)
                                         .tracking(1.0)
                                     
                                     Text(alert.message ?? "Driver \(driverName) has triggered a panic alarm. Assistance is required immediately.")
-                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                         .foregroundColor(.white.opacity(0.95))
                                         .lineSpacing(4)
                                 }
@@ -189,7 +189,7 @@ struct FleetContentView: View {
                                             .shadow(color: Theme.darkOrange.opacity(0.4), radius: 6, x: 0, y: 3)
                                             .overlay(
                                                 Image(systemName: "exclamationmark.triangle.fill")
-                                                    .font(.system(size: 12, weight: .bold))
+                                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                                     .foregroundColor(.white)
                                             )
                                     }
@@ -203,7 +203,7 @@ struct FleetContentView: View {
                             )
                             .overlay(
                                 Text("LIVE GEOFENCE COORDINATES")
-                                    .font(.system(size: 8, weight: .black, design: .rounded))
+                                    .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -579,7 +579,7 @@ struct SlideToAcknowledgeView: View {
                 HStack {
                     Spacer()
                     Text("Slide to Acknowledge")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(Theme.darkOrange)
                         .opacity(Double(1.0 - (dragOffset / maxOffset)))
                     Spacer()
@@ -593,7 +593,7 @@ struct SlideToAcknowledgeView: View {
                         .shadow(color: Theme.darkOrange.opacity(0.4), radius: 6, x: 0, y: 3)
                     
                     Image(systemName: "chevron.right.2")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(.white)
                 }
                 .offset(x: dragOffset)

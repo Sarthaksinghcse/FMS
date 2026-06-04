@@ -21,25 +21,27 @@ struct ProfileStatCard: View {
     let value: String
     let subtitle: String
 
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 16))
+                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(iconColor)
                 .frame(width: 36, height: 36)
                 .background(iconBg)
                 .clipShape(RoundedRectangle(cornerRadius: 9))
 
             Text(title)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
 
             Text(value)
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(AppTheme.Text.primary)
 
             Text(subtitle)
-                .font(.system(size: 11))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.tertiary)
                 .lineLimit(1)
         }
@@ -61,11 +63,13 @@ struct ProfileSettingsRow: View {
     let subtitle: String
     let action: () -> Void
 
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(iconColor)
                     .frame(width: 36, height: 36)
                     .background(iconBg)
@@ -73,11 +77,11 @@ struct ProfileSettingsRow: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Text.primary)
                     if !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(.system(size: 12))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                 }
@@ -85,7 +89,7 @@ struct ProfileSettingsRow: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Text.tertiary.opacity(0.7))
             }
             .padding(.horizontal, 16)
@@ -103,6 +107,8 @@ struct ProfileInnerScreenHeader: View {
     let title: String
     let subtitle: String
 
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+
     var body: some View {
         VStack(spacing: 12) {
             ZStack {
@@ -110,14 +116,14 @@ struct ProfileInnerScreenHeader: View {
                     .fill(iconColor.opacity(0.12))
                     .frame(width: 64, height: 64)
                 Image(systemName: icon)
-                    .font(.system(size: 26))
+                    .font(.system(size: 26 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(iconColor)
             }
             Text(title)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundColor(AppTheme.Text.primary)
             Text(subtitle)
-                .font(.system(size: 14))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(AppTheme.Text.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -136,10 +142,12 @@ struct ProfileToggleRow: View {
     @Binding var isOn: Bool
     var tintColor: Color = AppTheme.Brand.primary
 
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 15))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(iconColor)
                 .frame(width: 36, height: 36)
                 .background(iconColor.opacity(0.10))
@@ -147,11 +155,11 @@ struct ProfileToggleRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.primary)
                 if !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Text.secondary)
                 }
             }
@@ -174,14 +182,16 @@ struct ProfileInfoRow: View {
     let value: String
     var valueColor: Color = AppTheme.Text.primary
 
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+
     var body: some View {
         HStack {
             Text(label)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
             Spacer()
             Text(value)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(valueColor)
         }
         .padding(.horizontal, 16)
@@ -199,19 +209,21 @@ struct ProfileFormField: View {
     var keyboardType: UIKeyboardType = .default
     var iconColor: Color = AppTheme.Brand.primary
 
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 15))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(iconColor)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.tertiary)
                 TextField(placeholder, text: $text)
-                    .font(.system(size: 15))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(AppTheme.Text.primary)
                     .keyboardType(keyboardType)
             }
@@ -232,19 +244,21 @@ struct ProfileSecureFormField: View {
     var placeholder: String = ""
     var iconColor: Color = AppTheme.Brand.primary
 
+    @ObservedObject private var accessibility = AccessibilityManager.shared
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 15))
+                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundColor(iconColor)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.tertiary)
                 SecureField(placeholder, text: $text)
-                    .font(.system(size: 15))
+                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundColor(AppTheme.Text.primary)
             }
 

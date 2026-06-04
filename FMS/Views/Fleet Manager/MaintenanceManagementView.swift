@@ -24,7 +24,7 @@ struct MaintenanceSummaryCard: View {
                         .fill(color.opacity(0.12))
                         .frame(width: 36, height: 36)
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(color)
                 }
                 Spacer()
@@ -32,10 +32,10 @@ struct MaintenanceSummaryCard: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(.system(size: 26 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
             }
         }
@@ -253,11 +253,11 @@ struct MaintenanceManagementView: View {
                             if items.isEmpty {
                                 VStack(spacing: 12) {
                                     Image(systemName: "wrench.and.screwdriver.fill")
-                                        .font(.system(size: 40))
+                                        .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundColor(AppTheme.Text.tertiary.opacity(0.5))
                                         .padding(.top, 60)
                                     Text(selectedTab == 0 ? "No active maintenance work orders." : "No historic records found.")
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(AppTheme.Text.secondary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -288,7 +288,7 @@ struct MaintenanceManagementView: View {
                         showingScheduler = true
                     } label: {
                         Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                 }
@@ -349,7 +349,7 @@ struct MaintenanceManagementView: View {
         let cardContent = VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(order.priority.rawValue.uppercased())
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(priColor)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -357,23 +357,23 @@ struct MaintenanceManagementView: View {
                     .cornerRadius(6)
                 
                 Text("WO-\(order.id.uuidString.prefix(4).uppercased())")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
                 
                 Spacer()
                 
                 Text(currentStatusText(for: order))
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(order.workDescription.contains("[PENDING_APPROVAL]") ? AppTheme.Brand.amber : priColor)
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(getVehicleName(for: order.vehicleId))
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 
                 Text(order.title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(1)
             }
@@ -397,18 +397,18 @@ struct MaintenanceManagementView: View {
                         .rotationEffect(Angle(degrees: -90))
                     
                     Text("\(riskScorePercent)%")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                 }
                 .padding(.top, 2)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Failure Risk")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(Theme.darkOrange)
                     
                     Text(suggestedAction)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Text.primary)
                         .lineLimit(1)
                 }
@@ -427,27 +427,27 @@ struct MaintenanceManagementView: View {
             VStack(spacing: 8) {
                 HStack {
                     Label("Assigned Tech", systemImage: "person.fill")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Spacer()
                     Text(getStaffName(for: order.assignedTo))
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(.black)
                 }
                 
                 HStack {
                     Label("Downtime Tracker", systemImage: "clock.fill")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Spacer()
                     Text(getDowntimeString(for: order))
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Status.danger)
                 }
                 
                 HStack {
                     Label("Cost Estimate", systemImage: "indianrupeesign.circle.fill")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Spacer()
                     
@@ -455,17 +455,17 @@ struct MaintenanceManagementView: View {
                     let actStr = localRecord != nil ? String(format: "₹%.2f", currentCost) : "Awaiting actual"
                     
                     Text("Est: \(estStr) | Act: \(actStr)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(.black)
                 }
                 
                 HStack {
                     Label("Last Updated", systemImage: "calendar")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Spacer()
                     Text(order.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(AppTheme.Text.secondary)
                 }
             }
@@ -475,11 +475,11 @@ struct MaintenanceManagementView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("Repair Progress Timeline")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Spacer()
                     Text("\(currentStatusText(for: order)) (\(step)/\(totalSteps))")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Brand.primary)
                 }
                 
@@ -507,7 +507,7 @@ struct MaintenanceManagementView: View {
                             Spacer()
                             Image(systemName: "checkmark.circle.fill")
                             Text("Approve")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             Spacer()
                         }
                         .padding(.vertical, 10)
@@ -524,7 +524,7 @@ struct MaintenanceManagementView: View {
                             Spacer()
                             Image(systemName: "xmark.circle.fill")
                             Text("Decline")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             Spacer()
                         }
                         .padding(.vertical, 10)
@@ -539,7 +539,7 @@ struct MaintenanceManagementView: View {
                             Spacer()
                             Image(systemName: "eye.fill")
                             Text("View")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             Spacer()
                         }
                         .padding(.vertical, 10)
@@ -577,10 +577,10 @@ struct MaintenanceManagementView: View {
         HStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(AppTheme.Status.danger)
-                .font(.system(size: 16))
+                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
             
             Text(message)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(.black)
             
             Spacer()
@@ -706,7 +706,7 @@ struct ScheduleWorkOrderSheet: View {
                             
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("1. Select Vehicle")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.primary)
                                 
                                 Picker("Select Vehicle", selection: $viewModel.selectedVehicleId) {
@@ -731,7 +731,7 @@ struct ScheduleWorkOrderSheet: View {
                             
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("2. Assign Maintenance Tech")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.primary)
                                 
                                 Picker("Assign Tech", selection: $viewModel.selectedStaffId) {
@@ -756,14 +756,14 @@ struct ScheduleWorkOrderSheet: View {
                             
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("3. Order Details")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.primary)
                                 
                                 CustomAddTextField(label: "Job Title", placeholder: "e.g. Engine Overheating Fix / Brake replacement", icon: "wrench.and.screwdriver.fill", text: $viewModel.newTitle)
                                 
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Work Description")
-                                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     TextEditor(text: $viewModel.newDescription)
                                         .frame(height: 100)
@@ -782,7 +782,7 @@ struct ScheduleWorkOrderSheet: View {
                             
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Priority Level")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 
                                 Picker("Priority", selection: $viewModel.selectedPriority) {
@@ -831,9 +831,9 @@ struct ScheduleWorkOrderSheet: View {
         HStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(AppTheme.Status.danger)
-                .font(.system(size: 16))
+                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
             Text(message)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                 .foregroundColor(.black)
             Spacer()
         }
@@ -864,11 +864,11 @@ struct CompleteWorkOrderSheet: View {
                 VStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Complete Work Order")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Brand.primary)
                         
                         Text("Please specify the final actual cost of maintenance for \"\(workOrder.title)\" to log expenses.")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                         
                         CustomAddTextField(label: "Final Cost (₹)", placeholder: "e.g. 5200", icon: "indianrupeesign.circle.fill", text: $finalCostString, keyboardType: .numberPad)

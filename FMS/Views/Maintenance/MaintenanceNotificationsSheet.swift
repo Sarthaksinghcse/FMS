@@ -34,13 +34,13 @@ struct MaintenanceNotificationsSheet: View {
                     VStack(spacing: 12) {
                         Spacer()
                         Image(systemName: "bell.slash.fill")
-                            .font(.system(size: 48))
+                            .font(.system(size: 48 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text("All Caught Up!")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.primary)
                         Text("No notifications at the moment.")
-                            .font(.system(size: 13))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                             .multilineTextAlignment(.center)
                         Spacer()
@@ -72,7 +72,7 @@ struct MaintenanceNotificationsSheet: View {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Text.secondary)
                             .frame(width: 32, height: 32)
                     }
@@ -174,19 +174,19 @@ private struct NotificationRow: View {
                             .frame(width: 32, height: 32)
                         
                         Image(systemName: icon)
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(iconColor)
                     }
                     .frame(width: 32, height: 32)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text(categoryLabel.uppercased())
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(iconColor)
                             .tracking(0.5)
                         
                         Text(notification.isRead ? "READ" : "UNREAD")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(notification.isRead ? AppTheme.Text.secondary : AppTheme.Brand.royalBlue)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -199,7 +199,7 @@ private struct NotificationRow: View {
                 
                 // Status/New Badge
                 Text(!notification.isRead ? "NEW" : "READ")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -215,11 +215,11 @@ private struct NotificationRow: View {
             // Content
             VStack(alignment: .leading, spacing: 6) {
                 Text(notification.title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(AppTheme.Text.primary)
                 
                 Text(notification.message)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -237,15 +237,15 @@ private struct NotificationRow: View {
                             .fill(Color.black.opacity(0.04))
                             .frame(width: 28, height: 28)
                         Image(systemName: "tag.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("TYPE")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text(categoryLabel)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(AppTheme.Text.primary)
                     }
                 }
@@ -258,15 +258,15 @@ private struct NotificationRow: View {
                             .fill(Color.black.opacity(0.04))
                             .frame(width: 28, height: 28)
                         Image(systemName: "arrow.right.circle.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("ACTION")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text("VIEW DETAILS")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                 }
@@ -275,10 +275,10 @@ private struct NotificationRow: View {
                 // Time Detail Pill
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("RECEIVED")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.tertiary)
                     Text(notification.createdAt.formatted(.relative(presentation: .numeric)))
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                 }
             }

@@ -14,10 +14,10 @@ struct PredictiveAlertsView: View {
                 HStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Active Predictive Risks")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                         Text("\(viewModel.alerts.count)")
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                     }
 
@@ -34,9 +34,9 @@ struct PredictiveAlertsView: View {
                                     .tint(.white)
                             } else {
                                 Image(systemName: "sparkles")
-                                    .font(.system(size: 14, weight: .bold))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 Text("Re-Analyze Fleet")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             }
                         }
                         .padding(.horizontal, 14)
@@ -67,16 +67,16 @@ struct PredictiveAlertsView: View {
                                 .fill(AppTheme.Status.success.opacity(0.1))
                                 .frame(width: 80, height: 80)
                             Image(systemName: "checkmark.shield.fill")
-                                .font(.system(size: 40))
+                                .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(AppTheme.Status.success)
                         }
 
                         Text("Your Fleet is Healthy")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
 
                         Text("No upcoming breakdown risks predicted in the next 30 days.")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
@@ -87,7 +87,7 @@ struct PredictiveAlertsView: View {
                             }
                         } label: {
                             Text("Run AI Health Check")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 12)
@@ -146,15 +146,15 @@ struct PredictiveAlertsView: View {
                             .frame(width: 32, height: 32)
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(riskColor)
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("VEHICLE ID")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                         Text(alert.vehicleId.uuidString.prefix(8).uppercased())
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                     }
                 }
@@ -164,9 +164,9 @@ struct PredictiveAlertsView: View {
                 // Score Badge
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
-                        .font(.system(size: 10))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     Text(String(format: "Risk: %.0f%%", alert.riskScore * 100))
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 }
                 .foregroundColor(riskColor)
                 .padding(.horizontal, 10)
@@ -179,16 +179,16 @@ struct PredictiveAlertsView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 4) {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(AppTheme.Brand.primary)
                     Text("AI PREDICTION")
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Brand.primary)
                         .tracking(0.5)
                 }
 
                 Text(alert.llmExplanation ?? alert.triggeredReasons?.joined(separator: ", ") ?? "High probability of mechanical breakdown detected.")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -206,15 +206,15 @@ struct PredictiveAlertsView: View {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "wrench.and.screwdriver.fill")
                         .foregroundColor(AppTheme.Brand.primary)
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .padding(.top, 2)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("RECOMMENDED ACTION")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.tertiary)
                         Text(action)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(.black)
                     }
                 }

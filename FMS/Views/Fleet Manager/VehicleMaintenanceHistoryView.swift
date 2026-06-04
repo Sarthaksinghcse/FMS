@@ -79,9 +79,9 @@ struct VehicleMaintenanceHistoryView: View {
                     }) {
                         HStack(spacing: 6) {
                             Text("\(months[selectedMonth - 1]) \(String(selectedYear))")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         }
                         .foregroundColor(.black)
                         .padding(.horizontal, 14)
@@ -102,16 +102,16 @@ struct VehicleMaintenanceHistoryView: View {
                     VStack(spacing: 16) {
                         Spacer()
                         Image(systemName: selectedSort == .custom ? "calendar.badge.exclamationmark" : "wrench.and.screwdriver")
-                            .font(.system(size: 48))
+                            .font(.system(size: 48 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(.gray.opacity(0.6))
                         
                         Text(selectedSort == .custom ? "No Records for \(months[selectedMonth - 1]) \(String(selectedYear))" : "No Maintenance History")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.gray)
                         
                         if selectedSort == .custom {
                             Text("Try picking another date or reset the filter.")
-                                .font(.system(size: 13, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                                 .foregroundColor(.gray.opacity(0.8))
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
@@ -120,7 +120,7 @@ struct VehicleMaintenanceHistoryView: View {
                                 selectedSort = .newest
                             }) {
                                 Text("Reset Filter")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 10)
@@ -162,7 +162,7 @@ struct VehicleMaintenanceHistoryView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundColor(AppTheme.Brand.amber)
                         .rotationEffect(.degrees(90))
                         .padding(8)
@@ -183,10 +183,10 @@ struct VehicleMaintenanceHistoryView: View {
                     HStack {
                         HStack(spacing: 4) {
                             Text("\(months[selectedMonth - 1]) \(String(selectedYear))")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(Theme.royalBlue)
                             Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(Theme.royalBlue)
                         }
                         .padding(.horizontal, 14)
@@ -229,7 +229,7 @@ struct VehicleMaintenanceHistoryView: View {
                         showCalendarSheet = false
                     }) {
                         Text("Apply")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -273,12 +273,12 @@ struct MaintenanceActivityCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Service Type")
-                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                         .foregroundColor(.gray)
                         .tracking(0.5)
                     
                     Text(record.serviceType)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
@@ -288,12 +288,12 @@ struct MaintenanceActivityCard: View {
                 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Cost")
-                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                         .foregroundColor(.gray)
                         .tracking(0.5)
                     
                     Text(String(format: "₹%.2f", record.cost))
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Brand.amber)
                 }
             }
@@ -306,12 +306,12 @@ struct MaintenanceActivityCard: View {
                 if let notes = record.notes, !notes.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Repair Details")
-                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                             .foregroundColor(.gray)
                             .tracking(0.5)
                         
                         Text(notes)
-                            .font(.system(size: 13, design: .rounded))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                             .foregroundColor(.black.opacity(0.8))
                             .lineLimit(3)
                             .lineSpacing(2)
@@ -322,12 +322,12 @@ struct MaintenanceActivityCard: View {
                 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Date")
-                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                         .foregroundColor(.gray)
                         .tracking(0.5)
                     
                     Text(formattedDate)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(.gray)
                 }
             }
@@ -363,7 +363,7 @@ struct OngoingMaintenanceActivityCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Text("Active Work Order")
-                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                             .foregroundColor(AppTheme.Brand.amber)
                             .tracking(0.5)
                         
@@ -376,7 +376,7 @@ struct OngoingMaintenanceActivityCard: View {
                     }
                     
                     Text(order.title)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
@@ -387,9 +387,9 @@ struct OngoingMaintenanceActivityCard: View {
                 // Status Badge: Maintenance
                 HStack(spacing: 4) {
                     Image(systemName: "wrench.and.screwdriver.fill")
-                        .font(.system(size: 9))
+                        .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     Text("Maintenance")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .tracking(0.3)
                 }
                 .foregroundColor(AppTheme.Brand.amber)
@@ -410,12 +410,12 @@ struct OngoingMaintenanceActivityCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Details")
-                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .black, design: .rounded))
                         .foregroundColor(.gray)
                         .tracking(0.5)
                     
                     Text(order.workDescription.isEmpty ? "No details provided" : order.workDescription)
-                        .font(.system(size: 13, design: .rounded))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                         .foregroundColor(.black.opacity(0.8))
                         .lineLimit(3)
                         .lineSpacing(2)
@@ -427,20 +427,20 @@ struct OngoingMaintenanceActivityCard: View {
                     if let estCost = order.estimatedCost {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("Est. Cost")
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.gray)
                             Text(String(format: "₹%.2f", estCost))
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.black)
                         }
                     }
                     
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("Scheduled")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.gray)
                         Text(formattedDate)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                             .foregroundColor(.gray)
                     }
                 }

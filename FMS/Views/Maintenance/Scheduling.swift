@@ -188,7 +188,7 @@ private struct ScheduledTaskCard: View {
                         .fill(order.priority.detailColor)
                         .frame(width: 8, height: 8)
                     Text(order.title)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                         .lineLimit(1)
                 }
@@ -247,7 +247,7 @@ private struct ScheduledTaskCard: View {
                 )
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Text.tertiary.opacity(0.6))
             }
             .padding(.horizontal, 16)
@@ -276,15 +276,15 @@ private struct ScheduledDetailRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(color)
                 .frame(width: 20)
             Text(label)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundColor(AppTheme.Text.secondary)
                 .frame(width: 110, alignment: .leading)
             Text(value)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(AppTheme.Text.primary)
                 .lineLimit(1)
             Spacer()

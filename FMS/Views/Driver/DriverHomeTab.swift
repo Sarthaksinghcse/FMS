@@ -24,7 +24,7 @@ struct DriverHomeTab: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("ACTIVE ASSIGNED TRIP")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(.secondary)
                                 .tracking(0.6)
                             Spacer()
@@ -34,7 +34,7 @@ struct DriverHomeTab: View {
                                 }
                             } label: {
                                 Text("See All")
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundStyle(Color.fmsIndigo)
                             }
                         }
@@ -46,7 +46,7 @@ struct DriverHomeTab: View {
                     
                     VStack(alignment: .leading, spacing: 12) {
                         Text("QUICK ACTIONS")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(.secondary)
                             .tracking(0.6)
 
@@ -72,7 +72,7 @@ struct DriverHomeTab: View {
                     // ── FUEL SECTION ──────────────────────────────────────────
                     VStack(alignment: .leading, spacing: 12) {
                         Text("FUEL")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(.secondary)
                             .tracking(0.6)
 
@@ -84,7 +84,7 @@ struct DriverHomeTab: View {
                     // ── DRIVER PERFORMANCE ─────────────────────────────────────
                     VStack(alignment: .leading, spacing: 12) {
                         Text("DRIVER PERFORMANCE")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(.secondary)
                             .tracking(0.6)
 
@@ -148,10 +148,10 @@ private struct DashboardInlineHeader: View {
             // ── Two-line greeting on the left ────────────────────────────
             VStack(alignment: .leading, spacing: 2) {
                 Text(greeting)
-                    .font(.system(size: 17, weight: .regular))
+                    .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                     .foregroundStyle(.secondary)
                 Text(vm.driverName.components(separatedBy: " ").first ?? vm.driverName)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.primary)
             }
 
@@ -164,7 +164,7 @@ private struct DashboardInlineHeader: View {
             } label: {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: "bell.fill")
-                        .font(.system(size: 18))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(Color(UIColor.label))
                         .frame(width: 40, height: 40)
                         .background(Color(UIColor.secondarySystemGroupedBackground))
@@ -282,11 +282,11 @@ private struct LiveTripCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(trip.tripCode)
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(.primary)
                         Spacer()
                         Text("IN PROGRESS")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(AppTheme.Status.danger)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
@@ -296,9 +296,9 @@ private struct LiveTripCard: View {
                     if let notes = trip.notes, !notes.isEmpty {
                         HStack {
                             Image(systemName: "box.truck.fill")
-                                .font(.system(size: 10))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             Text(notes)
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         }
                         .foregroundStyle(AppTheme.Status.danger)
                         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -331,10 +331,10 @@ private struct LiveTripCard: View {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("DEPARTURE PORT")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(.secondary)
                             Text(trip.source)
-                                .font(.system(size: 15, weight: .bold))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(.primary)
                                 .lineLimit(nil)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -342,10 +342,10 @@ private struct LiveTripCard: View {
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text("ARRIVAL TERMINAL")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(.secondary)
                             Text(trip.destination)
-                                .font(.system(size: 15, weight: .bold))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(.primary)
                                 .lineLimit(nil)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -360,7 +360,7 @@ private struct LiveTripCard: View {
                         selectedTripForAddress = trip
                     } label: {
                         Label("View Full Address", systemImage: "map.fill")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                             .foregroundStyle(Color.fmsIndigo)
                     }
                     .buttonStyle(.plain)
@@ -400,14 +400,13 @@ private struct LiveTripCard: View {
                 
                 VStack(alignment: .center, spacing: 12) {
                     Text(vm.elapsedFormatted)
-                        .font(.system(size: 32, weight: .bold, design: .monospaced))
+                        .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                         .foregroundStyle(.primary)
                         .contentTransition(.numericText())
 
                     VStack(spacing: 10) {
-                        let largeTap = accessibility.driverLargeTapTargets
-                        let btnHeight: CGFloat = largeTap ? 64 : 48
-                        let btnFontSize: CGFloat = largeTap ? 17 : 14
+                        let btnHeight: CGFloat = 48
+                        let btnFontSize: CGFloat = 14
                         
                         HStack(spacing: 10) {
                             Button {
@@ -459,7 +458,7 @@ private struct LiveTripCard: View {
         .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 1)
         )
     }
 }
@@ -476,12 +475,12 @@ private struct IdleCard: View {
             // ── Empty state ────────────────────────────────────────────────
             VStack(alignment: .center, spacing: 12) {
                 Image(systemName: "map.fill")
-                    .font(.system(size: 40))
+                    .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(Color.fmsIndigo.opacity(0.3))
                 Text("No trips assigned today")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 Text("Your fleet manager will assign trips here.")
-                    .font(.system(size: 13))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
@@ -492,7 +491,7 @@ private struct IdleCard: View {
             .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                    .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 1)
             )
         }
     }
@@ -559,11 +558,11 @@ private struct AssignedTripCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .center) {
                     Text(tripCode)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundStyle(Color(UIColor.label))
                     Spacer()
                     Text("ASSIGNED")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         .foregroundStyle(Color.fmsIndigo)
                         .padding(.horizontal, 10).padding(.vertical, 5)
                         .background(Color.fmsIndigo.opacity(0.10))
@@ -572,9 +571,9 @@ private struct AssignedTripCard: View {
                 if let notes = trip.notes, !notes.isEmpty {
                     HStack {
                         Image(systemName: "box.truck.fill")
-                            .font(.system(size: 10))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         Text(notes)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     }
                     .foregroundStyle(Color.fmsIndigo)
                     .padding(.horizontal, 8).padding(.vertical, 4)
@@ -598,7 +597,7 @@ private struct AssignedTripCard: View {
                         .frame(width: 38, height: 38)
                         .overlay(
                             Image(systemName: "arrow.up")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                         )
 
@@ -613,7 +612,7 @@ private struct AssignedTripCard: View {
                         .frame(width: 38, height: 38)
                         .overlay(
                             Image(systemName: "flag.fill")
-                                .font(.system(size: 15, weight: .bold))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                         )
                 }
@@ -625,32 +624,32 @@ private struct AssignedTripCard: View {
                     // Departure text block
                     VStack(alignment: .leading, spacing: 4) {
                         Text("DEPARTURE")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(Color.fmsIndigo)
                             .kerning(0.6)
                         Text(trip.source)
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(Color(UIColor.label))
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
                         Text(departureTimeString)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(Color(UIColor.secondaryLabel))
                     }
 
                     // Arrival text block
                     VStack(alignment: .leading, spacing: 4) {
                         Text("ARRIVAL")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(Color.orange)
                             .kerning(0.6)
                         Text(trip.destination)
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.system(size: 17 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(Color(UIColor.label))
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
                         Text("ETA \(arrivalTimeString)")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(Color(UIColor.secondaryLabel))
                     }
                 }
@@ -667,7 +666,7 @@ private struct AssignedTripCard: View {
                     selectedTripForAddress = trip
                 } label: {
                     Label("View Full Address", systemImage: "map.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundStyle(Color.fmsIndigo)
                 }
                 .buttonStyle(.plain)
@@ -717,17 +716,17 @@ private struct AssignedTripCard: View {
                     HStack(spacing: 0) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("VEHICLE")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(Color(UIColor.secondaryLabel))
                             Text(localVehicle?.registrationNumber ?? tripVehicle?.licensePlate ?? "Not Assigned")
-                                .font(.system(size: 15, weight: .bold))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(Color(UIColor.label))
                         }
                         
                         Spacer()
                         
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(Color(UIColor.tertiaryLabel))
                             .rotationEffect(.degrees(showVehicleDetails ? -180 : 0))
                     }
@@ -771,17 +770,17 @@ private struct AssignedTripCard: View {
                         .frame(width: 36, height: 36)
                         .overlay(
                             Image(systemName: "text.quote")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundColor(Color.fmsIndigo)
                         )
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("FLEET MANAGER INSTRUCTIONS")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(Color.fmsIndigo)
                             .kerning(0.4)
                         Text(notes)
-                            .font(.system(size: 13, weight: .regular))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                             .foregroundStyle(Color(UIColor.label))
                             .lineLimit(4)
                             .fixedSize(horizontal: false, vertical: true)
@@ -804,7 +803,7 @@ private struct AssignedTripCard: View {
                     vm.showRaiseQuery = true
                 } label: {
                     Label("Raise Query", systemImage: "questionmark.bubble.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundStyle(Color.orange)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
@@ -828,9 +827,9 @@ private struct AssignedTripCard: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: isAccepted ? "play.fill" : "checkmark.circle.fill")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         Text(isAccepted ? "Start Trip" : "Confirm Trip")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -867,11 +866,11 @@ private struct AssignedTripCard: View {
     private func vehicleDetailRow(label: String, value: String) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                 .foregroundStyle(Color(UIColor.secondaryLabel))
             Spacer()
             Text(value)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundStyle(Color(UIColor.label))
         }
         .padding(.vertical, 8)
@@ -889,14 +888,14 @@ private struct TripMetricChip: View {
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(Color(UIColor.systemGray2))
             Text(label)
-                .font(.system(size: 8, weight: .semibold))
+                .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundStyle(.secondary)
                 .tracking(0.3)
             Text(value)
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity)
@@ -924,12 +923,12 @@ private struct QuickActionGridCell: View {
         Button(action: action) {
             VStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 24))
+                    .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(iconColor)
                     .frame(width: 44, height: 44)
                 
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
             }
@@ -940,7 +939,7 @@ private struct QuickActionGridCell: View {
             .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                    .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.05), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -960,20 +959,20 @@ private struct PerformanceCard: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundStyle(.secondary)
                 Text(value)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundStyle(.primary)
                 Text(subtitle)
-                    .font(.system(size: 10))
+                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     .foregroundStyle(.secondary)
             }
             
             Spacer()
             
             Image(systemName: icon)
-                .font(.system(size: 24))
+                .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                 .foregroundStyle(iconColor)
         }
         .frame(maxWidth: .infinity)
@@ -984,7 +983,7 @@ private struct PerformanceCard: View {
         .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.05), lineWidth: 1)
         )
     }
 }

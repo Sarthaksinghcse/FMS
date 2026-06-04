@@ -33,19 +33,19 @@ struct InventoryDetailView: View {
                                     .frame(width: 80, height: 80)
                                 
                                 Image(systemName: isLow ? "exclamationmark.triangle.fill" : "shippingbox.fill")
-                                    .font(.system(size: 36))
+                                    .font(.system(size: 36 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(isLow ? AppTheme.Brand.accent : AppTheme.Brand.teal)
                             }
                             .padding(.top, 10)
                             
                             VStack(spacing: 4) {
                                 Text(item.partName)
-                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.primary)
                                     .multilineTextAlignment(.center)
                                 
                                 Text("P/#\(item.partNumber)")
-                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                                     .foregroundColor(AppTheme.Text.secondary)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
@@ -65,7 +65,7 @@ struct InventoryDetailView: View {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack {
                                 Text("Stock Level")
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                     .textCase(.uppercase)
                                 
@@ -73,7 +73,7 @@ struct InventoryDetailView: View {
                                 
                                 if isLow {
                                     Text("CRITICAL STOCK")
-                                        .font(.system(size: 10, weight: .bold))
+                                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(AppTheme.Status.danger)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
@@ -81,7 +81,7 @@ struct InventoryDetailView: View {
                                         .cornerRadius(6)
                                 } else {
                                     Text("HEALTHY STOCK")
-                                        .font(.system(size: 10, weight: .bold))
+                                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                         .foregroundColor(AppTheme.Status.success)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
@@ -92,11 +92,11 @@ struct InventoryDetailView: View {
                             
                             HStack(alignment: .lastTextBaseline, spacing: 6) {
                                 Text("\(item.quantityInStock)")
-                                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                                    .font(.system(size: 36 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(isLow ? AppTheme.Status.danger : AppTheme.Text.primary)
                                 
                                 Text("units available")
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .foregroundColor(AppTheme.Text.secondary)
                             }
                             
@@ -126,7 +126,7 @@ struct InventoryDetailView: View {
                         // Technical Specifications Card
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Specifications")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .textCase(.uppercase)
                             
@@ -157,10 +157,10 @@ struct InventoryDetailView: View {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Registered On")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 Text(item.createdAt, style: .date)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.primary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -169,10 +169,10 @@ struct InventoryDetailView: View {
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Last Updated")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 Text(item.updatedAt, style: .date)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.primary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -227,18 +227,18 @@ private struct DetailRow: View {
                     .fill(color.opacity(0.1))
                     .frame(width: 32, height: 32)
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     .foregroundColor(color)
             }
             
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 .foregroundColor(AppTheme.Text.secondary)
             
             Spacer()
             
             Text(value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.primary)
         }
     }

@@ -14,10 +14,10 @@ struct VehicleHealthAnalysisView: View {
                 HStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Fleet Health Status")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                         Text(fleetHealthStatusText)
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(.black)
                     }
 
@@ -33,9 +33,9 @@ struct VehicleHealthAnalysisView: View {
                                 ProgressView().tint(.white)
                             } else {
                                 Image(systemName: "sparkles")
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 Text("AI Health Check")
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             }
                         }
                         .padding(.horizontal, 14)
@@ -60,10 +60,10 @@ struct VehicleHealthAnalysisView: View {
                     Spacer()
                     VStack(spacing: 12) {
                         Image(systemName: "car.fill")
-                            .font(.system(size: 40))
+                            .font(.system(size: 40 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(.gray.opacity(0.5))
                         Text("No Vehicles Registered")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.Text.secondary)
                     }
                     Spacer()
@@ -115,10 +115,10 @@ struct VehicleHealthAnalysisView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(score.vehicleNumber)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                     Text("Grade: " + score.grade.rawValue)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                         .foregroundColor(healthColor)
                 }
 
@@ -127,7 +127,7 @@ struct VehicleHealthAnalysisView: View {
                 // Circular Progress Dial
                 ZStack {
                     Circle()
-                        .stroke(Color.black.opacity(0.04), lineWidth: 4)
+                        .stroke(AccessibilityManager.shared.isHighContrastEnabled ? Color.black : Color.black.opacity(0.04), lineWidth: 4)
                         .frame(width: 44, height: 44)
                     
                     Circle()
@@ -137,7 +137,7 @@ struct VehicleHealthAnalysisView: View {
                         .rotationEffect(.degrees(-90))
                     
                     Text("\(score.score)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(.black)
                 }
             }
@@ -147,16 +147,16 @@ struct VehicleHealthAnalysisView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 4) {
                         Image(systemName: "sparkles")
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(Color.fmsIndigo)
                         Text("AI DIAGNOSTICS")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(Color.fmsIndigo)
                             .tracking(0.5)
                     }
 
                     Text(summary)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                         .foregroundColor(AppTheme.Text.secondary)
                         .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
@@ -176,14 +176,14 @@ struct VehicleHealthAnalysisView: View {
             if !score.issueFlags.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("PENDING ISSUES")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.tertiary)
                     
                     ForEach(score.issueFlags, id: \.self) { issue in
                         HStack(spacing: 6) {
                             Circle().fill(AppTheme.Status.danger).frame(width: 4, height: 4)
                             Text(issue)
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                         }
                     }
@@ -194,16 +194,16 @@ struct VehicleHealthAnalysisView: View {
             if !score.suggestedTasks.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("RECOMMENDED MAINTENANCE")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.tertiary)
                     
                     ForEach(score.suggestedTasks, id: \.self) { task in
                         HStack(spacing: 6) {
                             Image(systemName: "wrench.and.screwdriver.fill")
-                                .font(.system(size: 10))
+                                .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(AppTheme.Brand.primary)
                             Text(task)
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                 .foregroundColor(.black)
                         }
                     }

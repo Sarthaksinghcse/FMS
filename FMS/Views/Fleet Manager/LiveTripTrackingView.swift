@@ -58,12 +58,12 @@ struct LiveTripTrackingView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("VEHICLE LOCATION")
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .tracking(1.0)
                             
                             Text(vehicleName)
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.black)
                         }
                         
@@ -75,7 +75,7 @@ struct LiveTripTrackingView: View {
                                 .fill(trip.tripStatus == .inProgress ? AppTheme.Status.success : AppTheme.Brand.primary)
                                 .frame(width: 6, height: 6)
                             Text(trip.tripStatus.displayName.uppercased())
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         }
                         .foregroundColor(trip.tripStatus == .inProgress ? AppTheme.Status.success : AppTheme.Brand.primary)
                         .padding(.horizontal, 8)
@@ -93,14 +93,14 @@ struct LiveTripTrackingView: View {
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "mappin.circle.fill")
                                 .foregroundColor(AppTheme.Status.success)
-                                .font(.system(size: 16))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .frame(width: 20)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Departure")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(.gray)
                                 Text(trip.startLocation)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                     .foregroundColor(.black)
                             }
                         }
@@ -108,14 +108,14 @@ struct LiveTripTrackingView: View {
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "flag.circle.fill")
                                 .foregroundColor(AppTheme.Status.danger)
-                                .font(.system(size: 16))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .frame(width: 20)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Destination")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(.gray)
                                 Text(trip.endLocation)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                     .foregroundColor(.black)
                             }
                         }
@@ -130,7 +130,7 @@ struct LiveTripTrackingView: View {
                                 .fill(AppTheme.Brand.primary.opacity(0.1))
                                 .frame(width: 42, height: 42)
                             Text(driverInitials(for: driverName))
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Brand.primary)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.5)
@@ -139,16 +139,16 @@ struct LiveTripTrackingView: View {
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text(driverName)
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.black)
                             
                             if let lastUpdate = viewModel.lastUpdated {
                                 Text("Last updated \(timeAgo(from: lastUpdate))")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(.gray)
                             } else {
                                 Text("Syncing location...")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(.gray)
                             }
                         }
@@ -162,7 +162,7 @@ struct LiveTripTrackingView: View {
                                 }
                             } label: {
                                 Image(systemName: "phone.fill")
-                                    .font(.system(size: 15))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(.white)
                                     .frame(width: 38, height: 38)
                                     .background(AppTheme.Status.success)
@@ -191,7 +191,7 @@ struct LiveTripTrackingView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(AppTheme.Brand.primary)
                 }
             }
@@ -205,7 +205,7 @@ struct LiveTripTrackingView: View {
                         Task { await viewModel.fetchLocation() }
                     } label: {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Brand.primary)
                     }
                 }

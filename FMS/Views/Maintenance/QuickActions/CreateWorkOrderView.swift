@@ -51,14 +51,14 @@ struct CreateWorkOrderView: View {
                             // Section 1: Vehicle & Mechanic
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("Assignment")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.primary)
                                     .textCase(.uppercase)
                                 
                                 // Vehicle Selector
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Select Vehicle")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     
                                     Picker("Vehicle", selection: $selectedVehicleId) {
@@ -79,7 +79,7 @@ struct CreateWorkOrderView: View {
                                 // Mechanic Selector
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Assign Mechanic")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     
                                     Picker("Mechanic", selection: $selectedMechanicId) {
@@ -102,17 +102,17 @@ struct CreateWorkOrderView: View {
                             // Section 2: Issue details
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("Work Details")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.primary)
                                     .textCase(.uppercase)
                                 
                                 // Title
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Work Order Title")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     TextField("e.g. Engine Overheating, Brake Squeal", text: $title)
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .padding(12)
                                         .background(Color.black.opacity(0.04))
                                         .cornerRadius(8)
@@ -121,10 +121,10 @@ struct CreateWorkOrderView: View {
                                 // Issue Type
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Service/Issue Category")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     TextField("e.g. Brakes, Transmission, Engine", text: $issueType)
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .padding(12)
                                         .background(Color.black.opacity(0.04))
                                         .cornerRadius(8)
@@ -133,7 +133,7 @@ struct CreateWorkOrderView: View {
                                 // Priority
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Priority Level")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     
                                     Picker("Priority", selection: $selectedPriority) {
@@ -151,18 +151,18 @@ struct CreateWorkOrderView: View {
                             // Section 3: Cost & Notes
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("Estimation & Remarks")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Brand.primary)
                                     .textCase(.uppercase)
                                 
                                 // Est. Cost
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Estimated Cost (INR)")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     TextField("e.g. 5000", text: $estimatedCost)
                                         .keyboardType(.decimalPad)
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .padding(12)
                                         .background(Color.black.opacity(0.04))
                                         .cornerRadius(8)
@@ -171,7 +171,7 @@ struct CreateWorkOrderView: View {
                                 // Notes
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Detailed Repair Notes")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                         .foregroundColor(AppTheme.Text.secondary)
                                     TextEditor(text: $notes)
                                         .frame(minHeight: 100)
@@ -224,17 +224,17 @@ struct CreateWorkOrderView: View {
                                 .frame(width: 80, height: 80)
                             
                             Image(systemName: "checkmark")
-                                .font(.system(size: 36, weight: .bold))
+                                .font(.system(size: 36 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                         }
                         .scaleEffect(showSuccessOverlay ? 1.0 : 0.5)
                         
                         Text("Work Order Created")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                         
                         Text("Task successfully assigned and logged into local records.")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Text.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)

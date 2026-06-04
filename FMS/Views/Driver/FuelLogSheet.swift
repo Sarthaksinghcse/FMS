@@ -42,13 +42,13 @@ struct FuelSectionCard: View {
                         .fill(Color(hue: 0.58, saturation: 0.70, brightness: 0.55).opacity(isDisabled ? 0.05 : 0.15))
                         .frame(width: 52, height: 52)
                     Image(systemName: "fuelpump.fill")
-                        .font(.system(size: 22))
+                        .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundStyle(Color(hue: 0.58, saturation: 0.80, brightness: 0.75).opacity(isDisabled ? 0.4 : 1.0))
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Log Refuel")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundStyle(isDisabled ? .secondary : .primary)
 
                     if let log = lastLog {
@@ -64,10 +64,10 @@ struct FuelSectionCard: View {
                             Text("ago")
                                 .foregroundStyle(.secondary)
                         }
-                        .font(.system(size: 12))
+                        .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                     } else {
                         Text(isDisabled ? "No assigned vehicle or active trip" : "No refuel logged yet")
-                            .font(.system(size: 12))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -75,7 +75,7 @@ struct FuelSectionCard: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundStyle(.tertiary)
             }
             .padding(16)
@@ -142,13 +142,13 @@ struct FuelLogSheet: View {
                                 .fill(Color(hue: 0.58, saturation: 0.70, brightness: 0.55).opacity(0.12))
                                 .frame(width: 72, height: 72)
                             Image(systemName: "fuelpump.fill")
-                                .font(.system(size: 30))
+                                .font(.system(size: 30 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(Color(hue: 0.58, saturation: 0.80, brightness: 0.75))
                         }
                         Text("Log Refuel")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                         Text("Record your fuel fill-up details")
-                            .font(.system(size: 13))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(.secondary)
                     }
                     .padding(.top, 8)
@@ -156,20 +156,20 @@ struct FuelLogSheet: View {
                     // ── Vehicle / Fuel type info row ─────────────────────────
                     HStack(spacing: 14) {
                         Image(systemName: vehicleFuelType.icon)
-                            .font(.system(size: 16))
+                            .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(Color(hue: 0.58, saturation: 0.80, brightness: 0.75))
                             .frame(width: 26)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Fuel Type")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                 .foregroundStyle(.secondary)
                             Text(vehicleFuelType.displayName)
-                                .font(.system(size: 15, weight: .medium))
+                                .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         }
                         Spacer()
                         if let v = activeVehicle {
                             Text(v.registrationNumber)
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
@@ -186,16 +186,16 @@ struct FuelLogSheet: View {
                         // Litres
                         HStack(spacing: 14) {
                             Image(systemName: "gauge.with.needle.fill")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.secondary)
                                 .frame(width: 26)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Quantity")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .foregroundStyle(.secondary)
                                 TextField("0.0", text: $litresText)
                                     .keyboardType(.decimalPad)
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .onChange(of: litresText) { _, new in
                                         let clean = numericOnly(new)
                                         if clean != new { litresText = clean }
@@ -203,7 +203,7 @@ struct FuelLogSheet: View {
                             }
                             Spacer()
                             Text("Litres")
-                                .font(.system(size: 14))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -214,16 +214,16 @@ struct FuelLogSheet: View {
                         // Amount
                         HStack(spacing: 14) {
                             Image(systemName: "indianrupeesign.circle.fill")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.secondary)
                                 .frame(width: 26)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Amount Paid")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .foregroundStyle(.secondary)
                                 TextField("0.00", text: $amountText)
                                     .keyboardType(.decimalPad)
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .onChange(of: amountText) { _, new in
                                         let clean = numericOnly(new)
                                         if clean != new { amountText = clean }
@@ -231,7 +231,7 @@ struct FuelLogSheet: View {
                             }
                             Spacer()
                             Text("₹")
-                                .font(.system(size: 14))
+                                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 16)
@@ -244,15 +244,15 @@ struct FuelLogSheet: View {
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(spacing: 14) {
                             Image(systemName: "receipt.fill")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(.secondary)
                                 .frame(width: 26)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Receipt")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                                     .foregroundStyle(.secondary)
                                 Text(receiptImage == nil ? "Attach fuel receipt photo" : "Receipt attached")
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundStyle(receiptImage == nil ? .secondary : .primary)
                             }
                             Spacer()
@@ -276,7 +276,7 @@ struct FuelLogSheet: View {
                                 } else {
                                     Label("Add", systemImage: "photo.badge.plus")
                                         .labelStyle(.iconOnly)
-                                        .font(.system(size: 22))
+                                        .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                         .foregroundStyle(Color.fmsIndigo)
                                         .frame(width: 44, height: 44)
                                         .background(Color.fmsIndigo.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
@@ -310,7 +310,7 @@ struct FuelLogSheet: View {
                                         selectedPhotoItems = []
                                     } label: {
                                         Image(systemName: "xmark.circle.fill")
-                                            .font(.system(size: 20))
+                                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .symbolRenderingMode(.palette)
                                             .foregroundStyle(.white, Color.black.opacity(0.5))
                                     }
@@ -323,7 +323,7 @@ struct FuelLogSheet: View {
 
                     // ── Notes ─────────────────────────────────────────────────
                     TextField("Additional notes (optional)…", text: $notes, axis: .vertical)
-                        .font(.system(size: 14))
+                        .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .lineLimit(2...4)
                         .padding(14)
                         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
@@ -331,7 +331,7 @@ struct FuelLogSheet: View {
                     // ── Validation error ──────────────────────────────────────
                     if let err = validationError {
                         Label(err, systemImage: "exclamationmark.triangle.fill")
-                            .font(.system(size: 13))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundStyle(AppTheme.Status.danger)
                     }
 
@@ -344,11 +344,11 @@ struct FuelLogSheet: View {
                                 ProgressView().tint(.white)
                             } else if saved {
                                 Label("Saved!", systemImage: "checkmark.circle.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundStyle(.white)
                             } else {
                                 Label("Save Refuel Log", systemImage: "fuelpump.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundStyle(.white)
                             }
                         }

@@ -28,7 +28,7 @@ struct MessageFilterView: View {
                         }
                     } label: {
                         Text(category.rawValue)
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(
                                 selectedCategory == category ? .white : AppTheme.Text.secondary
                             )

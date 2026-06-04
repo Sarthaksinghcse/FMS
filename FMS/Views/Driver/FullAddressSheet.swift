@@ -13,11 +13,11 @@ struct FullAddressSheet: View {
                     // Header Card
                     VStack(alignment: .leading, spacing: 6) {
                         Text("TRIP CODE")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundStyle(.secondary)
                             .tracking(0.8)
                         Text(tripCode)
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundStyle(Color.fmsIndigo)
                     }
                     .padding()
@@ -29,16 +29,16 @@ struct FullAddressSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: "circle.fill")
-                                .font(.system(size: 8))
+                                .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(Color.fmsIndigo)
                             Text("DEPARTURE PORT")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(.secondary)
                                 .tracking(0.6)
                         }
                         
                         Text(source)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(.primary)
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -49,7 +49,7 @@ struct FullAddressSheet: View {
                             UIPasteboard.general.string = source
                         } label: {
                             Label("Copy Address", systemImage: "doc.on.doc")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(Color.fmsIndigo)
                         }
                         .buttonStyle(.borderless)
@@ -60,16 +60,16 @@ struct FullAddressSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: "mappin.circle.fill")
-                                .font(.system(size: 12))
+                                .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundStyle(Color.orange)
                             Text("ARRIVAL TERMINAL")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundStyle(.secondary)
                                 .tracking(0.6)
                         }
                         
                         Text(destination)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundStyle(.primary)
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -80,7 +80,7 @@ struct FullAddressSheet: View {
                             UIPasteboard.general.string = destination
                         } label: {
                             Label("Copy Address", systemImage: "doc.on.doc")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                 .foregroundStyle(Color.orange)
                         }
                         .buttonStyle(.borderless)

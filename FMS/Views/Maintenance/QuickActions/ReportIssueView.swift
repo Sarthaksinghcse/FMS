@@ -43,14 +43,14 @@ struct ReportIssueView: View {
                         // Section 1: Identification
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Asset Details")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Brand.accent)
                                 .textCase(.uppercase)
 
                             // Vehicle Selector
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Select Affected Vehicle")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 
                                 Picker("Vehicle", selection: $selectedVehicleId) {
@@ -74,17 +74,17 @@ struct ReportIssueView: View {
                         // Section 2: Defect description
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Incident Information")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Brand.accent)
                                 .textCase(.uppercase)
 
                             // Title
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Title / Summary")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 TextField("e.g. Brake oil leakage, Tire puncture", text: $issueTitle)
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .padding(12)
                                     .background(Color.black.opacity(0.04))
                                     .cornerRadius(8)
@@ -93,7 +93,7 @@ struct ReportIssueView: View {
                             // Category
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Category")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 
                                 Picker("Category", selection: $issueCategory) {
@@ -112,7 +112,7 @@ struct ReportIssueView: View {
                             // Severity
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Severity Level")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 
                                 Picker("Severity", selection: $selectedSeverity) {
@@ -129,14 +129,14 @@ struct ReportIssueView: View {
                         // Section 3: Notes & Photo
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Details & Evidence")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Brand.accent)
                                 .textCase(.uppercase)
 
                             // Remarks
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Description of defect / safety issue")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 TextEditor(text: $remarks)
                                     .frame(minHeight: 100)
@@ -148,7 +148,7 @@ struct ReportIssueView: View {
                             // Photo Upload Mock
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Attach Photo Evidence")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 
                                 Button {
@@ -158,10 +158,10 @@ struct ReportIssueView: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: isImageAttached ? "checkmark.circle.fill" : "camera.fill")
-                                            .font(.system(size: 18))
+                                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(isImageAttached ? AppTheme.Status.success : AppTheme.Brand.accent)
                                         Text(isImageAttached ? "Image Evidence Attached" : "Capture / Upload Photo")
-                                            .font(.system(size: 13, weight: .bold))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(isImageAttached ? AppTheme.Status.success : AppTheme.Text.secondary)
                                         Spacer()
                                         if isImageAttached {
@@ -184,7 +184,7 @@ struct ReportIssueView: View {
                                     // Mock Thumbnail image
                                     ZStack(alignment: .topTrailing) {
                                         Image(systemName: "photo.fill")
-                                            .font(.system(size: 32))
+                                            .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(.gray.opacity(0.6))
                                             .frame(width: 80, height: 80)
                                             .background(Color.gray.opacity(0.1))
@@ -192,7 +192,7 @@ struct ReportIssueView: View {
                                             .shadow(radius: 2)
                                         
                                         Image(systemName: "paperclip")
-                                            .font(.system(size: 10, weight: .bold))
+                                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(.white)
                                             .frame(width: 18, height: 18)
                                             .background(AppTheme.Brand.accent)
@@ -247,17 +247,17 @@ struct ReportIssueView: View {
                                 .frame(width: 80, height: 80)
                             
                             Image(systemName: "paperplane.fill")
-                                .font(.system(size: 32, weight: .bold))
+                                .font(.system(size: 32 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                 .foregroundColor(.white)
                                 .offset(x: -2, y: 2)
                         }
                         
                         Text("Safety Incident Logged")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                             .foregroundColor(Color(red: 0.08, green: 0.12, blue: 0.22))
                         
                         Text("Defect report submitted. The fleet manager has been notified.")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                             .foregroundColor(AppTheme.Text.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)

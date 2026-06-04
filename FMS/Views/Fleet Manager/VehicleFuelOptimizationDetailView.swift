@@ -61,23 +61,23 @@ struct VehicleFuelOptimizationDetailView: View {
                                     .fill(Theme.royalBlue.opacity(0.12))
                                     .frame(width: 44, height: 44)
                                 Image(systemName: "fuelpump.fill")
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(Theme.royalBlue)
                             }
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(stats.vehicleNumber)
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                 Text("\(stats.logCount) Refuels logged")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.secondary)
                             }
                             
                             Spacer()
                             
                             Text(stats.fuelType.uppercased())
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -112,7 +112,7 @@ struct VehicleFuelOptimizationDetailView: View {
                             ProgressView()
                                 .tint(Theme.royalBlue)
                             Text("Gemini is analyzing vehicle consumption patterns...")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                             Spacer().frame(height: 40)
                         }
@@ -120,10 +120,10 @@ struct VehicleFuelOptimizationDetailView: View {
                     } else if let error = errorMessage {
                         VStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 28))
+                                .font(.system(size: 28 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 .foregroundColor(Theme.darkOrange)
                             Text(error)
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
@@ -138,12 +138,12 @@ struct VehicleFuelOptimizationDetailView: View {
                                 Image(systemName: "sparkles")
                                     .foregroundColor(Theme.royalBlue)
                                 Text("AI Optimization Diagnostics")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                             }
                             
                             Text(ai.insights)
-                                .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                                .font(.system(size: 12.5 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                 .foregroundColor(AppTheme.Text.secondary)
                                 .lineSpacing(4)
                         }
@@ -165,17 +165,17 @@ struct VehicleFuelOptimizationDetailView: View {
                                             .fill(Theme.royalBlue.opacity(0.12))
                                             .frame(width: 36, height: 36)
                                         Image(systemName: "indianrupeesign.circle.fill")
-                                            .font(.system(size: 18))
+                                            .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(Theme.royalBlue)
                                     }
                                     
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("ESTIMATED MONTHLY SAVINGS")
-                                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                                            .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(AppTheme.Text.secondary)
                                             .tracking(0.5)
                                         Text(String(format: "₹%.0f", ai.estimatedSavings))
-                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                            .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.black)
                                     }
                                     Spacer()
@@ -195,7 +195,7 @@ struct VehicleFuelOptimizationDetailView: View {
                         if !ai.issues.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Consumption Inefficiencies")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                     .padding(.horizontal, 4)
                                 
@@ -206,7 +206,7 @@ struct VehicleFuelOptimizationDetailView: View {
                                             .frame(width: 6, height: 6)
                                             .padding(.top, 6)
                                         Text(issue)
-                                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                             .foregroundColor(AppTheme.Text.secondary)
                                     }
                                     .padding(12)
@@ -226,18 +226,18 @@ struct VehicleFuelOptimizationDetailView: View {
                         if !ai.recommendations.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Optimization Recommendations")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(.black)
                                     .padding(.horizontal, 4)
                                 
                                 ForEach(ai.recommendations, id: \.self) { rec in
                                     HStack(alignment: .top, spacing: 10) {
                                         Image(systemName: "checkmark.shield.fill")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(Theme.royalBlue)
                                             .padding(.top, 2)
                                         Text(rec)
-                                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                                             .foregroundColor(.black)
                                     }
                                     .padding(12)
@@ -270,7 +270,7 @@ struct VehicleFuelOptimizationDetailView: View {
                         ProgressView()
                     } else {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(Theme.royalBlue)
                     }
                 }
@@ -286,10 +286,10 @@ struct VehicleFuelOptimizationDetailView: View {
     private func specItem(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.Text.tertiary)
             Text(value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                 .foregroundColor(.black)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -21,13 +21,13 @@ struct DashboardQuickActionCard: View {
                         .frame(width: 64, height: 64)
                     
                     Image(systemName: action.icon)
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                         .foregroundColor(action.iconColor)
                 }
                 
                 
                 Text(action.label)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(Color.black.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)

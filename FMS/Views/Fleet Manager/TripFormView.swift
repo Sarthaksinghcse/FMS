@@ -70,7 +70,7 @@ struct AddTripFormView: View {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             if scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
                                 Text("⚠️ Start time must be at least 2 hours from now.")
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                     .foregroundColor(Theme.darkOrange)
                                     .padding(.horizontal, 16)
                                     .padding(.bottom, 8)
@@ -196,10 +196,10 @@ struct AddTripFormView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
                 Text(isSaving ? "Creating..." : "Create Trip")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
@@ -445,7 +445,7 @@ struct EditTripFormView: View {
                             DatePickerRow(label: "Start Time", date: $scheduledStartTime, showsTime: true)
                             if scheduledStartTime != trip.scheduledStartTime && scheduledStartTime < Date().addingTimeInterval(2 * 3600 - 60) {
                                 Text("⚠️ New start time must be at least 2 hours from now.")
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                     .foregroundColor(Theme.darkOrange)
                                     .padding(.horizontal, 16)
                                     .padding(.bottom, 8)
@@ -572,15 +572,15 @@ struct EditTripFormView: View {
                     .frame(width: 60, height: 60)
                     .shadow(color: AppTheme.Brand.royalBlue.opacity(0.35), radius: 10, y: 4)
                 Image(systemName: "map.fill")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(.white)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(trip.tripCode)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                     .foregroundColor(.black)
                 Text("\(trip.startLocation) → \(trip.endLocation)")
-                    .font(.system(size: 13, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(.secondary)
             }
             Spacer()
@@ -601,9 +601,9 @@ struct EditTripFormView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
-                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16, weight: .bold, design: .rounded))
+                Text(isSaving ? "Saving..." : "Save Changes").font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
@@ -626,9 +626,9 @@ struct EditTripFormView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: Theme.darkOrange))
                 } else {
-                    Image(systemName: "trash.fill").font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "trash.fill").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                 }
-                Text(isDeleting ? "Deleting..." : "Delete Trip").font(.system(size: 15, weight: .semibold, design: .rounded))
+                Text(isDeleting ? "Deleting..." : "Delete Trip").font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
             }
             .foregroundColor(Theme.darkOrange)
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -825,7 +825,7 @@ struct AdditionalTimeStepperRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .frame(width: 120, alignment: .leading)
             
@@ -844,7 +844,7 @@ struct AdditionalTimeStepperRow: View {
                 .disabled(additionalHours <= 0)
                 
                 Text(String(format: "%.1f hrs", additionalHours))
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(AppTheme.Brand.royalBlue)
                     .frame(minWidth: 55, alignment: .center)
                 
@@ -878,20 +878,20 @@ struct LocationSelectionRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Text(label)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                     .foregroundColor(.black)
                     .frame(width: 120, alignment: .leading)
                 
                 Spacer()
                 
                 Text(locationText.isEmpty ? placeholder : locationText)
-                    .font(.system(size: 14, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(locationText.isEmpty ? .gray : AppTheme.Brand.royalBlue)
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(Color(.systemGray3))
             }
             .padding(.horizontal, 16)
@@ -914,13 +914,13 @@ struct TripFormField: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .frame(width: 120, alignment: .leading)
             
             if isEditable {
                 TextField(placeholder, text: $text)
-                    .font(.system(size: 14, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(AppTheme.Brand.royalBlue)
                     .keyboardType(keyboardType)
                     .focused(focus, equals: tag)
@@ -928,7 +928,7 @@ struct TripFormField: View {
             } else {
                 Spacer()
                 Text(text)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.trailing)
             }
@@ -950,13 +950,13 @@ struct TripNotesField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
             
             TextField(placeholder, text: $text, axis: .vertical)
-                .font(.system(size: 14, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                 .foregroundColor(AppTheme.Brand.royalBlue)
                 .focused(focus, equals: tag)
                 .lineLimit(3...6)
@@ -1001,14 +1001,14 @@ struct VehiclePickerRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
             
             Spacer()
             
             if vehicles.isEmpty {
                 Text("No vehicles available")
-                    .font(.system(size: 13, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(.gray)
                     .italic()
             } else {
@@ -1054,7 +1054,7 @@ struct VehiclePickerRow: View {
                         .frame(maxWidth: 170, alignment: .trailing)
 
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     }
                     .foregroundColor(AppTheme.Brand.royalBlue)
                 }
@@ -1100,14 +1100,14 @@ struct DriverPickerRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
             
             Spacer()
             
             if drivers.isEmpty {
                 Text("No drivers available")
-                    .font(.system(size: 13, design: .rounded))
+                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), design: .rounded))
                     .foregroundColor(.gray)
                     .italic()
             } else {
@@ -1147,7 +1147,7 @@ struct DriverPickerRow: View {
                             .frame(maxWidth: 170, alignment: .trailing)
                         
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     }
                     .foregroundColor(AppTheme.Brand.royalBlue)
                 }
@@ -1174,7 +1174,7 @@ struct TripStatusPickerRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Status")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
@@ -1187,7 +1187,7 @@ struct TripStatusPickerRow: View {
                         } label: {
                             HStack(spacing: 5) {
                                 Circle().fill(color).frame(width: 7, height: 7)
-                                Text(label).font(.system(size: 12, weight: selection == status ? .bold : .medium, design: .rounded))
+                                Text(label).font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: selection == status ? .bold : .medium, design: .rounded))
                             }
                             .foregroundColor(selection == status ? .white : color)
                             .padding(.horizontal, 12).padding(.vertical, 8)

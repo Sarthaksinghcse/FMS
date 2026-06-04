@@ -28,28 +28,28 @@ struct DashboardActivityRow: View {
                     .fill(activity.iconBgColor)
                     .frame(width: 38, height: 38)
                 Image(systemName: activity.icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 16 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(activity.iconColor)
             }
 
             // Title + subtitle
             VStack(alignment: .leading, spacing: 3) {
                 Text(activity.title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .semibold))
                     .foregroundColor(AppTheme.Text.primary)
                     .lineLimit(1)
 
                 Text(activity.subtitle)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                     .foregroundColor(AppTheme.Text.secondary)
                     .lineLimit(1)
 
                 // Source badge
                 HStack(spacing: 4) {
                     Image(systemName: sourceIcon)
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 8 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                     Text(activity.source)
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                 }
                 .foregroundColor(sourceColor)
                 .padding(.horizontal, 7)
@@ -61,7 +61,7 @@ struct DashboardActivityRow: View {
             Spacer()
 
             Text(activity.time)
-                .font(.system(size: 11, weight: .regular))
+                .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .regular))
                 .foregroundColor(AppTheme.Text.secondary)
                 .multilineTextAlignment(.trailing)
         }

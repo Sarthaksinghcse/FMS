@@ -74,16 +74,16 @@ struct InventoryTabView: View {
                                             .fill(AppTheme.Brand.primary.opacity(0.12))
                                             .frame(width: 36, height: 36)
                                         Image(systemName: "sparkles")
-                                            .font(.system(size: 14, weight: .bold))
+                                            .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                             .foregroundColor(AppTheme.Brand.primary)
                                     }
                                     
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("AI Spare Parts Forecast")
-                                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                                            .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                             .foregroundColor(.black)
                                         Text("Predictive stock demand & reorder intelligence")
-                                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium, design: .rounded))
                                             .foregroundColor(.gray)
                                     }
                                 }
@@ -91,7 +91,7 @@ struct InventoryTabView: View {
                                 Spacer()
                                 
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(.gray)
                             }
                             .padding(12)
@@ -111,10 +111,10 @@ struct InventoryTabView: View {
                             // Total Parts
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Total Parts")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 Text("\(items.count)")
-                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.primary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -125,15 +125,15 @@ struct InventoryTabView: View {
                             // Low Stock Alert
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Low Stock")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                   HStack(spacing: 4) {
                                     Text("\(lowStock.count)")
-                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                         .foregroundColor(lowStock.isEmpty ? AppTheme.Text.primary : AppTheme.Status.danger)
                                     if !lowStock.isEmpty {
                                         Image(systemName: "exclamationmark.triangle.fill")
-                                            .font(.system(size: 12))
+                                            .font(.system(size: 12 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                             .foregroundColor(AppTheme.Status.danger)
                                     }
                                 }
@@ -146,10 +146,10 @@ struct InventoryTabView: View {
                             // Total Quantity
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Total Units")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 Text("\(totalQuantity)")
-                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .font(.system(size: 20 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                                     .foregroundColor(AppTheme.Text.primary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -167,7 +167,7 @@ struct InventoryTabView: View {
                                 Image(systemName: "magnifyingglass")
                                     .foregroundColor(AppTheme.Text.secondary)
                                 TextField("Search parts, number, supplier...", text: $searchText)
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 14 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.primary)
                                 if !searchText.isEmpty {
                                     Button(action: { searchText = "" }) {
@@ -195,13 +195,13 @@ struct InventoryTabView: View {
                         if filteredItems.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "shippingbox")
-                                    .font(.system(size: 48))
+                                    .font(.system(size: 48 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                                 Text("No parts found")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                                     .foregroundColor(AppTheme.Text.secondary)
                                 Text("Try adjusting your search or filter.")
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 13 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                     .foregroundColor(AppTheme.Text.tertiary)
                             }
                             .frame(maxWidth: .infinity)
@@ -242,7 +242,7 @@ struct InventoryTabView: View {
                             .shadow(color: AppTheme.Brand.primary.opacity(0.35), radius: 8, x: 0, y: 4)
                         
                         Image(systemName: "plus")
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.system(size: 24 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(.white)
                     }
                 }
@@ -276,19 +276,19 @@ struct InventoryRow: View {
                         .frame(width: 44, height: 44)
                     
                     Image(systemName: isLow ? "exclamationmark.triangle.fill" : "shippingbox.fill")
-                        .font(.system(size: 18))
+                        .font(.system(size: 18 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                         .foregroundColor(isLow ? AppTheme.Brand.accent : AppTheme.Brand.teal)
                 }
                 
                 // Middle: Part info
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.partName)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(AppTheme.Text.primary)
                     
                     HStack(spacing: 8) {
                         Text("P/#\(item.partNumber)")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .monospaced))
                             .foregroundColor(AppTheme.Text.secondary)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -298,10 +298,10 @@ struct InventoryRow: View {
                         if let supplier = item.supplierName, !supplier.isEmpty {
                             HStack(spacing: 4) {
                                 Image(systemName: "building.2.fill")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                                 Text(supplier)
                             }
-                            .font(.system(size: 11))
+                            .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0)))
                             .foregroundColor(AppTheme.Text.secondary)
                         }
                     }
@@ -312,11 +312,11 @@ struct InventoryRow: View {
                 // Right side: Stock Levels
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(item.quantityInStock)")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 22 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold, design: .rounded))
                         .foregroundColor(isLow ? AppTheme.Status.danger : AppTheme.Text.primary)
                     
                     Text("units in stock")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 10 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Text.secondary)
                 }
             }
@@ -325,14 +325,14 @@ struct InventoryRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Reorder Threshold: \(item.reorderThreshold) · Cost: ₹\(String(format: "%.2f", item.unitCost))")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 11 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .medium))
                         .foregroundColor(AppTheme.Text.secondary)
                     
                     Spacer()
                     
                     if isLow {
                         Text("CRITICAL STOCK")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Status.danger)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -340,7 +340,7 @@ struct InventoryRow: View {
                             .cornerRadius(4)
                     } else {
                         Text("HEALTHY")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 9 + (AccessibilityManager.shared.isLargeTextEnabled ? 4 : 0), weight: .bold))
                             .foregroundColor(AppTheme.Status.success)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
