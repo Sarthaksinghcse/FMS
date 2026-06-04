@@ -464,6 +464,8 @@ struct FilterChipView: View {
             HStack(spacing: 6) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 if count > 0 {
                     Text("\(count)")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
@@ -778,7 +780,11 @@ struct DriverListView: View {
                             .frame(width: 56, height: 56)
                             .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 8, x: 0, y: 4)
                         Text(initials(for: driver.fullName))
-                            .font(.system(size: 20, weight: .bold, design: .rounded)).foregroundColor(.white)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 56, height: 56, alignment: .center)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -1033,7 +1039,12 @@ struct EditDriverStubView: View {
                             ))
                             .frame(width: 80, height: 80)
                             .shadow(color: AppTheme.Brand.royalBlue.opacity(0.3), radius: 12, x: 0, y: 6)
-                        Text(initials).font(.system(size: 28, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        Text(initials)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 80, height: 80, alignment: .center)
                     }
                     VStack(spacing: 8) {
                         Text("Edit Driver Profile").font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
@@ -1179,7 +1190,11 @@ struct MaintenanceStaffListView: View {
                         .frame(width: 56, height: 56)
                         .shadow(color: AppTheme.Brand.accent.opacity(0.3), radius: 8, x: 0, y: 4)
                     Text(initials(for: staff.fullName))
-                        .font(.system(size: 18, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: 56, height: 56, alignment: .center)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -1354,7 +1369,12 @@ struct EditStaffSheetView: View {
                             ))
                             .frame(width: 80, height: 80)
                             .shadow(color: AppTheme.Brand.accent.opacity(0.3), radius: 10, x: 0, y: 6)
-                        Text(staffInitials).font(.system(size: 26, weight: .bold, design: .rounded)).foregroundColor(.white)
+                        Text(staffInitials)
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 80, height: 80, alignment: .center)
                     }
                     VStack(spacing: 8) {
                         Text(staff.fullName).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundColor(.black)
@@ -1542,6 +1562,8 @@ struct TripListContentView: View {
                         HStack(spacing: 6) {
                             Text(filter.rawValue)
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                             let count = countForFilter(filter)
                             if count > 0 {
                                 Text("\(count)")
@@ -2176,6 +2198,9 @@ struct TripDetailView: View {
                         Text(initials(for: driver.fullName))
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(AppTheme.Brand.royalBlue)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 40, height: 40, alignment: .center)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {

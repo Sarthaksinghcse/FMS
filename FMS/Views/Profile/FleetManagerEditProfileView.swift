@@ -73,6 +73,9 @@ struct FleetManagerEditProfileView: View {
                                         Text(initials.isEmpty ? "FM" : initials)
                                             .font(.system(size: 28, weight: .bold, design: .rounded))
                                             .foregroundColor(.white)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.5)
+                                            .frame(width: 80, height: 80, alignment: .center)
                                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                                             .background(
                                                 LinearGradient(
@@ -88,6 +91,9 @@ struct FleetManagerEditProfileView: View {
                                     Text(initials.isEmpty ? "FM" : initials)
                                         .font(.system(size: 28, weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.5)
+                                        .frame(width: 80, height: 80, alignment: .center)
                                 }
                             }
 

@@ -468,6 +468,9 @@ struct FleetAnalyticsView: View {
                                     .frame(width: 36, height: 36)
                                 Text(driverInitials(stat.driverName))
                                     .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .frame(width: 36, height: 36, alignment: .center)
                                     .foregroundStyle(
                                         stat.tripCount > 0
                                             ? AppTheme.Brand.primary

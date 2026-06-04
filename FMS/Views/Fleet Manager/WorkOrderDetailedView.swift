@@ -490,6 +490,9 @@ struct WorkOrderDetailedView: View {
                             Text(String(tech.fullName.prefix(2).uppercased()))
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(AppTheme.Brand.royalBlue)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 44, height: 44, alignment: .center)
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {

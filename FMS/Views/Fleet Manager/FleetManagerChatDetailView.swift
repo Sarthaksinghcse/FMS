@@ -44,6 +44,9 @@ struct FleetManagerChatDetailView: View {
                     Text(String(chatUser.name.prefix(2)).uppercased())
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(roleColor(for: chatUser.role))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(width: 36, height: 36, alignment: .center)
                     
                     Circle()
                         .fill(chatUser.isActive ? AppTheme.Status.success : AppTheme.Brand.primary.opacity(0.4))

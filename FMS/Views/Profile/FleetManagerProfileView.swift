@@ -131,6 +131,9 @@ struct FleetManagerProfileView: View {
                             Text(initials)
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .frame(width: 90, height: 90, alignment: .center)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background(
                                     LinearGradient(
@@ -146,6 +149,9 @@ struct FleetManagerProfileView: View {
                         Text(initials)
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .frame(width: 90, height: 90, alignment: .center)
                     }
                 }
 
